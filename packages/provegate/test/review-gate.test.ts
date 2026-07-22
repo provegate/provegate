@@ -17,7 +17,7 @@ const VALID_META = [
   '> **Reviewer:** codex (gpt-x)',
   '> **Base SHA:** `abc1234def`',
   '> **Critical:** 0',
-  '> **Quorum:** 1/1 pass',
+  '> **Quorum:** 3/5 pass',
 ].join('\n');
 
 const roots: string[] = [];

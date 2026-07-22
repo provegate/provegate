@@ -18,7 +18,7 @@
     "reviewer": {
       "type": "string",
       "minLength": 2,
-      "description": "Tool/model identity of the reviewer — must not be the implementing agent."
+      "description": "Tool/model identity of the reviewer \u2014 must not be the implementing agent."
     },
     "baseSha": {
       "type": "string",
@@ -40,7 +40,7 @@
     "quorum": {
       "type": "string",
       "minLength": 3,
-      "description": "e.g. \"3/5 pass\" for panel reviews, \"1/1 pass\" for a single cross-model reviewer."
+      "description": "Reviewer panel outcome, N/M pass. The method gate is >=3/5 pass (orchestration-runner prompt); record the actual panel result. Runtime quorum arithmetic enforcement is a tracked follow-up of the engine, not this schema."
     }
   }
 }

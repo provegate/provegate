@@ -159,6 +159,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - 3.x — W3 audit scopes to backticked `gate <sub>` mentions; prose "the gate checks" is English.
 - 5.4 — prd-template ships two §11 FR rows so the raw template structure matches its own §4 census.
 - eslint root config gained node globals for plain .mjs (example gate scripts) — config, not src/.
+- 11.x — quorum runtime enforcement (validateReviewArtifact parsing N/M and requiring
+  the >=3/5 gate arithmetically) is an ENGINE change barred by this PRD's src-freeze
+  (§12); deferred as a governed follow-up: owner=owner, due=2026-07-29, renewals=0 —
+  first engine item of the next PRD. Everything in this PRD's scope (template, prompts,
+  schema description, all test fixtures) now carries the doctrinal 3/5.
 
 ## Progress Log
 
