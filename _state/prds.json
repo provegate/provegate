@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T17:45:04.891Z",
+  "generatedAt": "2026-07-22T17:45:31.575Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -43,8 +43,8 @@
       "prd": "PRD-002",
       "number": 2,
       "slug": "gate-manifest-runner",
-      "status": "Operator Verification",
-      "cyclePhase": "7 (Learning — operator close pending)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -66,13 +66,13 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 51,
-        "uncheckedCount": 2,
+        "status": "Ship Verified",
+        "checkedCount": 53,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 3
       },
       "summary": {
-        "shipReadiness": "Operator Verification"
+        "shipReadiness": "Ship Verified"
       },
       "lastUpdated": "2026-07-22"
     }
