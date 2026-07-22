@@ -20,20 +20,25 @@ const WATCH = [
 // ────────────────────────────────────────────────────────────────────────────
 
 function diffFiles() {
+  // Fail CLOSED: a gate that cannot resolve its diff must error, never pass.
+  let mergeBase;
   try {
-    const mergeBase = execFileSync('git', ['merge-base', 'HEAD', baseRef], {
+    mergeBase = execFileSync('git', ['merge-base', 'HEAD', baseRef], {
       cwd: root,
       encoding: 'utf8',
     }).trim();
-    return execFileSync('git', ['diff', '--name-only', `${mergeBase}...HEAD`], {
-      cwd: root,
-      encoding: 'utf8',
-    })
-      .split('\n')
-      .filter(Boolean);
   } catch {
-    return [];
+    console.error(
+      `[doc-drift] cannot resolve merge-base vs '${baseRef}' in ${root} — not a repo or bad base ref`,
+    );
+    process.exit(2);
   }
+  return execFileSync('git', ['diff', '--name-only', `${mergeBase}...HEAD`], {
+    cwd: root,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean);
 }
 
 const changed = diffFiles();

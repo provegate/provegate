@@ -95,8 +95,10 @@ calibration — adapt the wording to your project, never the numbers.
 | `Operator Verification` | Human/runtime/staging checks remain                  |
 | `Ship Verified`         | Audit passed with evidence; deferrals triaged        |
 | `Superseded`            | Replaced by other work                               |
+| `Archived`              | Closed and archived to the completed state           |
 | `Blocked`               | Cannot proceed safely; blocker + resumption recorded |
 | `Deferred`              | Shelved mid-flight; artifacts in the deferred state  |
+| `Not Started`           | Registered but untouched (task-file initial state)   |
 
 `[x]` in a task file means **completed as written** — never "deferred", "operator-owned",
 or "covered later". Operator-owned work stays unchecked with an Operator Handoff row.

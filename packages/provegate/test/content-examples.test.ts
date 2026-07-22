@@ -76,3 +76,21 @@ describe('doc-drift example', () => {
     expect(runCheck('examples/doc-drift/check.mjs', [root, 'main']).code).toBe(0);
   });
 });
+
+describe('examples fail closed (codex review)', () => {
+  it('route-guard-coverage errors (exit 2) on a missing routes dir', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-example-'));
+    roots.push(root);
+    const result = runCheck('examples/route-guard-coverage/check.mjs', [root]);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain('configure ROUTES_DIR');
+  });
+
+  it('doc-drift errors (exit 2) outside a repo or with a bad base ref', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-example-'));
+    roots.push(root);
+    const result = runCheck('examples/doc-drift/check.mjs', [root, 'main']);
+    expect(result.code).toBe(2);
+    expect(result.output).toContain('cannot resolve merge-base');
+  });
+});

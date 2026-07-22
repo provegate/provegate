@@ -53,8 +53,12 @@ checked/unchecked counts.
 
 ### 2. Preflight Gates
 
-- Readiness verdict is PASS with score ≥ 8, and the task file exists with unchecked
+- Readiness verdict is PASS with score >= 8, and the task file exists with unchecked
   work — otherwise STOP and report which earlier phase is missing.
+- Lifecycle sanity: STOP if the item's status is `Blocked`, `Ship Verified`,
+  `Archived`, or `Deferred` — a blocked or already-closed item must never receive an
+  execution prompt, regardless of readiness. Artifact states must be consistent (all
+  three artifacts in the wip state).
 - `gate check {{ID_PREFIX}}-XXX` is clean.
 - `gate queue` shows no overlapping active claim on this item's Conflict Surface.
 

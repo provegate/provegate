@@ -98,11 +98,7 @@ describe('review-template round-trip (validateReviewArtifact)', () => {
         '> **Reviewer:** sample-reviewer',
       )
       .replace('> **Base SHA:** `[git merge-base or base tip]`', '> **Base SHA:** `abc1234def`')
-      .replace('> **Critical:** 0', `> **Critical:** ${critical}`)
-      .replace(
-        '> **Quorum:** [N/M pass — e.g. 3/5 for a panel, 1/1 for a single cross-model reviewer]',
-        '> **Quorum:** 1/1 pass',
-      );
+      .replace('> **Critical:** 0', `> **Critical:** ${critical}`);
 
   it('validates when filled with sample values', () => {
     const check = validateReviewArtifact(filled('pass', '0'), { expectedId: 'PRD-004' });
@@ -129,7 +125,7 @@ describe('tasks-template round-trip (validateTasksReviewRow)', () => {
         '> **Reviewer:** sample-reviewer',
         '> **Base SHA:** `abc1234def`',
         '> **Critical:** 0',
-        '> **Quorum:** 1/1 pass',
+        '> **Quorum:** 3/5 pass',
       ].join('\n'),
     );
     const tasks = fill(template('tasks-template.md'))
@@ -179,5 +175,23 @@ describe('readiness + summary + board round-trips (buildState / panel labels)', 
     for (const label of labels) {
       expect(board, label).toContain(`| ${label}`);
     }
+  });
+});
+
+describe('lifecycle vocabulary alignment (codex review)', () => {
+  it('prd-template and METHOD.md carry every config-canonical status', () => {
+    const prd = template('prd-template.md');
+    const method = readFileSync(join(pkgRoot, 'METHOD.md'), 'utf8');
+    for (const status of cfg.statusVocab.canonical) {
+      expect(prd, `template: ${status}`).toContain(status);
+      expect(method, `METHOD: ${status}`).toContain(status);
+    }
+  });
+
+  it('review template + phase-6 carry the doctrinal quorum, not a weakened one', () => {
+    expect(template('review-template.md')).toContain('**Quorum:** 3/5 pass');
+    const phase6 = readFileSync(join(pkgRoot, 'prompts/phase-6-final-auditing.md'), 'utf8');
+    expect(phase6).not.toContain('For high-risk diffs');
+    expect(phase6).toContain('>=3/5 pass quorum');
   });
 });

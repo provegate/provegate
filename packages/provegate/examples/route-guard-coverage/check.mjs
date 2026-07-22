@@ -30,6 +30,14 @@ function walk(dir) {
   return out;
 }
 
+// Fail CLOSED: a missing routes directory means the gate is misconfigured for
+// this repo — that must error, never count as "zero routes, pass".
+if (!existsSync(join(root, ROUTES_DIR))) {
+  console.error(
+    `[route-guard-coverage] routes dir not found: ${join(root, ROUTES_DIR)} — configure ROUTES_DIR`,
+  );
+  process.exit(2);
+}
 const routes = walk(join(root, ROUTES_DIR));
 const unguarded = routes.filter((route) => !existsSync(guardTestFor(route)));
 

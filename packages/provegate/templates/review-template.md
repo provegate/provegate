@@ -3,6 +3,8 @@
 > Save to your reviews directory (default `_docs/reviews/review-XXX-{short-name}.md`).
 > The metadata block below is machine-validated by `gate run`'s Phase 6 gate:
 > all six fields required; `pass` requires `Critical: 0` (strictly numeric).
+> Quorum records the reviewer panel outcome — the method's gate is >=3/5 pass
+> (see prompts/orchestration-runner.md); record the actual N/M your panel produced.
 
 > **PRD:** {{ID_PREFIX}}-XXX
 > **Verdict:** pass | fail
@@ -11,7 +13,7 @@
 > **Critical:** 0
 > **High:** 0
 > **Medium:** 0
-> **Quorum:** [N/M pass — e.g. 3/5 for a panel, 1/1 for a single cross-model reviewer]
+> **Quorum:** 3/5 pass
 
 ## Summary
 

@@ -89,11 +89,11 @@ strings, ID-generation conventions. -->
 
 ### 1.6 Independent Adversarial Review (blocking)
 
-1. Run an independent review of the full diff vs base by a reviewer that did **not**
-   write the code. Default: {{REVIEW_TOOL}} (different model family, pass/fail gate).
-   Fallback: a fresh agent session with no implementation context, prompted to refute
-   the diff. For high-risk diffs, run the full 5-lens panel (see
-   `prompts/orchestration-runner.md`).
+1. Run the reviewer panel of the full diff vs base — 5 lenses, >=3/5 pass quorum, per
+   `prompts/orchestration-runner.md`. Reviewers must not have written the code; prefer
+   a different model family ({{REVIEW_TOOL}}), fall back to fresh agent sessions with
+   no implementation context. If quorum cannot be reached, the gate is fail (STOP) —
+   an absent reviewer is never a pass.
 2. Triage every finding: fix it, or waive it with a one-line justification. `pass`
    requires zero unresolved critical findings.
 3. Save the review (findings + verdict) to a review artifact from

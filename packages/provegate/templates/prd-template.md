@@ -4,8 +4,9 @@
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
-> Ship Verified | Superseded | Blocked | Deferred. Never write "Completed"/"Done" —
-> the state builder normalizes known aliases but the canonical value is the contract. -->
+> Ship Verified | Superseded | Archived | Blocked | Deferred | Not Started. Never
+> write "Completed"/"Done" — the state builder normalizes known aliases but the
+> canonical value is the contract (workflow.config statusVocab.canonical). -->
 >
 > **Created**: [YYYY-MM-DD]
 > **Updated**: [YYYY-MM-DD]
