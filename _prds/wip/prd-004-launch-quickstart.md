@@ -120,7 +120,12 @@ so that the project citing calibration data against others' overclaiming never o
    is not possible in JSON — instead a minimal object with the two most-commonly
    customized fields populated from defaults) and starter `gates.manifest.json`
    (`{}`), never overwrites existing files, reports created/skipped per path, exits 0;
-   `--dry-run` prints the plan.
+   `--dry-run` prints the plan. **Root resolution**: init must work before any config
+   exists — it roots at the nearest `.git` walking up from cwd, else cwd itself
+   (never requires an existing `workflow.config.json`). **Wiring semantics**: on a
+   scaffolded repo without a `package.json`, the wiring audit's script-existence
+   direction is skipped (nothing to audit against) instead of failing — a fresh
+   non-node repo must pass `gate check --wiring`.
    - **Targets:** `packages/provegate/src/core/run/init.ts`, `packages/provegate/src/cli.ts`, `packages/provegate/src/core/run/index.ts`
 3. **FR-3 — Quickstart**: `packages/provegate/QUICKSTART.md` + docs page — the
    hotfix-class walkthrough: install, `gate init`, copy the PRD template, fill the
@@ -207,7 +212,8 @@ bugs` outside quoted external data), and the dead project's badge-jargon verdict
 
 - **Quorum rule**: ratio ≥ 3/5 reconciles doctrine with practice — the calibrated
   panel gate holds, and a single cross-model reviewer (`1/1`) passes as the degenerate
-  full-quorum case rather than via a documented exception. Historical review artifacts
+  full-quorum case rather than via a documented exception. Implemented as integer
+  arithmetic (`N * 5 >= M * 3`) — no float comparison. Historical review artifacts
   in `_docs/reviews/` are records, not gate inputs for closed PRDs — no retro-editing.
 - **Init is additive-only**: never writes over an existing file, never deletes;
   the starter config carries populated defaults for the two highest-churn fields
@@ -333,6 +339,7 @@ Cross-cutting (all green before Code Complete):
 
 ## Changelog
 
-| Date       | Author | Changes       |
-| ---------- | ------ | ------------- |
-| 2026-07-22 | rayvaz | Initial draft |
+| Date       | Author | Changes                                                                                                                                |
+| ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-22 | rayvaz | Initial draft                                                                                                                          |
+| 2026-07-22 | rayvaz | Phase 2 pre-score fixes: init root resolution + package.json-absent wiring semantics; do-not-say page-class split; integer quorum math |
