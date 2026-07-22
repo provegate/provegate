@@ -168,9 +168,11 @@ describe('codex review regressions', () => {
     });
     const root = mkdtempSync(join(tmpdir(), 'provegate-cand2-'));
     roots2.push(root);
-    mkdirSync(resolve(root, '_prds/proposals'), { recursive: true });
+    // Deliberately the SECOND configured state — the pre-fix code searched
+    // only drafts + states[0] and would report this PRD as missing.
+    mkdirSync(resolve(root, '_prds/landed'), { recursive: true });
     writeFileSync(
-      resolve(root, '_prds/proposals/prd-009-thing.md'),
+      resolve(root, '_prds/landed/prd-009-thing.md'),
       '## Conflict Surface\n\n- `lib/**`\n',
     );
     const candidate = candidateFromPrd(custom, 'PRD-009', root);

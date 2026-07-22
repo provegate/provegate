@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, deepMerge } from '../src/core/config/index.js';
+import { UNKNOWN_STATUS } from '../src/core/state/status.js';
 import type { StateRecord } from '../src/core/state/build.js';
 import {
   buildQueue,
@@ -22,7 +23,7 @@ function record(overrides: Partial<StateRecord> & { number: number }): StateReco
     artifacts: { prd: `_prds/wip/prd-x.md`, readiness: '', tasks: '', summary: '' },
     artifactStates: { prd: 'wip', readiness: 'missing', tasks: 'missing', summary: 'missing' },
     readiness: { score: null, verdict: null, modelTierExecution: null, modelTierAudit: null },
-    task: { status: 'Unknown', checkedCount: 0, uncheckedCount: 0, operatorHandoffCount: 0 },
+    task: { status: UNKNOWN_STATUS, checkedCount: 0, uncheckedCount: 0, operatorHandoffCount: 0 },
     summary: { shipReadiness: 'Unknown' },
     lastUpdated: null,
   };
@@ -249,7 +250,7 @@ describe('codex review regressions (custom lifecycle names)', () => {
   it('UNKNOWN_STATUS sentinel keeps unparseable records visible by design', () => {
     const r = record({
       number: 1,
-      status: 'Unknown',
+      status: UNKNOWN_STATUS,
       artifactStates: { prd: 'active', readiness: 'missing', tasks: 'missing', summary: 'missing' },
     });
     const emptyActive = deepMerge(custom, { statusVocab: { active: [] } });

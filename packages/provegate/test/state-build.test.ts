@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -137,5 +137,30 @@ describe('buildState', () => {
   it('returns an empty record set for an empty tree', () => {
     const root = tempRepo();
     expect(buildState(DEFAULT_CONFIG, root).records).toEqual([]);
+  });
+});
+
+describe('codex review regressions', () => {
+  it('writeState is atomic: no temp residue, snapshot intact', () => {
+    const root = tempRepo();
+    writeArtifact(root, '_prds/wip/prd-001-alpha.md', PRD_DOC);
+    const state = buildState(DEFAULT_CONFIG, root, { generatedAt: 'g' });
+    writeState(DEFAULT_CONFIG, root, state);
+    const stateDir = resolve(root, '_state');
+    expect(readdirSync(stateDir).filter((n) => n.includes('.tmp'))).toEqual([]);
+    expect(readState(DEFAULT_CONFIG, root)).toEqual(state);
+  });
+
+  it('escapes regex metacharacters in artifact filename prefixes', () => {
+    const root = tempRepo();
+    const config = deepMerge(DEFAULT_CONFIG, {
+      idPattern: { prefix: 'T.SK', width: 3 },
+      dirs: { artifacts: { prd: { dir: '_prds', prefix: 't.sk' } } },
+    });
+    writeArtifact(root, '_prds/wip/t.sk-011-real.md', PRD_DOC);
+    // 'x' in the dot position must NOT match a literal 't.sk' prefix
+    writeArtifact(root, '_prds/wip/txsk-012-fake.md', PRD_DOC);
+    const state = buildState(config, root);
+    expect(state.records.map((r) => r.prd)).toEqual(['T.SK-011']);
   });
 });

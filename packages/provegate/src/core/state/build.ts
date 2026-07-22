@@ -14,7 +14,12 @@ import {
   countTaskChecks,
   countOperatorHandoff,
 } from './markdown.js';
-import { normalizeAutonomousClose, normalizeStatus, type AutonomousClose } from './status.js';
+import {
+  normalizeAutonomousClose,
+  normalizeStatus,
+  UNKNOWN_STATUS,
+  type AutonomousClose,
+} from './status.js';
 
 export type ModelTier = 'high' | 'medium' | 'fast';
 
@@ -75,7 +80,7 @@ function parseTier(raw: string | null): ModelTier | null {
  */
 function parseSummaryReadiness(config: WorkflowConfig, content: string): string {
   const section = sectionAfter(content, 'Ship Readiness');
-  if (!section) return 'Unknown';
+  if (!section) return UNKNOWN_STATUS;
   const byLength = [...config.statusVocab.canonical].sort((a, b) => b.length - a.length);
   let earliest: { index: number; status: string } | null = null;
   const lowered = section.toLowerCase();
@@ -84,7 +89,7 @@ function parseSummaryReadiness(config: WorkflowConfig, content: string): string 
     if (index === -1) continue;
     if (earliest === null || index < earliest.index) earliest = { index, status };
   }
-  return earliest ? normalizeStatus(config.statusVocab, earliest.status) : 'Unknown';
+  return earliest ? normalizeStatus(config.statusVocab, earliest.status) : UNKNOWN_STATUS;
 }
 
 function emptyRecord(config: WorkflowConfig, number: number, slug: string): StateRecord {
@@ -92,15 +97,15 @@ function emptyRecord(config: WorkflowConfig, number: number, slug: string): Stat
     prd: formatId(config.idPattern, number),
     number,
     slug,
-    status: 'Unknown',
+    status: UNKNOWN_STATUS,
     cyclePhase: null,
     operatorAcceptance: null,
     autonomousClose: null,
     artifacts: { prd: '', readiness: '', tasks: '', summary: '' },
     artifactStates: { prd: 'missing', readiness: 'missing', tasks: 'missing', summary: 'missing' },
     readiness: { score: null, verdict: null, modelTierExecution: null, modelTierAudit: null },
-    task: { status: 'Unknown', checkedCount: 0, uncheckedCount: 0, operatorHandoffCount: 0 },
-    summary: { shipReadiness: 'Unknown' },
+    task: { status: UNKNOWN_STATUS, checkedCount: 0, uncheckedCount: 0, operatorHandoffCount: 0 },
+    summary: { shipReadiness: UNKNOWN_STATUS },
     lastUpdated: null,
   };
 }
