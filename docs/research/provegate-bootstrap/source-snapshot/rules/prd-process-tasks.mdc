@@ -1,0 +1,34 @@
+---
+description: Phases 4–7 — pointers when working on task lists and summaries
+globs: _tasks/**/*.md, _docs/**/*.md
+alwaysApply: false
+---
+
+# Phases 4–7 (task / summary files)
+
+**Do not duplicate the full protocol here.** Single source of truth:
+
+| Phase | Protocol |
+| ----- | -------- |
+| 4 — Implementation | `docs/ai-context/prompts/phase-4-implementation.md` |
+| 4 — Start message (artifacts + paste template) | `docs/ai-context/prompts/phase-4-implementation-bootstrap.md` |
+| 5 — Testing | `docs/ai-context/prompts/phase-5-testing.md` |
+| 6 — Final auditing | `docs/ai-context/prompts/phase-6-final-auditing.md` |
+| 7 — Learning | `docs/ai-context/prompts/phase-7-learning.md` |
+| 4–7 orchestration | `docs/ai-context/prompts/orchestration-runner.md` + `pnpm prd:autorun` |
+
+## Phase 4 — minimal reminders
+
+- **State lock:** Before editing code or task files, run `pnpm state:prd -- PRD-XXX`, then claim with `pnpm prd:start PRD-XXX --agent <name> [--phase "Phase 4"]` (worktree + lock + `_STATUS.md` row in one command; work inside the worktree) and run `pnpm verify:agent-locks && pnpm verify:branch-isolation`. Hand-written `_state/locks/*.json` is a fallback only when the wrapper cannot run. Do not read full `_state/prds.json` unless debugging the generator. Release with `pnpm prd:stop PRD-XXX` when done, blocked, or handed off.
+- **Loop:** READ (next unchecked sub-task) → EXECUTE → VERIFY (`pnpm check-types && pnpm lint`; parent group done → `pnpm build`) → UPDATE task file + Verification Ledger → COMMIT if allowed → repeat.
+- **Persistence:** Continue through all agent-finishable sub-tasks without waiting for per-step user confirmation. **Stop and ask** only for PRD/task gaps, blockers, or operator-owned verification (see phase-4 Error & Blocker Management).
+- **Typing:** No `any`. Use `unknown` only with narrowing — same as project standards.
+- **Scope:** Only what the PRD and task list require; update **Relevant Files** and **Progress Log** when paths or decisions change.
+- **State sync:** Run `pnpm state:sync` after task status changes. Phase 6–7 require `pnpm verify:workflow` and `pnpm verify:durable-artifacts`.
+- **Sub-task line edits — STRICT:** Only flip `[ ]` → `[x]` when the task is completed as written. **Never** modify the sub-task text, append inline notes ("Deferred — ...", "covered by ...", carry-forwards, implementation summaries) next to the checkbox. All annotations belong in dedicated sections at the bottom of the task file: implementation decisions → **Deferrals & Decisions** (bullet list), verification attempts → **Verification Ledger**, operator-owned work → **Operator Handoff**, runtime context → **Progress Log** (table), hard issues → **Blockers / Open Questions**. See `docs/ai-context/prompts/phase-4-implementation.md` → "Task File Updates" for the full contract.
+
+## Phases 5–7 — when implementation is code-complete
+
+- **Phase 5:** Run every PRD §11 verification command; update Verification Ledger with evidence (`phase-5-testing.md`).
+- **Phase 6:** Independent adversarial review + `pnpm verify:workflow` (`phase-6-final-auditing.md`).
+- **Phase 7:** Wiki ingest, durable artifacts, summary under `_docs/wip/`, memory/`_STATUS.md` sync, then move artifacts from `wip/` to `completed/` (`phase-7-learning.md`).

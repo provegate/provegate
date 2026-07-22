@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://emofy.local/schemas/prd-state.schema.json",
+  "title": "Emofy PRD Workflow State",
+  "type": "object",
+  "required": ["generatedAt", "schemaVersion", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/prdRecord"
+      }
+    }
+  },
+  "$defs": {
+    "artifactPath": {
+      "type": "string",
+      "pattern": "^(|(_prds|_readiness|_tasks|_docs)/(wip|completed)/.+\\.md)$"
+    },
+    "artifactState": {
+      "type": "string",
+      "enum": ["missing", "wip", "completed"]
+    },
+    "workflowStatus": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "In Review",
+        "Approved",
+        "In Progress",
+        "Code Complete",
+        "Operator Verification",
+        "Ship Verified",
+        "Superseded",
+        "Archived",
+        "Blocked",
+        "Unknown"
+      ]
+    },
+    "taskStatus": {
+      "type": "string",
+      "enum": [
+        "Not Started",
+        "In Progress",
+        "Code Complete",
+        "Operator Verification",
+        "Ship Verified",
+        "Archived",
+        "Blocked",
+        "Unknown"
+      ]
+    },
+    "prdRecord": {
+      "type": "object",
+      "required": [
+        "prd",
+        "number",
+        "slug",
+        "status",
+        "artifacts",
+        "artifactStates",
+        "readiness",
+        "task",
+        "summary",
+        "lastUpdated"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "prd": {
+          "type": "string",
+          "pattern": "^PRD-[0-9]{3}$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "status": {
+          "$ref": "#/$defs/workflowStatus"
+        },
+        "cyclePhase": {
+          "type": ["string", "null"]
+        },
+        "operatorAcceptance": {
+          "type": ["string", "null"],
+          "description": "Owner's explicit acceptance of operator-owned checks shipped without execution; waives unchecked-task and operator-handoff strictness in verify:prd-state"
+        },
+        "autonomousClose": {
+          "type": ["string", "null"],
+          "enum": ["eligible", "operator-gated", null],
+          "description": "PRD-248: declares whether the 7-phase orchestration may autonomously close + merge this PRD (eligible) or must stop at Operator Verification for owner-signed acceptance (operator-gated)"
+        },
+        "artifacts": {
+          "type": "object",
+          "required": ["prd", "readiness", "tasks", "summary"],
+          "additionalProperties": false,
+          "properties": {
+            "prd": {
+              "$ref": "#/$defs/artifactPath"
+            },
+            "readiness": {
+              "$ref": "#/$defs/artifactPath"
+            },
+            "tasks": {
+              "$ref": "#/$defs/artifactPath"
+            },
+            "summary": {
+              "$ref": "#/$defs/artifactPath"
+            }
+          }
+        },
+        "artifactStates": {
+          "type": "object",
+          "required": ["prd", "readiness", "tasks", "summary"],
+          "additionalProperties": false,
+          "properties": {
+            "prd": {
+              "$ref": "#/$defs/artifactState"
+            },
+            "readiness": {
+              "$ref": "#/$defs/artifactState"
+            },
+            "tasks": {
+              "$ref": "#/$defs/artifactState"
+            },
+            "summary": {
+              "$ref": "#/$defs/artifactState"
+            }
+          }
+        },
+        "readiness": {
+          "type": "object",
+          "required": [
+            "score",
+            "verdict",
+            "modelTierExecution",
+            "modelTierAudit"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "score": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 10
+            },
+            "verdict": {
+              "type": ["string", "null"],
+              "enum": ["PASS", "ITERATE", "REJECT", null]
+            },
+            "modelTierExecution": {
+              "type": ["string", "null"],
+              "enum": ["high", "medium", "fast", null]
+            },
+            "modelTierAudit": {
+              "type": ["string", "null"],
+              "enum": ["high", "medium", "fast", null]
+            }
+          }
+        },
+        "task": {
+          "type": "object",
+          "required": [
+            "status",
+            "checkedCount",
+            "uncheckedCount",
+            "operatorHandoffCount"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/taskStatus"
+            },
+            "checkedCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uncheckedCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "operatorHandoffCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": ["shipReadiness"],
+          "additionalProperties": false,
+          "properties": {
+            "shipReadiness": {
+              "$ref": "#/$defs/workflowStatus"
+            }
+          }
+        },
+        "lastUpdated": {
+          "type": ["string", "null"],
+          "format": "date"
+        }
+      }
+    }
+  }
+}

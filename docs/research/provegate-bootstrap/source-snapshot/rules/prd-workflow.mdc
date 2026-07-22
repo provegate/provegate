@@ -1,0 +1,84 @@
+---
+description: PRD-driven 7-phase gated development cycle and file management
+globs: _prds/**/*.md, _readiness/**/*.md, _tasks/**/*.md, _docs/**/*.md
+alwaysApply: false
+---
+
+# Development Cycle & File Management
+
+## The 7-Phase Cycle
+
+Every feature follows this mandatory flow. Full details: `docs/ai-context/WORKFLOW.md`
+
+```
+Phase 1: PRD Drafting        → docs/ai-context/prompts/phase-1-prd-generator.md
+Phase 2: Readiness Scoring   → docs/ai-context/prompts/phase-2-readiness-scorer.md
+Phase 3: Task Generation     → docs/ai-context/prompts/phase-3-task-generator.md
+Phase 4: Implementation      → docs/ai-context/prompts/phase-4-implementation.md
+Phase 4 start                → docs/ai-context/prompts/phase-4-implementation-bootstrap.md
+Phase 5: Testing             → docs/ai-context/prompts/phase-5-testing.md
+Phase 6: Final Auditing      → docs/ai-context/prompts/phase-6-final-auditing.md
+Phase 7: Learning            → docs/ai-context/prompts/phase-7-learning.md
+Orchestration (Phases 4–7)   → docs/ai-context/prompts/orchestration-runner.md + pnpm prd:autorun
+```
+
+Phases 1–3 are human-gated. Phases 4–7 + local merge run autonomously via `scripts/prd-autorun.mjs` (never pushes).
+
+## Directory Structure
+
+```
+_prds/wip/       → Active PRDs
+_prds/completed/ → Done PRDs
+
+_readiness/wip/       → Active readiness reports
+_readiness/completed/ → Done readiness reports
+
+_tasks/wip/       → Active tasks
+_tasks/completed/ → Done tasks
+
+_docs/wip/       → Active summaries
+_docs/completed/ → Done summaries
+
+_state/prds.json      → Generated PRD lifecycle SSOT (query with `pnpm state:prd -- PRD-XXX` / `pnpm state:index`; do not read full file normally)
+_state/locks/*.json   → Runtime agent locks (ignored by git)
+_state/schema/*.json  → State and lock contracts
+_state/acceptances.json → Operator acceptance store (PRD ≥ 248)
+```
+
+## File Naming (Consistent Numbering)
+
+All related files use the SAME 3-digit number and kebab-case name:
+
+```
+prd-XXX-{short-name}.md
+readiness-XXX-{short-name}.md
+tasks-XXX-{short-name}.md
+summary-XXX-{short-name}.md
+```
+
+Find highest XXX across `wip/` and `completed/`, then +1.
+
+## Gate Contract (PRD ≥ 248)
+
+New PRDs must include:
+
+- `Autonomous Close: eligible | operator-gated`
+- Per-FR §11 **Verification Commands** (one runnable command per FR)
+- `## Durable Artifacts` section
+
+Enforced by `pnpm verify:prd-ready`.
+
+## Status Values
+
+PRD: Draft → In Review → Approved → In Progress → Code Complete → Operator Verification → Ship Verified → Archived
+Task: Not Started → In Progress → Code Complete → Operator Verification → Ship Verified
+
+`[x]` means completed as written. Operator-owned verification remains unchecked and is tracked in `Operator Handoff`.
+
+## State & Lock Rules
+
+- Run `pnpm state:sync` after changing PRD/readiness/task/summary lifecycle data.
+- Run `pnpm verify:prd-state` before Phase 7 sign-off.
+- Run `pnpm verify:prd-ready -- _prds/wip/prd-XXX-{short-name}.md` before Phase 2 PASS.
+- Phase 4–6 work must be claimed via `pnpm prd:start PRD-XXX` (lock + worktree + status row) and pass `pnpm verify:agent-locks`; release via `pnpm prd:stop`. If a `verify:*` gate fails for reasons unrelated to your change, STOP and report — do not bypass or hand-edit its expected format.
+- `_STATUS.md` is a human board; `_state/prds.json` is the machine-readable lifecycle source. Agents should use compact `state:*` query commands instead of loading the full JSON into context.

@@ -1,0 +1,58 @@
+# ProveGate — Locked Decisions (as of 2026-07-22)
+
+> Owner: Ramazan Ayvaz (rayvaz). Every entry below is an owner decision unless marked PENDING.
+> The bootstrap agent must treat LOCKED items as constraints, not suggestions.
+
+## Identity
+
+| Item         | Decision                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| Project name | **provegate** (npm package, GitHub org — both verified free 2026-07-22)                               |
+| Wordmark     | **ProveGate** (CamelCase in all prose/marketing; package/binary lowercase)                            |
+| Tagline      | "ProveGate (prove + gate): prove it, then let it propagate." (README first line)                      |
+| Thesis name  | "Gated Autonomy" (whitepaper term; distinct from tool name)                                           |
+| License      | MIT                                                                                                   |
+| Telemetry    | None. No accounts, no cloud. Local JSONL metrics only                                                 |
+| Copy caution | Never use PROVEN/VIOLATED badge-jargon (dead shipgate project's vocabulary); the verb "prove" is fine |
+
+## Architecture
+
+| Item           | Decision                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| Repo shape     | **Monorepo**: `packages/provegate` (CLI+core+method assets) + `apps/web` (landing) + `apps/docs`                |
+| Package split  | Single `provegate` package initially; `@provegate/core` split only if programmatic-API demand appears           |
+| Method assets  | `prompts/` (7 phase prompts + tool adapters), `templates/`, `schemas/`, `examples/` ship INSIDE the npm package |
+| Dogfood        | The provegate repo runs the gated workflow on itself from day one (`_prds/`, `_state/`, gates in CI)            |
+| Core invariant | **The runner has no code path that pushes to a remote.** Push is always the human's decision                    |
+| CLI deps       | Zero runtime dependencies (target); dev-deps unrestricted                                                       |
+
+## Tech stack
+
+| Layer      | Choice                                                                          | Note                                                                     |
+| ---------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Language   | **TypeScript** (owner decision 2026-07-22, overrode buildless-.mjs alternative) |                                                                          |
+| Build      | **tsup**                                                                        | See "Known traps" in BOOTSTRAP_PROMPT — incremental×clean emit blindness |
+| Workspace  | pnpm + turborepo                                                                |                                                                          |
+| Test       | vitest                                                                          |                                                                          |
+| Web        | Next.js → Vercel                                                                | Minimal skeleton at bootstrap; content later                             |
+| Docs       | Fumadocs (Next-based)                                                           | Separate app; docs-drift gate target                                     |
+| Release    | Changesets + GitHub Actions `npm publish --provenance`                          | Provenance = on-brand evidence                                           |
+| Quality    | prettier + eslint + commitlint (conventional)                                   |                                                                          |
+| Node floor | ≥ 22                                                                            |                                                                          |
+
+## PENDING (confirm with owner before hard-wiring)
+
+| Item                    | Proposed                                                                                                                                                                                | Status                          |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| CLI binary              | Dual-bin: `provegate` + `gate` (both PATH/npm-bin free at sweep; `prove` is FORBIDDEN — /usr/bin/prove is Perl's TAP harness). `gate push` → refuses with "No. Push is yours." (exit 1) | proposed, not yet approved      |
+| Domain                  | **provegate.dev — REGISTERED (owner, 2026-07-22)**                                                                                                                                      | DONE                            |
+| GitHub org              | **`provegate`** lowercase (URL = identifier); org Display Name = "ProveGate" (wordmark); repo `provegate/provegate`                                                                     | decided; reservation owner task |
+| npm placeholder publish | —                                                                                                                                                                                       | owner task                      |
+
+## Method source of truth
+
+The workflow being productized is the **7-Phase Gated PRD Workflow** (Emofy Platform, ~390 PRDs).
+Extraction map: `de-emofy-inventory-2026-07-22.md`. Program plan: `oss-extraction-roadmap-2026-07-22.md`
+(Phase A partially done: hygiene PRD-418 landed, name decided; this bootstrap = "repo iskeleti" item).
+Thesis + evidence: `whitepaper-gated-autonomy-2026-07-22.md`. Market: `competitor-landscape-*.md`
+(incl. §2.5 shipgate/gatecheck addendum). Launch copy source: `positioning-and-faq-2026-07-22.md`.

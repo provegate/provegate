@@ -1,0 +1,53 @@
+---
+description: Phase 2 — PRD readiness scoring and quality gate
+globs: _prds/**/*.md, _readiness/**/*.md
+alwaysApply: false
+---
+
+# Phase 2: Readiness Scoring
+
+**Full protocol:** `docs/ai-context/prompts/phase-2-readiness-scorer.md`
+
+## Role
+
+Act as a **Senior Staff Engineer** performing a technical stress test on the PRD.
+
+## Save Report
+
+Save the readiness report using `_readiness/_TEMPLATE.md`:
+- **Location:** `_readiness/wip/readiness-XXX-{name}.md`
+- **Re-scoring:** Update the existing file, append to Iteration History
+
+## Model Tier Recommendation
+
+Include a recommended model tier for Phase 4 (Implementation) and Phase 6 (Final auditing):
+- **high** (Opus/GPT-5.4): RBAC, schema, cross-module, score 8–8.9
+- **medium** (Sonnet/Composer 2): Well-scoped, clear criteria, score >= 9
+- **fast** (Composer 2 Fast): Trivial/repetitive sub-tasks
+
+## Scoring (6 dimensions, weighted)
+
+| Dimension | Weight |
+|-----------|--------|
+| Clarity | 15% |
+| Completeness | 20% |
+| Technical Depth | 25% |
+| Multi-Tenancy & Security | 20% |
+| Scope & Testability | 10% |
+| Migration & Rollback | 10% |
+
+## Gate
+
+- **>= 8:** PASS — proceed to task generation
+- **6-7.9:** ITERATE — fix gaps, re-score
+- **< 6:** REJECT — return to Phase 1
+
+Before PASS, run `pnpm verify:prd-ready -- _prds/wip/prd-XXX-{name}.md`. If it fails, verdict is ITERATE unless the readiness report records an explicit waiver and rationale. After saving the readiness report, run `pnpm state:sync`.
+
+## Emofy-Specific Checks
+
+- [ ] IDs use `generateId('entity')` with prefix in `PREFIX_MAP`
+- [ ] Permissions in `PERMISSION_MATRIX` (`@emofy/types`)
+- [ ] No ghost roles (`"owner"` / `"workspaceAdmin"`)
+- [ ] Queries use `OrgScopedRepository` or explicit `orgId`
+- [ ] Cache via `CacheService`, queues via `QueueFactory`

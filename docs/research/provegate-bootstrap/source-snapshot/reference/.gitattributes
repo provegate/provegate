@@ -1,0 +1,13 @@
+# PRD-312 — shared / append-only manifests. Two parallel PRDs each appending a
+# line (a script, a gate registration, a doc bullet) should not collide at merge,
+# so resolve these with git's union merge-driver. Mirrors SHARED_APPEND_ONLY in
+# scripts/prd-state-utils.mjs. NOTE: _STATUS.md is intentionally NOT here — its
+# panel cells are modify-in-place (single value), where union would duplicate the
+# row; it self-heals via the next `state:sync` + `verify:status-panel` instead.
+package.json merge=union
+pnpm-lock.yaml merge=union
+commitlint.config.js merge=union
+docs/ai-context/WORKFLOW.md merge=union
+scripts/verify-workflow.mjs merge=union
+CLAUDE.md merge=union
+AGENTS.md merge=union

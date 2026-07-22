@@ -1,0 +1,34 @@
+---
+description: Phase 1 — PRD creation from feature requests
+globs: _prds/**/*.md
+alwaysApply: false
+---
+
+# Phase 1: PRD Creation
+
+**Full protocol:** `docs/ai-context/prompts/phase-1-prd-generator.md`
+
+## Quick Rules
+
+1. **Stop & Ask:** Never start writing a PRD without asking clarifying questions first.
+2. **No Code:** PRD phase produces zero implementation code.
+3. **No `any`:** Never use ambiguous types in technical specs.
+4. **Reference Memory:** Read `docs/ai-context/MEMORY.md` before writing. Verify ID prefixes and roles.
+
+## Discovery Questions (Mandatory)
+
+- Business Logic: problem, acceptance criteria
+- Multi-Tenancy & Auth: tenant-scoped or global? new permissions?
+- Data Model & IDs: new entities, prefix in `PREFIX_MAP`
+- Integration Points: DB, Redis, Convex, external APIs
+- Edge Cases: auth failures, data conflicts, concurrency
+
+## File Management
+
+- Location: `_prds/wip/prd-XXX-{short-name}.md`
+- Numbering: highest XXX in wip/ + completed/, then +1
+- Audience: implementing agent — every FR must include `Targets:` (file paths + symbols), plus PRD-level `Verification Commands` and `DO NOT (Anti-Patterns)` sections
+
+## Handover
+
+After saving, ask user: "Shall I proceed to **Phase 2: Readiness Scoring**?"

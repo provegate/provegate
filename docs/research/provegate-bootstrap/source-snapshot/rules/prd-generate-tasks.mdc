@@ -1,0 +1,39 @@
+---
+description: Phase 3 — Task list generation from scored PRD
+globs: _tasks/**/*.md
+alwaysApply: false
+---
+
+# Phase 3: Task Generation
+
+**Full protocol:** `docs/ai-context/prompts/phase-3-task-generator.md`
+
+## Pre-Condition
+
+PRD must have a Readiness Score of **8/10 or higher**. If not, return to Phase 2.
+
+## Two-Phase Process
+
+### Phase A: Parent Tasks
+1. Read PRD + `docs/ai-context/MEMORY.md` + `docs/ai-context/BEST_PRACTICES.md`
+2. Create ~5-7 parent tasks in order: DB → Backend → API → Events → Frontend → Permissions → QA
+3. Present to user
+4. **STOP** — wait for user to say "Go"
+
+### Phase B: Sub-Tasks
+1. Break each parent into atomic sub-tasks with explicit instructions
+2. Include specific file paths from monorepo structure
+3. Add Relevant Files section
+4. Save to `_tasks/wip/tasks-XXX-{name}.md`
+
+## Numbering
+
+Parent: `1.0`, `2.0` ... Sub-tasks: `1.1`, `1.2` ...
+
+## File Management
+
+- Same XXX number as the PRD
+- Location: `_tasks/wip/`
+- Audience: implementing agent — every sub-task carries its target file path from PRD §3 Targets; QA parent runs every command from PRD §11 Verification Commands
+- Outcome semantics: `[x]` means completed as written. Operator-owned, runtime, staging, or blocked checks stay unchecked and are tracked in `Operator Handoff`.
+- Include `Verification Ledger`, `Deferrals & Decisions`, `Progress Log`, `Blockers / Open Questions`, and `Operator Handoff` sections in every generated task file.
