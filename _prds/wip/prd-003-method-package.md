@@ -302,7 +302,7 @@ Run from repo root after `pnpm build`.
 | FR-1  | `pnpm --filter provegate test test/content-placeholders.test.ts`          | provegate | every used token declared; registry complete                    |
 | FR-2  | `pnpm --filter provegate test test/content-prompts.test.ts`               | provegate | 7 phase prompts: presence, hygiene, CLI refs, weights           |
 | FR-3  | `grep -c "never push" packages/provegate/prompts/orchestration-runner.md` | provegate | invariant block present (also covered in prompts suite)         |
-| FR-4  | `grep -cE "architecture                                                   | decisions | patterns                                                        | operations" packages/provegate/prompts/knowledge-ingest.md` | provegate | generic taxonomy present |
+| FR-4  | `grep -c architecture packages/provegate/prompts/knowledge-ingest.md`     | provegate | generic taxonomy present (full set asserted in prompts suite)   |
 | FR-5  | `grep -c "Phase 4" packages/provegate/prompts/adapters/codex-starter.md`  | provegate | renumber drift fixed (prompts suite asserts no "Phase 3" claim) |
 | FR-6  | `pnpm --filter provegate test test/content-templates.test.ts`             | provegate | engine round-trips for all 7 templates                          |
 | FR-7  | `grep -cE "^## " packages/provegate/METHOD.md`                            | provegate | spec sections present (content suite checks the set)            |
