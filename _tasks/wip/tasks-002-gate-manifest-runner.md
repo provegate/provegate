@@ -160,15 +160,15 @@ diffFiles)` — every declared path in merge-range diff
   - [x] 9.3 Live: `gate run --dry-run PRD-002` (plan, exit 0), `gate check PRD-002`
         (exit 0 — waiver retired), `gate check --wiring` (exit 0)
   - [x] 9.4 §12 DO NOT re-read + grep audit
-- [ ] 10.0 Phase 6 — Final Auditing
-  - [ ] 10.1 Codex adversarial review (primed: merge state machine, safety allowlist,
+- [x] 10.0 Phase 6 — Final Auditing
+  - [x] 10.1 Codex adversarial review (primed: merge state machine, safety allowlist,
         recursion guard, auto-revert paths) — artifact in `_docs/reviews/` with schema
         (now machine-validated by FR-4 code)
-  - [ ] 10.2 Fix or waive findings; critical must be 0; re-verify round
+  - [x] 10.2 Fix or waive findings; critical must be 0; re-verify round
 - [ ] 11.0 Phase 7 — Learning + dogfood close
-  - [ ] 11.1 Durable artifacts in diff (cli.mdx, README)
-  - [ ] 11.2 Summary `_docs/wip/summary-002-gate-manifest-runner.md`
-  - [ ] 11.3 PRD lifecycle walk (In Progress → Code Complete → Operator Verification)
+  - [x] 11.1 Durable artifacts in diff (cli.mdx, README)
+  - [x] 11.2 Summary `_docs/wip/summary-002-gate-manifest-runner.md`
+  - [x] 11.3 PRD lifecycle walk (In Progress → Code Complete → Operator Verification)
   - [ ] 11.4 Owner records acceptance entry in `_state/acceptances.json` (validated by
         FR-5 code — the guard gates its own PRD)
   - [ ] 11.5 **Dogfood finale**: `node packages/provegate/dist/cli.js run PRD-002` —
@@ -177,30 +177,30 @@ diffFiles)` — every declared path in merge-range diff
 
 ## Verification Ledger
 
-| Gate               | Command / Check                                                            | Scope     | Result  | Evidence                                                                                   | Notes                        |
-| ------------------ | -------------------------------------------------------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
-| FR-1               | `pnpm --filter provegate test test/manifest.test.ts`                       | provegate | passed  | 9/9 tests                                                                                  |                              |
-| FR-2               | `pnpm --filter provegate test test/safety.test.ts`                         | provegate | passed  | 7/7 tests                                                                                  |                              |
-| FR-3               | `pnpm --filter provegate test test/classes.test.ts`                        | provegate | passed  | 6/6 tests                                                                                  |                              |
-| FR-4               | `pnpm --filter provegate test test/review-gate.test.ts`                    | provegate | passed  | 7/7 tests                                                                                  |                              |
-| FR-5               | `pnpm --filter provegate test test/acceptance.test.ts`                     | provegate | passed  | 7/7 tests                                                                                  |                              |
-| FR-6               | `pnpm --filter provegate test test/durable.test.ts`                        | provegate | passed  | 5/5 tests                                                                                  |                              |
-| FR-7               | `pnpm --filter provegate test test/metrics.test.ts`                        | provegate | passed  | 2/2 tests                                                                                  |                              |
-| FR-8               | `pnpm --filter provegate test test/chain.test.ts` + live dry-run           | provegate | passed  | 8/8 tests + live dry-run exit 0 (plan renders own §11)                                     | incl. W1 recursion guard     |
-| FR-9               | `pnpm --filter provegate test test/merge.test.ts`                          | provegate | passed  | 8/8 fixture-repo tests (revert, preconditions, conflict abort)                             | incl. W2 preconditions       |
-| FR-10              | `pnpm --filter provegate test test/prd-ready.test.ts` + live check         | provegate | passed  | 8/8 tests + live `gate check PRD-002` exit 0 (waiver retired)                              | incl. W4 backtick exemption  |
-| FR-11              | `pnpm --filter provegate test test/wiring.test.ts` + live `check --wiring` | provegate | passed  | 5/5 tests + live `gate check --wiring` exit 0                                              |                              |
-| FR-12              | `pnpm build` + `--help` surface                                            | provegate | passed  | build clean; --help lists run/land/check real                                              |                              |
-| types              | `pnpm check-types`                                                         | monorepo  | passed  | turbo 3/3, zero errors                                                                     |                              |
-| lint               | `pnpm lint`                                                                | monorepo  | passed  | turbo 3/3, zero warnings                                                                   |                              |
-| test               | `pnpm --filter provegate test`                                             | provegate | passed  | 192/192 (23 files), PRD-001 suites intact                                                  | all PRD-001 suites unchanged |
-| build              | `pnpm build`                                                               | monorepo  | passed  | turbo 3/3 clean                                                                            |                              |
-| zero-dep           | dependencies-field check (PRD §11)                                         | provegate | passed  | no dependencies entries                                                                    |                              |
-| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                  | provegate | passed  | stderr "No. Push is yours.", exit 1                                                        |                              |
-| push-grep          | no push invocation in `core/run` + `core/gates` (PRD §11)                  | provegate | passed  | grep "'push'" in run+gates: clean; git-push literals = card text + safety regex (reviewed) | W3 archive msg also checked  |
-| name-grep          | no emofy/rayvaz in `src/`                                                  | provegate | passed  | clean                                                                                      |                              |
-| dogfood            | `gate check PRD-002` + `gate run --dry-run PRD-002` + close via `gate run` | repo      | passed  | check + dry-run exit 0; recursion guard refuses nested, dry-run exempt; close pending 11.5 | close is operator-triggered  |
-| independent-review | codex adversarial review artifact                                          | repo      | pending |                                                                                            | verdict pass, critical = 0   |
+| Gate               | Command / Check                                                            | Scope     | Result | Evidence                                                                                   | Notes                        |
+| ------------------ | -------------------------------------------------------------------------- | --------- | ------ | ------------------------------------------------------------------------------------------ | ---------------------------- |
+| FR-1               | `pnpm --filter provegate test test/manifest.test.ts`                       | provegate | passed | 9/9 tests                                                                                  |                              |
+| FR-2               | `pnpm --filter provegate test test/safety.test.ts`                         | provegate | passed | 7/7 tests                                                                                  |                              |
+| FR-3               | `pnpm --filter provegate test test/classes.test.ts`                        | provegate | passed | 6/6 tests                                                                                  |                              |
+| FR-4               | `pnpm --filter provegate test test/review-gate.test.ts`                    | provegate | passed | 7/7 tests                                                                                  |                              |
+| FR-5               | `pnpm --filter provegate test test/acceptance.test.ts`                     | provegate | passed | 7/7 tests                                                                                  |                              |
+| FR-6               | `pnpm --filter provegate test test/durable.test.ts`                        | provegate | passed | 5/5 tests                                                                                  |                              |
+| FR-7               | `pnpm --filter provegate test test/metrics.test.ts`                        | provegate | passed | 2/2 tests                                                                                  |                              |
+| FR-8               | `pnpm --filter provegate test test/chain.test.ts` + live dry-run           | provegate | passed | 8/8 tests + live dry-run exit 0 (plan renders own §11)                                     | incl. W1 recursion guard     |
+| FR-9               | `pnpm --filter provegate test test/merge.test.ts`                          | provegate | passed | 8/8 fixture-repo tests (revert, preconditions, conflict abort)                             | incl. W2 preconditions       |
+| FR-10              | `pnpm --filter provegate test test/prd-ready.test.ts` + live check         | provegate | passed | 8/8 tests + live `gate check PRD-002` exit 0 (waiver retired)                              | incl. W4 backtick exemption  |
+| FR-11              | `pnpm --filter provegate test test/wiring.test.ts` + live `check --wiring` | provegate | passed | 5/5 tests + live `gate check --wiring` exit 0                                              |                              |
+| FR-12              | `pnpm build` + `--help` surface                                            | provegate | passed | build clean; --help lists run/land/check real                                              |                              |
+| types              | `pnpm check-types`                                                         | monorepo  | passed | turbo 3/3, zero errors                                                                     |                              |
+| lint               | `pnpm lint`                                                                | monorepo  | passed | turbo 3/3, zero warnings                                                                   |                              |
+| test               | `pnpm --filter provegate test`                                             | provegate | passed | 192/192 (23 files), PRD-001 suites intact                                                  | all PRD-001 suites unchanged |
+| build              | `pnpm build`                                                               | monorepo  | passed | turbo 3/3 clean                                                                            |                              |
+| zero-dep           | dependencies-field check (PRD §11)                                         | provegate | passed | no dependencies entries                                                                    |                              |
+| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                  | provegate | passed | stderr "No. Push is yours.", exit 1                                                        |                              |
+| push-grep          | no push invocation in `core/run` + `core/gates` (PRD §11)                  | provegate | passed | grep "'push'" in run+gates: clean; git-push literals = card text + safety regex (reviewed) | W3 archive msg also checked  |
+| name-grep          | no emofy/rayvaz in `src/`                                                  | provegate | passed | clean                                                                                      |                              |
+| dogfood            | `gate check PRD-002` + `gate run --dry-run PRD-002` + close via `gate run` | repo      | passed | check + dry-run exit 0; recursion guard refuses nested, dry-run exempt; close pending 11.5 | close is operator-triggered  |
+| independent-review | codex adversarial review artifact                                          | repo      | passed | 3 rounds, 11 crit + 2 adv all fixed, verdict pass                                          | verdict pass, critical = 0   |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

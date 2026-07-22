@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T16:12:22.811Z",
+  "generatedAt": "2026-07-22T16:35:39.092Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -43,8 +43,8 @@
       "prd": "PRD-002",
       "number": 2,
       "slug": "gate-manifest-runner",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Code Complete",
+      "cyclePhase": "6 (Final Auditing — independent review pending)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -66,9 +66,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 53,
+        "status": "In Progress",
+        "checkedCount": 44,
+        "uncheckedCount": 9,
         "operatorHandoffCount": 3
       },
       "summary": {
