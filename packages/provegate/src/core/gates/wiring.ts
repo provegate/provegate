@@ -66,6 +66,71 @@ export interface WiringReport {
   issues: string[];
 }
 
+/** Manager subcommands that are NOT package.json script invocations. */
+const NON_SCRIPT_SUBCOMMANDS = new Set([
+  'exec',
+  'dlx',
+  'x',
+  'create',
+  'init',
+  'install',
+  'i',
+  'add',
+  'remove',
+  'rm',
+  'update',
+  'up',
+  'ci',
+  'publish',
+  'pack',
+  'link',
+  'unlink',
+  'audit',
+  'outdated',
+  'why',
+  'config',
+  'store',
+  'setup',
+  'help',
+  'login',
+  'logout',
+  'version',
+]);
+
+/**
+ * Which package.json script does this command invoke, if any?
+ * Parses the real grammar of pnpm/npm/yarn/bun instead of a happy-path
+ * prefix — `pnpm run ghost`, `npm test`, `yarn ghost`, and `bun test` all
+ * resolve to their script name; installs/execs/dlx do not; a `--filter`ed
+ * command targets another package's scripts and is out of this audit's
+ * scope (the root package.json cannot answer for it).
+ */
+export function packageScriptOf(cmd: string): string | null {
+  const tokens = cmd.trim().split(/\s+/);
+  const manager = tokens[0];
+  if (!manager || !['pnpm', 'npm', 'yarn', 'bun'].includes(manager)) return null;
+  let i = 1;
+  let sawRun = false;
+  while (i < tokens.length) {
+    const tok = tokens[i]!;
+    if (tok === '--filter' || tok === '-F' || tok === '--workspace' || tok === '-w') {
+      return null; // cross-package scope — root scripts cannot resolve it
+    }
+    if (tok.startsWith('-')) {
+      i += 1; // manager-level flag; conservative: values must use `=` form
+      continue;
+    }
+    if (!sawRun && (tok === 'run' || tok === 'run-script')) {
+      sawRun = true;
+      i += 1;
+      continue;
+    }
+    if (!sawRun && NON_SCRIPT_SUBCOMMANDS.has(tok)) return null;
+    return tok; // script name: bare shorthand, lifecycle alias, or after `run`
+  }
+  return null;
+}
+
 export function auditWiring(
   config: WorkflowConfig,
   manifest: GatesManifest,
@@ -89,10 +154,8 @@ export function auditWiring(
   // (For node repos this audit is wiring hygiene, not the execution gate —
   // manifest commands still EXECUTE at gate run and fail loud.)
   for (const cmd of manifestCommands(manifest)) {
-    const m = /^(?:pnpm|npm run|yarn|bun run)\s+([\w:.-]+)/.exec(cmd);
-    if (!m) continue;
-    const script = m[1]!;
-    if (['run', 'exec', 'dlx', '--filter'].includes(script)) continue;
+    const script = packageScriptOf(cmd);
+    if (script === null) continue;
     if (!hasPkg) {
       issues.push(
         `manifest command "${cmd}" needs a package.json script "${script}" but the repo has no package.json`,

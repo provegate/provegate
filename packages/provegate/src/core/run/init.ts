@@ -1,5 +1,5 @@
 import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { CONFIG_FILENAME } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
@@ -62,6 +62,14 @@ export function planInit(config: WorkflowConfig): InitAction[] {
   return actions;
 }
 
+/** True when `target` lies outside `base`. A bare `startsWith('..')` would
+ * false-positive on contained names like `..cache` — the escape marker is the
+ * exact `..` segment (or a cross-root/absolute relative on Windows). */
+function escapesBase(base: string, target: string): boolean {
+  const rel = relative(base, target);
+  return rel === '..' || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
+
 /** Root containment: config-controlled paths must stay inside `root` — no
  * absolute paths, no `..` escapes, and no symlinked parent that resolves
  * outside the repository. Throws instead of writing anywhere surprising. */
@@ -74,7 +82,7 @@ function containedPath(root: string, rel: string): string {
   // Lexical containment first (no fs involved): `..` segments must not climb
   // out of root. Compared lexically-to-lexically — mixing in realpath here
   // would false-positive on symlinked roots like macOS /var -> /private/var.
-  if (relative(rootAbs, full).startsWith('..')) {
+  if (escapesBase(rootAbs, full)) {
     throw new Error(`init refuses path escaping the workspace root: ${rel}`);
   }
   const rootReal = realpathSync(rootAbs);
@@ -84,7 +92,7 @@ function containedPath(root: string, rel: string): string {
   for (;;) {
     try {
       const real = realpathSync(ancestor);
-      if (real !== rootReal && relative(rootReal, real).startsWith('..')) {
+      if (real !== rootReal && escapesBase(rootReal, real)) {
         throw new Error(`init refuses symlinked path escaping the workspace root: ${rel}`);
       }
       break;

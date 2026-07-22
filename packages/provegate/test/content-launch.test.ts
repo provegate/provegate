@@ -44,9 +44,19 @@ function lintContent(text: string, cls: PageClass, sourceText = ''): string[] {
   // project's PROVEN/VIOLATED badge vocabulary is not.
   const m2 = /\b(PROVEN|VIOLATED)\b/.exec(t);
   if (m2) violations.push(`badge-jargon verdict label: "${m2[0]}"`);
-  for (const m of t.matchAll(PERCENT_CLAIM)) {
-    if (cls === 'evidence' && normalize(sourceText).includes(m[0])) continue;
-    violations.push(`unmeasured percentage claim: "${m[0]}"`);
+  if (cls === 'self-copy') {
+    for (const m of t.matchAll(PERCENT_CLAIM)) {
+      violations.push(`unmeasured percentage claim: "${m[0]}"`);
+    }
+  } else {
+    // Evidence pages: EVERY percentage figure — not just claim-phrases — must
+    // trace verbatim to the research source; "17% of fixes" is as much a
+    // fabrication risk as "17% faster".
+    const source = normalize(sourceText);
+    for (const m of t.matchAll(/\d+(?:\.\d+)?\s*%/g)) {
+      if (source.includes(m[0])) continue;
+      violations.push(`untraceable percentage figure: "${m[0]}"`);
+    }
   }
   return violations;
 }
@@ -95,6 +105,8 @@ describe('do-not-say lint over the launch surfaces (FR-8, W2)', () => {
     expect(lintContent('ProveGate is 900% faster', 'evidence', 'no such figure here')).toHaveLength(
       1,
     );
+    // ...including bare figures that aren't claim-phrases at all.
+    expect(lintContent('found in 17% of fixes', 'evidence', 'source without it')).toHaveLength(1);
   });
 
   it('deliberate non-violations pass (the lint is not overbroad)', () => {

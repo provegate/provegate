@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, validateConfig, validateResolvedConfig, deepMerge } from '../src/core/config/index.js';
 import { defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
-import { auditWiring } from '../src/core/gates/wiring.js';
+import { auditWiring, packageScriptOf } from '../src/core/gates/wiring.js';
 import { initWorkspace, planInit } from '../src/core/run/init.js';
 import { buildState } from '../src/core/state/build.js';
 
@@ -115,6 +115,56 @@ describe('initWorkspace (FR-2, W1)', () => {
     const report = auditWiring(cfg, defaultManifest(cfg), root);
     expect(report.ok).toBe(false);
     expect(report.issues.join(' ')).toContain('check-types');
+  });
+
+  it('a contained dotfile-style name like ..cache is not an escape', () => {
+    const root = tempRoot();
+    const dotcache = deepMerge(cfg, { dirs: { locksDir: '..cache/locks' } });
+    const report = initWorkspace(dotcache, root);
+    expect(report.created).toContain('..cache/locks');
+    expect(existsSync(join(root, '..cache', 'locks'))).toBe(true);
+  });
+});
+
+describe('packageScriptOf — the wiring grammar (no shape evasion)', () => {
+  const cases: [string, string | null][] = [
+    ['pnpm check-types', 'check-types'],
+    ['pnpm run ghost', 'ghost'],
+    ['pnpm run-script ghost', 'ghost'],
+    ['npm run ghost', 'ghost'],
+    ['npm test', 'test'],
+    ['yarn ghost', 'ghost'],
+    ['yarn run ghost', 'ghost'],
+    ['bun test', 'test'],
+    ['bun run ghost', 'ghost'],
+    ['pnpm install', null],
+    ['npm ci', null],
+    ['pnpm dlx create-thing', null],
+    ['pnpm exec vitest', null],
+    ['npx vitest', null],
+    ['node script.js', null],
+    ['pnpm --filter provegate test', null], // cross-package: root can't answer
+  ];
+  for (const [cmd, expected] of cases) {
+    it(`${JSON.stringify(cmd)} -> ${JSON.stringify(expected)}`, () => {
+      expect(packageScriptOf(cmd)).toBe(expected);
+    });
+  }
+
+  it('package-absent repos flag every script-invoking manager form', () => {
+    const root = tempRoot();
+    initWorkspace(cfg, root);
+    const manifest = {
+      ...defaultManifest(cfg),
+      phases: { '4': ['pnpm run ghost', 'npm test', 'yarn lint', 'bun run build'] },
+      postMerge: [],
+    };
+    const report = auditWiring(cfg, manifest, root);
+    expect(report.ok).toBe(false);
+    expect(report.issues).toHaveLength(4);
+    for (const issue of report.issues) {
+      expect(issue).toContain('no package.json');
+    }
   });
 });
 
