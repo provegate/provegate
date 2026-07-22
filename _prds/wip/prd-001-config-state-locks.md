@@ -1,12 +1,12 @@
 # PRD-001: Config Core + State/Lock Extraction
 
-> **Status**: Code Complete
+> **Status**: Operator Verification
 > **Created**: 2026-07-22
 > **Updated**: 2026-07-22
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `config-state-locks`
-> **Cycle Phase**: 6 (Final Auditing — independent review pending)
+> **Cycle Phase**: 7 (Learning — operator close pending)
 > **PRD Class**: infra
 > **Class Rationale**: Builds workflow tooling (the package's own core), no user-facing product surface; rollback is a git revert, deployment ordering is the only real risk.
 > **Autonomous Close**: operator-gated
@@ -363,8 +363,9 @@ Cross-cutting (all must be green before Code Complete):
 
 ## Changelog
 
-| Date       | Author | Changes                                                                                                          |
-| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
-| 2026-07-22 | rayvaz | Initial draft                                                                                                    |
-| 2026-07-22 | rayvaz | Phase 2 pre-score fixes: state-file locality (checkout-local), merge semantics, no-shell-git DO NOT              |
-| 2026-07-22 | rayvaz | Phases 4–5 complete (commit a0e2155): all §11 gates green, ledger evidence in tasks file; Status → Code Complete |
+| Date       | Author | Changes                                                                                                                                                                      |
+| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-22 | rayvaz | Initial draft                                                                                                                                                                |
+| 2026-07-22 | rayvaz | Phase 2 pre-score fixes: state-file locality (checkout-local), merge semantics, no-shell-git DO NOT                                                                          |
+| 2026-07-22 | rayvaz | Phases 4–5 complete (commit a0e2155): all §11 gates green, ledger evidence in tasks file; Status → Code Complete                                                             |
+| 2026-07-22 | rayvaz | Phase 6: codex review fail→fixes (a6071e1, d0d265d: stateRoles, sentinel, null-lock, atomic write, semantic validation, regex escaping)→pass; Status → Operator Verification |

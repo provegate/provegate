@@ -179,45 +179,45 @@
         root — PRD-001 present with current status
   - [x] 8.8 Re-read PRD §12 DO NOT — grep audit: `any` types, shell spawns, network imports
         (`node:http`, fetch), hardcoded Emofy values in `src/`
-- [ ] 9.0 Phase 6 — Final Auditing (operator-arranged)
-  - [ ] 9.1 Independent adversarial review by different model/session against PRD §4/§11/§12 +
+- [x] 9.0 Phase 6 — Final Auditing (operator-arranged)
+  - [x] 9.1 Independent adversarial review by different model/session against PRD §4/§11/§12 +
         readiness W1–W4; review artifact saved per source review-template with verdict/base-SHA/
         critical-count metadata
-  - [ ] 9.2 Resolve review findings (critical count must be 0) or record accepted deviations
+  - [x] 9.2 Resolve review findings (critical count must be 0) or record accepted deviations
         in Deferrals & Decisions
 - [ ] 10.0 Phase 7 — Learning + close
-  - [ ] 10.1 Durable-artifacts check (manual): merge diff touches `apps/docs/content/docs/cli.mdx` + `packages/provegate/README.md` (PRD Durable Artifacts list)
-  - [ ] 10.2 Write `_docs/wip/summary-001-config-state-locks.md` (source summary-template shape:
+  - [x] 10.1 Durable-artifacts check (manual): merge diff touches `apps/docs/content/docs/cli.mdx` + `packages/provegate/README.md` (PRD Durable Artifacts list)
+  - [x] 10.2 Write `_docs/wip/summary-001-config-state-locks.md` (source summary-template shape:
         outcome, evidence pointers, ship readiness)
-  - [ ] 10.3 Update PRD header status through lifecycle (`In Progress` → `Code Complete`);
+  - [x] 10.3 Update PRD header status through lifecycle (`In Progress` → `Code Complete`);
         changelog rows for implementation decisions
   - [ ] 10.4 Local `git merge --no-ff feat/prd-001-config-state-locks` into `main` after owner
         accept; delete lease file; **never push — owner's keystroke**
 
 ## Verification Ledger
 
-| Gate               | Command / Check                                                           | Scope     | Result  | Evidence                                       | Notes                            |
-| ------------------ | ------------------------------------------------------------------------- | --------- | ------- | ---------------------------------------------- | -------------------------------- |
-| FR-1               | `pnpm --filter provegate test test/config.test.ts`                        | provegate | passed  | 7/7 tests                                      |                                  |
-| FR-2               | `pnpm --filter provegate test test/config-load.test.ts`                   | provegate | passed  | 14/14 tests                                    |                                  |
-| FR-3               | `pnpm --filter provegate test test/markdown.test.ts`                      | provegate | passed  | 16/16 tests                                    |                                  |
-| FR-4               | `pnpm --filter provegate test test/status.test.ts`                        | provegate | passed  | 10/10 tests                                    |                                  |
-| FR-5               | `pnpm --filter provegate test test/state-build.test.ts` + live `status`   | provegate | passed  | 5/5 tests + live status exit 0                 | live run listed in row `dogfood` |
-| FR-6               | `pnpm --filter provegate test test/state-query.test.ts` + live `queue`    | provegate | passed  | 11/11 tests + live queue --json                |                                  |
-| FR-7               | `pnpm --filter provegate test test/locks-lease.test.ts`                   | provegate | passed  | 9/9 tests incl. real lease file                |                                  |
-| FR-8               | `pnpm --filter provegate test test/glob.test.ts`                          | provegate | passed  | 6/6 tests                                      |                                  |
-| FR-9               | `pnpm --filter provegate test test/conflicts.test.ts`                     | provegate | passed  | 14/14 tests incl. 4 self-test fixtures         |                                  |
-| FR-10              | `pnpm --filter provegate test test/schemas.test.ts`                       | provegate | passed  | 4/4 tests                                      |                                  |
-| FR-11              | `pnpm build` + dist import probe (PRD §11 FR-11 command)                  | provegate | passed  | export probe OK (6 fns), dts emitted           |                                  |
-| types              | `pnpm check-types`                                                        | monorepo  | passed  | turbo 3/3 tasks, zero errors                   |                                  |
-| lint               | `pnpm lint`                                                               | monorepo  | passed  | turbo 3/3 tasks, zero warnings                 |                                  |
-| test               | `pnpm --filter provegate test`                                            | provegate | passed  | 107/107 (12 files) incl. push-refusal          | incl. push-refusal regression    |
-| build              | `pnpm build`                                                              | monorepo  | passed  | turbo 3/3 tasks clean                          |                                  |
-| zero-dep           | `node -e "...dependencies check"` (PRD §11)                               | provegate | passed  | no dependencies field entries                  |                                  |
-| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                 | provegate | passed  | stderr "No. Push is yours.", exit 1            |                                  |
-| name-grep          | `grep -ri --include='*.ts' -l -e emofy -e rayvaz packages/provegate/src`  | provegate | passed  | no matches in src/                             | must match nothing               |
-| dogfood            | `node packages/provegate/dist/cli.js status` + `queue --json` (repo root) | repo      | passed  | PRD-001 Draft PASS/8.7 listed; lease IN-FLIGHT | PRD-001 visible                  |
-| independent-review | cross-model adversarial review artifact                                   | repo      | pending |                                                | verdict pass, critical = 0       |
+| Gate               | Command / Check                                                           | Scope     | Result | Evidence                                         | Notes                            |
+| ------------------ | ------------------------------------------------------------------------- | --------- | ------ | ------------------------------------------------ | -------------------------------- |
+| FR-1               | `pnpm --filter provegate test test/config.test.ts`                        | provegate | passed | 7/7 tests                                        |                                  |
+| FR-2               | `pnpm --filter provegate test test/config-load.test.ts`                   | provegate | passed | 14/14 tests                                      |                                  |
+| FR-3               | `pnpm --filter provegate test test/markdown.test.ts`                      | provegate | passed | 16/16 tests                                      |                                  |
+| FR-4               | `pnpm --filter provegate test test/status.test.ts`                        | provegate | passed | 10/10 tests                                      |                                  |
+| FR-5               | `pnpm --filter provegate test test/state-build.test.ts` + live `status`   | provegate | passed | 5/5 tests + live status exit 0                   | live run listed in row `dogfood` |
+| FR-6               | `pnpm --filter provegate test test/state-query.test.ts` + live `queue`    | provegate | passed | 11/11 tests + live queue --json                  |                                  |
+| FR-7               | `pnpm --filter provegate test test/locks-lease.test.ts`                   | provegate | passed | 9/9 tests incl. real lease file                  |                                  |
+| FR-8               | `pnpm --filter provegate test test/glob.test.ts`                          | provegate | passed | 6/6 tests                                        |                                  |
+| FR-9               | `pnpm --filter provegate test test/conflicts.test.ts`                     | provegate | passed | 14/14 tests incl. 4 self-test fixtures           |                                  |
+| FR-10              | `pnpm --filter provegate test test/schemas.test.ts`                       | provegate | passed | 4/4 tests                                        |                                  |
+| FR-11              | `pnpm build` + dist import probe (PRD §11 FR-11 command)                  | provegate | passed | export probe OK (6 fns), dts emitted             |                                  |
+| types              | `pnpm check-types`                                                        | monorepo  | passed | turbo 3/3 tasks, zero errors                     |                                  |
+| lint               | `pnpm lint`                                                               | monorepo  | passed | turbo 3/3 tasks, zero warnings                   |                                  |
+| test               | `pnpm --filter provegate test`                                            | provegate | passed | 107/107 (12 files) incl. push-refusal            | incl. push-refusal regression    |
+| build              | `pnpm build`                                                              | monorepo  | passed | turbo 3/3 tasks clean                            |                                  |
+| zero-dep           | `node -e "...dependencies check"` (PRD §11)                               | provegate | passed | no dependencies field entries                    |                                  |
+| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                 | provegate | passed | stderr "No. Push is yours.", exit 1              |                                  |
+| name-grep          | `grep -ri --include='*.ts' -l -e emofy -e rayvaz packages/provegate/src`  | provegate | passed | no matches in src/                               | must match nothing               |
+| dogfood            | `node packages/provegate/dist/cli.js status` + `queue --json` (repo root) | repo      | passed | PRD-001 Draft PASS/8.7 listed; lease IN-FLIGHT   | PRD-001 visible                  |
+| independent-review | cross-model adversarial review artifact                                   | repo      | passed | codex 3 rounds, 7/7 findings fixed, verdict pass | verdict pass, critical = 0       |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -239,6 +239,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | ---------- | ------- | ----------------------------------------------------------------------------------------------------------- |
 | 2026-07-22 | 2.0–6.0 | Implementation single-session on feat/prd-001-config-state-locks; commit a0e2155; 107 tests across 12 files |
 | 2026-07-22 | 8.0     | Full §11 sweep green; live dogfood: `gate status` lists PRD-001, `gate queue` shows own lease IN-FLIGHT     |
+| 2026-07-22 | 9.0     | Codex review: fail (4 P1 + 3 P2) → fixes a6071e1, d0d265d → re-review pass; artifact in _docs/reviews/      |
 
 ## Blockers / Open Questions
 
