@@ -131,3 +131,21 @@ describe('findLeaseConflicts', () => {
     expect(conflicts).toEqual([{ a: 'a.json', b: 'b.json', shared: ['y.md'] }]);
   });
 });
+
+describe('codex review regressions', () => {
+  it('valid-JSON non-object lock files become error entries, never data', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-locks-'));
+    roots.push(root);
+    mkdirSync(resolve(root, '_state/locks'), { recursive: true });
+    writeFileSync(resolve(root, '_state/locks/null.json'), 'null');
+    writeFileSync(resolve(root, '_state/locks/num.json'), '42');
+    writeFileSync(resolve(root, '_state/locks/arr.json'), '[]');
+
+    const locks = listLockFiles(DEFAULT_CONFIG, root);
+    expect(locks).toHaveLength(3);
+    for (const lock of locks) {
+      expect(lock.data, lock.name).toBeUndefined();
+      expect(lock.error, lock.name).toContain('not a JSON object');
+    }
+  });
+});

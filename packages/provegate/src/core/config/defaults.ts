@@ -13,6 +13,11 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
       summary: { dir: '_docs', prefix: 'summary' },
     },
     states: ['wip', 'completed', 'deferred'],
+    stateRoles: {
+      wip: 'wip',
+      completed: 'completed',
+      deferred: 'deferred',
+    },
     stateFile: '_state/prds.json',
     locksDir: '_state/locks',
   },

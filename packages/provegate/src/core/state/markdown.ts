@@ -13,7 +13,9 @@ export function stripMarkdown(value: string): string {
     .trim();
 }
 
-function escapeRegExp(value: string): string {
+/** Escape a literal for interpolation into a RegExp — REQUIRED for any
+ * user-configured value (prefixes, labels) entering a pattern. */
+export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

@@ -136,3 +136,42 @@ describe('findRepoRoot / loadConfig', () => {
     expect(() => resolveConfig(root)).toThrow(/not valid JSON/);
   });
 });
+
+describe('semantic validation (codex review regressions)', () => {
+  it('rejects role-set statuses missing from canonical', () => {
+    const root = tempRepo();
+    writeFileSync(
+      resolve(root, 'workflow.config.json'),
+      JSON.stringify({ statusVocab: { ...DEFAULT_CONFIG.statusVocab, ready: ['Approvd'] } }),
+    );
+    expect(() => resolveConfig(root)).toThrow(/statusVocab\.ready.*Approvd/s);
+  });
+
+  it('rejects alias targets missing from canonical', () => {
+    const root = tempRepo();
+    writeFileSync(
+      resolve(root, 'workflow.config.json'),
+      JSON.stringify({
+        statusVocab: { ...DEFAULT_CONFIG.statusVocab, aliases: { done: 'Shipped!' } },
+      }),
+    );
+    expect(() => resolveConfig(root)).toThrow(/statusVocab\.aliases\.done/);
+  });
+
+  it('rejects stateRoles pointing outside dirs.states', () => {
+    const root = tempRepo();
+    writeFileSync(
+      resolve(root, 'workflow.config.json'),
+      JSON.stringify({
+        dirs: { stateRoles: { wip: 'nope', completed: 'completed', deferred: 'deferred' } },
+      }),
+    );
+    expect(() => resolveConfig(root)).toThrow(/dirs\.stateRoles\.wip/);
+  });
+
+  it('rejects empty executionPhases', () => {
+    const root = tempRepo();
+    writeFileSync(resolve(root, 'workflow.config.json'), JSON.stringify({ executionPhases: [] }));
+    expect(() => resolveConfig(root)).toThrow(/executionPhases/);
+  });
+});

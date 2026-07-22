@@ -22,6 +22,13 @@ export interface DirsConfig {
   };
   /** Lifecycle subdirectories scanned under each artifact dir, e.g. `wip`. */
   states: string[];
+  /** Which configured state plays which lifecycle role. Every value must be a
+   * member of `states` — query semantics key off roles, never off position. */
+  stateRoles: {
+    wip: string;
+    completed: string;
+    deferred: string;
+  };
   /** Snapshot file the state build writes, relative to the repo root. */
   stateFile: string;
   /** Lock lease directory, relative to the MAIN checkout root. */

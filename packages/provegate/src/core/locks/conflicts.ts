@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
-import { declaredGlobs } from '../state/markdown.js';
+import { declaredGlobs, escapeRegExp } from '../state/markdown.js';
 import { globToRegExp } from './glob.js';
 
 /**
@@ -119,7 +119,9 @@ export function candidateFromPrd(
 ): SurfacedLock | null {
   const normalized = String(id ?? '').toUpperCase();
   const match = normalized.match(
-    new RegExp(`^${config.idPattern.prefix.toUpperCase()}-(\\d{${config.idPattern.width}})$`),
+    new RegExp(
+      `^${escapeRegExp(config.idPattern.prefix.toUpperCase())}-(\\d{${config.idPattern.width}})$`,
+    ),
   );
   if (!match) {
     throw new Error(
@@ -128,11 +130,12 @@ export function candidateFromPrd(
   }
   const num = match[1]!;
   const prdKind = config.dirs.artifacts.prd;
-  const fileRe = new RegExp(`^${prdKind.prefix}-${num}-.+\\.md$`);
+  const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${num}-.+\\.md$`);
   const mainRoot = mainRepoRoot(root);
   const found: string[] = [];
-  const wipState = config.dirs.states[0] ?? 'wip';
-  for (const state of ['drafts', wipState]) {
+  // Candidates are pre-execution: search every configured lifecycle state (a
+  // completed match still resolves, harmlessly) in configured order.
+  for (const state of config.dirs.states) {
     const dir = resolve(mainRoot, prdKind.dir, state);
     if (!existsSync(dir)) continue;
     for (const name of readdirSync(dir)) {
@@ -140,7 +143,9 @@ export function candidateFromPrd(
     }
   }
   if (found.length === 0) {
-    throw new Error(`no PRD file for ${normalized} in ${prdKind.dir}/{drafts,${wipState}}`);
+    throw new Error(
+      `no PRD file for ${normalized} in ${prdKind.dir}/{${config.dirs.states.join(',')}}`,
+    );
   }
   if (found.length > 1) {
     throw new Error(
@@ -149,7 +154,11 @@ export function candidateFromPrd(
   }
   const globs = declaredGlobs(readFileSync(found[0]!, 'utf8'));
   if (globs.length === 0) return null;
-  const executionPhase = config.executionPhases.at(-2) ?? config.executionPhases[0] ?? 'Phase 4';
+  // Stamp as an execution-phase entry — validated non-empty at config load.
+  const executionPhase = config.executionPhases[0];
+  if (executionPhase === undefined) {
+    throw new Error('executionPhases must not be empty');
+  }
   return { prd: normalized, phase: executionPhase, ownedPaths: globs };
 }
 

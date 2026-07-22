@@ -1,6 +1,14 @@
 import type { StatusVocabConfig } from '../config/index.js';
 import { stripMarkdown } from './markdown.js';
 
+/**
+ * System sentinel for a status that failed to normalize. NOT part of the
+ * configurable vocabulary — it marks parse failure, and queries deliberately
+ * keep unknown-status records visible (active) so a broken header surfaces
+ * instead of silently disappearing from every view.
+ */
+export const UNKNOWN_STATUS = 'Unknown';
+
 function lookupTable(vocab: StatusVocabConfig): Map<string, string> {
   const table = new Map<string, string>();
   for (const canonical of vocab.canonical) {
@@ -20,7 +28,7 @@ function lookupTable(vocab: StatusVocabConfig): Map<string, string> {
 export function normalizeStatus(
   vocab: StatusVocabConfig,
   value: string | null | undefined,
-  fallback = 'Unknown',
+  fallback: string = UNKNOWN_STATUS,
 ): string {
   if (!value) return fallback;
   const table = lookupTable(vocab);

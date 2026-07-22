@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import type { DirsConfig, IdPatternConfig, WorkflowConfig } from '../config/index.js';
+import { escapeRegExp } from './markdown.js';
 
 /** Repo-relative, posix-normalized path — the storage/matching form everywhere. */
 export function toRepoPath(root: string, pathname: string): string {
@@ -36,7 +37,9 @@ export function parseArtifactName(
   filePath: string,
 ): ParsedArtifactName | null {
   const name = filePath.split(sep).at(-1) ?? '';
-  const match = name.match(new RegExp(`^${prefix}-(\\d{${idPattern.width}})-(.+)\\.md$`));
+  const match = name.match(
+    new RegExp(`^${escapeRegExp(prefix)}-(\\d{${idPattern.width}})-(.+)\\.md$`),
+  );
   if (!match) return null;
   return {
     number: Number.parseInt(match[1]!, 10),

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
-import { validateConfig } from './validate.js';
+import { validateConfig, validateResolvedConfig } from './validate.js';
 
 export const CONFIG_FILENAME = 'workflow.config.json';
 
@@ -73,7 +73,12 @@ export function resolveConfig(root: string): WorkflowConfig {
   if (issues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is invalid`, issues);
   }
-  return deepMerge(DEFAULT_CONFIG, parsed as PartialWorkflowConfig);
+  const merged = deepMerge(DEFAULT_CONFIG, parsed as PartialWorkflowConfig);
+  const semanticIssues = validateResolvedConfig(merged);
+  if (semanticIssues.length > 0) {
+    throw new ConfigError(`${CONFIG_FILENAME} is semantically invalid`, semanticIssues);
+  }
+  return merged;
 }
 
 /** Discover the repo root from `cwd` and resolve its config. */

@@ -117,7 +117,11 @@ describe('candidateFromPrd', () => {
   it('builds an execution-phase candidate from the Conflict Surface', () => {
     const root = repoWithPrd('prd-004-widget.md', '## Conflict Surface\n\n- `packages/x/**`\n');
     const candidate = candidateFromPrd(cfg, 'prd-004', root);
-    expect(candidate).toEqual({ prd: 'PRD-004', phase: 'Phase 4', ownedPaths: ['packages/x/**'] });
+    expect(candidate).toEqual({
+      prd: 'PRD-004',
+      phase: cfg.executionPhases[0],
+      ownedPaths: ['packages/x/**'],
+    });
   });
 
   it('returns null when no surface is declared', () => {
@@ -146,5 +150,46 @@ describe('candidateFromPrd', () => {
     const candidate = candidateFromPrd(custom, 'task-0042', root);
     expect(candidate?.prd).toBe('TASK-0042');
     expect(candidate?.ownedPaths).toEqual(['lib/**']);
+  });
+});
+
+describe('codex review regressions', () => {
+  const roots2: string[] = [];
+  afterEach(() => {
+    while (roots2.length > 0) rmSync(roots2.pop()!, { recursive: true, force: true });
+  });
+
+  it('candidateFromPrd finds PRDs in custom-named lifecycle states', () => {
+    const custom = deepMerge(DEFAULT_CONFIG, {
+      dirs: {
+        states: ['proposals', 'landed'],
+        stateRoles: { wip: 'proposals', completed: 'landed', deferred: 'landed' },
+      },
+    });
+    const root = mkdtempSync(join(tmpdir(), 'provegate-cand2-'));
+    roots2.push(root);
+    mkdirSync(resolve(root, '_prds/proposals'), { recursive: true });
+    writeFileSync(
+      resolve(root, '_prds/proposals/prd-009-thing.md'),
+      '## Conflict Surface\n\n- `lib/**`\n',
+    );
+    const candidate = candidateFromPrd(custom, 'PRD-009', root);
+    expect(candidate?.ownedPaths).toEqual(['lib/**']);
+    expect(candidate?.phase).toBe(custom.executionPhases[0]);
+  });
+
+  it('escapes regex metacharacters in configured prefixes', () => {
+    const custom = deepMerge(DEFAULT_CONFIG, {
+      idPattern: { prefix: 'T.SK', width: 3 },
+      dirs: { artifacts: { prd: { dir: '_prds', prefix: 't.sk' } } },
+    });
+    const root = mkdtempSync(join(tmpdir(), 'provegate-cand3-'));
+    roots2.push(root);
+    mkdirSync(resolve(root, '_prds/wip'), { recursive: true });
+    // literal dot prefix resolves...
+    writeFileSync(resolve(root, '_prds/wip/t.sk-010-x.md'), '## Conflict Surface\n\n- `a/**`\n');
+    expect(candidateFromPrd(custom, 'T.SK-010', root)?.prd).toBe('T.SK-010');
+    // ...and a metachar-exploiting id does NOT ("TXSK" must not match "T.SK")
+    expect(() => candidateFromPrd(custom, 'TXSK-010', root)).toThrow(/malformed id/);
   });
 });

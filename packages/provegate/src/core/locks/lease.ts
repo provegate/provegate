@@ -92,11 +92,18 @@ export function listLockFiles(config: WorkflowConfig, root: string): LockFileEnt
     .map((name) => {
       const path = resolve(dir, name);
       try {
-        return {
-          path,
-          name,
-          data: JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>,
-        };
+        const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+        // Valid JSON that is not an object (null, number, string, array) is
+        // just as malformed as a syntax error — carry it as an error entry so
+        // consumers never dereference a non-object lock.
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          return {
+            path,
+            name,
+            error: `lock file is not a JSON object (got ${JSON.stringify(parsed)?.slice(0, 40) ?? 'undefined'})`,
+          };
+        }
+        return { path, name, data: parsed as Record<string, unknown> };
       } catch (error) {
         return { path, name, error: error instanceof Error ? error.message : String(error) };
       }

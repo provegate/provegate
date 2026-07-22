@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { formatId } from './artifacts.js';
 import { declaredGlobs } from './markdown.js';
+import { UNKNOWN_STATUS } from './status.js';
 import type { StateRecord } from './build.js';
 
 /**
@@ -13,7 +14,7 @@ import type { StateRecord } from './build.js';
 
 export function isImplemented(config: WorkflowConfig, record: StateRecord): boolean {
   if (config.statusVocab.implemented.includes(record.status)) return true;
-  if (record.artifactStates.prd === 'completed') return true;
+  if (record.artifactStates.prd === config.dirs.stateRoles.completed) return true;
   if (record.artifactStates.summary && record.artifactStates.summary !== 'missing') return true;
   return false;
 }
@@ -56,11 +57,15 @@ export function statusPanelMetrics(
 export function getActiveRecords(config: WorkflowConfig, records: StateRecord[]): StateRecord[] {
   return records.filter((record) => {
     if (isImplemented(config, record)) return false;
-    if (record.artifactStates.prd === 'deferred') return false;
-    if (record.status !== 'Unknown' && !config.statusVocab.active.includes(record.status)) {
+    if (record.artifactStates.prd === config.dirs.stateRoles.deferred) return false;
+    // UNKNOWN_STATUS is the parse-failure sentinel, not vocabulary: an
+    // unparseable status stays visible in the active view by design.
+    if (record.status !== UNKNOWN_STATUS && !config.statusVocab.active.includes(record.status)) {
       return false;
     }
-    return Object.values(record.artifactStates).some((state) => state === config.dirs.states[0]);
+    return Object.values(record.artifactStates).some(
+      (state) => state === config.dirs.stateRoles.wip,
+    );
   });
 }
 

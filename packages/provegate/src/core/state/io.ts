@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import type { WorkflowState } from './build.js';
@@ -35,10 +35,14 @@ export function readState(config: WorkflowConfig, root: string): WorkflowState |
   return JSON.parse(readFileSync(path, 'utf8')) as WorkflowState;
 }
 
-/** Write the snapshot (2-space JSON + trailing newline), creating its directory. */
+/** Write the snapshot (2-space JSON + trailing newline), creating its
+ * directory. Write-to-temp + rename so concurrent writers produce one intact
+ * snapshot or the other — never an interleaved torso. */
 export function writeState(config: WorkflowConfig, root: string, state: WorkflowState): string {
   const path = statePath(config, root);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`);
+  renameSync(tmp, path);
   return path;
 }

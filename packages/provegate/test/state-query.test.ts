@@ -215,3 +215,44 @@ describe('statusPanelMetrics', () => {
     expect(statusPanelMetrics(cfg, [])).toEqual({ Implemented: '0', 'Latest implemented': '—' });
   });
 });
+
+describe('codex review regressions (custom lifecycle names)', () => {
+  const custom = deepMerge(DEFAULT_CONFIG, {
+    dirs: {
+      states: ['active', 'done', 'parked'],
+      stateRoles: { wip: 'active', completed: 'done', deferred: 'parked' },
+    },
+  });
+
+  it('a "done" prd artifact counts as implemented (role-driven, not literal)', () => {
+    const r = record({
+      number: 1,
+      artifactStates: { prd: 'done', readiness: 'missing', tasks: 'missing', summary: 'missing' },
+    });
+    expect(isImplemented(custom, r)).toBe(true);
+  });
+
+  it('a "parked" record is excluded from active; "active" artifacts satisfy the wip check', () => {
+    const parked = record({
+      number: 1,
+      status: 'Draft',
+      artifactStates: { prd: 'parked', readiness: 'missing', tasks: 'missing', summary: 'missing' },
+    });
+    const live = record({
+      number: 2,
+      status: 'Draft',
+      artifactStates: { prd: 'active', readiness: 'missing', tasks: 'missing', summary: 'missing' },
+    });
+    expect(getActiveRecords(custom, [parked, live]).map((r) => r.number)).toEqual([2]);
+  });
+
+  it('UNKNOWN_STATUS sentinel keeps unparseable records visible by design', () => {
+    const r = record({
+      number: 1,
+      status: 'Unknown',
+      artifactStates: { prd: 'active', readiness: 'missing', tasks: 'missing', summary: 'missing' },
+    });
+    const emptyActive = deepMerge(custom, { statusVocab: { active: [] } });
+    expect(getActiveRecords(emptyActive, [r]).map((x) => x.number)).toEqual([1]);
+  });
+});

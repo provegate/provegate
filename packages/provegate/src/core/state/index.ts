@@ -22,7 +22,12 @@ export {
   type ArtifactKey,
   type ParsedArtifactName,
 } from './artifacts.js';
-export { normalizeStatus, normalizeAutonomousClose, type AutonomousClose } from './status.js';
+export {
+  normalizeStatus,
+  normalizeAutonomousClose,
+  UNKNOWN_STATUS,
+  type AutonomousClose,
+} from './status.js';
 export { buildState, type ModelTier, type StateRecord, type WorkflowState } from './build.js';
 export { mainRepoRoot, readState, statePath, writeState } from './io.js';
 export {

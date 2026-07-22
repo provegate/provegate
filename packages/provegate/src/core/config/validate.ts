@@ -30,6 +30,7 @@ const CONFIG_SPEC = obj({
       summary: artifactKind,
     }),
     states: strArr,
+    stateRoles: obj({ wip: str, completed: str, deferred: str }),
     stateFile: str,
     locksDir: str,
   }),
@@ -113,5 +114,63 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
 export function validateConfig(value: unknown): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
   walk(CONFIG_SPEC, value, '', issues);
+  return issues;
+}
+
+/**
+ * Semantic cross-checks on the MERGED (complete) config — shape checks alone
+ * let a typo like `ready: ["Approvd"]` silently break queue semantics.
+ */
+export function validateResolvedConfig(config: {
+  dirs: { states: string[]; stateRoles: Record<string, string> };
+  statusVocab: {
+    canonical: string[];
+    aliases: Record<string, string>;
+    active: string[];
+    implemented: string[];
+    ready: string[];
+    blocked: string[];
+    reviewing: string[];
+  };
+  executionPhases: string[];
+}): ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+
+  if (config.dirs.states.length === 0) {
+    issues.push({ path: 'dirs.states', message: 'must not be empty' });
+  }
+  for (const [role, state] of Object.entries(config.dirs.stateRoles)) {
+    if (!config.dirs.states.includes(state)) {
+      issues.push({
+        path: `dirs.stateRoles.${role}`,
+        message: `"${state}" is not one of dirs.states`,
+      });
+    }
+  }
+
+  const canonical = new Set(config.statusVocab.canonical);
+  for (const [alias, target] of Object.entries(config.statusVocab.aliases)) {
+    if (!canonical.has(target)) {
+      issues.push({
+        path: `statusVocab.aliases.${alias}`,
+        message: `maps to "${target}" which is not in statusVocab.canonical`,
+      });
+    }
+  }
+  for (const set of ['active', 'implemented', 'ready', 'blocked', 'reviewing'] as const) {
+    for (const status of config.statusVocab[set]) {
+      if (!canonical.has(status)) {
+        issues.push({
+          path: `statusVocab.${set}`,
+          message: `"${status}" is not in statusVocab.canonical`,
+        });
+      }
+    }
+  }
+
+  if (config.executionPhases.length === 0) {
+    issues.push({ path: 'executionPhases', message: 'must not be empty' });
+  }
+
   return issues;
 }

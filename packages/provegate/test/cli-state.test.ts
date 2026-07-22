@@ -107,3 +107,14 @@ describe('unchanged surfaces', () => {
     expect(result.stderr).toContain('roadmap Phase C');
   });
 });
+
+describe('codex review regressions', () => {
+  it('a lock file containing JSON null does not crash queue', async () => {
+    mkdirSync(resolve(root, '_state/locks'), { recursive: true });
+    writeFileSync(resolve(root, '_state/locks/broken.json'), 'null');
+    const result = await cli('queue', '--json');
+    expect(result.code).toBe(0);
+    const queue = JSON.parse(result.stdout);
+    expect(queue.inFlight).toEqual([]);
+  });
+});
