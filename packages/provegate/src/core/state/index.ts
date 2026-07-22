@@ -1,3 +1,43 @@
-// core/state — workflow state SSOT + sync + queries (queue/active/next).
-// Stub: extracted in roadmap Phase B.
-export {};
+// core/state — workflow state SSOT: build from artifacts, persist, query.
+export {
+  stripMarkdown,
+  getMetaValue,
+  getTableValue,
+  sectionAfter,
+  countTaskChecks,
+  countOperatorHandoff,
+  findMarkdownTable,
+  writeTableValue,
+  declaredGlobs,
+  type MarkdownTableBounds,
+} from './markdown.js';
+export {
+  toRepoPath,
+  listMarkdownFiles,
+  parseArtifactName,
+  formatId,
+  artifactState,
+  collectArtifactFiles,
+  type ArtifactFile,
+  type ArtifactKey,
+  type ParsedArtifactName,
+} from './artifacts.js';
+export { normalizeStatus, normalizeAutonomousClose, type AutonomousClose } from './status.js';
+export { buildState, type ModelTier, type StateRecord, type WorkflowState } from './build.js';
+export { mainRepoRoot, readState, statePath, writeState } from './io.js';
+export {
+  isImplemented,
+  latestImplemented,
+  latestByStatus,
+  statusPanelMetrics,
+  getActiveRecords,
+  getReadyRecords,
+  isResumable,
+  formatCompactRecord,
+  readyOverlaps,
+  buildQueue,
+  type CompactRecord,
+  type Queue,
+  type QueueLockInfo,
+  type QueueOverlapWarning,
+} from './query.js';
