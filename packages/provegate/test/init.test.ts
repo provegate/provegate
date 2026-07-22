@@ -1,5 +1,13 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -78,6 +86,26 @@ describe('initWorkspace (FR-2, W1)', () => {
     expect(buildState(cfg, root).records).toEqual([]);
     const manifest = loadManifest(cfg, root);
     expect(auditWiring(cfg, manifest, root)).toEqual({ ok: true, issues: [] });
+  });
+
+  it('refuses config-controlled paths that escape the root (absolute, dotdot, symlink)', () => {
+    const outside = tempRoot();
+    const abs = deepMerge(cfg, { dirs: { locksDir: join(outside, 'locks') } });
+    expect(() => initWorkspace(abs, tempRoot())).toThrow(/absolute/);
+    const dotdot = deepMerge(cfg, { dirs: { locksDir: '../escaped-locks' } });
+    expect(() => initWorkspace(dotdot, tempRoot())).toThrow(/escap/);
+    const symRoot = tempRoot();
+    symlinkSync(outside, join(symRoot, '_state'));
+    expect(() => initWorkspace(cfg, symRoot)).toThrow(/symlink/);
+    expect(existsSync(join(outside, 'locks'))).toBe(false);
+  });
+
+  it('a refused plan writes nothing at all (no partial scaffold)', () => {
+    const root = tempRoot();
+    const dotdot = deepMerge(cfg, { dirs: { locksDir: '../escaped-locks' } });
+    expect(() => initWorkspace(dotdot, root)).toThrow(/escap/);
+    expect(existsSync(join(root, '_prds'))).toBe(false);
+    expect(existsSync(join(root, 'workflow.config.json'))).toBe(false);
   });
 
   it('a node repo still gets the script-existence audit (no evasion by absence)', () => {

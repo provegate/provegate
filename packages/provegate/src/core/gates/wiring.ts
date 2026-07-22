@@ -82,17 +82,22 @@ export function auditWiring(
   const scriptNames = new Set(Object.keys(scripts));
 
   // Direction 1: manifest commands naming pnpm/npm scripts must exist.
-  // Skipped entirely when there is no package.json (a fresh non-node scaffold
-  // has nothing to audit against). This is not an evasion vector for node
-  // repos: deleting package.json doesn't dodge anything real — the manifest
-  // commands still EXECUTE at gate run and fail loud; this audit is wiring
-  // hygiene, not the execution gate.
-  for (const cmd of hasPkg ? manifestCommands(manifest) : []) {
+  // With no package.json, a fresh non-node scaffold has nothing to audit
+  // against — but a manifest that still references package-manager scripts is
+  // mis-wired by shape, not exempt: those commands cannot resolve anywhere.
+  // Repo shape must not buy silence, so that case is flagged, not skipped.
+  // (For node repos this audit is wiring hygiene, not the execution gate —
+  // manifest commands still EXECUTE at gate run and fail loud.)
+  for (const cmd of manifestCommands(manifest)) {
     const m = /^(?:pnpm|npm run|yarn|bun run)\s+([\w:.-]+)/.exec(cmd);
     if (!m) continue;
     const script = m[1]!;
     if (['run', 'exec', 'dlx', '--filter'].includes(script)) continue;
-    if (!scriptNames.has(script)) {
+    if (!hasPkg) {
+      issues.push(
+        `manifest command "${cmd}" needs a package.json script "${script}" but the repo has no package.json`,
+      );
+    } else if (!scriptNames.has(script)) {
       issues.push(
         `manifest command "${cmd}" names package.json script "${script}" which does not exist`,
       );

@@ -81,18 +81,16 @@ correctability, reversibility, authority handoff — maps directly onto explicit
 ## 2. Prior Art and the Gap
 
 We ran a five-angle research sweep (July 2026) with 3-vote adversarial verification per claim;
-23 of 25 top claims survived, 2 were refuted. Summary of the landscape (mainstream-tool
-characterizations below draw on multi-source secondary literature that did not individually survive
-strict verification; they are directional, not adjudicated):
+23 of 25 top claims survived, 2 were refuted. Summary of the landscape. One editorial rule,
+applied to ourselves: where per-tool characterizations did not individually survive strict
+verification against primary sources, we state category scope only and make no claims about any
+named tool's internals — this paper only publishes claims it can gate.
 
 - **Spec-driven development** (GitHub Spec Kit, Amazon Kiro, BMAD-METHOD, OpenSpec) gates the
-  _specification_: constitution → specify → plan → tasks → implement, with a human reviewing
-  documents at each boundary. None require executed-test evidence to ship; parallel execution is at
-  most a static `[P]` task marker; review is same-session or persona role-play. Kiro's SMT-based
-  "spec check" is the category's only machine-verification gate — and it verifies the spec's
-  internal consistency, not the shipped code. Practitioner critique of the category concentrates on
-  fixed overhead ("a single-line bug fix should not trigger a full spec pipeline") and brownfield
-  weakness.
+  _specification_: humans review documents at phase boundaries before implementation begins. The
+  category's gate is on what you intend to build; an executed-evidence gate on what actually
+  shipped is a different problem, and the one this paper addresses. Per-tool mechanics are
+  deliberately not characterized here (see the editorial rule above).
 - **Multi-agent orchestrators** (a category less than six months old: worktree/session managers,
   agent teams) solve _isolation_: each agent gets a git worktree so edits never collide. Verified
   directly against primary docs: Claude Code's only lock protects a worktree from concurrent

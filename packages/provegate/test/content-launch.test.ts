@@ -21,38 +21,32 @@ const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
  *   percentage speedup/defect claims, and the dead project's badge-jargon
  *   verdict labels.
  * - evidence (case study, whitepaper): these pages quote measured figures,
- *   including external studies with percentages, so only "first ever" and
- *   badge-jargon are banned; number discipline is enforced by the
- *   figure-consistency checks below instead.
+ *   including external studies with percentages — so a percentage claim is
+ *   allowed ONLY if the exact figure appears in the research source document
+ *   (figure-to-source fidelity, mechanical). "first ever" and badge-jargon
+ *   stay banned outright.
  */
 type PageClass = 'self-copy' | 'evidence';
 
-const RULES: { name: string; pattern: RegExp; classes: PageClass[] }[] = [
-  {
-    name: 'first-ever claim',
-    pattern: /\bfirst[- ]ever\b/i,
-    classes: ['self-copy', 'evidence'],
-  },
-  {
-    name: 'badge-jargon verdict label',
-    // Upper-case only: the verb "prove" and the tagline are fine; the dead
-    // project's PROVEN/VIOLATED badge vocabulary is not.
-    pattern: /\b(PROVEN|VIOLATED)\b/,
-    classes: ['self-copy', 'evidence'],
-  },
-  {
-    name: 'unmeasured percentage claim',
-    pattern: /\d+(?:\.\d+)?\s*%\s*(?:faster|slower|fewer|less|more|speedup|productivity)|\d+(?:\.\d+)?\s*%\s*(?:fewer|less)?\s*(?:bugs?|defects?)/i,
-    classes: ['self-copy'],
-  },
-];
+// Typographic hyphens (U+2010–U+2015, U+2212) must not smuggle "first‑ever"
+// past an ASCII-only pattern.
+const normalize = (text: string) => text.replace(/[‐-―−]/g, '-');
 
-function lintContent(text: string, cls: PageClass): string[] {
+const PERCENT_CLAIM =
+  /\d+(?:\.\d+)?\s*%\s*(?:faster|slower|fewer|less|more|speedup|slowdown|productivity)|\d+(?:\.\d+)?\s*%\s*(?:fewer|less)?\s*(?:bugs?|defects?)/gi;
+
+function lintContent(text: string, cls: PageClass, sourceText = ''): string[] {
   const violations: string[] = [];
-  for (const rule of RULES) {
-    if (!rule.classes.includes(cls)) continue;
-    const m = rule.pattern.exec(text);
-    if (m) violations.push(`${rule.name}: "${m[0]}"`);
+  const t = normalize(text);
+  const m1 = /\bfirst[- ]ever\b/i.exec(t);
+  if (m1) violations.push(`first-ever claim: "${m1[0]}"`);
+  // Upper-case only: the verb "prove" and the tagline are fine; the dead
+  // project's PROVEN/VIOLATED badge vocabulary is not.
+  const m2 = /\b(PROVEN|VIOLATED)\b/.exec(t);
+  if (m2) violations.push(`badge-jargon verdict label: "${m2[0]}"`);
+  for (const m of t.matchAll(PERCENT_CLAIM)) {
+    if (cls === 'evidence' && normalize(sourceText).includes(m[0])) continue;
+    violations.push(`unmeasured percentage claim: "${m[0]}"`);
   }
   return violations;
 }
@@ -62,6 +56,8 @@ const SELF_COPY_PAGES = [
   'packages/provegate/README.md',
   'packages/provegate/QUICKSTART.md',
   'apps/web/app/page.tsx',
+  'apps/docs/content/docs/index.mdx',
+  'apps/docs/content/docs/quickstart.mdx',
   '_docs/launch/announcement-draft.md',
 ];
 
@@ -69,6 +65,10 @@ const EVIDENCE_PAGES = [
   'apps/docs/content/docs/case-study.mdx',
   'apps/docs/content/docs/whitepaper.mdx',
 ];
+
+// The figure-fidelity source: every percentage claim on an evidence page must
+// appear verbatim here.
+const RESEARCH_SOURCE = 'docs/research/provegate-bootstrap/whitepaper-gated-autonomy-2026-07-22.md';
 
 describe('do-not-say lint over the launch surfaces (FR-8, W2)', () => {
   it.each(SELF_COPY_PAGES)('%s is clean under the strict self-copy rules', (page) => {
@@ -78,24 +78,33 @@ describe('do-not-say lint over the launch surfaces (FR-8, W2)', () => {
 
   it.each(EVIDENCE_PAGES)('%s is clean under the evidence-page rules', (page) => {
     expect(existsSync(join(repoRoot, page))).toBe(true);
-    expect(lintContent(read(page), 'evidence')).toEqual([]);
+    expect(lintContent(read(page), 'evidence', read(RESEARCH_SOURCE))).toEqual([]);
   });
 
   it('deliberate violations are caught (the lint is not vacuous)', () => {
     expect(lintContent('the first ever gated workflow', 'self-copy')).toHaveLength(1);
     expect(lintContent('the first-ever gated workflow', 'evidence')).toHaveLength(1);
+    // Typographic hyphen (U+2011) must not smuggle the claim past the lint.
+    expect(lintContent('the first‑ever gated workflow', 'evidence')).toHaveLength(1);
     expect(lintContent('ships 50% faster than manual review', 'self-copy')).toHaveLength(1);
     expect(lintContent('40% fewer bugs, guaranteed', 'self-copy')).toHaveLength(1);
     expect(lintContent('verdict: PROVEN', 'self-copy')).toHaveLength(1);
     expect(lintContent('gate VIOLATED', 'evidence')).toHaveLength(1);
+    // Evidence pages get no blanket percentage exemption: a figure absent
+    // from the research source is a violation there too.
+    expect(lintContent('ProveGate is 900% faster', 'evidence', 'no such figure here')).toHaveLength(
+      1,
+    );
   });
 
   it('deliberate non-violations pass (the lint is not overbroad)', () => {
     // The verb is fine; only the badge vocabulary is banned.
     expect(lintContent('prove it, then let it propagate', 'self-copy')).toEqual([]);
     expect(lintContent('a proven approach to gating', 'self-copy')).toEqual([]);
-    // Quoted external percentages are legitimate on evidence pages.
-    expect(lintContent('the study measured a 19% slowdown', 'evidence')).toEqual([]);
+    // Source-traceable external percentages are legitimate on evidence pages.
+    expect(lintContent('made them 19% slower', 'evidence', 'it made them 19% slower [5]')).toEqual(
+      [],
+    );
     // r-values are figures, not speedup claims.
     expect(lintContent('r = −0.03 with post-ship defects', 'self-copy')).toEqual([]);
   });

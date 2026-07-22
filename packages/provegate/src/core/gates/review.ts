@@ -64,8 +64,13 @@ export function validateReviewArtifact(
     // N/M >= 3/5, in integer math. `1/1` passes as the degenerate full-quorum
     // case; `2/5` is mechanically impossible to pass.
     // Annotated heads are legal ("3/5 pass (one abstention)") — the arithmetic
-    // reads the head, the annotation is prose. Same discipline as status parsing.
-    const m = /^(\d+)\/(\d+) pass\b/.exec(quorum.trim());
+    // reads the head, the annotation is prose. After `pass`, only end-of-value
+    // or a ` (`-opened annotation is accepted (annotations may run past the
+    // metadata line, so the closing paren is not required); a bare `\b` would
+    // let contradictory tails like "3/5 pass/2/5 fail" validate. Counts are
+    // capped at 3 digits — real panels are small, and unbounded digit strings
+    // would overflow safe-integer arithmetic in the product comparison.
+    const m = /^(\d{1,3})\/(\d{1,3}) pass(?: \(.*)?$/.exec(quorum.trim());
     if (!m) {
       issues.push(`Quorum "${quorum}" is malformed — expected \`N/M pass\``);
     } else {

@@ -45,11 +45,13 @@ tooling — we claim direction, not magnitude.*
 
 ## Cross-model review data
 
-In the same period, a reviewer from a different model family found correctness issues
-in 3 of 19 fixes (16%) that same-family reviewers had approved, plus 3 defects they
-never surfaced. This is why the method mandates that the Phase 6 reviewer is never
-the implementing model family, and why the review artifact — verdict, critical count,
-base SHA, quorum — is machine-validated rather than prose-trusted.
+The cross-model mandate rests on **external** evidence: in the Refute-or-Promote
+security campaign (a separate published study, not our platform data), a
+Codex-family critic found correctness issues in 3 of 19 fixes (16%) that
+Claude-family reviewers had approved, plus 3 defects they never surfaced. This is
+why the method mandates that the Phase 6 reviewer is never the implementing model
+family, and why the review artifact — verdict, critical count, base SHA, quorum —
+is machine-validated rather than prose-trusted.
 
 The method's own extraction repeated the pattern: during the port of this very method
 package, the cross-model reviewer caught the port **weakening the calibrated review

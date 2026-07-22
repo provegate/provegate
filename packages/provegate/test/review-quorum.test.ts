@@ -45,6 +45,25 @@ describe('quorum arithmetic (W3 boundaries)', () => {
       expect(issues.join(' '), q).toMatch(/malformed|invalid/);
     }
   });
+
+  it('contradictory or freeform tails after `pass` are malformed (no `\\b` smuggling)', () => {
+    for (const q of ['3/5 pass/2/5 fail', '3/5 passX', '3/5 pass but actually fail', '3/5 pass.']) {
+      const issues = validateReviewArtifact(artifact('pass', q)).issues;
+      expect(issues.join(' '), q).toMatch(/malformed/);
+    }
+  });
+
+  it('a ` (`-opened annotation is legal, closed or line-truncated', () => {
+    for (const q of ['3/5 pass (one abstention)', '1/1 pass (single cross-model reviewer over']) {
+      expect(validateReviewArtifact(artifact('pass', q)).issues, q).toEqual([]);
+    }
+  });
+
+  it('counts above 3 digits are malformed — unbounded digits could break safe-integer math', () => {
+    const huge = '5404319552844595/9007199254740993 pass';
+    const issues = validateReviewArtifact(artifact('pass', huge)).issues;
+    expect(issues.join(' ')).toMatch(/malformed/);
+  });
 });
 
 describe('historical review artifacts remain valid (no retro-breakage)', () => {
