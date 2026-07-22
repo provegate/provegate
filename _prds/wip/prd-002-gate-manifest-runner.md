@@ -179,7 +179,10 @@ All new code TypeScript strict, ESM, node ≥22 builtins only; every module take
    durable-artifacts fn-gate; merge-gate operator guard. `runChain` executes with
    per-gate results + metrics + `--from-phase` skip logic; `planChain` renders the
    dry-run plan; STOP card (stderr, resume hint, exit 1) and handoff card (stdout,
-   diffstat, gate list, "push is yours") ported with English text.
+   diffstat, gate list, "push is yours") ported with English text. **Recursion guard**:
+   the runner sets an env sentinel (`PROVEGATE_RUN_ACTIVE`); a nested non-dry-run
+   `gate run`/`gate land` under that sentinel refuses with a clear error (a §11 row
+   invoking the runner would otherwise loop); `--dry-run` is exempt.
    - **Targets:** `packages/provegate/src/core/run/chain.ts`, `packages/provegate/src/core/run/cards.ts`
 9. **FR-9 — Archive + local merge + auto-revert**: port `archivePrdArtifacts`
    equivalent (move the item's four artifacts wip→completed via git mv semantics +
@@ -189,13 +192,17 @@ All new code TypeScript strict, ESM, node ≥22 builtins only; every module take
    local branch in this checkout: checkout base → merge → on failure reset + return to
    feature branch) — deliberate OSS generalization, single-checkout repos are
    first-class. `git merge --no-ff` array-args, post-merge gates from manifest
-   `postMerge`, failure ⇒ `git reset --hard HEAD~1` + STOP. **No push invocation
-   anywhere; §11 grep gate enforces.**
+   `postMerge`, failure ⇒ `git reset --hard HEAD~1` + STOP. **Preconditions**: the merge
+   step refuses when the current (feature) checkout is dirty with non-coordination
+   files, and refuses when already on the base branch. **No push invocation anywhere;
+   §11 grep gate enforces.**
    - **Targets:** `packages/provegate/src/core/run/merge.ts`, `packages/provegate/src/core/run/archive.ts`
 10. **FR-10 — PRD-ready lint (`gate check`)**: structural checks (every FR has
     `**Targets:**`; every FR has a §11 row with ≥1 runnable command; `## 12. DO NOT`
     present; `## 9. Open Questions` empty or explicitly deferred; no `TBD`/`???`/
-    `to be decided` in FR/spec sections; unsafe §11 commands reported) + manifest
+    `to be decided` in FR/spec sections — **backtick-quoted tokens are exempt** (a
+    PRD may cite the lint's own patterns, as this one does); unsafe §11 commands
+    reported) + manifest
     `hardCaps` evaluation (rule fires when `when.targetsMatch` intersects FR target
     paths and `requireLine` regex finds no match in the PRD). Library returns issue
     list; CLI exits 0/1.
@@ -276,6 +283,11 @@ All new code TypeScript strict, ESM, node ≥22 builtins only; every module take
 - **Merge substrate**: worktree-discovery port + single-checkout fallback (documented
   generalization; roadmap open decision #4 answered "yes, single-package/checkout
   repos are supported").
+- **Safety threat model**: the command-safety gate defends against _accidents and
+  injection through artifact content_ (a malicious diff or generated §11 row), not
+  against an adversarial spec author — the spec is human-approved upstream (Phase 1
+  gate). `curl`/`psql` prefixes stay allowlisted because §11 probes are the user's own
+  declared commands; the CLI itself never originates network calls.
 - **Metrics** append-only local JSONL; failures to write never fail a gate.
 - **Recursion note**: `gate run PRD-002` executes PRD-002's own §11, which includes
   vitest suites but NOT `gate run` itself (no self-recursion in §11 FR rows —
@@ -408,6 +420,7 @@ Close (operator-triggered, the dogfood finale): `node packages/provegate/dist/cl
 
 ## Changelog
 
-| Date       | Author | Changes       |
-| ---------- | ------ | ------------- |
-| 2026-07-22 | rayvaz | Initial draft |
+| Date       | Author | Changes                                                                                                              |
+| ---------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-22 | rayvaz | Initial draft                                                                                                        |
+| 2026-07-22 | rayvaz | Phase 2 pre-score fixes: merge preconditions, recursion guard sentinel, backtick lint exemption, safety threat model |
