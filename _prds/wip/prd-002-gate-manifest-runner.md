@@ -1,12 +1,12 @@
 # PRD-002: Gate Manifest + Autorun Runner
 
-> **Status**: Draft
+> **Status**: Code Complete
 > **Created**: 2026-07-22
 > **Updated**: 2026-07-22
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `gate-manifest-runner`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 6 (Final Auditing — independent review pending)
 > **PRD Class**: infra
 > **Class Rationale**: Builds the runner/tooling core (no user-facing product surface); the risk profile is deployment ordering of the gate chain and merge machinery, not data or UI.
 > **Autonomous Close**: operator-gated
@@ -38,11 +38,11 @@ architectural invariant this whole project is named after.
 
 ### Primary Goals
 
-- [ ] `gates.manifest.json`: user-owned, validated manifest — phase chains, class
+- [x] `gates.manifest.json`: user-owned, validated manifest — phase chains, class
       defaults (diff-conditional), hard caps, post-merge gates.
-- [ ] `core/run`: the autorun engine — gate chain, resume, dry-run, handoff cards,
+- [x] `core/run`: the autorun engine — gate chain, resume, dry-run, handoff cards,
       archive, local no-ff merge, auto-revert. Zero push paths.
-- [ ] `gate check`: machine PRD-readiness lint driven by manifest hard caps — no more
+- [x] `gate check`: machine PRD-readiness lint driven by manifest hard caps — no more
       structural-lint waivers.
 - [ ] Dogfood: PRD-002 lands via `gate run PRD-002`.
 
@@ -424,3 +424,4 @@ Close (operator-triggered, the dogfood finale): `node packages/provegate/dist/cl
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-22 | rayvaz | Initial draft                                                                                                        |
 | 2026-07-22 | rayvaz | Phase 2 pre-score fixes: merge preconditions, recursion guard sentinel, backtick lint exemption, safety threat model |
+| 2026-07-22 | rayvaz | Phases 4–5 complete (0b93d0d): all §11 green, `gate check PRD-002` passes own lint; Status → Code Complete           |
