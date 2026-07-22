@@ -200,7 +200,7 @@ diffFiles)` — every declared path in merge-range diff
 | push-grep          | no push invocation in `core/run` + `core/gates` (PRD §11)                  | provegate | passed | grep "'push'" in run+gates: clean; git-push literals = card text + safety regex (reviewed) | W3 archive msg also checked  |
 | name-grep          | no emofy/rayvaz in `src/`                                                  | provegate | passed | clean                                                                                      |                              |
 | dogfood            | `gate check PRD-002` + `gate run --dry-run PRD-002` + close via `gate run` | repo      | passed | check + dry-run exit 0; recursion guard refuses nested, dry-run exempt; close pending 11.5 | close is operator-triggered  |
-| independent-review | codex adversarial review artifact                                          | repo      | passed | 3 rounds, 11 crit + 2 adv all fixed, verdict pass                                          | verdict pass, critical = 0   |
+| independent-review | `_docs/reviews/review-002-gate-manifest-runner.md`                         | repo      | passed | codex 3 rounds, 11 crit + 2 adv all fixed, verdict pass                                    | verdict pass, critical = 0   |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
