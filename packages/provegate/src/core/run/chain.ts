@@ -1,7 +1,11 @@
 import { execSync } from 'node:child_process';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
-import { parseVerificationCommands, type SafetyCheckedCommand } from '../gates/safety.js';
+import {
+  isSafeCommand,
+  parseVerificationCommands,
+  type SafetyCheckedCommand,
+} from '../gates/safety.js';
 import { resolveClassGates, mergeGateCommands } from '../gates/classes.js';
 import { validateTasksReviewRow } from '../gates/review.js';
 import type { StateRecord } from '../state/build.js';
@@ -54,11 +58,12 @@ function gatePhaseNumber(gate: ChainGate): number {
 
 export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
   if (!fromPhase) return false;
+  // The operator merge gate is NEVER skippable — `gate land` must not become
+  // an acceptance bypass (codex P1 finding).
+  if (gate.phase === 'merge gate') return false;
   if (fromPhase === 'merge') return true;
   return gatePhaseNumber(gate) < fromPhase;
 }
-
-const trusted = (cmd: string): SafetyCheckedCommand => ({ cmd, safe: true });
 
 export function buildGateChain(options: {
   config: WorkflowConfig;
@@ -73,6 +78,12 @@ export function buildGateChain(options: {
   const { config, manifest, root, record, prdContent, tasksContent, changedFiles, prdClass } =
     options;
 
+  // Manifest/config commands get the SAME safety stamp as §11 rows — loadManifest
+  // already refuses unsafe ones, this is defense in depth for hand-built manifests.
+  const checked = (cmd: string): SafetyCheckedCommand => ({
+    cmd,
+    safe: isSafeCommand(config, cmd),
+  });
   const phase4 = mergeGateCommands(
     manifest.phases['4'] ?? [],
     resolveClassGates(manifest, prdClass, changedFiles),
@@ -80,7 +91,7 @@ export function buildGateChain(options: {
   const phase5 = parseVerificationCommands(config, prdContent);
 
   const chain: ChainGate[] = [
-    { phase: '4 Implementation', cmds: phase4.map(trusted) },
+    { phase: '4 Implementation', cmds: phase4.map(checked) },
     { phase: '5 Testing', cmds: phase5, required: true },
     {
       phase: '6 Final Auditing',
@@ -96,7 +107,7 @@ export function buildGateChain(options: {
   ];
   const phase6Cmds = manifest.phases['6'] ?? [];
   if (phase6Cmds.length > 0)
-    chain.push({ phase: '6 Final Auditing', cmds: phase6Cmds.map(trusted) });
+    chain.push({ phase: '6 Final Auditing', cmds: phase6Cmds.map(checked) });
 
   chain.push({
     phase: '7 Learning',
@@ -104,7 +115,7 @@ export function buildGateChain(options: {
     fn: () => durableArtifactsOk(declaredArtifacts(prdContent), changedFiles),
   });
   const phase7Cmds = manifest.phases['7'] ?? [];
-  if (phase7Cmds.length > 0) chain.push({ phase: '7 Learning', cmds: phase7Cmds.map(trusted) });
+  if (phase7Cmds.length > 0) chain.push({ phase: '7 Learning', cmds: phase7Cmds.map(checked) });
 
   chain.push({
     phase: 'merge gate',

@@ -29,8 +29,10 @@ export interface ReviewCheck {
 function parseSeverityCount(content: string, label: string): number | null {
   const raw = getMetaValue(content, label);
   if (!raw) return null;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) ? n : null;
+  // Strict: the whole value must be a non-negative integer. `-1` or
+  // `0 forged` must not satisfy the pass ⇒ Critical=0 contract.
+  if (!/^\d+$/.test(raw.trim())) return null;
+  return Number.parseInt(raw, 10);
 }
 
 export function validateReviewArtifact(
@@ -56,8 +58,13 @@ export function validateReviewArtifact(
   if (critical === null) issues.push('missing numeric `> **Critical:** N` metadata');
   if (!quorum) issues.push('missing `> **Quorum:** N/M pass` metadata');
 
-  if (expectedId && prd && !prd.toUpperCase().includes(expectedId.toUpperCase())) {
-    issues.push(`PRD metadata "${prd}" does not match expected ${expectedId}`);
+  if (expectedId && prd) {
+    // Exact-token match: substring matching would accept PRD-0020 as
+    // evidence for PRD-002.
+    const idRe = new RegExp(`(^|[^\\w-])${escapeRegExp(expectedId)}([^\\w-]|$)`, 'i');
+    if (!idRe.test(prd)) {
+      issues.push(`PRD metadata "${prd}" does not match expected ${expectedId}`);
+    }
   }
   if (verdict === 'pass' && critical !== null && critical > 0) {
     issues.push(`Verdict is pass but Critical=${critical} — fix findings or set Verdict to fail`);

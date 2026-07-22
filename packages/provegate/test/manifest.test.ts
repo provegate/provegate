@@ -123,3 +123,24 @@ describe('manifestCommands', () => {
     expect(cmds.filter((c) => c === 'pnpm build')).toHaveLength(1);
   });
 });
+
+describe('codex review regressions (round 1)', () => {
+  it('rejects unknown phase keys (unreachable chains must not validate)', () => {
+    const issues = validateManifest(cfg, { phases: { '99': ['pnpm test'] } });
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        path: 'phases.99',
+        message: expect.stringContaining('unknown phase key'),
+      }),
+    );
+  });
+
+  it('refuses a manifest whose commands fail the safety gate (git push, metachars)', () => {
+    expect(() => loadManifest(cfg, tempRepo({ postMerge: ['git push origin main'] }))).toThrow(
+      /unsafe commands/,
+    );
+    expect(() => loadManifest(cfg, tempRepo({ phases: { '4': ['pnpm test > out.txt'] } }))).toThrow(
+      /unsafe commands/,
+    );
+  });
+});

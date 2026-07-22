@@ -71,3 +71,25 @@ describe('parseVerificationCommands', () => {
     expect(parseVerificationCommands(cfg, '# nothing')).toEqual([]);
   });
 });
+
+describe('codex review regressions (round 1)', () => {
+  it('rejects a lone & (backgrounding escapes the segment check)', () => {
+    expect(isSafeCommand(cfg, 'pnpm test & rm -rf /tmp/victim')).toBe(false);
+    expect(isSafeCommand(cfg, 'pnpm test & PROVEGATE_RUN_ACTIVE= node cli.js run PRD-002')).toBe(
+      false,
+    );
+    // && chaining stays legal
+    expect(isSafeCommand(cfg, 'pnpm test && pnpm build')).toBe(true);
+  });
+
+  it('surfaces command-shaped non-prefix tokens as unsafe instead of hiding them', () => {
+    const prd = [
+      '## 11. Verification Commands',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 | `pnpm test` then `rm -rf /` |',
+    ].join('\n');
+    const cmds = parseVerificationCommands(cfg, prd);
+    expect(cmds).toContainEqual({ cmd: 'rm -rf /', safe: false });
+  });
+});

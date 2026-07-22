@@ -33,6 +33,7 @@ import {
   archivePrdArtifacts,
   buildGateChain,
   handoffCard,
+  mergePreconditions,
   mergeToLocalBase,
   parseFromPhase,
   planChain,
@@ -282,6 +283,22 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
         id,
         phase: outcome.stopped.phase,
         why: outcome.stopped.why,
+        results: outcome.results,
+      }),
+    );
+    return 1;
+  }
+
+  // Merge preconditions run BEFORE the archive mutates anything: invoking from
+  // the base branch or with a dirty checkout must not leave archive commits
+  // behind (codex P1 finding).
+  const pre = mergePreconditions(config, root);
+  if (!pre.ok) {
+    console.error(
+      stopCard({
+        id,
+        phase: 'merge',
+        why: pre.why ?? 'precondition failed',
         results: outcome.results,
       }),
     );

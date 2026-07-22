@@ -103,14 +103,14 @@ describe('from-phase handling', () => {
     expect(() => parseFromPhase('9')).toThrow(/invalid --from-phase/);
   });
 
-  it('skips earlier phases; merge skips everything', () => {
+  it('skips earlier phases; merge skips command phases but NEVER the operator gate', () => {
     const gate4 = { phase: '4 Implementation' };
     const gate6 = { phase: '6 Final Auditing' };
     const mergeGate = { phase: 'merge gate' };
     expect(shouldSkipGate(gate4, 5)).toBe(true);
     expect(shouldSkipGate(gate6, 5)).toBe(false);
     expect(shouldSkipGate(gate4, 'merge')).toBe(true);
-    expect(shouldSkipGate(mergeGate, 'merge')).toBe(true);
+    expect(shouldSkipGate(mergeGate, 'merge')).toBe(false);
   });
 });
 
@@ -188,5 +188,32 @@ describe('runChain', () => {
     });
     expect(outcome.stopped?.why).toContain('command failed');
     expect(outcome.results).toContainEqual(['5 Testing: node -e "process.exit(1)"', 'FAILED']);
+  });
+});
+
+describe('codex review regressions (round 1)', () => {
+  it('the operator merge gate is never skippable — gate land cannot bypass acceptance', () => {
+    expect(shouldSkipGate({ phase: 'merge gate' }, 'merge')).toBe(false);
+    expect(shouldSkipGate({ phase: 'merge gate' }, 7)).toBe(false);
+  });
+
+  it('hand-built manifests with unsafe phase commands are refused at execution', () => {
+    const root = tempRoot();
+    const evil = {
+      ...defaultManifest(cfg),
+      phases: { '4': ['git push origin main'] },
+    };
+    const chain = buildGateChain({
+      config: cfg,
+      manifest: evil,
+      root,
+      record: record(),
+      prdContent: PRD_WITH_11,
+      tasksContent: '',
+      changedFiles: [],
+      prdClass: 'infra',
+    });
+    const outcome = runChain({ config: cfg, root, id: 'PRD-002', chain, fromPhase: null });
+    expect(outcome.stopped?.why).toContain('unsafe');
   });
 });

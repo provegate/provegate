@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { deepMerge, type WorkflowConfig } from '../config/index.js';
+import { isSafeCommand } from './safety.js';
 
 /**
  * The gates manifest — user-owned gate membership and policy. Split from
@@ -84,6 +85,9 @@ function isNonEmptyCommandArray(value: unknown): value is string[] {
   return isCommandArray(value) && value.length > 0;
 }
 
+/** Phase keys buildGateChain actually consumes. */
+export const RUNNER_PHASES = new Set(['4', '6', '7']);
+
 const KNOWN_KEYS = new Set([
   'phases',
   'classDefaults',
@@ -108,6 +112,14 @@ export function validateManifest(config: WorkflowConfig, value: unknown): Manife
       issues.push({ path: 'phases', message: 'must be an object of phase → command list' });
     } else {
       for (const [phase, cmds] of Object.entries(phases)) {
+        // Only phases the runner executes are legal keys — a chain under an
+        // unknown key would count as "wired" while never running (codex P2).
+        if (!RUNNER_PHASES.has(phase)) {
+          issues.push({
+            path: `phases.${phase}`,
+            message: `unknown phase key (runner executes ${[...RUNNER_PHASES].join(', ')})`,
+          });
+        }
         if (!isCommandArray(cmds)) {
           issues.push({
             path: `phases.${phase}`,
@@ -239,7 +251,18 @@ export function loadManifest(config: WorkflowConfig, root: string): GatesManifes
   if (issues.length > 0) {
     throw new ManifestError(`${MANIFEST_FILENAME} is invalid`, issues);
   }
-  return deepMerge(defaults, parsed);
+  const merged = deepMerge(defaults, parsed);
+  // Safety is not optional for manifest/config commands either: a manifest
+  // (or workflow.config commands entry) containing `git push` or shell
+  // metachars must fail loud at load, not execute as "trusted" (codex P1).
+  const unsafe = manifestCommands(merged).filter((cmd) => !isSafeCommand(config, cmd));
+  if (unsafe.length > 0) {
+    throw new ManifestError(
+      `${MANIFEST_FILENAME} contains unsafe commands`,
+      unsafe.map((cmd) => ({ path: 'commands', message: `refused by the safety gate: ${cmd}` })),
+    );
+  }
+  return merged;
 }
 
 /** Every command the manifest can ever run (phases ∪ classDefaults ∪ postMerge). */

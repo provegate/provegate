@@ -11,6 +11,9 @@ import { sectionMatching } from '../state/markdown.js';
 /** True when a user-gate command may be shell-executed. */
 export function isSafeCommand(config: WorkflowConfig, cmd: string): boolean {
   if (/[`$><]|\$\(|\bgit\s+push\b/.test(cmd)) return false;
+  // A lone `&` backgrounds the left side — the right side escapes the segment
+  // check (and could clear the recursion sentinel). Only `&&` chaining is legal.
+  if (/(?<!&)&(?!&)/.test(cmd)) return false;
   const segments = cmd
     .split(/&&|\|\||;|\|/)
     .map((s) => s.trim())
@@ -41,7 +44,11 @@ export function parseVerificationCommands(
     if (!/^\s*\|\s*FR-\d+\b/.test(line)) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const cmd = match[1]!.trim();
-      if (config.commands.allowedPrefixes.some((p) => cmd.startsWith(p))) {
+      // Include allowlisted-prefix tokens AND anything command-shaped
+      // (contains whitespace): a row hiding `rm -rf /` must surface as
+      // unsafe, never be silently invisible to the runner and the lint.
+      const commandShaped = /\s/.test(cmd);
+      if (config.commands.allowedPrefixes.some((p) => cmd.startsWith(p)) || commandShaped) {
         cmds.push({ cmd, safe: isSafeCommand(config, cmd) });
       }
     }

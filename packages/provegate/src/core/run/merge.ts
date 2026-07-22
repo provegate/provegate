@@ -1,6 +1,7 @@
 import { execFileSync, execSync } from 'node:child_process';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
+import { isSafeCommand } from '../gates/safety.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
 
 /**
@@ -85,6 +86,10 @@ function runPostMerge(
 ): { results: [string, 'passed' | 'FAILED'][]; failed: string | null } {
   const results: [string, 'passed' | 'FAILED'][] = [];
   for (const cmd of manifest.postMerge) {
+    if (!isSafeCommand(config, cmd)) {
+      results.push([`post-merge: ${cmd}`, 'FAILED']);
+      return { results, failed: cmd };
+    }
     try {
       execSync(cmd, { cwd: dir, stdio: 'inherit', env: { ...process.env, [RUN_ACTIVE_ENV]: '1' } });
       results.push([`post-merge: ${cmd}`, 'passed']);
@@ -96,10 +101,32 @@ function runPostMerge(
   return { results, failed: null };
 }
 
+/** Preconditions shared by the CLI (checked BEFORE any archive mutation) and
+ * the merge itself: on a real feature branch, checkout clean. */
+export function mergePreconditions(
+  config: WorkflowConfig,
+  root: string,
+): { ok: boolean; why?: string; branch?: string } {
+  const base = config.branches.base;
+  const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  if (branch === 'HEAD') {
+    return { ok: false, why: 'detached HEAD — check out the feature branch first' };
+  }
+  if (branch === base) {
+    return {
+      ok: false,
+      why: `current branch is '${base}' — run from the feature branch, not the base checkout`,
+    };
+  }
+  const clean = ensureCheckoutClean(config, root);
+  if (!clean.ok) return { ok: false, why: clean.why };
+  return { ok: true, branch };
+}
+
 /**
  * Merge the current feature branch into the local base branch, verify, and
- * auto-revert on failure. Preconditions: not on base; feature checkout clean
- * of non-coordination dirt.
+ * auto-revert on failure. Preconditions: not on base, not detached; feature
+ * checkout clean of non-coordination dirt.
  */
 export function mergeToLocalBase(options: {
   config: WorkflowConfig;
@@ -109,16 +136,9 @@ export function mergeToLocalBase(options: {
 }): MergeOutcome {
   const { config, manifest, root, id } = options;
   const base = config.branches.base;
-  const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
-
-  if (branch === base) {
-    return {
-      ok: false,
-      why: `current branch is '${base}' — run from the feature branch, not the base checkout`,
-    };
-  }
-  const clean = ensureCheckoutClean(config, root);
-  if (!clean.ok) return { ok: false, why: clean.why };
+  const pre = mergePreconditions(config, root);
+  if (!pre.ok) return { ok: false, why: pre.why };
+  const branch = pre.branch!;
 
   const worktreeDir = findBaseWorktree(root, base);
   if (worktreeDir !== null && worktreeDir !== root) {
@@ -145,14 +165,29 @@ function mergeInWorktree(options: {
   const clean = ensureCheckoutClean(config, baseDir);
   if (!clean.ok) return { ok: false, why: `base checkout: ${clean.why}` };
 
-  git(baseDir, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+  // Captured BEFORE the merge: the revert target. `HEAD~1` after post-merge
+  // commands is not guaranteed to be the pre-merge tip (codex P1 finding).
+  const preMergeSha = git(baseDir, ['rev-parse', 'HEAD']);
+  try {
+    git(baseDir, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+  } catch (error) {
+    try {
+      execFileSync('git', ['merge', '--abort'], { cwd: baseDir, stdio: 'ignore' });
+    } catch {
+      /* no merge in progress */
+    }
+    return {
+      ok: false,
+      why: `merge failed in base worktree (${error instanceof Error ? error.message.split('\n')[0] : 'conflict'}) — aborted, base intact`,
+    };
+  }
   const { results, failed } = runPostMerge(config, manifest, baseDir);
   if (failed) {
-    git(baseDir, ['reset', '--hard', 'HEAD~1']);
+    git(baseDir, ['reset', '--hard', preMergeSha]);
     return {
       ok: false,
       postMergeResults: results,
-      why: `post-merge ${failed} failed — merge reverted; feature branch intact`,
+      why: `post-merge ${failed} failed — merge reverted to ${preMergeSha.slice(0, 7)}; feature branch intact`,
     };
   }
   return {
@@ -160,7 +195,7 @@ function mergeInWorktree(options: {
     baseDir,
     branch,
     postMergeResults: results,
-    diffstat: git(baseDir, ['diff', '--shortstat', `${base}~1`, base]),
+    diffstat: git(baseDir, ['diff', '--shortstat', preMergeSha, base]),
   };
 }
 
@@ -174,10 +209,15 @@ function mergeSingleCheckout(options: {
 }): MergeOutcome {
   const { config, manifest, root, base, branch, id } = options;
   git(root, ['checkout', base]);
+  const preMergeSha = git(root, ['rev-parse', 'HEAD']);
   try {
     git(root, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
   } catch (error) {
-    execFileSync('git', ['merge', '--abort'], { cwd: root, stdio: 'ignore' });
+    try {
+      execFileSync('git', ['merge', '--abort'], { cwd: root, stdio: 'ignore' });
+    } catch {
+      /* no merge in progress */
+    }
     git(root, ['checkout', branch]);
     return {
       ok: false,
@@ -186,12 +226,12 @@ function mergeSingleCheckout(options: {
   }
   const { results, failed } = runPostMerge(config, manifest, root);
   if (failed) {
-    git(root, ['reset', '--hard', 'HEAD~1']);
+    git(root, ['reset', '--hard', preMergeSha]);
     git(root, ['checkout', branch]);
     return {
       ok: false,
       postMergeResults: results,
-      why: `post-merge ${failed} failed — merge reverted; back on ${branch}, feature branch intact`,
+      why: `post-merge ${failed} failed — merge reverted to ${preMergeSha.slice(0, 7)}; back on ${branch}, feature branch intact`,
     };
   }
   return {
@@ -199,6 +239,6 @@ function mergeSingleCheckout(options: {
     baseDir: root,
     branch,
     postMergeResults: results,
-    diffstat: git(root, ['diff', '--shortstat', `${base}~1`, base]),
+    diffstat: git(root, ['diff', '--shortstat', preMergeSha, base]),
   };
 }

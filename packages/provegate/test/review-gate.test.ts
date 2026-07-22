@@ -93,3 +93,23 @@ describe('extractReviewArtifactPath / validateTasksReviewRow', () => {
     expect(check.artifact).toBe('_docs/reviews/review-002-x.md');
   });
 });
+
+describe('codex review regressions (round 1)', () => {
+  it('negative or forged Critical values never satisfy the contract', () => {
+    const neg = VALID_META.replace('> **Critical:** 0', '> **Critical:** -1');
+    expect(validateReviewArtifact(neg).issues).toContainEqual(
+      expect.stringContaining('missing numeric'),
+    );
+    const forged = VALID_META.replace('> **Critical:** 0', '> **Critical:** 0 forged');
+    expect(validateReviewArtifact(forged).issues).toContainEqual(
+      expect.stringContaining('missing numeric'),
+    );
+  });
+
+  it('id matching is exact-token: PRD-0020 is not evidence for PRD-002', () => {
+    const other = VALID_META.replace('> **PRD:** PRD-002', '> **PRD:** PRD-0020');
+    expect(validateReviewArtifact(other, { expectedId: 'PRD-002' }).issues).toContainEqual(
+      expect.stringContaining('does not match expected PRD-002'),
+    );
+  });
+});

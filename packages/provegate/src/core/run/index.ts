@@ -30,6 +30,7 @@ export {
   ensureCheckoutClean,
   findBaseWorktree,
   mergeMessage,
+  mergePreconditions,
   mergeToLocalBase,
   type MergeOutcome,
 } from './merge.js';

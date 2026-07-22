@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 import type { WorkflowConfig } from '../config/index.js';
 import type { StateRecord } from '../state/build.js';
 
@@ -44,18 +45,15 @@ export function archivePrdArtifacts(
 
   if (moved.length === 0) return { moved, committed: false };
 
-  const dirty = git(root, ['status', '--porcelain']);
-  if (!dirty) return { moved, committed: false };
-  git(root, [
-    'add',
-    '--all',
-    '--',
-    ...new Set([
-      ...moved,
-      ...moved.map((d) => d.replace(`/${completed}/`, `/${wip}/`)),
-      config.dirs.stateFile,
-    ]),
-  ]);
-  git(root, ['commit', '-m', archiveCommitMessage(record.prd)]);
+  // Pathspec-scoped commit: a plain `git commit` would sweep in whatever else
+  // happens to be staged (codex P1 finding). `git mv` already staged the
+  // renames; only the state snapshot needs staging, and only when present.
+  const oldPaths = moved.map((d) => d.replace(`/${completed}/`, `/${wip}/`));
+  const paths = [...new Set([...moved, ...oldPaths])];
+  if (existsSync(resolve(root, config.dirs.stateFile))) {
+    git(root, ['add', '--', config.dirs.stateFile]);
+    paths.push(config.dirs.stateFile);
+  }
+  git(root, ['commit', '-m', archiveCommitMessage(record.prd), '--', ...paths]);
   return { moved, committed: true };
 }

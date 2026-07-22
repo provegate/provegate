@@ -118,3 +118,17 @@ describe('codex review regressions', () => {
     expect(queue.inFlight).toEqual([]);
   });
 });
+
+describe('codex review regressions (round 1): recursion sentinel (W1, real CLI)', () => {
+  it('nested non-dry-run gate run refuses before touching anything', async () => {
+    const result = await run(process.execPath, [cliPath, 'run', 'PRD-001'], {
+      cwd: root,
+      env: { ...process.env, PROVEGATE_RUN_ACTIVE: '1' },
+    }).then(
+      () => ({ code: 0, stderr: '' }),
+      (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
+    );
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('refusing to nest');
+  });
+});
