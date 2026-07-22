@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-004-launch-quickstart.md](../../_prds/wip/prd-004-launch-quickstart.md)
 > **Readiness**: [readiness-004-launch-quickstart.md](../../_readiness/wip/readiness-004-launch-quickstart.md)
-> **Status**: Phase 5 Complete — Testing Verified
+> **Status**: Phase 6 Complete — Review Passed
 > **Readiness Score**: 8.7/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-22
@@ -100,13 +100,13 @@
         push-refusal/hygiene grep incl. QUICKSTART.md)
   - [x] 9.2 §12 re-read + audit (no overclaims, no competitor claims, init
         additive-only, no retro-edits)
-- [ ] 10.0 Phase 6 — Final Auditing
-  - [ ] 10.1 Codex review — brief: quorum arithmetic boundaries, init write-path
+- [x] 10.0 Phase 6 — Final Auditing
+  - [x] 10.1 Codex review — brief: quorum arithmetic boundaries, init write-path
         safety, wiring-skip evasion, figure-to-source fidelity, do-not-say
         completeness; artifact in `_docs/reviews/` (validated by the NEW quorum gate)
-  - [ ] 10.2 Fix/waive; critical = 0; verification round
-- [ ] 11.0 Phase 7 — Learning + close
-  - [ ] 11.1 Summary artifact; PRD lifecycle walk
+  - [x] 10.2 Fix/waive; critical = 0; verification round
+- [x] 11.0 Phase 7 — Learning + close
+  - [x] 11.1 Summary artifact; PRD lifecycle walk
   - [ ] 11.2 Owner acceptance; close via `gate run PRD-004`; push stays owner's
 
 ## Verification Ledger
@@ -165,6 +165,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-22 | 2.0–8.0 | Quorum arithmetic + gate init + full launch surface on feat/prd-004; 35 new tests |
 | 2026-07-22 | 2.2     | PRD-003 quorum deferral closed 7 days before due, 0 renewals                 |
 | 2026-07-22 | 9.0     | §11 sweep: 10/10 FR rows + 8 cross-cutting green; 302 tests, 31 files        |
+| 2026-07-22 | 10.0    | codex 4 rounds: 3 crit + 9 P2/P3 found+fixed → pass 0 findings; 330 tests    |
+| 2026-07-22 | 11.1    | summary artifact written; review artifact validates under its own new gate    |
 
 ## Blockers / Open Questions
 
