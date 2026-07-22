@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T17:45:31.575Z",
+  "generatedAt": "2026-07-22T19:07:55.710Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -73,6 +73,43 @@
       },
       "summary": {
         "shipReadiness": "Ship Verified"
+      },
+      "lastUpdated": "2026-07-22"
+    },
+    {
+      "prd": "PRD-003",
+      "number": 3,
+      "slug": "method-package",
+      "status": "Code Complete",
+      "cyclePhase": "6 (Final Auditing — independent review pending)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-003-method-package.md",
+        "readiness": "_readiness/wip/readiness-003-method-package.md",
+        "tasks": "_tasks/wip/tasks-003-method-package.md",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.7,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "In Progress",
+        "checkedCount": 43,
+        "uncheckedCount": 6,
+        "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
       },
       "lastUpdated": "2026-07-22"
     }

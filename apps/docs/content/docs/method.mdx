@@ -3,12 +3,20 @@ title: The Method
 description: Seven phases, machine-checkable gates, human-only push.
 ---
 
-> **Stub.** The full method spec (`METHOD.md`) is extracted in roadmap Phase D. This page
-> sketches the shape; the thesis lives in the Gated Autonomy whitepaper.
+The full spec ships in the package as `METHOD.md`. The core design rule: **a phase
+boundary is a gate only if a machine can check it** — a verification command's exit
+code, or an independent reviewer's structured verdict; never the implementing agent's
+own judgment.
 
-The core design rule: **a phase boundary is a gate only if a machine can check it** — a
-verification command's exit code, or an independent reviewer's structured verdict; never the
-implementing agent's own judgment.
+| Phase / step | Gate (machine-checkable)                                          | On fail    |
+| ------------ | ----------------------------------------------------------------- | ---------- |
+| 2 → 3        | readiness PASS (score ≥ 8, no hard cap tripped) + `gate check`    | ITERATE    |
+| 4            | type/lint/build/test floor + class-default gates (manifest)       | STOP       |
+| 5            | every §11 FR command exits 0 (safety-checked, really executed)    | STOP       |
+| 6            | independent-review ledger row + structured artifact (schema)      | STOP       |
+| 7            | declared Durable Artifacts present in the merge diff              | STOP       |
+| merge        | operator rows = 0 or owner acceptance; post-merge gates or revert | STOP       |
+| push         | —                                                                 | human only |
 
 ## The seven phases
 

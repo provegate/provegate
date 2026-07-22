@@ -1,12 +1,12 @@
 # PRD-003: Method Package — Prompts, Templates, METHOD.md, Examples
 
-> **Status**: Draft
+> **Status**: Operator Verification
 > **Created**: 2026-07-22
 > **Updated**: 2026-07-22
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `method-package`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Learning — operator close pending)
 > **PRD Class**: feature
 > **Class Rationale**: (default class) — the method content IS the product's user-facing surface; this PRD ships what `npm install -D provegate` exists to deliver.
 > **Autonomous Close**: operator-gated
@@ -37,12 +37,12 @@ fails a vitest gate, not a reader's patience. Prompts reference the shipped CLI
 
 ### Primary Goals
 
-- [ ] 10 core method prompts + 2 adapters shipped under `prompts/`, placeholder-clean.
-- [ ] 7 artifact templates shipped under `templates/`, each mechanically validated
+- [x] 10 core method prompts + 2 adapters shipped under `prompts/`, placeholder-clean.
+- [x] 7 artifact templates shipped under `templates/`, each mechanically validated
       against the Phase B–C engine.
-- [ ] `METHOD.md`: the method spec distilled from the parent WORKFLOW.md's generic core.
-- [ ] `examples/`: 2–3 genericized gate plugins wired as manifest snippets.
-- [ ] Every content file passes the hygiene gate: no parent-project names, no personal
+- [x] `METHOD.md`: the method spec distilled from the parent WORKFLOW.md's generic core.
+- [x] `examples/`: 2–3 genericized gate plugins wired as manifest snippets.
+- [x] Every content file passes the hygiene gate: no parent-project names, no personal
       names, English-only, valid placeholder tokens.
 
 ### Success Metrics
@@ -353,3 +353,4 @@ Cross-cutting (all green before Code Complete):
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-22 | rayvaz | Initial draft                                                                                                           |
 | 2026-07-22 | rayvaz | `gate check` caught table-pipe hazard in FR-4 row (fixed); Phase 2 pre-score fix: unshipped-tooling policy in FR-2 + §7 |
+| 2026-07-22 | rayvaz | Phases 4–5 complete (34f42d4): 52 content tests, src frozen, pack verified; Status → Code Complete                      |

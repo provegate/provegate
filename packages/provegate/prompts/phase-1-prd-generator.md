@@ -1,0 +1,150 @@
+# Phase 1: PRD Generator Protocol
+
+> **Cycle Phase:** 1 of 7
+> **Role:** Product Architect
+> **Goal:** Transform a feature request into a production-grade PRD that an **implementing agent** can execute autonomously — surfacing only structural blockers, not clarifications. Every FR carries the file paths, types, and verification commands the agent needs so Phase 4 never re-discovers context.
+
+---
+
+## Agent Constraints
+
+1. **Stop & Ask:** Do NOT start writing a PRD immediately. Ask clarifying questions
+   first. Prefer deriving answers from {{ARCHITECTURE_DOC}} and the codebase; only ask
+   the user for what genuinely cannot be derived (product intent, business rules, scope
+   boundaries).
+2. **No Code Yet:** The PRD phase produces zero implementation code. Only schemas, type
+   definitions, and architectural specs.
+3. **Strict Typing:** Never use `any` or ambiguous types in the PRD. Specify exact
+   types, branded IDs, and schema definitions.
+4. **Reference Memory:** Read {{ARCHITECTURE_DOC}} before writing. Verify ID prefixes,
+   role names, and existing patterns.
+5. **Agent-Executable:** Every FR must carry concrete file paths + symbol names so the
+   implementing agent can navigate without grep guesswork. PRDs without target paths
+   fail Phase 2 Clarity.
+
+---
+
+## Step 0: PRD Class Selection (Mandatory)
+
+Before Discovery, pick the **PRD Class** that matches the work. The class determines
+(a) which Discovery sections below are mandatory vs skippable, (b) the Phase 2 scoring
+formula, (c) the Phase 3 parent task skeleton, (d) the readiness-lint strictness.
+
+| Class            | When                                                                            |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `feature`        | New user-facing capability, schema change, permission update, cross-module work |
+| `test-hardening` | Single-test or test-infra fix; no production code changes                       |
+| `hotfix`         | Production bug fix with bounded blast radius                                    |
+| `infra`          | Workflow / tooling / CI / deploy change                                         |
+
+Record the chosen class in the PRD header (`> **PRD Class**: <class>`). When the class
+is anything other than `feature`, add one justification line directly below it
+(`> **Class Rationale**: <why this class, why not feature>`) — class choice changes
+scoring weights and lint strictness, so it must be visible and reviewable, not
+implicit. If unsure, default to `feature` — the workflow over-engineers gracefully but
+under-engineers dangerously.
+
+---
+
+## Step 1: Discovery & Clarification
+
+Skip Discovery sections marked **(feature-only)** when the PRD Class is
+`test-hardening` or `hotfix`. `infra` PRDs follow `feature` discovery but emphasise
+deploy/rollback over data-model questions.
+
+### Business Logic (all classes)
+
+- "What is the core problem this feature solves? What are the exact acceptance criteria?"
+
+### Tenancy & Auth (feature-only)
+
+- "Is this feature tenant-scoped or global? Does it need new permissions or roles?"
+
+### Data Model & IDs (feature-only)
+
+- "Which new entities are needed? What ID prefix should we use? (Check the project's
+  existing prefix registry.)"
+
+### Integration Points (feature-only)
+
+- "How does this flow between the project's data stores, caches, queues, and external
+  services?"
+
+### Edge Cases (all classes)
+
+- "What happens on invalid authorization, data conflicts, missing input, or concurrent
+  access?"
+
+### Reproduction / Diagnostic (test-hardening + hotfix only)
+
+- For `test-hardening`: "Which test command produces the failure? What's the failure
+  signal (timeout, assertion mismatch, hang)? Have we eliminated environmental causes?"
+- For `hotfix`: "What's the user-visible failure? Have we reproduced it locally with the
+  same trace as production? What's the smallest viable fix that resolves the repro
+  without expanding scope?"
+
+---
+
+## Step 2: PRD Document Structure
+
+After all answers are collected, create the PRD from `templates/prd-template.md`. The
+structural spine (every section below is load-bearing for a later gate):
+
+- **Header metadata** — Status, dates, class (+ rationale), `Autonomous Close`
+  (`eligible` | `operator-gated`; any PRD that will produce operator-owned rows MUST be
+  `operator-gated`).
+- **§4 Functional Requirements** — each FR with pass/fail criteria and a
+  `**Targets:**` line (`path/to/file.ts::SymbolName`).
+- **§5 Non-Goals** — explicit out-of-scope list.
+- **§9 Open Questions** — must be empty (or explicitly deferred) before Phase 2 PASS.
+- **§ Conflict Surface** — glob paths this PRD claims exclusive write ownership of.
+  Never declare shared append-only manifests here (they are excluded from overlap by
+  config).
+- **§ Durable Artifacts** — knowledge pages/ADRs/patterns this PRD must update on
+  completion, or `none`. Phase 7's gate checks these against the merge diff.
+- **§11 Verification Commands** — one table row per FR with at least one runnable
+  backticked command. This is what makes Phase 5 machine-checkable: the runner executes
+  every FR row and refuses unsafe commands.
+- **§12 DO NOT (Anti-Patterns)** — explicit forbidden moves; catches drift the agent
+  might otherwise rationalize.
+
+### §11 authoring rules
+
+- Every command starts with an allowlisted runner prefix (your package manager, `node`,
+  `grep`, `test`, …) and contains no shell metacharacters — `gate check` reports
+  violations before scoring, and `gate run` refuses them at execution.
+- **Never put a pipe character (`|`) inside a backticked command in the §11 table** —
+  the markdown table will swallow it as a column separator and shred the command.
+  Reword, or split into multiple commands.
+- Commands run from the repo root; scope them explicitly.
+
+---
+
+## Step 3: File Management
+
+- **Location:** the PRD artifacts directory, `wip` state (default `_prds/wip/`)
+- **Naming:** `prd-XXX-{short-name}.md` — 3-digit zero-padded number + kebab-case slug
+- **Numbering:** highest existing number across `wip` and `completed`, plus one
+
+---
+
+## Step 4: Handover
+
+After saving, run `gate check {{ID_PREFIX}}-XXX` and fix anything it reports. Then
+prompt the user:
+
+> "PRD saved and lint-clean. The next step is **Phase 2: Readiness Scoring** — shall I
+> perform a Senior Staff Engineer stress test on this plan before we proceed?"
+
+---
+
+## Project-Specific References
+
+<!-- Replace with your project's lookup table: ID prefix registry, permission registry,
+role list, architecture doc, coding standards, module layout. -->
+
+| What                      | Where                  |
+| ------------------------- | ---------------------- |
+| Tech stack & architecture | {{ARCHITECTURE_DOC}}   |
+| Coding standards          | {{BEST_PRACTICES_DOC}} |
+| Domain checklists         | {{DOMAIN_CHECKS}}      |

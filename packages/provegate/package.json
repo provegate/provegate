@@ -25,6 +25,7 @@
     "templates",
     "schemas",
     "examples",
+    "METHOD.md",
     "README.md"
   ],
   "scripts": {
