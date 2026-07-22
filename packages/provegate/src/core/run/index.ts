@@ -26,6 +26,7 @@ export {
   type FromPhase,
 } from './chain.js';
 export { archiveCommitMessage, archivePrdArtifacts, type ArchiveResult } from './archive.js';
+export { initWorkspace, planInit, type InitAction, type InitReport } from './init.js';
 export {
   ensureCheckoutClean,
   findBaseWorktree,

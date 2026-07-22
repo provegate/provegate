@@ -1,0 +1,67 @@
+---
+title: Case Study
+description: ~390 production work items, one calibration study, and what the numbers actually license.
+---
+
+Everything below is **observational, single-project data** from the production SaaS
+platform where this method was developed — with one exception, labeled where it
+appears: the cross-model review figures, which come from an external published study.
+We publish all of it with the caveats attached to every figure because miscalibrated
+claims are precisely the failure mode this method exists to gate. It is still more
+published calibration data than we have found anywhere else in this space.
+
+## Origin: ~390 gated work items
+
+The method hardened over roughly 390 production PRDs on one platform — every feature,
+hotfix, and infra change through the seven phases, with the gate chain accumulating
+rules each time something slipped past it. The workflow described in METHOD.md is not
+a design; it is a residue.
+
+*Caveat: one team, one codebase, one stack. Portability is an argument (the gates are
+generic), not yet a dataset.*
+
+## The calibration study: 143 findings against the score
+
+The readiness gate originally produced a decimal score (7.8, 8.4, 9.1…) and the team
+treated it as signal. When 143 post-ship review findings were mapped back against the
+readiness scores of the items that produced them, the correlation between the decimal
+score and post-ship defects inside the PASS band was **r = −0.03** — noise.
+
+What did discriminate was *wiring*: whether the PRD named a runnable deny-path test
+when it touched a guarded surface; whether a new payload had a round-trip contract
+test; whether §11 commands were actually executable. The redesign followed the data:
+**binary verdict (PASS/ITERATE) + hard caps** that force ITERATE on missing wiring
+regardless of the weighted total. The decimal survives only as advisory color.
+
+*Caveat: 143 findings is a small N by ML standards; it was, however, every post-ship
+finding there was — a census, not a sample.*
+
+## Outcome delta: 0 vs 2
+
+Before the calibrated gate: 2 critical post-ship findings. In the scored-and-capped
+era that followed: 0 critical post-ship findings across the remaining items.
+
+*Caveat: small absolute numbers, no controlled comparison, concurrent improvements in
+tooling — we claim direction, not magnitude.*
+
+## Cross-model review data
+
+The cross-model mandate rests on **external** evidence: in the Refute-or-Promote
+security campaign (a separate published study, not our platform data), a
+Codex-family critic found correctness issues in 3 of 19 fixes (16%) that
+Claude-family reviewers had approved, plus 3 defects they never surfaced. This is
+why the method mandates that the Phase 6 reviewer is never the implementing model
+family, and why the review artifact — verdict, critical count, base SHA, quorum —
+is machine-validated rather than prose-trusted.
+
+The method's own extraction repeated the pattern: during the port of this very method
+package, the cross-model reviewer caught the port **weakening the calibrated review
+quorum** — the maintainers drifting from their own doctrine — and the fix went through
+the method's own deferral governance. The review trail is in the repo.
+
+## What we do not claim
+
+No controlled trial. No speedup percentage. No defect-reduction percentage. No
+"prevents all agent failures." The claim is narrower and, we think, more defensible:
+**shifting trust from agent claims to executed evidence is mechanically enforceable,
+and here is one production system where it has been running for ~390 items.**

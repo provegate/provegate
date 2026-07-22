@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T19:15:22.181Z",
+  "generatedAt": "2026-07-22T21:03:27.323Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -110,6 +110,43 @@
       },
       "summary": {
         "shipReadiness": "Ship Verified"
+      },
+      "lastUpdated": "2026-07-22"
+    },
+    {
+      "prd": "PRD-004",
+      "number": 4,
+      "slug": "launch-quickstart",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-004-launch-quickstart.md",
+        "readiness": "_readiness/wip/readiness-004-launch-quickstart.md",
+        "tasks": "_tasks/wip/tasks-004-launch-quickstart.md",
+        "summary": "_docs/wip/summary-004-launch-quickstart.md"
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "wip"
+      },
+      "readiness": {
+        "score": 8.7,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 35,
+        "uncheckedCount": 1,
+        "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
       },
       "lastUpdated": "2026-07-22"
     }

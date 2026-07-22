@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { ConfigError, loadConfig, type WorkflowConfig } from './core/config/index.js';
+import { ConfigError, DEFAULT_CONFIG, loadConfig, type WorkflowConfig } from './core/config/index.js';
 import {
   buildQueue,
   buildState,
@@ -28,10 +28,13 @@ import {
   loadManifest,
   parsePrdClass,
 } from './core/gates/index.js';
+import { existsSync } from 'node:fs';
+import { dirname as pathDirname } from 'node:path';
 import {
   RUN_ACTIVE_ENV,
   archivePrdArtifacts,
   buildGateChain,
+  initWorkspace,
   handoffCard,
   mergePreconditions,
   mergeToLocalBase,
@@ -51,7 +54,6 @@ interface StubCommand {
 }
 
 const STUBS: Record<string, StubCommand> = {
-  init: { summary: 'scaffold workflow config + artifact tree in a repo', phase: 'Phase B' },
   new: { summary: 'create a PRD and register it in workflow state', phase: 'Phase B' },
   open: { summary: 'claim a PRD: acquire locks, declare conflict surfaces', phase: 'Phase B' },
 };
@@ -66,6 +68,7 @@ function usage(): string {
     'Usage: gate <command> [options]   (also available as: provegate)',
     '',
     'Commands:',
+    '  init     scaffold the workflow tree + starter configs (--dry-run)',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
@@ -91,6 +94,41 @@ function collectLocks(root: string, config: WorkflowConfig): QueueLockInfo[] {
         typeof lock.data!['worktree'] === 'string' ? (lock.data!['worktree'] as string) : null,
       expiresAt: String(lock.data!['expiresAt'] ?? ''),
     }));
+}
+
+function runInit(args: string[]): number {
+  const dryRun = args.includes('--dry-run');
+  // Init must work before any config exists: root at the nearest .git walking
+  // up from cwd, else cwd itself.
+  let root = process.cwd();
+  let probe = root;
+  for (;;) {
+    if (existsSync(`${probe}/.git`)) {
+      root = probe;
+      break;
+    }
+    const parent = pathDirname(probe);
+    if (parent === probe) break;
+    probe = parent;
+  }
+  const config = (() => {
+    try {
+      return loadConfig(root).config;
+    } catch {
+      // No config yet — that's the point. Scaffold from defaults.
+      return DEFAULT_CONFIG;
+    }
+  })();
+
+  const report = initWorkspace(config, root, { dryRun });
+  console.log(`[init] ${dryRun ? 'DRY-RUN ' : ''}root: ${root}`);
+  for (const path of report.created) console.log(`  + ${path}`);
+  for (const path of report.skipped) console.log(`  = ${path} (exists, skipped)`);
+  console.log(
+    `[init] ${report.created.length} created, ${report.skipped.length} skipped — nothing is ever overwritten`,
+  );
+  console.log('[init] next: see QUICKSTART.md (npm home: provegate/QUICKSTART.md)');
+  return 0;
 }
 
 function runStatus(): number {
@@ -368,6 +406,7 @@ export function main(argv: string[]): number {
   }
 
   try {
+    if (command === 'init') return runInit(rest);
     if (command === 'status') return runStatus();
     if (command === 'queue') return runQueue(rest.includes('--json'));
     if (command === 'check') return runCheck(rest);
