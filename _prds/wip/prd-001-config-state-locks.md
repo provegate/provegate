@@ -74,7 +74,9 @@ so that queue/active/next decisions never rely on an agent's memory of what is i
 
 - [ ] `gate status` rebuilds state from `_prds|_readiness|_tasks|_docs` and writes `_state/prds.json`.
 - [ ] `gate queue --json` emits machine-readable ready/in-flight/blocked/in-review sets.
-- [ ] Both commands work from a linked git worktree (state resolves to the main checkout).
+- [ ] Both commands work from a linked git worktree: the state snapshot is checkout-local
+      (each checkout scans its own artifact tree — source parity); only lock operations
+      resolve to the main checkout via `mainRepoRoot`.
 
 #### User Story 2
 
@@ -123,9 +125,10 @@ All new code TypeScript strict, ESM, node ≥22 builtins only.
    manifest list). `DEFAULT_CONFIG` mirrors the source scripts' values minus Emofy-isms.
    - **Targets:** `packages/provegate/src/core/config/types.ts`, `packages/provegate/src/core/config/defaults.ts`, `packages/provegate/src/core/config/index.ts`
 2. **FR-2 — Config load + validate (hand-rolled, zod-free)**: `findRepoRoot(cwd)` (walk up to
-   `workflow.config.json` or `.git`), `loadConfig(cwd)` (read + deep-merge over defaults),
-   `validateConfig(value): ConfigIssue[]` with `path`/`message` per issue; loader throws an
-   aggregate error listing all issues. Unknown keys are issues (typo guard).
+   `workflow.config.json` or `.git`; throws a clear error when neither is found), `loadConfig(cwd)`
+   (read + deep-merge over defaults — plain objects merge recursively, arrays and scalars
+   replace wholesale), `validateConfig(value): ConfigIssue[]` with `path`/`message` per issue;
+   loader throws an aggregate error listing all issues. Unknown keys are issues (typo guard).
    - **Targets:** `packages/provegate/src/core/config/load.ts`, `packages/provegate/src/core/config/validate.ts`
 3. **FR-3 — Markdown/artifact parsers**: port `stripMarkdown`, `getMetaValue`, `getTableValue`,
    `sectionAfter`, `findMarkdownTable`, `writeTableValue`, `countTaskChecks`,
@@ -352,12 +355,15 @@ Cross-cutting (all must be green before Code Complete):
 - DO NOT let queries filter by a serial high-water-mark (the bug PRD-312 removed) — the
   per-record done-check is the ported semantic.
 - DO NOT make network calls or add telemetry.
+- DO NOT spawn git through a shell — `execFile`-style array-argument invocation only (the
+  source's `execFileSync` discipline; no `exec`, no string interpolation into commands).
 - DO NOT fabricate prompts/templates/method content — out of scope until Phase D.
 
 ---
 
 ## Changelog
 
-| Date       | Author | Changes       |
-| ---------- | ------ | ------------- |
-| 2026-07-22 | rayvaz | Initial draft |
+| Date       | Author | Changes                                                                                             |
+| ---------- | ------ | --------------------------------------------------------------------------------------------------- |
+| 2026-07-22 | rayvaz | Initial draft                                                                                       |
+| 2026-07-22 | rayvaz | Phase 2 pre-score fixes: state-file locality (checkout-local), merge semantics, no-shell-git DO NOT |
