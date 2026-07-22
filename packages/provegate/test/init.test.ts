@@ -144,6 +144,9 @@ describe('packageScriptOf — the wiring grammar (no shape evasion)', () => {
     ['npx vitest', null],
     ['node script.js', null],
     ['pnpm --filter provegate test', null], // cross-package: root can't answer
+    ['pnpm --filter=provegate test', null], // attached selector, same scope-out
+    ['npm --workspace=pkg test', null],
+    ['npm -w=pkg run ghost', null],
   ];
   for (const [cmd, expected] of cases) {
     it(`${JSON.stringify(cmd)} -> ${JSON.stringify(expected)}`, () => {

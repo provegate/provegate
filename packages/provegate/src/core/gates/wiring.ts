@@ -113,7 +113,16 @@ export function packageScriptOf(cmd: string): string | null {
   let sawRun = false;
   while (i < tokens.length) {
     const tok = tokens[i]!;
-    if (tok === '--filter' || tok === '-F' || tok === '--workspace' || tok === '-w') {
+    if (
+      tok === '--filter' ||
+      tok === '-F' ||
+      tok === '--workspace' ||
+      tok === '-w' ||
+      tok.startsWith('--filter=') ||
+      tok.startsWith('-F=') ||
+      tok.startsWith('--workspace=') ||
+      tok.startsWith('-w=')
+    ) {
       return null; // cross-package scope — root scripts cannot resolve it
     }
     if (tok.startsWith('-')) {
