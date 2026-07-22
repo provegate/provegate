@@ -41,9 +41,9 @@ describe('cli skeleton', () => {
   });
 
   it('stub commands exit 1 and name their roadmap phase', async () => {
-    const result = await cli('run');
+    const result = await cli('open');
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('not implemented yet (roadmap Phase C)');
+    expect(result.stderr).toContain('not implemented yet (roadmap Phase B)');
   });
 
   it('unknown commands exit 1', async () => {

@@ -7,11 +7,12 @@ const schemasDir = fileURLToPath(new URL('../schemas', import.meta.url));
 const schemaFiles = readdirSync(schemasDir).filter((name) => name.endsWith('.schema.json'));
 
 describe('generalized schemas', () => {
-  it('ships the three ported schemas', () => {
+  it('ships the four schemas (three ported + review-metadata)', () => {
     expect(schemaFiles.sort()).toEqual([
       'acceptances.schema.json',
       'agent-lock.schema.json',
       'prd-state.schema.json',
+      'review-metadata.schema.json',
     ]);
   });
 

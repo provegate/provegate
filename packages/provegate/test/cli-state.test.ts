@@ -102,9 +102,9 @@ describe('unchanged surfaces', () => {
   });
 
   it('remaining stubs still exit 1 with their phase', async () => {
-    const result = await cli('run');
+    const result = await cli('open');
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('roadmap Phase C');
+    expect(result.stderr).toContain('roadmap Phase B');
   });
 });
 

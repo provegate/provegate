@@ -33,6 +33,10 @@ export interface DirsConfig {
   stateFile: string;
   /** Lock lease directory, relative to the MAIN checkout root. */
   locksDir: string;
+  /** Independent-review artifacts directory, relative to the repo root. */
+  reviewsDir: string;
+  /** Local gate-metrics JSONL file, relative to the repo root (gitignored). */
+  metricsFile: string;
 }
 
 export interface IdPatternConfig {
@@ -78,6 +82,8 @@ export interface CommandsConfig {
   lint: string;
   test: string;
   build: string;
+  /** Command prefixes user-gate commands may start with (the safety allowlist). */
+  allowedPrefixes: string[];
 }
 
 export interface WorktreeConfig {
@@ -96,6 +102,10 @@ export interface WorkflowConfig {
   worktree: WorktreeConfig;
   /** Phases that write code — a lock in one of these claims its conflict surface. */
   executionPhases: string[];
+  /** Work-item classes; the first entry is the default class. */
+  classes: string[];
+  /** Regex source matching package.json script names that count as gates. */
+  verifyScriptPattern: string;
   /** Append-only manifests excluded from exclusive path-ownership overlap. */
   sharedAppendOnly: string[];
 }
