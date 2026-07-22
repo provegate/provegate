@@ -1,6 +1,6 @@
 # PRD-004: Launch Surface — Init, Quickstart, Case Study, Whitepaper
 
-> **Status**: Draft
+> **Status**: Ship Verified
 > **Created**: 2026-07-22
 > **Updated**: 2026-07-22
 > **Author**: rayvaz

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T21:03:27.323Z",
+  "generatedAt": "2026-07-22T21:03:53.946Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -122,16 +122,16 @@
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-004-launch-quickstart.md",
-        "readiness": "_readiness/wip/readiness-004-launch-quickstart.md",
-        "tasks": "_tasks/wip/tasks-004-launch-quickstart.md",
-        "summary": "_docs/wip/summary-004-launch-quickstart.md"
+        "prd": "_prds/completed/prd-004-launch-quickstart.md",
+        "readiness": "_readiness/completed/readiness-004-launch-quickstart.md",
+        "tasks": "_tasks/completed/tasks-004-launch-quickstart.md",
+        "summary": "_docs/completed/summary-004-launch-quickstart.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.7,

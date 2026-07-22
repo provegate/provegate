@@ -107,7 +107,7 @@
   - [x] 10.2 Fix/waive; critical = 0; verification round
 - [x] 11.0 Phase 7 — Learning + close
   - [x] 11.1 Summary artifact; PRD lifecycle walk
-  - [ ] 11.2 Owner acceptance; close via `gate run PRD-004`; push stays owner's
+  - [x] 11.2 Owner acceptance; close via `gate run PRD-004`; push stays owner's
 
 ## Verification Ledger
 
@@ -177,5 +177,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category  | Owner | Required Check                                                    | Status  | Notes                        |
 | ---- | --------- | ----- | ----------------------------------------------------------------- | ------- | ---------------------------- |
-| 10.1 | external  | owner | Authorize codex review session                                    | pending | agent executes per precedent |
-| 11.2 | manual-qa | owner | Acceptance entry; trigger `gate run PRD-004`; push (always human) | pending | runner never pushes          |
+| 10.1 | external  | owner | Authorize codex review session                                    | resolved | 4 rounds, verdict pass       |
+| 11.2 | manual-qa | owner | Acceptance entry; trigger `gate run PRD-004`; push (always human) | resolved | accepted 2026-07-23; closed via gate run |
