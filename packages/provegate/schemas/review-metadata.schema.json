@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://provegate.dev/schemas/review-metadata.schema.json",
+  "title": "Independent Review Artifact Metadata",
+  "description": "Contract for the metadata block of an independent-review artifact (markdown blockquote header, parsed by core/gates review). Documented as JSON for tooling; the artifact itself is markdown. The `prd` pattern shows the DEFAULT id pattern; runtime validation derives it from workflow.config idPattern. Invariant: verdict `pass` requires `critical` = 0.",
+  "type": "object",
+  "required": ["prd", "verdict", "reviewer", "baseSha", "critical", "quorum"],
+  "additionalProperties": false,
+  "properties": {
+    "prd": {
+      "type": "string",
+      "pattern": "^PRD-[0-9]{3}$"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Tool/model identity of the reviewer — must not be the implementing agent."
+    },
+    "baseSha": {
+      "type": "string",
+      "minLength": 7,
+      "description": "Merge-base (or base tip) the diff was reviewed against."
+    },
+    "critical": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "high": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "medium": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "quorum": {
+      "type": "string",
+      "minLength": 3,
+      "description": "e.g. \"3/5 pass\" for panel reviews, \"1/1 pass\" for a single cross-model reviewer."
+    }
+  }
+}

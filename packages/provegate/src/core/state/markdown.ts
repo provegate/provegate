@@ -41,9 +41,14 @@ export function getTableValue(content: string, label: string): string | null {
   return match?.[1] !== undefined ? stripMarkdown(match[1]) : null;
 }
 
-/** The body of a `## <heading>` section, up to the next `##`. */
+/** The body of a `## <heading>` section (literal heading), up to the next `##`. */
 export function sectionAfter(content: string, heading: string): string {
-  const pattern = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`, 'im');
+  return sectionMatching(content, escapeRegExp(heading));
+}
+
+/** Like `sectionAfter`, but the heading is a regex source (e.g. `.*Verification Commands.*`). */
+export function sectionMatching(content: string, headingPattern: string): string {
+  const pattern = new RegExp(`^##\\s+${headingPattern}\\s*$`, 'im');
   const match = pattern.exec(content);
   if (!match) return '';
   const rest = content.slice(match.index + match[0].length);

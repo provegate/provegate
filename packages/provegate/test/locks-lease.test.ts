@@ -1,7 +1,6 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, deepMerge } from '../src/core/config/index.js';
 import { findLeaseConflicts, listLockFiles, validateLock } from '../src/core/locks/lease.js';
@@ -84,11 +83,28 @@ describe('validateLock', () => {
     );
   });
 
-  it('validates the real PRD-001 lease file authored at pre-flight', () => {
-    const leasePath = fileURLToPath(
-      new URL('../../../_state/locks/prd-001-config-state-locks.json', import.meta.url),
-    );
-    const lease = JSON.parse(readFileSync(leasePath, 'utf8')) as Record<string, unknown>;
+  it('validates the hand-authored pre-flight lease shape (frozen PRD-001 fixture)', () => {
+    // Frozen copy of the real PRD-001 lease — the live file is deleted at PRD
+    // close, so the shape is pinned here instead of read from disk.
+    const lease: Record<string, unknown> = {
+      schemaVersion: 2,
+      lockId: 'prd-001-config-state-locks.claude-fable-5.20260722',
+      agent: 'claude-fable-5',
+      prd: 'PRD-001',
+      phase: 'Phase 4',
+      startedAt: '2026-07-22T13:30:00.000Z',
+      expiresAt: '2026-07-23T13:30:00.000Z',
+      branch: 'feat/prd-001-config-state-locks',
+      touchedFiles: [
+        '_prds/wip/prd-001-config-state-locks.md',
+        '_tasks/wip/tasks-001-config-state-locks.md',
+      ],
+      ownedPaths: [
+        'packages/provegate/src/**',
+        'packages/provegate/test/**',
+        'packages/provegate/schemas/**',
+      ],
+    };
     const issues = validateLock(DEFAULT_CONFIG, lease, {
       now: Date.parse(String(lease['startedAt'])),
     });

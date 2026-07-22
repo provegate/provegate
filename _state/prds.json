@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T15:30:33.517Z",
+  "generatedAt": "2026-07-22T16:35:39.092Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -36,6 +36,43 @@
       },
       "summary": {
         "shipReadiness": "Ship Verified"
+      },
+      "lastUpdated": "2026-07-22"
+    },
+    {
+      "prd": "PRD-002",
+      "number": 2,
+      "slug": "gate-manifest-runner",
+      "status": "Code Complete",
+      "cyclePhase": "6 (Final Auditing — independent review pending)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-002-gate-manifest-runner.md",
+        "readiness": "_readiness/wip/readiness-002-gate-manifest-runner.md",
+        "tasks": "_tasks/wip/tasks-002-gate-manifest-runner.md",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.65,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "In Progress",
+        "checkedCount": 44,
+        "uncheckedCount": 9,
+        "operatorHandoffCount": 3
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
       },
       "lastUpdated": "2026-07-22"
     }

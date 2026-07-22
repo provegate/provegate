@@ -33,6 +33,8 @@ const CONFIG_SPEC = obj({
     stateRoles: obj({ wip: str, completed: str, deferred: str }),
     stateFile: str,
     locksDir: str,
+    reviewsDir: str,
+    metricsFile: str,
   }),
   idPattern: obj({ prefix: str, width: num }),
   statusVocab: obj({
@@ -51,11 +53,13 @@ const CONFIG_SPEC = obj({
     allowedDirectPrefixes: strArr,
     allowedDirectFiles: strArr,
   }),
-  commands: obj({ checkTypes: str, lint: str, test: str, build: str }),
+  commands: obj({ checkTypes: str, lint: str, test: str, build: str, allowedPrefixes: strArr }),
   owners: strArr,
   worktree: obj({ dir: str }),
   executionPhases: strArr,
   sharedAppendOnly: strArr,
+  classes: strArr,
+  verifyScriptPattern: str,
 });
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -133,6 +137,7 @@ export function validateResolvedConfig(config: {
     reviewing: string[];
   };
   executionPhases: string[];
+  classes?: string[];
 }): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
 
@@ -170,6 +175,10 @@ export function validateResolvedConfig(config: {
 
   if (config.executionPhases.length === 0) {
     issues.push({ path: 'executionPhases', message: 'must not be empty' });
+  }
+
+  if (config.classes !== undefined && config.classes.length === 0) {
+    issues.push({ path: 'classes', message: 'must not be empty' });
   }
 
   return issues;

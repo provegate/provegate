@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -102,9 +102,9 @@ describe('unchanged surfaces', () => {
   });
 
   it('remaining stubs still exit 1 with their phase', async () => {
-    const result = await cli('run');
+    const result = await cli('open');
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('roadmap Phase C');
+    expect(result.stderr).toContain('roadmap Phase B');
   });
 });
 
@@ -116,5 +116,43 @@ describe('codex review regressions', () => {
     expect(result.code).toBe(0);
     const queue = JSON.parse(result.stdout);
     expect(queue.inFlight).toEqual([]);
+  });
+});
+
+describe('codex review regressions (round 1): recursion sentinel (W1, real CLI)', () => {
+  it('nested non-dry-run gate run refuses before touching anything', async () => {
+    const result = await run(process.execPath, [cliPath, 'run', 'PRD-001'], {
+      cwd: root,
+      env: { ...process.env, PROVEGATE_RUN_ACTIVE: '1' },
+    }).then(
+      () => ({ code: 0, stderr: '' }),
+      (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
+    );
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('refusing to nest');
+  });
+});
+
+describe('codex round-2: precondition-before-archive ordering (real CLI)', () => {
+  it('gate land from the base branch refuses without creating any commit', async () => {
+    const gitRun = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+    gitRun(['init', '-q', '-b', 'main']);
+    gitRun(['config', 'user.email', 't@example.invalid']);
+    gitRun(['config', 'user.name', 'T']);
+    gitRun(['add', '.']);
+    gitRun(['commit', '-q', '-m', 'chore: fixture']);
+    const before = gitRun(['rev-parse', 'HEAD']).trim();
+
+    // clear the sentinel: this suite may itself run under `gate run` (dogfood)
+    const result = await run(process.execPath, [cliPath, 'land', 'PRD-001'], {
+      cwd: root,
+      env: { ...process.env, PROVEGATE_RUN_ACTIVE: '' },
+    }).then(
+      () => ({ code: 0, stderr: '' }),
+      (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
+    );
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("current branch is 'main'");
+    expect(gitRun(['rev-parse', 'HEAD']).trim()).toBe(before);
   });
 });

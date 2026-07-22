@@ -8,8 +8,9 @@ out/
 .turbo/
 .source/
 
-# workflow runtime state (leases are ephemeral, never committed)
+# workflow runtime state (leases ephemeral, metrics local-only — never committed)
 _state/locks/
+_state/prd-metrics.jsonl
 
 # logs & OS noise
 *.tsbuildinfo

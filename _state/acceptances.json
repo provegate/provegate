@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "acceptances": [
+    {
+      "prd": "PRD-002",
+      "owner": "owner",
+      "items": [
+        "10.1 codex review session authorized and completed (verdict pass)",
+        "11.4 operator acceptance of autonomous close",
+        "11.5 dogfood close trigger authorized"
+      ],
+      "reason": "reviewed three codex rounds and the fix commits; accepting autonomous close via gate run",
+      "date": "2026-07-22",
+      "method": "interactive"
+    }
+  ]
+}
