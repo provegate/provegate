@@ -13,12 +13,16 @@ without a human.
 
 ```sh
 npm install -D provegate
+npx gate init
 ```
 
 ```
 $ gate push
 No. Push is yours.
 ```
+
+New here? [QUICKSTART.md](QUICKSTART.md) walks install → first gated close
+(hotfix-class) → handoff card in one sitting.
 
 ## Commands
 

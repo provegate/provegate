@@ -56,7 +56,30 @@ export function validateReviewArtifact(
   }
   if (!baseSha || baseSha.length < 7) issues.push('missing `> **Base SHA:** <git sha>` metadata');
   if (critical === null) issues.push('missing numeric `> **Critical:** N` metadata');
-  if (!quorum) issues.push('missing `> **Quorum:** N/M pass` metadata');
+  if (!quorum) {
+    issues.push('missing `> **Quorum:** N/M pass` metadata');
+  } else {
+    // Quorum arithmetic (closes the PRD-003 governed deferral): strict `N/M pass`
+    // with N <= M, M >= 1; a `pass` verdict requires the calibrated panel gate
+    // N/M >= 3/5, in integer math. `1/1` passes as the degenerate full-quorum
+    // case; `2/5` is mechanically impossible to pass.
+    // Annotated heads are legal ("3/5 pass (one abstention)") — the arithmetic
+    // reads the head, the annotation is prose. Same discipline as status parsing.
+    const m = /^(\d+)\/(\d+) pass\b/.exec(quorum.trim());
+    if (!m) {
+      issues.push(`Quorum "${quorum}" is malformed — expected \`N/M pass\``);
+    } else {
+      const n = Number.parseInt(m[1]!, 10);
+      const total = Number.parseInt(m[2]!, 10);
+      if (total < 1 || n > total) {
+        issues.push(`Quorum "${quorum}" is invalid — need N <= M and M >= 1`);
+      } else if (verdict === 'pass' && n * 5 < total * 3) {
+        issues.push(
+          `Verdict is pass but quorum ${n}/${total} is below the 3/5 panel gate`,
+        );
+      }
+    }
+  }
 
   if (expectedId && prd) {
     // Exact-token match: substring matching would accept PRD-0020 as

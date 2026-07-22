@@ -21,6 +21,9 @@ over ~390 production PRDs. MIT, agent-agnostic, bring your own gates.
 
 ```sh
 npm install -D provegate
+npx gate init          # scaffold the workflow tree + starter configs
+npx gate check PRD-001 # lint your spec against the machine gates
+npx gate run PRD-001   # phases 4-7 + local merge, gated end to end
 ```
 
 ```
@@ -28,16 +31,27 @@ $ gate push
 No. Push is yours.
 ```
 
-That refusal is the one fully-implemented CLI behavior today, and it is load-bearing: the
-runner contains no code path that pushes to a git remote. Everything reversible is autonomous;
-the irreversible step costs one human keystroke.
+That refusal is load-bearing: the runner contains no code path that pushes to a git
+remote. Everything reversible is autonomous; the irreversible step costs one human
+keystroke. Start with the [quickstart](packages/provegate/QUICKSTART.md) — install to
+handoff card, hotfix-class, one sitting.
+
+## The evidence
+
+Your coding agent's "done" is not evidence — so here is ours, caveats attached:
+[the case study](apps/docs/content/docs/case-study.mdx) (~390 production work items,
+a 143-finding calibration study, the redesign it forced) and
+[the whitepaper](apps/docs/content/docs/whitepaper.mdx) (the full argument, the
+limitations section included on purpose).
 
 ## This repo runs its own method
 
-From day one this repository dogfoods the gated workflow it productizes: PRDs live in
-[`_prds/`](_prds/), readiness verdicts in [`_readiness/`](_readiness/), task plans in
-[`_tasks/`](_tasks/), knowledge capture in [`_docs/`](_docs/), and workflow state in
-[`_state/`](_state/). The gates run in [CI](.github/workflows/ci.yml).
+Every line of this codebase shipped through the workflow it implements — read the PRDs
+in [`_prds/completed/`](_prds/completed/), the readiness verdicts, the task ledgers,
+and the cross-model review artifacts in [`_docs/reviews/`](_docs/reviews/) (including
+the round where the reviewer caught the maintainers weakening the method's own
+calibrated doctrine, and the fix went through the method's own deferral governance).
+The runner closed its own PRDs: `gate run` landed the commits that built `gate run`.
 
 ## Layout
 

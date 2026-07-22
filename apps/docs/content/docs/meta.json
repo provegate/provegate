@@ -1,3 +1,10 @@
 {
-  "pages": ["index", "method", "cli"]
+  "pages": [
+    "index",
+    "quickstart",
+    "method",
+    "case-study",
+    "whitepaper",
+    "cli"
+  ]
 }

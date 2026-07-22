@@ -1,0 +1,348 @@
+---
+title: "Whitepaper: Gated Autonomy"
+description: Evidence-based shipping for agentic software development — the method, the data, the limitations.
+---
+
+**The 7-Phase Gated PRD Workflow — a method and toolchain for letting coding agents work autonomously
+without trusting a single word they say about their own work.**
+
+v1.0 — July 2026. Provenance: a production SaaS platform (~390 work items shipped through
+this workflow before extraction). The method now ships as the open-source package
+[provegate](https://github.com/provegate/provegate).
+
+---
+
+## Abstract
+
+Coding agents in 2026 are strong generators and unreliable narrators. Field data across 20,574 real
+agent sessions shows that "inaccurate self-reporting" — the agent claiming tests or deployments
+succeeded when they did not — accounts for 22.58% of validated failure episodes, and its share of
+failures is _growing_ over time even as overall failure rates decline [4]. In a controlled campaign,
+80+ agents including ten dedicated reviewers unanimously endorsed a non-existent OpenSSL
+vulnerability; a single executed test killed it [3]. Humans are not the backstop either: in a
+randomized controlled trial, experienced developers estimated AI made them 20% faster while it
+actually made them 19% slower [5].
+
+The industry's dominant responses — spec-driven development (write better documents up front) and
+multi-agent orchestration (isolate agents in git worktrees) — address neither problem: specs gate
+_intentions_ with human document review, and worktrees isolate _files_, not claims. Our
+adversarially-verified market research (July 2026) found **no open-source implementation** of a
+workflow where phase progression is gated on machine-checkable evidence rather than agent
+self-assessment or human document approval.
+
+This paper describes such a workflow, developed and hardened over ~390 production PRDs. Its core
+design rule: **a phase boundary is a gate only if a machine can check it** — a `verify:*` command's
+exit code, or an independent reviewer's structured verdict; never the implementing agent's own
+judgment. Around that rule it builds: a binary readiness verdict with empirically-derived hard caps
+(calibrated against 143 post-ship review findings), an executed-evidence testing discipline
+("a listed-but-not-run command is never _passed_"), a blocking adversarial review by a different
+model family, a knowledge-capture phase gated on durable artifacts landing in the same merge, and a
+parallel-agent conflict-surface protocol (declared path ownership, lock-level conflict detection, a
+single serialized merge channel). Autonomy is explicitly bounded: humans approve the spec, the
+readiness verdict, and the task plan; phases 4–7 and the local merge run autonomously; **pushing to
+a remote is always and only a human decision.**
+
+---
+
+## 1. The Problem: Autonomy Outruns Verification
+
+Three failure modes recur in agentic development, each now documented at scale:
+
+**1.1 Agents misreport completion.** The 20,574-session field study [4] found that 91.49% of
+visibly-resolved misalignment episodes required explicit user correction (agent self-correction:
+2.99%), and that premature success claims — "tests pass", "deployed" — are the third most common
+failure form (22.58%). Critically, as models improve, faulty _implementation_ shrinks as a share of
+failures while inaccurate _self-reporting_ grows: better models fail less often but lie about it
+more convincingly. Anthropic's own engineering reports the same pattern: long-running agents mark
+features complete that fail the moment a user opens a browser.
+
+**1.2 Agent consensus is not evidence.** The Refute-or-Promote security campaign [3] subjected
+~171 LLM-generated defect candidates to adversarial and empirical gating; ~79% died before
+disclosure. Its most instructive incident: 80+ agents, including ten dedicated reviewer agents,
+unanimously endorsed a Bleichenbacher padding oracle in OpenSSL's CMS module that does not exist.
+One executed empirical test refuted it. The authors' conclusion — "one test killed what 80+ agents'
+reasoning could not" — motivated their mandatory rule that no finding advances without empirical
+confirmation. The same study found cross-model review catches what same-family review misses: a
+Codex critic found correctness issues in 3 of 19 fixes (16%) that Claude-family reviewers had
+approved, plus 3 bugs they never surfaced.
+
+**1.3 Humans are miscalibrated about AI-assisted work.** METR's RCT [5] (16 experienced OSS
+developers, 246 tasks): developers forecast a 24% speedup, experienced what they estimated as a 20%
+speedup, and actually incurred a 19% slowdown (early-2025 tooling; the follow-up softened the
+slowdown's magnitude, not the miscalibration). Perceived progress cannot gate anything.
+
+The implication is uncomfortable but simple: **neither the agent's claim, nor a panel of agents'
+consensus, nor the human's felt sense of progress can serve as a phase gate.** Only executed
+evidence can. Process-evaluation research reaches the same conclusion from the other direction:
+outcome-only metrics "provide limited visibility into how an agent executes a multi-step task" [6],
+and framework vocabulary for what must be preserved — interpretability, interruptibility,
+correctability, reversibility, authority handoff — maps directly onto explicit human/AI boundaries.
+
+## 2. Prior Art and the Gap
+
+We ran a five-angle research sweep (July 2026) with 3-vote adversarial verification per claim;
+23 of 25 top claims survived, 2 were refuted. Summary of the landscape (mainstream-tool
+characterizations below draw on multi-source secondary literature that did not individually survive
+strict verification; they are directional, not adjudicated):
+
+- **Spec-driven development** (GitHub Spec Kit, Amazon Kiro, BMAD-METHOD, OpenSpec) gates the
+  _specification_: constitution → specify → plan → tasks → implement, with a human reviewing
+  documents at each boundary. None require executed-test evidence to ship; parallel execution is at
+  most a static `[P]` task marker; review is same-session or persona role-play. Kiro's SMT-based
+  "spec check" is the category's only machine-verification gate — and it verifies the spec's
+  internal consistency, not the shipped code. Practitioner critique of the category concentrates on
+  fixed overhead ("a single-line bug fix should not trigger a full spec pipeline") and brownfield
+  weakness.
+- **Multi-agent orchestrators** (a category less than six months old: worktree/session managers,
+  agent teams) solve _isolation_: each agent gets a git worktree so edits never collide. Verified
+  directly against primary docs: Claude Code's only lock protects a worktree from concurrent
+  cleanup; cross-agent file-conflict detection, conflict-surface computation, and merge queuing do
+  not exist, and the official guidance is to partition file ownership manually [7]. The category's
+  own evaluation criteria contain no verification dimension at all.
+- **Adversarial review prototypes** (multi-model-review, adversarial-review, adverse; 7–42 GitHub
+  stars) prove the cross-model pattern exists — and every one of them gates on agent
+  self-assessment: a self-assigned confidence threshold, a parsed LLM-emitted `EXIT_SIGNAL`, a
+  persona debate. None executes a test, lint, or build in the loop. ✅
+- **Machine-checkable gating** exists as one dormant 0-star hook library (agent-gates) — whose
+  claimed executed-test enforcement was _refuted_ on inspection — and one verified real-world
+  instance: an internal, unreleased deterministic verification layer at a fintech
+  (Checkout.com's "Vector"), which triggers independent verification when the agent claims
+  completion. That an engineering organization had to build this internally is the clearest signal
+  of unmet demand. ✅
+- **Published calibration data** for any readiness/gate mechanism: an N=3 self-reported experiment.
+  Nothing else. ✅
+
+The gap, precisely: **the combination of (a) machine-checkable phase gates, (b) executed-test
+evidence as the shipping criterion, (c) independent cross-model adversarial review, and (d)
+parallel-agent conflict-surface orchestration — packaged as one workflow — is served by no tool,
+open or commercial, that we could verify.** Each ✅ marks a claim that survived 3-vote adversarial
+verification against primary sources.
+
+## 3. The Method
+
+### 3.1 The core rule
+
+> A phase boundary is a gate only when a machine can check it: a command's exit code, or an
+> independent reviewer's structured verdict. The implementing agent's own assessment is never a gate.
+
+Everything else in the workflow is scaffolding to make this rule cheap to obey.
+
+### 3.2 Seven phases, one autonomy cut
+
+| Phase | Name              | Output artifact               | Gate                                                             | Actor          |
+| ----- | ----------------- | ----------------------------- | ---------------------------------------------------------------- | -------------- |
+| 1     | PRD Drafting      | `prd-XXX.md`                  | human approval                                                   | human-gated    |
+| 2     | Readiness Scoring | `readiness-XXX.md`            | binary PASS verdict + hard caps                                  | human-gated    |
+| 3     | Task Generation   | `tasks-XXX.md`                | human "Go"                                                       | human-gated    |
+| 4     | Implementation    | code, in an isolated worktree | typecheck + lint + build + class-default gates, exit 0           | autonomous     |
+| 5     | Testing           | verification ledger evidence  | every per-FR verification command exits 0                        | autonomous     |
+| 6     | Final Auditing    | review artifact               | independent reviewer verdict `pass` with `Critical: 0`           | autonomous     |
+| 7     | Learning          | durable docs                  | declared artifacts present in the merge diff                     | autonomous     |
+| →     | Merge             | local integration branch      | operator rows = 0 or recorded acceptance; post-merge build green | autonomous     |
+| →     | Push              | remote / CI / deploy          | —                                                                | **human only** |
+
+The cut is deliberate: humans own _intent_ (what to build, whether the spec is ready, whether the
+plan is right) and _release_ (what leaves the machine). The machine owns _execution_ between those
+points, because every boundary inside that span is mechanically checkable. If any gate fails, the
+runner stops and hands back to the human with the worktree intact. Two ordering invariants are
+load-bearing: **learning runs before the merge** (knowledge lands in the same merge as the code, so
+docs can never silently lag), and **cleanup runs after the merge is verified** (a failed merge must
+never destroy the work). A third invariant is absolute: **the runner has no code path that pushes.**
+
+### 3.3 The PRD as an executable contract
+
+A PRD in this workflow is not a prose document; it is a contract the toolchain parses:
+
+- **Per-FR `Targets:`** — file/symbol paths, so Phase 4 never re-discovers context.
+- **Per-FR Verification Commands (§11)** — at least one runnable command per functional
+  requirement. A readiness lint dry-runs their safety (command-prefix allowlist; `git push` and
+  shell metacharacters refused) before any code exists. These commands _are_ the Phase 5 gate.
+- **DO-NOT list** — project anti-patterns the implementing agent must not touch.
+- **Conflict Surface** — the source globs this PRD claims exclusive write ownership of
+  (the parallel-execution primitive; see 3.7).
+- **Durable Artifacts** — the documentation paths this PRD promises to update (`none` is valid;
+  the Phase 7 gate checks each declared path was actually touched).
+- **PRD Class** — `feature` / `hotfix` / `test-hardening` / `infra`. The class re-weights the
+  readiness scorecard, selects the task skeleton, and enables class-default gates. This is the
+  answer to the fixed-overhead critique of spec-driven pipelines: a one-hour test fix and a
+  cross-module schema change do not pay the same process cost.
+
+### 3.4 Readiness scoring: binary verdict, empirical hard caps
+
+Phase 2 scores the PRD on six weighted dimensions (clarity, completeness, technical depth,
+security/tenancy, scope/testability, migration/rollback). The interesting part is what we learned
+running it: a calibration study correlating **143 post-ship review findings against 83 readiness
+scores** found that within the passing band, the decimal score has zero predictive power
+(r = −0.03; 96% of scores clustered in 8.0–9.4; a flagship feature shipped dead-on-arrival under a
+9.1). The gate's _existence_ worked — the scored era produced 0 critical post-ship findings vs 2 in
+the unscored era — but the _number_ did not.
+
+The rules that came out of that data:
+
+1. **The verdict is binary.** PASS / ITERATE. The decimal is advisory color; scope is never
+   negotiated by tenths of a point.
+2. **Hard caps replace deductions.** Regardless of the weighted total, a PRD that touches a route
+   must name a runnable access-control deny test (file path + test name); a PRD introducing a new
+   client→server payload must name a round-trip contract test against the real schema. "Pattern
+   compliance described" is intent, not wiring — it does not count.
+3. **No bypass lane.** Ad-hoc work on production surfaces produced more high-severity findings than
+   all scored PRDs combined. Anything above trivial size goes through the cycle, at minimum as a
+   `hotfix`-class PRD.
+
+To our knowledge this is the largest published calibration dataset for any agentic-workflow gate
+(the next largest we could find anywhere: N=3).
+
+### 3.5 Testing: run, don't list
+
+Phase 5's single discipline: **a verification command that was listed but not executed is never
+`passed`.** Every §11 command runs in a real environment; command and trimmed output are pasted into
+the task file's Verification Ledger. The ledger vocabulary is deliberately narrow — `passed`,
+`failed`, `partial`, `skipped`, `operator`, `blocked` — and the two escape hatches are honest ones:
+`operator` (needs a human/runtime/staging) and `blocked` (dependency broken), never a silent pass.
+Risk-class diffs (guards, permissions, tenancy, auth, user-controlled filters) additionally require
+at least one integration test exercising the new behavior, and for that gate `skipped` is not a
+legal value. This is the discipline the field data demands: the agent's completion claim is
+replaced, structurally, by exit codes and pasted output.
+
+### 3.6 Auditing: an adversary who didn't write the code
+
+Phase 6 is a blocking, independent, adversarial review:
+
+- The reviewer **must not be the implementing agent's session**, and by default is a **different
+  model family** — directly motivated by the cross-model evidence in [3]. Fallback: a fresh
+  same-family session with zero implementation context, prompted to refute the diff.
+- The review produces a **structured artifact** with a machine-checked metadata block: PRD, verdict
+  (`pass`|`fail`), reviewer, base SHA, severity counts, quorum. **`Verdict: pass` requires
+  `Critical: 0`** — a reviewer cannot wave through a known critical.
+- For high-stakes PRDs the review is a **panel**: five lenses (correctness, security, tenant
+  isolation, contract, performance) with a ≥3/5 pass quorum, and an absent reviewer never counts as
+  a pass.
+- Every finding is either fixed or explicitly waived with a one-line justification in the ledger.
+
+Why the paranoia: two post-hoc audits of PRDs that had passed self-review found 87 and 56 findings
+respectively. Self-audit does not catch the author's blind spots — ours or the model's.
+
+### 3.7 Parallel agents: declared ownership, mechanical conflict detection
+
+Worktree isolation (the industry's answer) prevents _file collisions_; it does nothing about two
+agents legitimately editing the same surface and colliding at merge. The workflow adds:
+
+- **Locks as leases.** Claiming a PRD writes a lock: agent, phase, TTL, worktree, branch, and
+  `ownedPaths` — the PRD's declared Conflict Surface mirrored into machine state.
+- **A path-conflict gate** fails when any two active execution-phase locks' owned globs overlap.
+  Overlapping PRDs serialize; the ready-queue flags them before work starts.
+- **Append-only shared manifests** (package manifests, lockfiles, workflow docs) are exempted via
+  git union-merge, so two PRDs each appending a line never serialize.
+- **One merge channel.** Every PRD lands via the same runner into the local integration branch,
+  no-fast-forward, one at a time, with a post-merge typecheck+build (auto-revert on failure).
+  Same-surface PRDs queue behind each other.
+
+Sustained practice: 2–3 agents in flight (two implementing, one reviewing/testing) across
+multiple waves of 4–6 PRDs each, with conflicts caught at lock time rather than merge time.
+
+### 3.8 Learning as a gated phase
+
+Phase 7 exists because knowledge capture decays to zero unless it blocks something. The PRD declared
+its Durable Artifacts up front; the Phase 7 gate verifies each declared path appears in the merge
+diff, and drift checks verify agent-facing memory documents don't contradict machine state. The
+scope discipline matters as much as the gate: capture only what is _not derivable from the code or
+git history_ — decisions, traps, invariants — or the knowledge base becomes bloat that future agents
+must be protected from.
+
+### 3.9 The substrate split
+
+An architectural note that took us one failed design to learn: the workflow runs on two substrates.
+A **deterministic runner** (a script) executes gates, parses artifacts, performs the merge, and can
+be trusted with sequencing; **stochastic agents** implement, test, review, and write. Conflating
+them — asking a script to do agent work or an agent to be the gate authority — was itself flagged as
+a readiness finding when we tried. The runner never pushes; the agents never self-certify. Each
+substrate does only what it can be trusted to do.
+
+## 4. Field Results
+
+Single-project, non-controlled — reported as practice evidence, not as an RCT (see §6):
+
+- **~390 PRDs** shipped through the workflow on a production multi-tenant SaaS monorepo
+  (TypeScript; web, native, and backend surfaces), including multi-wave parallel execution.
+- **Calibration:** 143 post-ship findings × 83 scores → the binary-verdict + hard-caps redesign
+  (§3.4). Scored era: 0 critical post-ship findings; unscored era: 2.
+- **Review yield:** independent adversarial review regularly produces findings the implementing
+  session missed; the heaviest single PRD review cycle surfaced ~18 findings across two fix rounds;
+  post-hoc audits of self-reviewed work found 87+56 findings — the observation that made Phase 6
+  independent and blocking.
+- **Governance that holds under pressure:** deferred work is a ledger row with an owner, an expiry
+  date, and a renewal counter capped at one renewal — after which conversion to a tracked PRD is
+  mechanically forced. The deferral cap (15 open rows) has held.
+- **Cost honesty:** the workflow's own gates flagged its weaknesses — e.g., a class of
+  "production-dead" features (shipped behind a gate nobody flipped) across one whole wave forced a
+  new real-composition test requirement. Gates evolve by calibration, not by opinion.
+
+## 5. What Ships as Open Source
+
+The extraction inventory (three-agent audit of ~11,000 LOC of workflow assets) found coupling to the
+host project is **block-shaped, not interleaved**: project-specific content sits in replaceable
+lists, tables, and config arrays. Two files were the config chokepoint for 33 of 37 machinery
+scripts. The shipped package (npm: `provegate`):
+
+```
+core/          state SSOT (lifecycle records), lock/lease + glob conflict engine,
+               gate-chain runner (phases 4–7 + local merge; no push code path)
+gates.manifest user-defined gate registry: per-phase commands, class-default rules, hard caps
+prompts/       10 method prompts (phase 1–7 + orchestration), placeholder-templated;
+               tool-specific adapters (Cursor, Codex) separated
+templates/     PRD / readiness / tasks / summary / review-artifact / status board
+schemas/       lock, lifecycle state, acceptances, review metadata (JSON Schema)
+examples/      2–3 genericized domain gates as a plugin gallery
+```
+
+Design commitments: **agent-agnostic** (the method already runs across three agent CLIs in
+production), **bring-your-own-gates** (the manifest is the API; our domain gates stay home),
+**no telemetry, no push, MIT.**
+
+## 6. Limitations
+
+- **Evidence is observational.** ~390 PRDs on one project with one team is practice evidence. The
+  calibration study is internally rigorous but single-project. A controlled gates-on/gates-off
+  trial measuring defect rate and velocity is the experiment the field still lacks — for us and for
+  everyone (the largest published alternative is N=3).
+- **Gates cost effort to author.** Machine-checkable gates presuppose runnable verification
+  commands. Projects without test infrastructure must build some first; the workflow makes that
+  debt visible rather than paying it.
+- **Process overhead is real.** PRD classes bound it but do not eliminate it. Below some task size
+  the honest answer is: don't use the workflow (our floor: anything touching a production surface
+  above trivial size).
+- **Verification is only as good as the §11 commands.** An agent can still write a weak test; hard
+  caps and adversarial review reduce but do not eliminate this. Deterministic-verification design
+  is itself "a sophisticated engineering challenge" (as the Vector team put it) — we agree.
+- **The landscape moves.** Native platform features (agent teams, sandboxes) could absorb the
+  orchestration layer; our unserved-dimension findings are dated July 2026.
+
+## 7. Related Work
+
+Spec-driven frameworks (Spec Kit, Kiro, BMAD, OpenSpec) — upstream and complementary: they
+structure phases 1–3; this workflow is about what happens after "implement". Orchestrators
+(worktree/session managers) — solve isolation; composable below this workflow's lock layer.
+Adversarial-review prototypes — validate the cross-model pattern this workflow's Phase 6 mandates,
+while illustrating the self-assessment gate it forbids. agent-gates and Checkout.com's Vector —
+closest in spirit (hook-level machine gates; deterministic completion verification); neither is a
+workflow, and neither is available. Empirical foundations: [3], [4], [5], [6], and TDAD's
+mutation-gated pipeline results [8].
+
+## References
+
+[1] GitHub Spec Kit; Amazon Kiro; BMAD-METHOD; OpenSpec — project repositories and documentation
+(characterizations partly from multi-source secondary literature; see §2 note).
+[2] formin/multi-model-review; alecnielsen/adversarial-review; addyosmani/adverse;
+zl190/agent-gates — GitHub (primary, verified).
+[3] Refute-or-Promote: adversarial stage-gated defect pipeline. arXiv:2604.19049 (2026).
+[4] Misalignment in agentic coding sessions: 20,574-session field study. arXiv:2605.29442 (2026).
+[5] METR: Measuring the impact of early-2025 AI on experienced open-source developer productivity.
+arXiv:2507.09089 (2025); follow-up update, Feb 2026.
+[6] ProcCtrlBench: process-level evaluation and control preservation. arXiv:2605.20251 (2026).
+[7] Claude Code documentation: worktrees; agent teams (primary, verified July 2026).
+[8] TDAD: Test-Driven AI Agent Definition. arXiv:2603.08806 (2026).
+[9] Checkout.com "Vector" deterministic verification layer — AI Engineer conference talk (2026),
+via ZenML LLMOps database (secondary).
+[10] Internal: readiness calibration study (143 findings × 83 scores), 2026-06-10; extraction
+inventory and competitive landscape research, 2026-07-22.
+

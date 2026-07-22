@@ -12,7 +12,7 @@ export type {
   WorktreeConfig,
 } from './types.js';
 export { DEFAULT_CONFIG } from './defaults.js';
-export { validateConfig } from './validate.js';
+export { validateConfig, validateResolvedConfig } from './validate.js';
 export {
   CONFIG_FILENAME,
   ConfigError,

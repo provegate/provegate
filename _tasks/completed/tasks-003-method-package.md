@@ -164,6 +164,9 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   (§12); deferred as a governed follow-up: owner=owner, due=2026-07-29, renewals=0 —
   first engine item of the next PRD. Everything in this PRD's scope (template, prompts,
   schema description, all test fixtures) now carries the doctrinal 3/5.
+  **CLOSED 2026-07-22 by PRD-004 FR-1** (before due, 0 renewals): `validateReviewArtifact`
+  now parses `N/M pass` and rejects pass verdicts below the 3/5 panel gate arithmetically
+  (`src/core/gates/review.ts`, `test/review-quorum.test.ts`).
 
 ## Progress Log
 

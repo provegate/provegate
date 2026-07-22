@@ -74,14 +74,20 @@ export function auditWiring(
   const issues: string[] = [];
 
   const pkgPath = resolve(root, 'package.json');
-  const pkg = existsSync(pkgPath)
+  const hasPkg = existsSync(pkgPath);
+  const pkg = hasPkg
     ? (JSON.parse(readFileSync(pkgPath, 'utf8')) as { scripts?: Record<string, string> })
     : {};
   const scripts = pkg.scripts ?? {};
   const scriptNames = new Set(Object.keys(scripts));
 
   // Direction 1: manifest commands naming pnpm/npm scripts must exist.
-  for (const cmd of manifestCommands(manifest)) {
+  // Skipped entirely when there is no package.json (a fresh non-node scaffold
+  // has nothing to audit against). This is not an evasion vector for node
+  // repos: deleting package.json doesn't dodge anything real — the manifest
+  // commands still EXECUTE at gate run and fail loud; this audit is wiring
+  // hygiene, not the execution gate.
+  for (const cmd of hasPkg ? manifestCommands(manifest) : []) {
     const m = /^(?:pnpm|npm run|yarn|bun run)\s+([\w:.-]+)/.exec(cmd);
     if (!m) continue;
     const script = m[1]!;

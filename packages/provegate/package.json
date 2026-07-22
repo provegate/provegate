@@ -26,7 +26,8 @@
     "schemas",
     "examples",
     "METHOD.md",
-    "README.md"
+    "README.md",
+    "QUICKSTART.md"
   ],
   "scripts": {
     "build": "tsup",
