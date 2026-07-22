@@ -11,6 +11,10 @@ import { sectionMatching } from '../state/markdown.js';
 /** True when a user-gate command may be shell-executed. */
 export function isSafeCommand(config: WorkflowConfig, cmd: string): boolean {
   if (/[`$><]|\$\(|\bgit\s+push\b/.test(cmd)) return false;
+  // Newlines are shell separators too — a manifest JSON string (or a
+  // multi-line backtick span) could smuggle a second command past the
+  // segment check (codex round-2 finding).
+  if (/[\r\n]/.test(cmd)) return false;
   // A lone `&` backgrounds the left side — the right side escapes the segment
   // check (and could clear the recursion sentinel). Only `&&` chaining is legal.
   if (/(?<!&)&(?!&)/.test(cmd)) return false;
@@ -44,11 +48,12 @@ export function parseVerificationCommands(
     if (!/^\s*\|\s*FR-\d+\b/.test(line)) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const cmd = match[1]!.trim();
-      // Include allowlisted-prefix tokens AND anything command-shaped
-      // (contains whitespace): a row hiding `rm -rf /` must surface as
-      // unsafe, never be silently invisible to the runner and the lint.
-      const commandShaped = /\s/.test(cmd);
-      if (config.commands.allowedPrefixes.some((p) => cmd.startsWith(p)) || commandShaped) {
+      // Every backticked token surfaces UNLESS it is an inert file path
+      // (extension-terminated, no whitespace). Bare words like `reboot`
+      // and path-shaped commands like `./verify` must be visible as
+      // unsafe, never silently dropped (codex round-2 finding).
+      const inertPath = !/\s/.test(cmd) && /^[\w@/-]+(\.[\w-]+)+$/.test(cmd);
+      if (!inertPath) {
         cmds.push({ cmd, safe: isSafeCommand(config, cmd) });
       }
     }

@@ -64,6 +64,8 @@ describe('parseVerificationCommands', () => {
       { cmd: 'pnpm test test/a.test.ts', safe: true },
       { cmd: 'pnpm build && node dist/cli.js x', safe: true },
       { cmd: 'pnpm run $(evil)', safe: false },
+      // bare non-path tokens are deliberately visible as unsafe (round 2)
+      { cmd: 'not-a-command', safe: false },
     ]);
   });
 
@@ -91,5 +93,25 @@ describe('codex review regressions (round 1)', () => {
     ].join('\n');
     const cmds = parseVerificationCommands(cfg, prd);
     expect(cmds).toContainEqual({ cmd: 'rm -rf /', safe: false });
+  });
+});
+
+describe('codex review regressions (round 2)', () => {
+  it('rejects newline-separated payloads (shell treats \\n as a separator)', () => {
+    expect(isSafeCommand(cfg, 'pnpm test\nrm -rf /tmp/victim')).toBe(false);
+    expect(isSafeCommand(cfg, 'pnpm test\r\nnode evil.js')).toBe(false);
+  });
+
+  it('bare non-prefix tokens surface as unsafe; inert file paths stay invisible', () => {
+    const prd = [
+      '## 11. Verification Commands',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 | `pnpm test` then `reboot` and `./verify` but see `test/x.test.ts` |',
+    ].join('\n');
+    const cmds = parseVerificationCommands(cfg, prd);
+    expect(cmds).toContainEqual({ cmd: 'reboot', safe: false });
+    expect(cmds).toContainEqual({ cmd: './verify', safe: false });
+    expect(cmds.map((c) => c.cmd)).not.toContain('test/x.test.ts');
   });
 });

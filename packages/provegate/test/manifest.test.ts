@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { DEFAULT_CONFIG, deepMerge } from '../src/core/config/index.js';
 import {
   ManifestError,
   defaultManifest,
@@ -137,10 +137,17 @@ describe('codex review regressions (round 1)', () => {
 
   it('refuses a manifest whose commands fail the safety gate (git push, metachars)', () => {
     expect(() => loadManifest(cfg, tempRepo({ postMerge: ['git push origin main'] }))).toThrow(
-      /unsafe commands/,
+      /safety gate/,
     );
     expect(() => loadManifest(cfg, tempRepo({ phases: { '4': ['pnpm test > out.txt'] } }))).toThrow(
-      /unsafe commands/,
+      /safety gate/,
     );
+  });
+});
+
+describe('codex review regressions (round 2)', () => {
+  it('an absent manifest does NOT let unsafe workflow.config commands escape', () => {
+    const evilCfg = deepMerge(cfg, { commands: { test: 'git push origin main' } });
+    expect(() => loadManifest(evilCfg, tempRepo())).toThrow(/safety gate/);
   });
 });

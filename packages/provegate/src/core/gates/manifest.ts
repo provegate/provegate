@@ -233,11 +233,27 @@ export function validateManifest(config: WorkflowConfig, value: unknown): Manife
   return issues;
 }
 
+/** Refuse any manifest (including pure defaults built from workflow.config
+ * commands) whose commands fail the safety gate — an unsafe config command
+ * must not escape just because no manifest file exists (codex round-2). */
+function assertCommandsSafe(config: WorkflowConfig, manifest: GatesManifest): void {
+  const unsafe = manifestCommands(manifest).filter((cmd) => !isSafeCommand(config, cmd));
+  if (unsafe.length > 0) {
+    throw new ManifestError(
+      'gate commands refused by the safety gate',
+      unsafe.map((cmd) => ({ path: 'commands', message: `unsafe: ${cmd}` })),
+    );
+  }
+}
+
 /** Load the manifest for a repo root. Absent file = pure defaults. */
 export function loadManifest(config: WorkflowConfig, root: string): GatesManifest {
   const file = resolve(root, MANIFEST_FILENAME);
   const defaults = defaultManifest(config);
-  if (!existsSync(file)) return defaults;
+  if (!existsSync(file)) {
+    assertCommandsSafe(config, defaults);
+    return defaults;
+  }
 
   let parsed: unknown;
   try {
@@ -252,16 +268,7 @@ export function loadManifest(config: WorkflowConfig, root: string): GatesManifes
     throw new ManifestError(`${MANIFEST_FILENAME} is invalid`, issues);
   }
   const merged = deepMerge(defaults, parsed);
-  // Safety is not optional for manifest/config commands either: a manifest
-  // (or workflow.config commands entry) containing `git push` or shell
-  // metachars must fail loud at load, not execute as "trusted" (codex P1).
-  const unsafe = manifestCommands(merged).filter((cmd) => !isSafeCommand(config, cmd));
-  if (unsafe.length > 0) {
-    throw new ManifestError(
-      `${MANIFEST_FILENAME} contains unsafe commands`,
-      unsafe.map((cmd) => ({ path: 'commands', message: `refused by the safety gate: ${cmd}` })),
-    );
-  }
+  assertCommandsSafe(config, merged);
   return merged;
 }
 

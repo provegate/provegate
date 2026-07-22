@@ -280,3 +280,22 @@ describe('archive commit scoping (codex round 1)', () => {
     expect(git(root, ['diff', '--cached', '--name-only'])).toContain('stray.ts');
   });
 });
+
+describe('codex round-2 test adequacy', () => {
+  it('worktree revert also survives an intervening post-merge commit', () => {
+    const root = fixtureRepo();
+    const wtDir = mkdtempSync(join(tmpdir(), 'provegate-wt-'));
+    roots.push(wtDir);
+    git(root, ['worktree', 'add', '-q', '-f', wtDir, 'main']);
+    const before = git(root, ['rev-parse', 'main']);
+    const committing =
+      "node -e \"require('node:child_process').execFileSync('git',['commit','--allow-empty','-m','chore: side commit'])\"";
+    const manifest = {
+      ...defaultManifest(cfg),
+      postMerge: [committing, 'node -e "process.exit(1)"'],
+    };
+    const result = mergeToLocalBase({ config: cfg, manifest, root, id: 'PRD-002' });
+    expect(result.ok).toBe(false);
+    expect(git(root, ['rev-parse', 'main'])).toBe(before);
+  });
+});

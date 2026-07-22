@@ -373,7 +373,7 @@ Run from repo root after `pnpm build`. Every FR maps to ≥1 runnable command.
 | FR-3  | `pnpm --filter provegate test test/classes.test.ts`                                                              | provegate | class parse, diff fallback chain, conditional rules          |
 | FR-4  | `pnpm --filter provegate test test/review-gate.test.ts`                                                          | provegate | metadata block, pass-with-critical rejection, ledger row     |
 | FR-5  | `pnpm --filter provegate test test/acceptance.test.ts`                                                           | provegate | owner allowlist from config, malformed entries               |
-| FR-6  | `pnpm --filter provegate test test/durable.test.ts`                                                              | provegate | declared∩diff, `none` handling                               |
+| FR-6  | `pnpm --filter provegate test test/durable.test.ts`                                                              | provegate | declared∩diff, none-token handling                           |
 | FR-7  | `pnpm --filter provegate test test/metrics.test.ts`                                                              | provegate | JSONL append, best-effort failure                            |
 | FR-8  | `pnpm --filter provegate test test/chain.test.ts` && `node packages/provegate/dist/cli.js run --dry-run PRD-002` | provegate | chain assembly, from-phase skip, live dry-run plan exit 0    |
 | FR-9  | `pnpm --filter provegate test test/merge.test.ts`                                                                | provegate | fixture-repo merge, auto-revert, coordination-dirt reset     |
