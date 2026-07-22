@@ -126,6 +126,10 @@ rules bind).
    the snapshot: English, parent examples/DO-NOTs/References swapped for generic content
    or placeholders, command references updated to the shipped CLI, class tables and
    scoring weights preserved intact (they are the method's calibrated core).
+   **Unshipped-tooling policy**: where the parent flow used tooling not yet extracted
+   (acceptance recording, worktree start/stop, state panel sync), the prompt describes
+   the manual procedure (e.g. "record an owner entry in the acceptances file — see
+   METHOD.md") and never names a command the CLI does not have.
    - **Targets:** `packages/provegate/prompts/phase-1-prd-generator.md`, `packages/provegate/prompts/phase-2-readiness-scorer.md`, `packages/provegate/prompts/phase-3-task-generator.md`, `packages/provegate/prompts/phase-4-implementation.md`, `packages/provegate/prompts/phase-5-testing.md`, `packages/provegate/prompts/phase-6-final-auditing.md`, `packages/provegate/prompts/phase-7-learning.md`
 3. **FR-3 — Orchestration-runner prompt**: port with the substrate split, the 5-lens
    review panel (correctness/security/cross-tenant/contract/perf) with ≥3/5 quorum, and
@@ -222,6 +226,9 @@ rules bind).
 - **Calibrated content is load-bearing**: phase-2 scoring weights, hard-cap rules,
   class tables, and the 5-lens quorum port UNCHANGED — they encode the 143-finding
   calibration; wording may localize, numbers may not.
+- **Unshipped-tooling policy** (applies to every prompt/template): shipped CLI commands
+  are named directly; parent flows without a shipped equivalent become documented manual
+  procedures; nothing is presented as a command that does not exist.
 - **Turkish source surfaces** (template comments, status-board headers, prompt notes)
   are translated, not transliterated; the status board keeps the parent's table
   _structure_ (lock mirror + owner/due/renewal columns) with English headers matching
@@ -342,6 +349,7 @@ Cross-cutting (all green before Code Complete):
 
 ## Changelog
 
-| Date       | Author | Changes       |
-| ---------- | ------ | ------------- |
-| 2026-07-22 | rayvaz | Initial draft |
+| Date       | Author | Changes                                                                                                                 |
+| ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-22 | rayvaz | Initial draft                                                                                                           |
+| 2026-07-22 | rayvaz | `gate check` caught table-pipe hazard in FR-4 row (fixed); Phase 2 pre-score fix: unshipped-tooling policy in FR-2 + §7 |
