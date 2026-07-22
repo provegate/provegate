@@ -131,6 +131,7 @@
 | push-refusal       | `node packages/provegate/dist/cli.js push`                                  | provegate | passed  | exit 1, "No. Push is yours." | |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz packages/provegate/src QUICKSTART.md`       | provegate | passed  | clean | |
 | wiring             | `node packages/provegate/dist/cli.js check --wiring`                        | provegate | passed  | all wired/excepted | |
+| independent-review | `_docs/reviews/review-004-launch-quickstart.md`                             | repo      | passed  | codex 4 rounds (3 crit + 9 P2/P3 fixed), verdict pass, 0 critical | validated by new quorum gate |
 | types              | `pnpm check-types`                                                          | monorepo  | pending |          |                                     |
 | lint               | `pnpm lint`                                                                 | monorepo  | pending |          |                                     |
 | test               | `pnpm --filter provegate test`                                              | provegate | pending |          | prior suites intact                 |
