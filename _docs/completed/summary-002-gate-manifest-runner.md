@@ -1,8 +1,8 @@
 # Development Summary: Gate Manifest + Autorun Runner
 
-> **PRD**: [prd-002-gate-manifest-runner.md](../../_prds/wip/prd-002-gate-manifest-runner.md)
-> **Tasks**: [tasks-002-gate-manifest-runner.md](../../_tasks/wip/tasks-002-gate-manifest-runner.md)
-> **Ship Readiness**: Operator Verification
+> **PRD**: [prd-002-gate-manifest-runner.md](../../_prds/completed/prd-002-gate-manifest-runner.md)
+> **Tasks**: [tasks-002-gate-manifest-runner.md](../../_tasks/completed/tasks-002-gate-manifest-runner.md)
+> **Ship Readiness**: Ship Verified
 > **Completed**: 2026-07-22
 > **Author**: rayvaz (implementing agent: claude-fable-5; reviewer: codex)
 
@@ -42,6 +42,9 @@ local no-ff merge, post-merge verification, and captured-SHA auto-revert. `gate 
 
 ## Ship Readiness
 
-Operator Verification — remaining operator-owned steps: record the acceptance entry in
-`_state/acceptances.json` (the FR-5 guard validates it), trigger the dogfood close
-(`gate run PRD-002` — the runner lands its own PRD), and the push, always.
+Ship Verified — operator accepted 2026-07-22 (entry in `_state/acceptances.json`,
+validated by the FR-5 guard this PRD shipped); closed by `gate run PRD-002` itself:
+19 command gates green, review/durable/operator fn-gates passed, artifacts archived,
+no-ff merge `4c58ed5` with post-merge gates green. One STOP on the way (Phase 6
+caught a ledger row missing the review-artifact path) — fixed and resumed with
+`--from-phase=6`, exactly as the STOP card instructed. Push remains the owner's.

@@ -1,8 +1,8 @@
 # Tasks: Gate Manifest + Autorun Runner
 
-> **PRD**: [prd-002-gate-manifest-runner.md](../../_prds/wip/prd-002-gate-manifest-runner.md)
-> **Readiness**: [readiness-002-gate-manifest-runner.md](../../_readiness/wip/readiness-002-gate-manifest-runner.md)
-> **Status**: In Progress
+> **PRD**: [prd-002-gate-manifest-runner.md](../../_prds/completed/prd-002-gate-manifest-runner.md)
+> **Readiness**: [readiness-002-gate-manifest-runner.md](../../_readiness/completed/readiness-002-gate-manifest-runner.md)
+> **Status**: Ship Verified
 > **Readiness Score**: 8.65/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-22
@@ -165,13 +165,13 @@ diffFiles)` — every declared path in merge-range diff
         recursion guard, auto-revert paths) — artifact in `_docs/reviews/` with schema
         (now machine-validated by FR-4 code)
   - [x] 10.2 Fix or waive findings; critical must be 0; re-verify round
-- [ ] 11.0 Phase 7 — Learning + dogfood close
+- [x] 11.0 Phase 7 — Learning + dogfood close
   - [x] 11.1 Durable artifacts in diff (cli.mdx, README)
   - [x] 11.2 Summary `_docs/wip/summary-002-gate-manifest-runner.md`
   - [x] 11.3 PRD lifecycle walk (In Progress → Code Complete → Operator Verification)
   - [x] 11.4 Owner records acceptance entry in `_state/acceptances.json` (validated by
         FR-5 code — the guard gates its own PRD)
-  - [ ] 11.5 **Dogfood finale**: `node packages/provegate/dist/cli.js run PRD-002` —
+  - [x] 11.5 **Dogfood finale**: `node packages/provegate/dist/cli.js run PRD-002` —
         chain + archive + no-ff merge to main + post-merge gates + handoff card;
         push stays owner's
 
@@ -199,7 +199,7 @@ diffFiles)` — every declared path in merge-range diff
 | push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                  | provegate | passed | stderr "No. Push is yours.", exit 1                                                        |                              |
 | push-grep          | no push invocation in `core/run` + `core/gates` (PRD §11)                  | provegate | passed | grep "'push'" in run+gates: clean; git-push literals = card text + safety regex (reviewed) | W3 archive msg also checked  |
 | name-grep          | no emofy/rayvaz in `src/`                                                  | provegate | passed | clean                                                                                      |                              |
-| dogfood            | `gate check PRD-002` + `gate run --dry-run PRD-002` + close via `gate run` | repo      | passed | check + dry-run exit 0; recursion guard refuses nested, dry-run exempt; close pending 11.5 | close is operator-triggered  |
+| dogfood            | `gate check PRD-002` + `gate run --dry-run PRD-002` + close via `gate run` | repo      | passed | closed BY `gate run PRD-002`: 19 gates + archive + no-ff merge 4c58ed5 + post-merge green  | close is operator-triggered  |
 | independent-review | `_docs/reviews/review-002-gate-manifest-runner.md`                         | repo      | passed | codex 3 rounds, 11 crit + 2 adv all fixed, verdict pass                                    | verdict pass, critical = 0   |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -231,8 +231,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Operator Handoff
 
-| Task | Category  | Owner | Required Check                                                          | Status  | Notes                                |
-| ---- | --------- | ----- | ----------------------------------------------------------------------- | ------- | ------------------------------------ |
-| 10.1 | external  | owner | Authorize codex review session (established cross-model reviewer)       | pending | agent executes per PRD-001 precedent |
-| 11.4 | manual-qa | owner | Record acceptance entry in `_state/acceptances.json` (or dictate terms) | pending | FR-5 guard validates it mechanically |
-| 11.5 | manual-qa | owner | Trigger dogfood close; push after handoff card (always human)           | pending | runner never pushes                  |
+| Task | Category  | Owner | Required Check                                                          | Status   | Notes                                |
+| ---- | --------- | ----- | ----------------------------------------------------------------------- | -------- | ------------------------------------ |
+| 10.1 | external  | owner | Authorize codex review session (established cross-model reviewer)       | resolved | agent executes per PRD-001 precedent |
+| 11.4 | manual-qa | owner | Record acceptance entry in `_state/acceptances.json` (or dictate terms) | resolved | FR-5 guard validates it mechanically |
+| 11.5 | manual-qa | owner | Trigger dogfood close; push after handoff card (always human)           | resolved | runner never pushes                  |
