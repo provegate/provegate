@@ -143,7 +143,11 @@ describe('codex round-2: precondition-before-archive ordering (real CLI)', () =>
     gitRun(['commit', '-q', '-m', 'chore: fixture']);
     const before = gitRun(['rev-parse', 'HEAD']).trim();
 
-    const result = await run(process.execPath, [cliPath, 'land', 'PRD-001'], { cwd: root }).then(
+    // clear the sentinel: this suite may itself run under `gate run` (dogfood)
+    const result = await run(process.execPath, [cliPath, 'land', 'PRD-001'], {
+      cwd: root,
+      env: { ...process.env, PROVEGATE_RUN_ACTIVE: '' },
+    }).then(
       () => ({ code: 0, stderr: '' }),
       (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
     );

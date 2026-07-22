@@ -169,7 +169,7 @@ diffFiles)` — every declared path in merge-range diff
   - [x] 11.1 Durable artifacts in diff (cli.mdx, README)
   - [x] 11.2 Summary `_docs/wip/summary-002-gate-manifest-runner.md`
   - [x] 11.3 PRD lifecycle walk (In Progress → Code Complete → Operator Verification)
-  - [ ] 11.4 Owner records acceptance entry in `_state/acceptances.json` (validated by
+  - [x] 11.4 Owner records acceptance entry in `_state/acceptances.json` (validated by
         FR-5 code — the guard gates its own PRD)
   - [ ] 11.5 **Dogfood finale**: `node packages/provegate/dist/cli.js run PRD-002` —
         chain + archive + no-ff merge to main + post-merge gates + handoff card;
