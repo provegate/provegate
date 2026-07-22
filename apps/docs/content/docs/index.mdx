@@ -1,0 +1,25 @@
+---
+title: What is ProveGate?
+description: prove it, then let it propagate.
+---
+
+Coding agents misreport completion — in 20K+ real sessions, false "tests pass" claims are the
+third most common failure and growing. ProveGate makes agent self-assessment structurally
+irrelevant: seven phases where every autonomous boundary is a machine-checkable gate (a
+verification command's exit code or an independent cross-model reviewer's structured verdict),
+executed-evidence testing ("listed but not run" is never "passed"), declared conflict surfaces
+for parallel agents, and a hard rule that nothing pushes to a remote without a human.
+
+Hardened over ~390 production PRDs. MIT, agent-agnostic, bring your own gates.
+
+> **Pre-release.** Method extraction is in progress. The CLI ships stubs plus one real
+> behavior: `gate push` refuses.
+
+<Cards>
+  <Card
+    title="The method"
+    href="/docs/method"
+    description="The 7-phase gated workflow at a glance."
+  />
+  <Card title="CLI reference" href="/docs/cli" description="Commands and what they will do." />
+</Cards>

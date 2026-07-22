@@ -1,0 +1,24 @@
+---
+title: The Method
+description: Seven phases, machine-checkable gates, human-only push.
+---
+
+> **Stub.** The full method spec (`METHOD.md`) is extracted in roadmap Phase D. This page
+> sketches the shape; the thesis lives in the Gated Autonomy whitepaper.
+
+The core design rule: **a phase boundary is a gate only if a machine can check it** — a
+verification command's exit code, or an independent reviewer's structured verdict; never the
+implementing agent's own judgment.
+
+## The seven phases
+
+1. **Spec** — human-approved intent (PRD).
+2. **Readiness** — binary verdict with empirically-derived hard caps.
+3. **Task plan** — human-approved decomposition with declared conflict surfaces.
+4. **Implement** — autonomous, gated on typecheck/lint/build/tests.
+5. **Verify** — executed evidence; a listed-but-not-run command is never "passed".
+6. **Review** — blocking adversarial review by a different model family.
+7. **Land** — knowledge capture + no-ff local merge; **push stays human**.
+
+Phases 4–7 run autonomously. Humans own the spec, the readiness verdict, the task plan — and
+the push.
