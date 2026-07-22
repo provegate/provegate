@@ -3,23 +3,31 @@ title: CLI Reference
 description: provegate / gate commands.
 ---
 
-> **Stub.** This reference will be auto-generated from the CLI once commands are implemented
-> (roadmap Phases B–C). Today every command below exits 1 with its roadmap phase — except
-> `push`, which is fully implemented.
-
 The package installs two equivalent binaries: `provegate` and `gate`.
 
-| Command  | Will do                                              | Status  |
-| -------- | ---------------------------------------------------- | ------- |
-| `init`   | scaffold workflow config + artifact tree             | Phase B |
-| `new`    | create a PRD and register it in workflow state       | Phase B |
-| `check`  | run the readiness gate against a PRD                 | Phase C |
-| `open`   | claim a PRD: acquire locks, declare conflict surface | Phase B |
-| `run`    | run gated phases 4–7 for the active PRD              | Phase C |
-| `land`   | no-ff local merge with post-merge verification       | Phase C |
-| `queue`  | show the PRD queue                                   | Phase B |
-| `status` | show workflow state (active / next / blocked)        | Phase B |
-| `push`   | refuse — push is always yours                        | done    |
+## Implemented
+
+### `gate status`
+
+Rebuilds workflow state from the artifact tree (`_prds`/`_readiness`/`_tasks`/`_docs` by
+default), writes the snapshot (default `_state/prds.json`), and prints one line per work item
+plus panel metrics:
+
+```
+$ gate status
+PRD-001  In Progress  readiness=PASS/8.7  tasks=12/45  config-state-locks
+Implemented: 0
+Latest implemented: —
+wrote /repo/_state/prds.json
+```
+
+### `gate queue [--json]`
+
+The scheduling view: READY items sorted by readiness score (with conflict-surface overlap
+warnings), IN-FLIGHT lock leases (stale-flagged), BLOCKED, and IN-REVIEW. `--json` emits the
+machine shape (`ready` / `readyOverlaps` / `inFlight` / `blocked` / `inReview`).
+
+### `gate push`
 
 ```
 $ gate push
@@ -27,3 +35,19 @@ No. Push is yours.
 $ echo $?
 1
 ```
+
+Fully implemented, permanently. The runner has no code path that pushes to a remote.
+
+Layout, id pattern, status vocabulary, and branch policy all come from an optional
+`workflow.config.json` — see the package README for the full surface.
+
+## Stubs (exit 1, naming their roadmap phase)
+
+| Command | Will do                                              | Arrives |
+| ------- | ---------------------------------------------------- | ------- |
+| `init`  | scaffold workflow config + artifact tree             | Phase B |
+| `new`   | create a PRD and register it in workflow state       | Phase B |
+| `open`  | claim a PRD: acquire locks, declare conflict surface | Phase B |
+| `check` | run the readiness gate against a PRD                 | Phase C |
+| `run`   | run gated phases 4–7 for the active PRD              | Phase C |
+| `land`  | no-ff local merge with post-merge verification       | Phase C |

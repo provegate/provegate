@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://provegate.dev/schemas/prd-state.schema.json",
+  "title": "Workflow State Snapshot",
+  "description": "Contract for the generated state snapshot (default `_state/prds.json`). The artifact tree is the source of truth; this file is a regenerable snapshot built by core/state. Patterns and enums below show the DEFAULTS — artifact dirs, lifecycle states, id pattern, and status vocabulary all derive from workflow.config at runtime.",
+  "type": "object",
+  "required": ["generatedAt", "schemaVersion", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    }
+  },
+  "$defs": {
+    "artifactPath": {
+      "type": "string",
+      "pattern": "^(|(_prds|_readiness|_tasks|_docs)/(wip|completed|deferred)/.+\\.md)$"
+    },
+    "artifactState": {
+      "type": "string",
+      "enum": ["missing", "wip", "completed", "deferred"]
+    },
+    "workflowStatus": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "In Review",
+        "Approved",
+        "In Progress",
+        "Code Complete",
+        "Operator Verification",
+        "Ship Verified",
+        "Superseded",
+        "Archived",
+        "Blocked",
+        "Deferred",
+        "Not Started",
+        "Unknown"
+      ]
+    },
+    "record": {
+      "type": "object",
+      "required": [
+        "prd",
+        "number",
+        "slug",
+        "status",
+        "artifacts",
+        "artifactStates",
+        "readiness",
+        "task",
+        "summary",
+        "lastUpdated"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "prd": {
+          "type": "string",
+          "pattern": "^PRD-[0-9]{3}$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "status": {
+          "$ref": "#/$defs/workflowStatus"
+        },
+        "cyclePhase": {
+          "type": ["string", "null"]
+        },
+        "operatorAcceptance": {
+          "type": ["string", "null"],
+          "description": "Owner's explicit acceptance of operator-owned checks shipped without execution."
+        },
+        "autonomousClose": {
+          "type": ["string", "null"],
+          "enum": ["eligible", "operator-gated", null],
+          "description": "Whether orchestration may autonomously close + locally merge this item (eligible) or must stop for owner-signed acceptance (operator-gated). Push is human either way."
+        },
+        "artifacts": {
+          "type": "object",
+          "required": ["prd", "readiness", "tasks", "summary"],
+          "additionalProperties": false,
+          "properties": {
+            "prd": { "$ref": "#/$defs/artifactPath" },
+            "readiness": { "$ref": "#/$defs/artifactPath" },
+            "tasks": { "$ref": "#/$defs/artifactPath" },
+            "summary": { "$ref": "#/$defs/artifactPath" }
+          }
+        },
+        "artifactStates": {
+          "type": "object",
+          "required": ["prd", "readiness", "tasks", "summary"],
+          "additionalProperties": false,
+          "properties": {
+            "prd": { "$ref": "#/$defs/artifactState" },
+            "readiness": { "$ref": "#/$defs/artifactState" },
+            "tasks": { "$ref": "#/$defs/artifactState" },
+            "summary": { "$ref": "#/$defs/artifactState" }
+          }
+        },
+        "readiness": {
+          "type": "object",
+          "required": ["score", "verdict", "modelTierExecution", "modelTierAudit"],
+          "additionalProperties": false,
+          "properties": {
+            "score": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 10
+            },
+            "verdict": {
+              "type": ["string", "null"],
+              "enum": ["PASS", "ITERATE", "REJECT", null]
+            },
+            "modelTierExecution": {
+              "type": ["string", "null"],
+              "enum": ["high", "medium", "fast", null]
+            },
+            "modelTierAudit": {
+              "type": ["string", "null"],
+              "enum": ["high", "medium", "fast", null]
+            }
+          }
+        },
+        "task": {
+          "type": "object",
+          "required": ["status", "checkedCount", "uncheckedCount", "operatorHandoffCount"],
+          "additionalProperties": false,
+          "properties": {
+            "status": { "$ref": "#/$defs/workflowStatus" },
+            "checkedCount": { "type": "integer", "minimum": 0 },
+            "uncheckedCount": { "type": "integer", "minimum": 0 },
+            "operatorHandoffCount": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": ["shipReadiness"],
+          "additionalProperties": false,
+          "properties": {
+            "shipReadiness": { "$ref": "#/$defs/workflowStatus" }
+          }
+        },
+        "lastUpdated": {
+          "type": ["string", "null"],
+          "format": "date"
+        }
+      }
+    }
+  }
+}

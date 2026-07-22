@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-22T15:25:13.521Z",
+  "records": [
+    {
+      "prd": "PRD-001",
+      "number": 1,
+      "slug": "config-state-locks",
+      "status": "Operator Verification",
+      "cyclePhase": "7 (Learning — operator close pending)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-001-config-state-locks.md",
+        "readiness": "_readiness/wip/readiness-001-config-state-locks.md",
+        "tasks": "_tasks/wip/tasks-001-config-state-locks.md",
+        "summary": "_docs/wip/summary-001-config-state-locks.md"
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "wip"
+      },
+      "readiness": {
+        "score": 8.7,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "In Progress",
+        "checkedCount": 59,
+        "uncheckedCount": 2,
+        "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Operator Verification"
+      },
+      "lastUpdated": "2026-07-22"
+    }
+  ]
+}

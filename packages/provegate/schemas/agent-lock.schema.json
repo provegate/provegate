@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://provegate.dev/schemas/agent-lock.schema.json",
+  "title": "Agent Workflow Lock",
+  "description": "A lease claiming a work item for an agent. Documentation of shape only — the runtime gate is the hand-rolled validateLock() in core/locks (zero-dependency by design). The `prd` pattern below shows the DEFAULT id pattern; runtime validation derives the actual pattern from workflow.config idPattern.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "lockId",
+    "agent",
+    "prd",
+    "phase",
+    "startedAt",
+    "expiresAt",
+    "touchedFiles"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "enum": [1, 2]
+    },
+    "lockId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_.:-]+$"
+    },
+    "agent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prd": {
+      "type": "string",
+      "pattern": "^PRD-[0-9]{3}$"
+    },
+    "phase": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Workflow phase name. Whether the phase counts as execution (claims its conflict surface) comes from workflow.config executionPhases."
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "touchedFiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional git branch the agent is working on (v2)."
+    },
+    "worktree": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional repo-relative worktree path (v2). Required when set: must start with the configured worktree dir (default `.worktrees/`)."
+    },
+    "notes": {
+      "type": "string"
+    },
+    "ownedPaths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "description": "Optional glob patterns this work item claims exclusive write-ownership of, for path-level conflict detection (v2). Consumed by the path-conflict gate in core/locks."
+    }
+  }
+}
