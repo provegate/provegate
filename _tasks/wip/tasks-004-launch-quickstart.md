@@ -38,8 +38,8 @@
 
 ## Tasks
 
-- [ ] 1.0 Pre-flight
-  - [ ] 1.1 Branch `feat/prd-004-launch-quickstart`; lease (Conflict Surface globs);
+- [x] 1.0 Pre-flight
+  - [x] 1.1 Branch `feat/prd-004-launch-quickstart`; lease (Conflict Surface globs);
         baseline gates green
 - [x] 2.0 Quorum arithmetic (FR-1, W3)
   - [x] 2.1 `review.ts`: parse `Quorum` strictly (`^(\d+)/(\d+) pass$` post-strip;
@@ -59,7 +59,7 @@
         cwd (no config required); prints report + quickstart pointer; replaces stub
   - [x] 3.3 `wiring.ts`: skip script-existence direction when `package.json` absent;
         comment documents the no-evasion reasoning (execution gate still fails loud)
-  - [ ] 3.4 Tests `test/init.test.ts`: full tree shape; idempotent second run (all
+  - [x] 3.4 Tests `test/init.test.ts`: full tree shape; idempotent second run (all
         skipped, zero mutations — mtime/content unchanged); `--dry-run` writes
         nothing; scaffolded repo passes `buildState` + `auditWiring` (W1) + starter
         config passes `validateConfig`/`validateResolvedConfig`; non-git dir roots
@@ -113,19 +113,19 @@
 
 | Gate               | Command / Check                                                             | Scope     | Result  | Evidence | Notes                               |
 | ------------------ | --------------------------------------------------------------------------- | --------- | ------- | -------- | ----------------------------------- |
-| FR-1               | `pnpm --filter provegate test test/review-quorum.test.ts`                   | provegate | passed | 12/12 | W3 boundaries + historical fixtures |
-| FR-2               | `pnpm --filter provegate test test/init.test.ts`                            | provegate | passed | 7/7 | W1 scaffold passes gates |
+| FR-1               | `pnpm --filter provegate test test/review-quorum.test.ts`                   | provegate | passed | 15/15 | W3 boundaries + historical fixtures + codex r1-r3 exploits |
+| FR-2               | `pnpm --filter provegate test test/init.test.ts`                            | provegate | passed | 30/30 | W1 scaffold + containment + wiring grammar |
 | FR-3               | `grep -c "gate init" packages/provegate/QUICKSTART.md`                      | provegate | passed | 2 |                                     |
 | FR-4               | `grep -c "143" apps/docs/content/docs/case-study.mdx`                       | repo      | passed | 3 |                                     |
 | FR-5               | `grep -c "production SaaS platform" apps/docs/content/docs/whitepaper.mdx`  | repo      | passed | 1 (0 emofy) |                                     |
 | FR-6               | `grep -c "prove it, then let it propagate" README.md`                       | repo      | passed | 1 |                                     |
 | FR-7               | `test -f _docs/launch/announcement-draft.md`                                | repo      | passed | exists |                                     |
-| FR-8               | `pnpm --filter provegate test test/content-launch.test.ts`                  | provegate | passed | 16/16 | W2 page classes |
-| FR-9               | `pnpm --filter provegate test test/init.test.ts test/review-quorum.test.ts` | provegate | passed | 19/19 |                                     |
+| FR-8               | `pnpm --filter provegate test test/content-launch.test.ts`                  | provegate | passed | 18/18 | W2 page classes + figure tracing |
+| FR-9               | `pnpm --filter provegate test test/init.test.ts test/review-quorum.test.ts` | provegate | passed | 45/45 |                                     |
 | FR-10              | `grep -c "quickstart" apps/docs/content/docs/meta.json`                     | repo      | passed | 1 |                                     |
 | types              | `pnpm check-types`                                                          | repo      | passed  | 3/3 tasks | zero errors |
 | lint               | `pnpm lint`                                                                 | repo      | passed  | 3/3 tasks | zero warnings |
-| full-suite         | `pnpm --filter provegate test`                                              | provegate | passed  | 302/302 (31 files) | prior suites unchanged |
+| full-suite         | `pnpm --filter provegate test`                                              | provegate | passed  | 330/330 (31 files) | prior suites unchanged |
 | build              | `pnpm build`                                                                | repo      | passed  | 3/3 tasks | both apps clean |
 | self-check         | `node packages/provegate/dist/cli.js check PRD-004`                         | provegate | passed  | exit 0 | PRD passes its own gate |
 | push-refusal       | `node packages/provegate/dist/cli.js push`                                  | provegate | passed  | exit 1, "No. Push is yours." | |

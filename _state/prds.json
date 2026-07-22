@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T20:22:59.981Z",
+  "generatedAt": "2026-07-22T20:34:09.298Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -125,13 +125,13 @@
         "prd": "_prds/wip/prd-004-launch-quickstart.md",
         "readiness": "_readiness/wip/readiness-004-launch-quickstart.md",
         "tasks": "_tasks/wip/tasks-004-launch-quickstart.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-004-launch-quickstart.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.7,
@@ -141,8 +141,8 @@
       },
       "task": {
         "status": "Unknown",
-        "checkedCount": 27,
-        "uncheckedCount": 9,
+        "checkedCount": 35,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 2
       },
       "summary": {
