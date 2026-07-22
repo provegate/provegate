@@ -208,10 +208,9 @@ All new code TypeScript strict, ESM, node ≥22 builtins only; every module take
     exceptions (gate now wired or script gone) fail — shrink-only.
     - **Targets:** `packages/provegate/src/core/gates/wiring.ts`
 12. **FR-12 — CLI + exports**: wire `run` (`--dry-run`, `--from-phase=4|5|6|7|merge`),
-    `land` (= run `--from-phase=merge`), `check` (+ `check-wiring` subaction via
-    `gate check --wiring`? no — separate hidden? decide: `gate check <id>` and
-    `gate check --wiring`), replacing their stubs; `init|new|open` remain stubs;
-    `push` refusal byte-identical; public exports for all new modules.
+    `land` (= run `--from-phase=merge`), and `check` — `gate check PRD-XXX` lints a PRD,
+    `gate check --wiring` runs the wiring audit — replacing their stubs; `init|new|open`
+    remain stubs; `push` refusal byte-identical; public exports for all new modules.
     - **Targets:** `packages/provegate/src/cli.ts`, `packages/provegate/src/core/gates/index.ts`, `packages/provegate/src/core/run/index.ts`, `packages/provegate/src/index.ts`
 
 ---
