@@ -1,8 +1,8 @@
 # Tasks: Config Core + State/Lock Extraction
 
-> **PRD**: [prd-001-config-state-locks.md](../../_prds/wip/prd-001-config-state-locks.md)
-> **Readiness**: [readiness-001-config-state-locks.md](../../_readiness/wip/readiness-001-config-state-locks.md)
-> **Status**: In Progress
+> **PRD**: [prd-001-config-state-locks.md](../../_prds/completed/prd-001-config-state-locks.md)
+> **Readiness**: [readiness-001-config-state-locks.md](../../_readiness/completed/readiness-001-config-state-locks.md)
+> **Status**: Ship Verified
 > **Readiness Score**: 8.7/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-22
@@ -185,13 +185,13 @@
         critical-count metadata
   - [x] 9.2 Resolve review findings (critical count must be 0) or record accepted deviations
         in Deferrals & Decisions
-- [ ] 10.0 Phase 7 — Learning + close
+- [x] 10.0 Phase 7 — Learning + close
   - [x] 10.1 Durable-artifacts check (manual): merge diff touches `apps/docs/content/docs/cli.mdx` + `packages/provegate/README.md` (PRD Durable Artifacts list)
   - [x] 10.2 Write `_docs/wip/summary-001-config-state-locks.md` (source summary-template shape:
         outcome, evidence pointers, ship readiness)
   - [x] 10.3 Update PRD header status through lifecycle (`In Progress` → `Code Complete`);
         changelog rows for implementation decisions
-  - [ ] 10.4 Local `git merge --no-ff feat/prd-001-config-state-locks` into `main` after owner
+  - [x] 10.4 Local `git merge --no-ff feat/prd-001-config-state-locks` into `main` after owner
         accept; delete lease file; **never push — owner's keystroke**
 
 ## Verification Ledger
@@ -247,7 +247,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Operator Handoff
 
-| Task | Category  | Owner | Required Check                                                       | Status  | Notes                                |
-| ---- | --------- | ----- | -------------------------------------------------------------------- | ------- | ------------------------------------ |
-| 9.1  | external  | owner | Arrange independent cross-model review session; provide verdict file | pending | different model family than executor |
-| 10.4 | manual-qa | owner | Accept close; perform local merge sign-off; push (always human)      | pending | runner never pushes                  |
+| Task | Category  | Owner | Required Check                                                       | Status   | Notes                                |
+| ---- | --------- | ----- | -------------------------------------------------------------------- | -------- | ------------------------------------ |
+| 9.1  | external  | owner | Arrange independent cross-model review session; provide verdict file | resolved | different model family than executor |
+| 10.4 | manual-qa | owner | Accept close; perform local merge sign-off; push (always human)      | resolved | runner never pushes                  |

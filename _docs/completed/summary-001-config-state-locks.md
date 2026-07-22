@@ -1,8 +1,8 @@
 # Development Summary: Config Core + State/Lock Extraction
 
-> **PRD**: [prd-001-config-state-locks.md](../../_prds/wip/prd-001-config-state-locks.md)
-> **Tasks**: [tasks-001-config-state-locks.md](../../_tasks/wip/tasks-001-config-state-locks.md)
-> **Ship Readiness**: Operator Verification
+> **PRD**: [prd-001-config-state-locks.md](../../_prds/completed/prd-001-config-state-locks.md)
+> **Tasks**: [tasks-001-config-state-locks.md](../../_tasks/completed/tasks-001-config-state-locks.md)
+> **Ship Readiness**: Ship Verified
 > **Completed**: 2026-07-22
 > **Author**: rayvaz (implementing agent: claude-fable-5; reviewer: codex)
 
@@ -43,6 +43,5 @@ live in `packages/provegate/src/core/{config,state,locks}`. `gate status` and
 
 ## Ship Readiness
 
-Operator Verification — code complete, gates green, review passed. Remaining
-operator-owned steps: accept the close, local no-ff merge of
-`feat/prd-001-config-state-locks` into `main`, and (always) the push.
+Ship Verified — operator accepted 2026-07-22; no-ff merge `8fc251d` landed on `main` with
+post-merge gates green (120/120 tests). Push remains the owner's keystroke.

@@ -1,26 +1,26 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T15:25:13.521Z",
+  "generatedAt": "2026-07-22T15:30:33.517Z",
   "records": [
     {
       "prd": "PRD-001",
       "number": 1,
       "slug": "config-state-locks",
-      "status": "Operator Verification",
-      "cyclePhase": "7 (Learning — operator close pending)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-001-config-state-locks.md",
-        "readiness": "_readiness/wip/readiness-001-config-state-locks.md",
-        "tasks": "_tasks/wip/tasks-001-config-state-locks.md",
-        "summary": "_docs/wip/summary-001-config-state-locks.md"
+        "prd": "_prds/completed/prd-001-config-state-locks.md",
+        "readiness": "_readiness/completed/readiness-001-config-state-locks.md",
+        "tasks": "_tasks/completed/tasks-001-config-state-locks.md",
+        "summary": "_docs/completed/summary-001-config-state-locks.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.7,
@@ -29,13 +29,13 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 59,
-        "uncheckedCount": 2,
+        "status": "Ship Verified",
+        "checkedCount": 61,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 2
       },
       "summary": {
-        "shipReadiness": "Operator Verification"
+        "shipReadiness": "Ship Verified"
       },
       "lastUpdated": "2026-07-22"
     }

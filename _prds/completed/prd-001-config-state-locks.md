@@ -1,12 +1,12 @@
 # PRD-001: Config Core + State/Lock Extraction
 
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 > **Created**: 2026-07-22
 > **Updated**: 2026-07-22
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `config-state-locks`
-> **Cycle Phase**: 7 (Learning — operator close pending)
+> **Cycle Phase**: 7 (Closed)
 > **PRD Class**: infra
 > **Class Rationale**: Builds workflow tooling (the package's own core), no user-facing product surface; rollback is a git revert, deployment ordering is the only real risk.
 > **Autonomous Close**: operator-gated
@@ -369,3 +369,4 @@ Cross-cutting (all must be green before Code Complete):
 | 2026-07-22 | rayvaz | Phase 2 pre-score fixes: state-file locality (checkout-local), merge semantics, no-shell-git DO NOT                                                                          |
 | 2026-07-22 | rayvaz | Phases 4–5 complete (commit a0e2155): all §11 gates green, ledger evidence in tasks file; Status → Code Complete                                                             |
 | 2026-07-22 | rayvaz | Phase 6: codex review fail→fixes (a6071e1, d0d265d: stateRoles, sentinel, null-lock, atomic write, semantic validation, regex escaping)→pass; Status → Operator Verification |
+| 2026-07-22 | rayvaz | Operator accepted; no-ff merge 8fc251d to main, post-merge gates green; Status → Ship Verified                                                                               |
