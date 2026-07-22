@@ -1,0 +1,87 @@
+# Development Summary: [Feature Name]
+
+> **PRD**: [prd-XXX-{short-name}.md](../../_prds/completed/prd-XXX-{short-name}.md)
+> **Tasks**: [tasks-XXX-{short-name}.md](../../_tasks/completed/tasks-XXX-{short-name}.md)
+> **Ship Readiness**: Ship Verified | Operator Verification
+> **Completed**: [YYYY-MM-DD]
+> **Author**: [role identity]
+
+---
+
+## Overview
+
+[What was implemented — 2-3 sentences]
+
+---
+
+## Key Features
+
+- Feature 1: [Description]
+- Feature 2: [Description]
+
+---
+
+## Technical Implementation
+
+[Architecture decisions, patterns used, notable choices]
+
+## Files Created/Modified
+
+| File           | Type             | Description |
+| -------------- | ---------------- | ----------- |
+| `path/to/file` | Created/Modified | ...         |
+
+---
+
+## Testing
+
+[Test approach, coverage, notable adversarial cases]
+
+---
+
+## Verification Evidence
+
+| Gate  | Scope                 | Result                   | Evidence                 | Notes |
+| ----- | --------------------- | ------------------------ | ------------------------ | ----- |
+| types | [monorepo / affected] | [passed/partial/blocked] | [command output summary] |       |
+| lint  | [monorepo / targeted] | [passed/partial/blocked] | [command output summary] |       |
+| build | [monorepo / affected] | [passed/partial/blocked] | [command output summary] |       |
+| tests | [affected packages]   | [passed/skipped/blocked] | [command output summary] |       |
+
+Allowed results: `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
+
+---
+
+## Operator Handoff
+
+| Task      | Category           | Required Check                 | Owner  | Status                  | Notes |
+| --------- | ------------------ | ------------------------------ | ------ | ----------------------- | ----- |
+| [Task ID] | [runtime/staging…] | [Runtime/manual/staging check] | [role] | [pending/done/accepted] |       |
+
+If no operator-owned work remains, write `None`.
+
+---
+
+## Ship Readiness
+
+[Ship Verified / Operator Verification with concise rationale. The state builder reads
+the first canonical status in this section — lead with it. If `Operator Verification`,
+artifacts remain in `wip/` until required handoff rows are resolved or accepted.]
+
+---
+
+## Breaking Changes
+
+[List or "None"]
+
+---
+
+## Deferred Items
+
+[Anything punted to a future work item, each with an owner and due date]
+
+---
+
+## References
+
+- Review artifact: `_docs/reviews/review-XXX-{short-name}.md`

@@ -1,0 +1,147 @@
+# Phase 4: Production-Grade Execution Protocol
+
+> **Cycle Phase:** 4 of 7
+> **Role:** Senior Implementation Engineer
+> **Goal:** Implement every task with zero technical debt, maximum type safety, and continuous verification.
+>
+> **Split note:** This phase runs the inline type-check + lint loop after each sub-task, and writes risk-class integration tests next to the behavior they cover. The **full test gate** — executing every PRD §11 Verification Command against a real environment — is **Phase 5**'s job. Implementation is "done" when the code is written and the inline gates pass; proving it via §11 is Phase 5.
+
+---
+
+## Agent Constraints
+
+1. **Persistence:** Work autonomously until every agent-finishable task is completed,
+   blocked, or handed off to the operator with evidence. Do not stop mid-way.
+2. **Atomic Progress:** Update the task file immediately after each sub-task.
+3. **Minimalism:** No conversational filler. No unnecessary comments. Code must be
+   clean and self-explanatory.
+4. **No Over-Engineering:** Do not add verbose docs or comments unless the logic is
+   genuinely complex.
+5. **Scope Locking:** Do not modify files or refactor code outside the current PRD's
+   scope unless strictly necessary. The PRD's Conflict Surface is your write boundary.
+6. **Model Tier Awareness:** Check the readiness report for the recommended tier. For
+   complex sub-tasks (auth, schema, cross-module) escalate; for repetitive sub-tasks a
+   lower tier is acceptable.
+7. **Claim before you code:** Record a lock lease for the work item (see METHOD.md →
+   Locks) declaring your `ownedPaths` from the PRD's Conflict Surface, and work on a
+   feature branch — never directly on {{BASE_BRANCH}}. `gate queue` shows overlapping
+   claims; do not start when your surface overlaps an active lease.
+8. **Guard failures are STOP signals:** If a gate fails for a reason unrelated to your
+   change (formatting, another item's rows, stale state), stop and report it — do
+   **not** bypass the gate, hand-edit whatever format it expects, or modify the gate
+   itself. Gates are part of the workflow contract; changing one is an `infra`-class
+   PRD of its own.
+
+---
+
+## Execution Loop
+
+For each uncompleted task:
+
+```
+0. CLAIM  → lease recorded, feature branch checked out, `gate status` clean
+1. READ   → Identify the next uncompleted sub-task
+2. EXECUTE → Write the code changes
+3. VERIFY  → Run {{CMD_CHECK_TYPES}} && {{CMD_LINT}}
+4. TEST    → Run {{CMD_TEST_SCOPED}} (skip only if the package has no test infra)
+           → Risk-class gate: if this sub-task touched guards, permissions/roles,
+             tenant scoping, auth flows, or user-controlled filters, write the
+             integration test NOW, inside the same parent task — Phase 4 cannot
+             accept `skipped` for this gate.
+5. UPDATE  → Mark only completed-as-written items [x]; update Relevant Files and the
+             Verification Ledger
+6. SYNC    → Run `gate status` at parent-task completion (not per sub-task — the state
+             snapshot is committed, and per-sub-task syncs create merge conflicts
+             between parallel agents)
+7. COMMIT  → Conventional Commits, when the agent mode allows commits
+8. REPEAT  → Next sub-task (continue autonomously; stop only for PRD/task gaps or
+             blockers)
+```
+
+---
+
+## Technical Quality Standards
+
+- **No `any`.** No `unknown` without narrowing. Leverage the project's type system.
+- Explicit return types on exported functions; branded types for entity IDs.
+
+<!-- {{TECH_STANDARDS}}: replace with your stack's layer rules — e.g. controller/
+service/repository pattern, scoped-repository requirement, DTO validation, permission
+decorators, frontend data-fetching conventions, schema/migration rules, queue/cache
+naming. Keep each rule checkable in review. -->
+
+{{TECH_STANDARDS}}
+
+---
+
+## Verification Commands
+
+Run after **every** sub-task:
+
+```bash
+{{CMD_CHECK_TYPES}}    # must pass
+{{CMD_LINT}}           # must pass
+{{CMD_TEST_SCOPED}}    # must pass (skip if no test infra)
+```
+
+Run after **every** parent task:
+
+```bash
+{{CMD_BUILD}}          # must pass
+```
+
+If any command fails, fix the issue before moving to the next task. Never leave broken
+state. Record every verification attempt in the Verification Ledger with one of:
+`passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`. Use `operator` for
+checks requiring a human, browser session, staging environment, credentials, or seeded
+runtime data.
+
+---
+
+## Commit Protocol
+
+After each logical unit (typically 1–3 sub-tasks), when the agent mode allows commits:
+
+```
+<type>(<scope>): <description>
+
+Types: feat, fix, refactor, chore, docs, test
+```
+
+Rules: lowercase subject, no period, max 72 chars, imperative mood.
+
+---
+
+## Error & Blocker Management
+
+- **Type errors:** Fix immediately. Do not proceed with broken types.
+- **Design questions not covered in the PRD:** Stop and ask the user.
+- **Unexpected complexity:** Log it in the task file's Blockers section and continue if
+  possible.
+
+---
+
+## Task File Updates
+
+After each sub-task:
+
+1. Mark `[ ]` → `[x]` only when the task is completed as written
+2. Leave operator-owned, environment-dependent, or blocked tasks unchecked and add them
+   to `Operator Handoff`
+3. When all required sub-tasks of a parent are `[x]`, mark the parent `[x]` too
+4. Add new/modified files to "Relevant Files"
+5. Note deviations/decisions in "Deferrals & Decisions" or "Progress Log"
+6. Update the Verification Ledger after every verification attempt
+
+**STRICT — Sub-task line edits:**
+
+- **NEVER modify the text of a sub-task line.** Only flip `[ ]` → `[x]`. The original
+  wording, file paths, and bracketed labels stay byte-identical.
+- **NEVER append inline notes, justifications, "Deferred — …", carry-forwards, or
+  summaries to a sub-task line.** A completed sub-task line reads exactly as Phase 3
+  wrote it, with the box checked.
+- All annotations go in the dedicated sections: single-line decisions → **Deferrals &
+  Decisions**; multi-line context → **Progress Log**; hard blockers → **Blockers /
+  Open Questions**; operator work → **Operator Handoff** (one row, task unchecked).
+- Rationale: the task file is the implementation contract. Inline commentary turns it
+  into a changelog and makes diffs and the Phase 6 audit unreadable.

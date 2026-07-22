@@ -1,0 +1,79 @@
+# Orchestration Runner — Agent-Phase Driver
+
+> **Role:** Deterministic orchestrator for Phases 4–7 + local merge.
+> **Pairs with:** `gate run` (the gate + merge + handoff half of the runner).
+
+---
+
+## The substrate split (why two halves)
+
+A deterministic runner can execute **gates** (verification commands, `git merge`,
+type-checks) reliably, but it cannot run the **stochastic agent phases** (writing code,
+writing adversarial tests, running a reviewer panel). Conflating the two is the classic
+orchestration mistake. So the orchestration is two cooperating halves:
+
+| Half                         | What it does                                                       | Where                        |
+| ---------------------------- | ------------------------------------------------------------------ | ---------------------------- |
+| **Agent driver** (this doc)  | Runs the stochastic phases: implement, test-author, reviewer panel | Workflow tool / parent agent |
+| **Gate runner** (`gate run`) | Verifies machine-checkable artifacts, merges locally, hands off    | Deterministic CLI            |
+
+The driver does the work; the runner refuses to advance unless the work's artifacts
+pass. Neither half pushes — push is always the human's call.
+
+---
+
+## Loop (per work item, after Phase 3 "Go")
+
+```
+Phase 4  Implementation → agent writes code; runner gate: {{CMD_CHECK_TYPES}} + {{CMD_LINT}} + {{CMD_BUILD}} + {{CMD_TEST}} + class-default gates from gates.manifest.json
+Phase 5  Testing        → agent authors deny/contract tests; runner gate: every §11 command exits 0 (safety-checked)
+Phase 6  Final Auditing → reviewer PANEL (below); agent saves a structured review artifact + ledger row; runner gate: review schema
+Phase 7  Learning       → agent updates declared Durable Artifacts; runner gate: declared paths present in the merge diff
+archive  → runner: wip→completed moves + commit (pathspec-scoped)
+merge    → runner: operator-acceptance guard, no-ff merge to LOCAL {{BASE_BRANCH}}, post-merge gates, auto-revert on failure
+handoff  → runner prints the card + metrics path; HUMAN runs git push
+```
+
+Resume after a gate failure: `gate run --from-phase=N {{ID_PREFIX}}-XXX` (4–7) or
+`gate land {{ID_PREFIX}}-XXX` when gates already passed and only the merge remains.
+The operator-acceptance gate is never skipped, in any resume mode.
+
+`gate run --dry-run {{ID_PREFIX}}-XXX` only prints the plan — it is **not** how gates
+run. The driver runs the actual phase work, then the runner's real pass executes the
+gates in order and STOPs at the first failure, handing back to the driver/human with
+the working tree intact.
+
+---
+
+## Reviewer panel (Phase 6)
+
+Spawn independent reviewers of the full diff vs base, each with a distinct lens. Prefer
+a different model family ({{REVIEW_TOOL}}); fall back to fresh agent sessions with no
+implementation context.
+
+| Lens         | Asks                                                                       |
+| ------------ | -------------------------------------------------------------------------- |
+| correctness  | Does the code do what the FRs say? Off-by-one, wrong branch, missing case? |
+| security     | Auth/permission bypass, secret leak, injection?                            |
+| cross-tenant | Can one tenant reach another tenant's data? Is every query scoped?         |
+| contract     | Does every client→server payload round-trip against the real schema?       |
+| perf         | N+1, unbounded result set, missing index, hot-path allocation?             |
+
+**Quorum: ≥3 of 5 `pass` → gate pass.** Fewer than 5 reviewers responded and quorum
+cannot be reached → gate `fail` (STOP) — never treat an absent reviewer as a pass. Save
+the panel verdict + findings to a review artifact (`templates/review-template.md`
+metadata: `Verdict`, `Critical`, `Base SHA`, `Quorum` required; `pass` ⇒ `Critical: 0`).
+Record the `independent-review` ledger row naming the artifact path — `gate run`
+validates the ledger row and the artifact schema mechanically.
+
+---
+
+## Invariants
+
+- **Learning before merge** — durable docs land in the same merge as the code.
+- **Cleanup after verified merge** — a failed merge must never destroy the working tree.
+- **Never push** — the runner stops at the handoff card; the human decides. There is
+  no code path that pushes and the runner will never push a remote; `gate push`
+  exists only to refuse.
+- **Operator rows** — autonomous merge refuses when operator-owned task rows exist
+  unless the acceptances file carries a valid owner-signed entry (see METHOD.md).

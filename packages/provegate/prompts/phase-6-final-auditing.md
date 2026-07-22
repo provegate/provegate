@@ -1,0 +1,157 @@
+# Phase 6: Final Auditing
+
+> **Cycle Phase:** 6 of 7
+> **Role:** Quality Assurance Lead
+> **Goal:** Verify the implementation matches the PRD, run the independent adversarial review, and provide a sign-off report.
+>
+> **Split note:** Testing is **Phase 5** — by the time you reach Phase 6, every §11 command has already been executed. Knowledge sync is **Phase 7**, which runs _after_ this audit and _before_ the merge. This phase focuses on the **independent adversarial review** (reviewer panel, different model family) and the spec-vs-code audit. The panel uses 5 lenses (correctness / security / cross-tenant / contract / perf) with a ≥3/5 `pass` quorum; if quorum can't be reached, the gate is `fail` (STOP).
+
+---
+
+## Agent Constraints
+
+1. **No New Features:** Verification and documentation only. Do not add features or
+   refactor code.
+2. **Thorough:** Check every constraint from the PRD against the actual implementation.
+3. **Ship Gate:** Decide whether the work is `Ship Verified` or remains in
+   `Operator Verification`. Do not archive items with unresolved required operator
+   checks. Shipping with accepted-but-not-run operator checks requires an explicit
+   owner acceptance entry (see METHOD.md → Operator acceptance).
+4. **State Gate:** Run `gate status` and confirm the state snapshot reflects reality.
+   Do not declare `Ship Verified` while any state or ledger check fails.
+5. **Review Gate:** `Ship Verified` requires an independent adversarial review of the
+   diff by an agent that did not write the code ({{REVIEW_TOOL}}, or a fresh session
+   with no implementation context prompted to refute the diff). The implementing
+   agent's own audit is necessary but not sufficient.
+
+---
+
+## Step 1: Verification Audit (Spec vs. Code)
+
+### 1.1 Constraint Matching
+
+- [ ] Every Functional Requirement (FR-1, FR-2, …) is implemented
+- [ ] Every User Story has a corresponding code path
+- [ ] Every Acceptance Criterion can be verified
+- [ ] Non-Goals are respected — nothing out-of-scope was added
+
+### 1.2 Code Hygiene
+
+- [ ] No debug logging left in production code
+- [ ] No `FIXME` / `TODO` / `HACK` comments from development
+- [ ] No commented-out code blocks
+- [ ] No `any` annotations or unsafe casts
+- [ ] No hardcoded values that should be configuration
+
+### 1.3 Build Verification
+
+```bash
+{{CMD_BUILD}}
+{{CMD_CHECK_TYPES}}
+{{CMD_LINT}}
+{{CMD_TEST_SCOPED}}
+```
+
+All must pass cleanly. Skip the test command only for packages without test infra.
+
+### 1.3b Verification Evidence
+
+Read the task file's Verification Ledger and confirm every required gate has evidence:
+
+- [ ] `passed` rows include the command/check, scope, and concrete evidence
+- [ ] `partial` rows explain the narrower scope and why full scope could not run
+- [ ] `skipped` rows are truly not applicable
+- [ ] `operator` rows are copied into the summary's Operator Handoff
+- [ ] `blocked` rows include a resumption condition
+
+If any required gate is `operator` or `blocked`, the item is `Operator Verification`,
+not `Ship Verified`.
+
+### 1.3c Execute the PRD's Verification Commands
+
+A listed-but-not-run command is `operator` or `blocked` — never `passed`. (`gate run`
+executes the §11 chain mechanically; this audit confirms the evidence exists.)
+
+### 1.3d Risk-Class Test Gate
+
+If the diff touches guards, permissions/roles, tenant scoping, auth flows, or
+user-controlled filters: confirm at least one integration test exercises the new
+behavior's **deny** path. This gate may only be `passed` or `failed` — `skipped` is not
+acceptable; `operator` requires an explicit owner acceptance.
+
+### 1.4 Domain Audit
+
+<!-- {{DOMAIN_CHECKS}}: replace with your project's audit list — tenant scoping on
+every new query, permission registry completeness, endpoint/UI gating, forbidden role
+strings, ID-generation conventions. -->
+
+{{DOMAIN_CHECKS}}
+
+### 1.6 Independent Adversarial Review (blocking)
+
+1. Run an independent review of the full diff vs base by a reviewer that did **not**
+   write the code. Default: {{REVIEW_TOOL}} (different model family, pass/fail gate).
+   Fallback: a fresh agent session with no implementation context, prompted to refute
+   the diff. For high-risk diffs, run the full 5-lens panel (see
+   `prompts/orchestration-runner.md`).
+2. Triage every finding: fix it, or waive it with a one-line justification. `pass`
+   requires zero unresolved critical findings.
+3. Save the review (findings + verdict) to a review artifact from
+   `templates/review-template.md` — the metadata block (`Verdict`, `Reviewer`,
+   `Base SHA`, `Critical`, `Quorum`) is machine-validated by `gate run`.
+4. Record an `independent-review` ledger row naming the saved artifact path.
+
+---
+
+## Step 2: Knowledge & State Sync
+
+1. Hand knowledge capture to **Phase 7** (`prompts/phase-7-learning.md`) — declared
+   Durable Artifacts only.
+2. Refresh state (`gate status`) and confirm the status board (if your project keeps
+   one) reflects the item's new status.
+3. Any deferred/follow-up item this work leaves behind gets a tracked row with an
+   owner and a due date, under the deferral governance rules (METHOD.md → Deferrals).
+   Never skip recording a deferral.
+
+---
+
+## Step 3: Documentation & Archiving
+
+Create the summary from `templates/summary-template.md` (overview, key features,
+technical implementation, verification evidence table, operator handoff, ship
+readiness). Then report:
+
+- `Ship Verified` → artifacts are ready to move `wip` → `completed` (the runner's
+  archive step does this mechanically at close).
+- `Operator Verification` → keep artifacts in `wip` until the Operator Handoff rows are
+  resolved or explicitly accepted.
+
+---
+
+## Step 4: Final Sign-off Report
+
+```markdown
+## Sign-off: {{ID_PREFIX}}-XXX
+
+### Core Changes
+
+[The most critical part of this implementation]
+
+### Architectural Impact
+
+[How this changes the project's state or future development]
+
+### Residual Technical Debt
+
+[Deferred nice-to-haves, or "None"]
+
+### Verification
+
+- [x] {{CMD_BUILD}} — PASS / PARTIAL / OPERATOR / BLOCKED
+- [x] {{CMD_CHECK_TYPES}} — PASS / …
+- [x] {{CMD_LINT}} — PASS / …
+- [x] Domain audit — PASS
+- [x] Risk-class test gate — PASS / N-A (diff doesn't touch guarded surfaces)
+- [x] Independent adversarial review — PASS / WAIVED (justification)
+- [x] §11 commands executed with output evidence — PASS
+```

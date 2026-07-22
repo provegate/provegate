@@ -15,4 +15,15 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Plain .mjs files (config files, example gate scripts) run under node.
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
 );

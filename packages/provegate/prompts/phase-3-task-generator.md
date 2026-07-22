@@ -1,0 +1,126 @@
+# Phase 3: Task List Generator Protocol
+
+> **Cycle Phase:** 3 of 7
+> **Role:** Technical Lead
+> **Goal:** Transform a scored PRD (>= 8/10) into an atomic, step-by-step implementation plan that an **implementing agent** can execute without ambiguity — every sub-task references the PRD's Targets, Verification Commands, and DO NOT lists.
+
+---
+
+## Agent Constraints
+
+1. **Pre-Condition:** The PRD must have a Readiness Score of 8/10 or higher, with a
+   saved readiness report. If the report does not exist, warn the user and recommend
+   returning to Phase 2.
+2. **No Implementation:** This phase produces a task document only — zero code changes.
+3. **Agent-Executable:** Every sub-task includes the exact file path it touches (carry
+   over from the PRD's `FR-N → Targets` lines). Sub-tasks without a path fail the gate —
+   return to Phase 1 to fill in Targets.
+4. **Test-Driven:** Every logical task group includes a corresponding test sub-task.
+5. **Strict Typing:** Include notes in tasks that forbid `any` and mandate the
+   project's typing discipline.
+6. **Verification Wired:** The Phase 5 parent task must run every command from the
+   PRD's Verification Commands section — no ad-hoc additions, no omissions.
+7. **Outcome Semantics:** Generate task files where `[x]` means completed as written.
+   Do not instruct future agents to check off operator-owned, blocked, or deferred
+   verification work.
+
+---
+
+## Process
+
+### Phase A: Parent Tasks (Skeleton)
+
+1. Read the PRD, {{ARCHITECTURE_DOC}}, and {{BEST_PRACTICES_DOC}}.
+2. Read the PRD's `PRD Class` field (default `feature`). Pick the matching parent-task
+   skeleton below.
+
+#### Class: `feature` — full-stack skeleton
+
+Create parent tasks following your project's layer order — the canonical shape:
+
+| Order | Parent Task Category         | Covers                                                              |
+| ----- | ---------------------------- | ------------------------------------------------------------------- |
+| 1     | **Data & Infrastructure**    | Schema, IDs, migrations, branded types                              |
+| 2     | **Core Logic**               | Services, repositories, domain logic                                |
+| 3     | **API & Validation**         | Endpoints, DTOs/schemas, guards                                     |
+| 4     | **Events & Integration**     | Domain events, queues, cache, webhooks, audit                       |
+| 5     | **Frontend Implementation**  | Pages/components, data hooks, UI                                    |
+| 6     | **Permissions & Security**   | Permission registry updates, endpoint + UI gating                   |
+| 7     | **Phase 5 — Testing**        | Run every PRD §11 command; update Verification Ledger with evidence |
+| 8     | **Phase 6 — Final Auditing** | Independent adversarial review; spec-vs-code audit                  |
+| 9     | **Phase 7 — Learning**       | Knowledge ingest; durable-artifacts check; summary                  |
+
+#### Class: `test-hardening` — diagnostic-first skeleton
+
+| Order | Parent Task Category         | Covers                                                                               |
+| ----- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| 0     | **Pre-flight**               | Claim the work item (lock/lease), baseline reproduction of the failure               |
+| 1     | **Diagnostic**               | Read sources, reproduce verbosely, identify root cause; **must complete before Fix** |
+| 2     | **Fix**                      | Minimum-blast-radius change. Stub-shape contracts documented here.                   |
+| 3     | **Audit**                    | Workaround grep (no skip-flags leaked), CI workflow check                            |
+| 4     | **Doc**                      | Inline comment recording root cause + fix for future contributors                    |
+| 5     | **Quality gate**             | Every PRD §11 command; re-read §12 DO NOT and confirm none introduced                |
+| 6     | **Phase 6 — Final Auditing** | Independent review + summary draft                                                   |
+| 7     | **Phase 7 — Learning**       | Knowledge ingest, durable artifacts, cleanup                                         |
+
+#### Class: `hotfix` — repro → fix → verify
+
+| Order | Parent Task Category         | Covers                                                                                |
+| ----- | ---------------------------- | ------------------------------------------------------------------------------------- |
+| 0     | **Pre-flight**               | Lock, baseline repro matching the production failure trace                            |
+| 1     | **Repro**                    | Stable local reproduction with the same failure signal; capture the trace             |
+| 2     | **Fix**                      | Minimum diff that resolves the repro; explicit non-goals if scope creep is tempting   |
+| 3     | **Verify**                   | Confirm fix on the repro + affected test suite + regression check on related surfaces |
+| 4     | **Doc**                      | Incident note (if applicable), inline comment recording the bug + fix                 |
+| 5     | **Quality gate + Phase 6/7** | Floor gates + independent review + learning + close                                   |
+
+#### Class: `infra` — workflow / tooling / CI / deploy change
+
+Use the `feature` skeleton but add **Migration & Rollback Plan** as an explicit parent
+task between Implementation and Phase 5 Testing. Migration weight at Phase 2 is 20% for
+this class — the parent task must mirror that emphasis.
+
+3. Present parent tasks to the user:
+
+   > "High-level implementation plan ready. Type **Go** to generate detailed sub-tasks
+   > with file paths."
+
+4. **STOP** — Do not continue until the user says "Go". Exception: in
+   autonomous-execution mode, document the skipped approval gate in the task file's
+   **Deferrals & Decisions** before proceeding.
+
+### Phase B: Sub-Tasks & Relevant Files
+
+After user approval:
+
+1. Break each parent into atomic sub-tasks with explicit instructions.
+2. Include specific file paths from the PRD Targets.
+3. Add a "Relevant Files" section listing all files that will be created or modified.
+4. Place risk-class integration tests (guards, permissions/roles, tenant scoping, auth
+   flows, user-controlled filters) as sub-tasks **inside the implementation parent that
+   introduces the behavior**, not in the Phase 5 parent — the test is written while the
+   behavior is built, and Phase 6 cannot accept `skipped` for this gate.
+5. Carry every readiness watch item (W1, W2, …) into an explicit sub-task.
+
+---
+
+## Task Numbering
+
+- Parent tasks: `1.0`, `2.0`, `3.0` …
+- Sub-tasks: `1.1`, `1.2` … / `2.1`, `2.2` …
+
+---
+
+## Output Format
+
+Use `templates/tasks-template.md`. Non-negotiable sections: **Task Outcome Rules**,
+**Relevant Files**, **Tasks**, **Verification Ledger** (pre-populated with one pending
+row per §11 command), **Deferrals & Decisions**, **Progress Log**, **Blockers / Open
+Questions**, **Operator Handoff**.
+
+---
+
+## File Management
+
+- **File Name:** `tasks-XXX-{short-name}.md` — same number as the PRD
+- **Location:** the tasks artifacts directory, `wip` state (default `_tasks/wip/`)

@@ -67,6 +67,15 @@ types fail loud with path-tagged errors.
 | `executionPhases`  | `["Phase 2b", "Phase 3", "Phase 4", "Maintenance"]`    | which phases claim conflict surfaces     |
 | `sharedAppendOnly` | `package.json`, `pnpm-lock.yaml`, …                    | manifests exempt from ownership overlap  |
 
+## The method assets
+
+The package ships the method itself, not just the tooling: [`METHOD.md`](METHOD.md)
+(the spec — gate rule, phases, classes, calibration principle), `prompts/` (the seven
+phase protocols + orchestration + knowledge upkeep + Cursor/Codex adapters, placeholder
+tokens per `prompts/PLACEHOLDERS.md`), `templates/` (artifact templates byte-compatible
+with the gate parsers — drift is a red test in this repo), and `examples/` (gate-plugin
+gallery: route-guard-coverage, doc-drift).
+
 ## Gates manifest
 
 Optional `gates.manifest.json` at the repo root — gate membership and policy, split from
