@@ -1,8 +1,8 @@
 # Development Summary: Method Package
 
-> **PRD**: [prd-003-method-package.md](../../_prds/wip/prd-003-method-package.md)
-> **Tasks**: [tasks-003-method-package.md](../../_tasks/wip/tasks-003-method-package.md)
-> **Ship Readiness**: Operator Verification
+> **PRD**: [prd-003-method-package.md](../../_prds/completed/prd-003-method-package.md)
+> **Tasks**: [tasks-003-method-package.md](../../_tasks/completed/tasks-003-method-package.md)
+> **Ship Readiness**: Ship Verified
 > **Completed**: 2026-07-22
 > **Author**: rayvaz (implementing agent: claude-fable-5; reviewer: codex)
 
@@ -40,6 +40,7 @@ example gallery — English-only, de-parented, calibration numbers byte-faithful
 
 ## Ship Readiness
 
-Operator Verification — remaining operator-owned steps: acceptance entry, dogfood
-close (`gate run PRD-003`), push. One governed deferral rides to the next PRD:
-runtime quorum arithmetic in the review validator (owner, due 2026-07-29).
+Ship Verified — operator accepted 2026-07-22; closed by `gate run PRD-003` on the
+first attempt: 20 gates green, artifacts archived, no-ff merge with post-merge gates
+clean. One governed deferral rides to the next PRD: runtime quorum arithmetic in the
+review validator (owner, due 2026-07-29). Push remains the owner's.

@@ -1,8 +1,8 @@
 # Tasks: Method Package — Prompts, Templates, METHOD.md, Examples
 
-> **PRD**: [prd-003-method-package.md](../../_prds/wip/prd-003-method-package.md)
-> **Readiness**: [readiness-003-method-package.md](../../_readiness/wip/readiness-003-method-package.md)
-> **Status**: In Progress
+> **PRD**: [prd-003-method-package.md](../../_prds/completed/prd-003-method-package.md)
+> **Readiness**: [readiness-003-method-package.md](../../_readiness/completed/readiness-003-method-package.md)
+> **Status**: Ship Verified
 > **Readiness Score**: 8.7/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-22
@@ -120,34 +120,34 @@
         parent residue, dropped method steps, invented doctrine; artifact in
         `_docs/reviews/` (schema-gated)
   - [x] 11.2 Fix/waive findings; critical = 0; verification round
-- [ ] 12.0 Phase 7 — Learning + close
+- [x] 12.0 Phase 7 — Learning + close
   - [x] 12.1 Summary artifact; PRD lifecycle walk
-  - [ ] 12.2 Owner acceptance entry; **close via `gate run PRD-003`**; push stays owner's
+  - [x] 12.2 Owner acceptance entry; **close via `gate run PRD-003`**; push stays owner's
 
 ## Verification Ledger
 
-| Gate               | Command / Check                                                           | Scope     | Result  | Evidence                                                                      | Notes                          |
-| ------------------ | ------------------------------------------------------------------------- | --------- | ------- | ----------------------------------------------------------------------------- | ------------------------------ |
-| FR-1               | `pnpm --filter provegate test test/content-placeholders.test.ts`          | provegate | passed  | 4/4 tests (registry complete, no orphans)                                     |                                |
-| FR-2               | `pnpm --filter provegate test test/content-prompts.test.ts`               | provegate | passed  | 8/8 tests (census, weights byte-faithful, W3 audit)                           |                                |
-| FR-3               | `grep -c "never push" packages/provegate/prompts/orchestration-runner.md` | provegate | passed  | grep 1 (invariant present) + prompts suite                                    |                                |
-| FR-4               | `grep -c architecture packages/provegate/prompts/knowledge-ingest.md`     | provegate | passed  | grep 4 + taxonomy suite                                                       |                                |
-| FR-5               | `grep -c "Phase 4" packages/provegate/prompts/adapters/codex-starter.md`  | provegate | passed  | grep 7 Phase-4 mentions; suite asserts no Phase-3 claim                       | suite asserts no Phase-3 claim |
-| FR-6               | `pnpm --filter provegate test test/content-templates.test.ts`             | provegate | passed  | 8/8 round-trip tests incl. W1 fill map                                        | W1 fill map + round-trips      |
-| FR-7               | `grep -cE "^## " packages/provegate/METHOD.md`                            | provegate | passed  | 8 sections; census in prompts suite                                           |                                |
-| FR-8               | `pnpm --filter provegate test test/content-examples.test.ts`              | provegate | passed  | 2/2 pass/fail fixture tests                                                   |                                |
-| FR-9               | `pnpm --filter provegate test test/content-hygiene.test.ts`               | provegate | passed  | 30/30 hygiene tests (W2 char policy)                                          | W2 char classes                |
-| FR-10              | `pnpm --filter provegate exec npm pack --dry-run`                         | provegate | passed  | npm pack --dry-run: 28 content files incl. METHOD.md                          | content files in listing       |
-| types              | `pnpm check-types`                                                        | monorepo  | passed  | turbo 3/3                                                                     |                                |
-| lint               | `pnpm lint`                                                               | monorepo  | passed  | turbo 3/3 (node globals for example .mjs)                                     |                                |
-| test               | `pnpm --filter provegate test`                                            | provegate | passed  | 263/263 (28 files), PRD-001/002 suites intact                                 | PRD-001/002 suites unchanged   |
-| build              | `pnpm build`                                                              | monorepo  | passed  | turbo 3/3                                                                     |                                |
-| prd-lint           | `node packages/provegate/dist/cli.js check PRD-003`                       | repo      | passed  | `gate check PRD-003` exit 0 (repeatedly, incl. post-port)                     | real gate, no waiver           |
-| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                 | provegate | passed  | exit 1                                                                        |                                |
-| hygiene-sh         | shell-level emofy/rayvaz grep over shipped content (PRD §11)              | provegate | passed  | shell grep clean over all shipped content                                     |                                |
-| src-frozen         | `git diff --stat main...HEAD -- packages/provegate/src`                   | provegate | passed  | git diff main...HEAD -- src: empty (0 lines)                                  | must be empty (§12)            |
-| independent-review | `_docs/reviews/review-003-method-package.md`                              | repo      | passed  | codex 3 rounds (1 crit + 3 adv fixed; quorum deferral governed), verdict pass |
-| dogfood            | close via `gate run PRD-003`                                              | repo      | pending |                                                                               | operator-triggered             |
+| Gate               | Command / Check                                                           | Scope     | Result | Evidence                                                                      | Notes                          |
+| ------------------ | ------------------------------------------------------------------------- | --------- | ------ | ----------------------------------------------------------------------------- | ------------------------------ |
+| FR-1               | `pnpm --filter provegate test test/content-placeholders.test.ts`          | provegate | passed | 4/4 tests (registry complete, no orphans)                                     |                                |
+| FR-2               | `pnpm --filter provegate test test/content-prompts.test.ts`               | provegate | passed | 8/8 tests (census, weights byte-faithful, W3 audit)                           |                                |
+| FR-3               | `grep -c "never push" packages/provegate/prompts/orchestration-runner.md` | provegate | passed | grep 1 (invariant present) + prompts suite                                    |                                |
+| FR-4               | `grep -c architecture packages/provegate/prompts/knowledge-ingest.md`     | provegate | passed | grep 4 + taxonomy suite                                                       |                                |
+| FR-5               | `grep -c "Phase 4" packages/provegate/prompts/adapters/codex-starter.md`  | provegate | passed | grep 7 Phase-4 mentions; suite asserts no Phase-3 claim                       | suite asserts no Phase-3 claim |
+| FR-6               | `pnpm --filter provegate test test/content-templates.test.ts`             | provegate | passed | 8/8 round-trip tests incl. W1 fill map                                        | W1 fill map + round-trips      |
+| FR-7               | `grep -cE "^## " packages/provegate/METHOD.md`                            | provegate | passed | 8 sections; census in prompts suite                                           |                                |
+| FR-8               | `pnpm --filter provegate test test/content-examples.test.ts`              | provegate | passed | 2/2 pass/fail fixture tests                                                   |                                |
+| FR-9               | `pnpm --filter provegate test test/content-hygiene.test.ts`               | provegate | passed | 30/30 hygiene tests (W2 char policy)                                          | W2 char classes                |
+| FR-10              | `pnpm --filter provegate exec npm pack --dry-run`                         | provegate | passed | npm pack --dry-run: 28 content files incl. METHOD.md                          | content files in listing       |
+| types              | `pnpm check-types`                                                        | monorepo  | passed | turbo 3/3                                                                     |                                |
+| lint               | `pnpm lint`                                                               | monorepo  | passed | turbo 3/3 (node globals for example .mjs)                                     |                                |
+| test               | `pnpm --filter provegate test`                                            | provegate | passed | 263/263 (28 files), PRD-001/002 suites intact                                 | PRD-001/002 suites unchanged   |
+| build              | `pnpm build`                                                              | monorepo  | passed | turbo 3/3                                                                     |                                |
+| prd-lint           | `node packages/provegate/dist/cli.js check PRD-003`                       | repo      | passed | `gate check PRD-003` exit 0 (repeatedly, incl. post-port)                     | real gate, no waiver           |
+| push-refusal       | `node packages/provegate/dist/cli.js push; test $? -eq 1`                 | provegate | passed | exit 1                                                                        |                                |
+| hygiene-sh         | shell-level emofy/rayvaz grep over shipped content (PRD §11)              | provegate | passed | shell grep clean over all shipped content                                     |                                |
+| src-frozen         | `git diff --stat main...HEAD -- packages/provegate/src`                   | provegate | passed | git diff main...HEAD -- src: empty (0 lines)                                  | must be empty (§12)            |
+| independent-review | `_docs/reviews/review-003-method-package.md`                              | repo      | passed | codex 3 rounds (1 crit + 3 adv fixed; quorum deferral governed), verdict pass |
+| dogfood            | close via `gate run PRD-003`                                              | repo      | passed | first-try clean close: 20 gates + archive + no-ff merge + post-merge green    |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -178,7 +178,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Operator Handoff
 
-| Task | Category  | Owner | Required Check                                                    | Status  | Notes                        |
-| ---- | --------- | ----- | ----------------------------------------------------------------- | ------- | ---------------------------- |
-| 11.1 | external  | owner | Authorize codex review session (W4 brief)                         | pending | agent executes per precedent |
-| 12.2 | manual-qa | owner | Acceptance entry; trigger `gate run PRD-003`; push (always human) | pending | runner never pushes          |
+| Task | Category  | Owner | Required Check                                                    | Status   | Notes                        |
+| ---- | --------- | ----- | ----------------------------------------------------------------- | -------- | ---------------------------- |
+| 11.1 | external  | owner | Authorize codex review session (W4 brief)                         | resolved | agent executes per precedent |
+| 12.2 | manual-qa | owner | Acceptance entry; trigger `gate run PRD-003`; push (always human) | resolved | runner never pushes          |
