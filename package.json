@@ -1,0 +1,36 @@
+{
+  "name": "provegate-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ProveGate monorepo — CLI, landing page, and docs for the Gated Autonomy workflow",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.26.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.5",
+    "typescript-eslint": "^8.65.0"
+  }
+}
