@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T21:03:53.946Z",
+  "generatedAt": "2026-07-22T21:04:14.900Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -117,7 +117,7 @@
       "prd": "PRD-004",
       "number": 4,
       "slug": "launch-quickstart",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
@@ -141,8 +141,8 @@
       },
       "task": {
         "status": "Unknown",
-        "checkedCount": 35,
-        "uncheckedCount": 1,
+        "checkedCount": 36,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 2
       },
       "summary": {
