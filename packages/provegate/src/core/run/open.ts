@@ -1,14 +1,4 @@
-import {
-  closeSync,
-  constants as fsConstants,
-  ftruncateSync,
-  linkSync,
-  openSync,
-  readFileSync,
-  readdirSync,
-  unlinkSync,
-  writeSync,
-} from 'node:fs';
+import { linkSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import {
@@ -337,55 +327,62 @@ function claimPrdLocked(
     const refreshed = self.length > 0;
     const leaseBody = `${JSON.stringify(lease, null, 2)}\n`;
     const selfAtDestination = self.find((l) => l.file === leasePath);
-    // Install the lease through ONE file descriptor. Refresh path: open the
-    // existing destination with O_NOFOLLOW (a symlink is refused by the OS,
-    // not by a racy pre-check), validate the CONTENT READ THROUGH THAT FD
-    // against the parsed self lease, then truncate+write the same fd — no
-    // validate-vs-write gap exists for a rival to slip into. Anything else:
-    // O_EXCL creation, EEXIST aborts.
+    // Uniform install protocol — refresh and fresh claim take the SAME path:
+    //  1. the full lease body is STAGED to a private file (writeFileSync
+    //     completes short writes internally; a failure here has touched
+    //     nothing at the destination);
+    //  2. a self lease at the destination is QUARANTINED (no-replace move)
+    //     and its quarantined content identity-validated like any victim;
+    //  3. the staged file is installed at the canonical path via linkSync —
+    //     hard-link semantics are O_EXCL: an existing entry (rival, symlink,
+    //     anything) fails EEXIST without following or replacing it;
+    //  4. only after installation do quarantines become deletions.
+    // A descriptor-based in-place rewrite cannot pin the PATHNAME to the
+    // inode it validated; link-into-place makes the pathname itself the
+    // atomic commit.
+    const staged = `${leasePath}.staged-${process.pid}-${now.getTime()}`;
+    writeFileSync(staged, leaseBody, { flag: 'wx' });
     let installIssue: string | null = null;
     try {
       if (selfAtDestination) {
-        let fd: number;
+        quarantineSeq += 1;
+        const selfQuarantine = `${leasePath}.stolen-${process.pid}-${now.getTime()}-${quarantineSeq}`;
+        let selfOk = false;
         try {
-          fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_NOFOLLOW);
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-            // Self lease vanished mid-claim — fall through to exclusive create.
-            fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_CREAT | fsConstants.O_EXCL);
-            writeSync(fd, leaseBody, 0, 'utf8');
-            closeSync(fd);
-            fd = -1;
-          } else if ((err as NodeJS.ErrnoException).code === 'ELOOP') {
-            throw new Error(`refusing symlinked lease destination ${leasePath}`, { cause: err });
-          } else {
-            throw err;
-          }
+          moveNoReplace(leasePath, selfQuarantine);
+          quarantined.push({
+            from: leasePath,
+            to: selfQuarantine,
+            victim: asStolen(selfAtDestination),
+          });
+          const current = JSON.parse(readFileSync(selfQuarantine, 'utf8')) as Record<
+            string,
+            unknown
+          >;
+          selfOk = IDENTITY_FIELDS.every(
+            (f) => String(current[f] ?? '') === String(selfAtDestination.snapshot[f] ?? ''),
+          );
+        } catch {
+          /* vanished or unmovable — selfOk stays false */
         }
-        if (fd >= 0) {
-          try {
-            const current = JSON.parse(readFileSync(fd, 'utf8')) as Record<string, unknown>;
-            const isSelf = IDENTITY_FIELDS.every(
-              (f) => String(current[f] ?? '') === String(selfAtDestination.snapshot[f] ?? ''),
-            );
-            if (!isSelf) {
-              installIssue = `${leasePath} no longer carries our lease (replaced mid-claim)`;
-            } else {
-              ftruncateSync(fd, 0);
-              writeSync(fd, leaseBody, 0, 'utf8');
-            }
-          } finally {
-            closeSync(fd);
-          }
+        if (!selfOk) {
+          installIssue = `${leasePath} no longer carries our lease (replaced or vanished mid-claim)`;
         }
-      } else {
-        const fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_CREAT | fsConstants.O_EXCL);
-        writeSync(fd, leaseBody, 0, 'utf8');
-        closeSync(fd);
       }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
-      installIssue = `${leasePath} changed on disk during the claim (unseen rival)`;
+      if (installIssue === null) {
+        try {
+          linkSync(staged, leasePath);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+          installIssue = `${leasePath} changed on disk during the claim (unseen rival)`;
+        }
+      }
+    } finally {
+      try {
+        unlinkSync(staged);
+      } catch {
+        /* staged already gone */
+      }
     }
     if (installIssue !== null) {
       const stranded = rollback();
@@ -397,9 +394,9 @@ function claimPrdLocked(
       };
     }
 
-    // COMMIT POINT — the new lease is installed. Everything after here is
-    // cleanup and must never throw the claim into a half-rolled-back state:
-    // failures are collected and REPORTED on the successful result instead.
+    // COMMIT POINT — the new lease is linked into place. Everything after
+    // here is cleanup and must never throw the claim into a half-rolled-back
+    // state: failures are collected and REPORTED on the successful result.
     const warnings: string[] = [];
     for (const q of quarantined.splice(0)) {
       try {
@@ -407,7 +404,7 @@ function claimPrdLocked(
       } catch {
         warnings.push(`stale victim copy left at ${q.to} — delete manually`);
       }
-      stolen.push(q.victim);
+      if (q.victim.prd !== normalized) stolen.push(q.victim);
     }
     // Self leases under a different filename (hand-written era) are superseded.
     for (const l of self) {
@@ -431,7 +428,15 @@ function claimPrdLocked(
       issues: warnings,
     };
   } catch (err) {
-    rollback();
+    // Exception path: stranded-rollback messages must not vanish with the
+    // stack — they name real files needing manual attention.
+    const stranded = rollback();
+    if (stranded.length > 0) {
+      throw new Error(
+        `${err instanceof Error ? err.message : String(err)} — additionally: ${stranded.join('; ')}`,
+        { cause: err },
+      );
+    }
     throw err;
   }
 }

@@ -172,6 +172,7 @@ function runOpen(args: string[]): number {
       `[open] ${result.refreshed ? 'refreshed (already held)' : 'claimed'} ${result.id} — ${result.globs.length} surface glob(s)`,
     );
     console.log(`[open] lease: ${result.leasePath}`);
+    for (const warning of result.issues) console.error(`[open] WARNING: ${warning}`);
     return 0;
   } catch (error) {
     console.error(`[open] ${error instanceof Error ? error.message : String(error)}`);
