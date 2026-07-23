@@ -92,10 +92,11 @@ nothing.
 `--worktree` extends the atomic claim to the checkout: after the lease installs, a
 feature branch (from `branches.featurePattern`) and a linked worktree under the
 configured `worktree.dir` are provisioned, and the lease is stamped with both.
-The checkout is cut from the configured base ref, so the PRD (and
-`workflow.config.json`, when present) must be committed there first — an
-uncommitted PRD refuses the claim instead of producing a checkout missing the
-artifact it claims. Provisioning failure (branch or path collision) rolls the
+The checkout is cut from the configured base ref, so the PRD and the control
+files that decide what runs there (`workflow.config.json`, `gates.manifest.json`,
+when present) must match the base ref first — missing OR edited-since-commit
+both refuse, instead of producing a checkout whose PRD, layout, or gate policy
+differs from the one just claimed. Provisioning failure (branch or path collision) rolls the
 lease back — claim and checkout are one outcome. After `gate run` lands the merge, the runner removes the
 worktree and deletes the merged branch; a dirty worktree refuses removal and
 degrades to a handoff-card warning (never `--force` on user trees). Branch deletion

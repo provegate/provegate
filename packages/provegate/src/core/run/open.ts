@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { CONFIG_FILENAME, type WorkflowConfig } from '../config/index.js';
+import { MANIFEST_FILENAME } from '../gates/manifest.js';
 import {
   candidateConflicts,
   candidateFromPrd,
@@ -293,10 +294,14 @@ function claimPrdLocked(
   // resolution happen while every victim still sits untouched on disk — an
   // exception past this point can no longer follow destroyed leases.
   const { slug, relPath: prdRelPath } = prdFile(config, root, normalized);
-  // Artifacts a provisioned checkout must carry: the PRD itself, plus the
-  // config file when the repo has one (layout drives every later command).
+  // Artifacts a provisioned checkout must carry: the PRD itself plus the
+  // CONTROL files that decide what runs there — config drives layout, the
+  // gates manifest decides policy (a missing manifest silently falls back to
+  // built-in defaults, changing the gates the agent runs, codex r16 P1).
   const requiredArtifacts = [prdRelPath];
-  if (existsSync(resolve(root, CONFIG_FILENAME))) requiredArtifacts.push(CONFIG_FILENAME);
+  for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
+    if (existsSync(resolve(root, control))) requiredArtifacts.push(control);
+  }
   containedPath(mainRepoRoot(root), config.dirs.locksDir);
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);

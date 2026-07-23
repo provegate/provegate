@@ -146,17 +146,30 @@ export function worktreeNamesFor(
   return { relPath: `${normalizedWorktreeDir(config)}/${stem}`, branch };
 }
 
-/** Repo-relative paths NOT reachable from `ref` (`git cat-file -e ref:path`). */
-export function pathsMissingOnRef(mainRoot: string, ref: string, relPaths: string[]): string[] {
-  const missing: string[] = [];
+/**
+ * Repo-relative paths whose committed state on `ref` does NOT match the
+ * working tree — absent, or present with uncommitted edits. Existence alone
+ * is not enough: a provisioned checkout receiving the OLD blob while the
+ * lease was built from the edited file means the agent works against a
+ * different PRD than the one protected (codex r16 P1).
+ */
+export function pathsNotMatchingRef(mainRoot: string, ref: string, relPaths: string[]): string[] {
+  const stale: string[] = [];
   for (const rel of relPaths) {
     try {
       git(mainRoot, ['cat-file', '-e', `${ref}:${rel}`]);
     } catch {
-      missing.push(rel);
+      stale.push(rel);
+      continue;
+    }
+    try {
+      // Ref vs WORKING TREE for this path; nonzero exit = differs.
+      git(mainRoot, ['diff', '--quiet', ref, '--', rel]);
+    } catch {
+      stale.push(rel);
     }
   }
-  return missing;
+  return stale;
 }
 
 /** The branch currently registered at `path` (realpath-compared), or null. */
@@ -304,10 +317,10 @@ export function createWorktree(
     // quickstart order (`gate new` → `gate open --worktree`) would otherwise
     // hand back a checkout missing the very PRD it claims, and every
     // subsequent `gate check/run` there would fail (codex r15 P1).
-    const missing = pathsMissingOnRef(mainRoot, `refs/heads/${base}`, requireOnBase);
-    if (missing.length > 0) {
+    const stale = pathsNotMatchingRef(mainRoot, `refs/heads/${base}`, requireOnBase);
+    if (stale.length > 0) {
       throw new Error(
-        `these workflow artifacts are not committed on '${base}' (${missing.join(', ')}) — commit them first, or claim without --worktree`,
+        `these workflow artifacts are missing or uncommitted on '${base}' (${stale.join(', ')}) — commit them first, or claim without --worktree`,
       );
     }
     git(mainRoot, ['branch', branch, `refs/heads/${base}`]);

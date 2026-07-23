@@ -801,7 +801,7 @@ describe('codex r15 regressions', () => {
     // Quickstart order: init → new → open --worktree, nothing committed yet.
     const refused = claimPrd(cfg, root, id, { worktree: true });
     expect(refused.ok).toBe(false);
-    expect(refused.issues.join(' ')).toContain('not committed');
+    expect(refused.issues.join(' ')).toContain('missing or uncommitted');
     expect(refused.issues.join(' ')).toContain('_prds/wip');
     expect(existsSync(join(root, '_state/locks', `${id.toLowerCase()}-uncommitted.json`))).toBe(
       false,
@@ -817,6 +817,34 @@ describe('codex r15 regressions', () => {
         join(claimed.worktree!.path, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-uncommitted.md`),
       ),
     ).toBe(true);
+  });
+
+  it('refuses when a committed artifact has UNCOMMITTED edits (r16 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'edited', ['src/edited/**']);
+    await commitArtifacts(root);
+    // Surface edited after the commit: the lease would protect the new globs
+    // while the checkout received the old blob.
+    const prdPath = join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-edited.md`);
+    writeFileSync(prdPath, `${readFileSync(prdPath, 'utf8')}\n<!-- later edit -->\n`);
+
+    const refused = claimPrd(cfg, root, id, { worktree: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('missing or uncommitted');
+  });
+
+  it('refuses when gates.manifest.json is present but uncommitted (r16 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'manifested', ['src/manifested/**']);
+    await commitArtifacts(root);
+    writeFileSync(
+      join(root, 'gates.manifest.json'),
+      `${JSON.stringify({ phases: {}, postMerge: [] }, null, 2)}\n`,
+    );
+
+    const refused = claimPrd(cfg, root, id, { worktree: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('gates.manifest.json');
   });
 
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
