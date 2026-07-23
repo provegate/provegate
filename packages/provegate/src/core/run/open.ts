@@ -31,6 +31,7 @@ import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 import {
   createWorktree,
+  removeWorktree,
   worktreeForBranch,
   worktreeNamesFor,
   type WorktreeProvision,
@@ -530,6 +531,7 @@ function claimPrdLocked(
     // checkout are one atomic outcome (W2). Only after provisioning do
     // quarantines become deletions.
     let provisioned: WorktreeProvision | undefined;
+    let weCreatedCheckout = false;
     if (wtNames !== null) {
       const mainRoot = mainRepoRoot(root);
       const registered = worktreeForBranch(mainRoot, wtNames.branch);
@@ -565,6 +567,7 @@ function claimPrdLocked(
         // Idempotent refresh: our branch already lives in the expected worktree.
         provisioned = { path: expected, relPath: wtNames.relPath, branch: wtNames.branch };
       } else {
+        weCreatedCheckout = true;
         try {
           // Provision under the SAME names the lease body carries — with
           // prior stamps this recreates the stamped checkout, never a
@@ -641,6 +644,40 @@ function claimPrdLocked(
             ],
           };
         }
+      }
+    }
+
+    // Provisioning ran arbitrary user code (checkout hooks) while our lease
+    // sat installed. Before committing, prove the lease at the destination is
+    // STILL ours byte-for-byte: a hook that replaced or removed it would
+    // leave the checkout unprotected and admit an overlapping claim (codex
+    // r14 P1). Our own checkout is torn down; a reused one is left alone.
+    if (provisioned !== undefined) {
+      let stillOurs = false;
+      try {
+        stillOurs = readFileSync(leasePath, 'utf8') === leaseBody;
+      } catch {
+        stillOurs = false;
+      }
+      if (!stillOurs) {
+        const issues = [
+          `claim aborted: ${leasePath} was replaced or removed while the checkout was provisioned — inspect it before re-claiming`,
+        ];
+        if (weCreatedCheckout) {
+          const undo = removeWorktree(config, root, {
+            worktree: provisioned.relPath,
+            branch: provisioned.branch,
+          });
+          issues.push(
+            undo.removed
+              ? `the checkout we created at ${provisioned.relPath} was removed`
+              : `the checkout we created at ${provisioned.relPath} could NOT be removed — clean up manually`,
+            ...undo.warnings,
+          );
+        }
+        const stranded = rollback();
+        dropQuarantineDir();
+        return { ...base, globs, ok: false, issues: [...issues, ...stranded] };
       }
     }
 

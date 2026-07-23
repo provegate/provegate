@@ -730,6 +730,51 @@ describe('codex r13 regressions', () => {
   });
 });
 
+describe('codex r14 regressions', () => {
+  it('a hook that replaces the lease during a SUCCESSFUL add aborts and tears our checkout down (P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'hijacked', ['src/hijacked/**']);
+    const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-hijacked.json`);
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    // Hook SUCCEEDS (exit 0) but swaps the lease out from under us.
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\nprintf '{"rival":true}' > "${leaseFile}"\nexit 0\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('replaced or removed while the checkout');
+    // Our checkout is gone; the rival's lease bytes survive untouched.
+    expect(existsSync(join(root, `.worktrees/${id.toLowerCase()}-hijacked`))).toBe(false);
+    expect(readFileSync(leaseFile, 'utf8')).toContain('rival');
+  });
+
+  it('a stale claim mutex throws — the close path must catch it, not crash (P1)', async () => {
+    // Codex's scenario: a killed process left the mutex behind. Acquisition
+    // fails CLOSED (by design), which is exactly why post-merge teardown
+    // wraps it — the landed merge must still produce a handoff card.
+    const root = await gitRoot();
+    const { claimMutexPath, withWorkspaceMutex } = await import('../src/core/run/index.js');
+    const { mkdirSync: mkdir, utimesSync } = await import('node:fs');
+    mkdir(join(root, '_state/locks'), { recursive: true });
+    const mutex = claimMutexPath(cfg, root);
+    writeFileSync(mutex, '999999999:1:2020-01-01T00:00:00Z\n');
+    const old = new Date(Date.now() - 120_000);
+    utimesSync(mutex, old, old);
+
+    let warning = '';
+    try {
+      withWorkspaceMutex(mutex, () => undefined);
+    } catch (error) {
+      warning = error instanceof Error ? error.message : String(error);
+    }
+    expect(warning).toContain('stale workspace mutex');
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

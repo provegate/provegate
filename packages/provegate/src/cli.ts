@@ -511,30 +511,39 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     // identity first: a rival `gate open --worktree` that refreshed the
     // lease after our stamps snapshot owns the checkout now — deleting it
     // would tear down an active claim (codex r13 P1).
-    withWorkspaceMutex(claimMutexPath(config, root), () => {
-      const fresh = worktreeStamps(config, root, id);
-      if (
-        !fresh ||
-        fresh.worktree !== stamps.worktree ||
-        fresh.branch !== stamps.branch ||
-        fresh.startedAt !== stamps.startedAt ||
-        fresh.expiresAt !== stamps.expiresAt
-      ) {
-        cleanupWarnings = [
-          'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',
-        ];
-        return;
-      }
-      const removal = removeWorktree(config, root, stamps);
-      cleanupDone = removal.removed;
-      if (removal.removed) {
-        outcome.results.push([
-          `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
-          'passed',
-        ]);
-      }
-      cleanupWarnings = removal.warnings;
-    });
+    // The merge has LANDED — nothing past this point may throw the close
+    // away. A busy or stale mutex degrades to a cleanup warning on the
+    // handoff card, never a crash without one (W3, codex r14 P1).
+    try {
+      withWorkspaceMutex(claimMutexPath(config, root), () => {
+        const fresh = worktreeStamps(config, root, id);
+        if (
+          !fresh ||
+          fresh.worktree !== stamps.worktree ||
+          fresh.branch !== stamps.branch ||
+          fresh.startedAt !== stamps.startedAt ||
+          fresh.expiresAt !== stamps.expiresAt
+        ) {
+          cleanupWarnings = [
+            'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',
+          ];
+          return;
+        }
+        const removal = removeWorktree(config, root, stamps);
+        cleanupDone = removal.removed;
+        if (removal.removed) {
+          outcome.results.push([
+            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+            'passed',
+          ]);
+        }
+        cleanupWarnings = removal.warnings;
+      });
+    } catch (error) {
+      cleanupWarnings = [
+        `worktree cleanup skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; remove ${stamps.worktree} manually`,
+      ];
+    }
   }
 
   console.log(
