@@ -153,6 +153,16 @@ export function worktreeNamesFor(
  * lease was built from the edited file means the agent works against a
  * different PRD than the one protected (codex r16 P1).
  */
+/** Whether `rel` is reachable from `ref`. */
+export function existsOnRef(mainRoot: string, ref: string, rel: string): boolean {
+  try {
+    git(mainRoot, ['cat-file', '-e', `${ref}:${rel}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function pathsNotMatchingRef(mainRoot: string, ref: string, relPaths: string[]): string[] {
   const stale: string[] = [];
   for (const rel of relPaths) {
@@ -325,6 +335,7 @@ export function createWorktree(
     }
     git(mainRoot, ['branch', branch, `refs/heads/${base}`]);
   }
+  const baseRef = `refs/heads/${base}`;
   try {
     git(mainRoot, ['worktree', 'add', path, branch]);
   } catch (err) {
@@ -376,6 +387,28 @@ export function createWorktree(
       `worktree add failed for ${relPath}: ${detail}${debris.length > 0 ? ` — provisioning debris left: ${debris.join(', ')}; remove manually` : ''}`,
       { cause: err },
     );
+  }
+  // A REATTACHED branch was cut from an older base: its checkout can carry a
+  // stale PRD or gate policy while the fresh lease protects the new one. The
+  // freshly-cut path is current by construction; only reattach needs proving
+  // (codex r17 P1). Our own worktree is removed on mismatch; the pre-existing
+  // branch is left alone.
+  if (reattach && requireOnBase.length > 0) {
+    const stale = pathsNotMatchingRef(path, baseRef, requireOnBase);
+    if (stale.length > 0) {
+      try {
+        git(mainRoot, ['worktree', 'remove', path]);
+      } catch {
+        try {
+          git(mainRoot, ['worktree', 'prune']);
+        } catch {
+          /* best-effort */
+        }
+      }
+      throw new Error(
+        `the existing branch ${branch} carries workflow artifacts differing from '${base}' (${stale.join(', ')}) — merge or rebase ${base} into it first`,
+      );
+    }
   }
   return { path, relPath, branch };
 }

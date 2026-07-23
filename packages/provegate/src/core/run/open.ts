@@ -32,6 +32,8 @@ import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 import {
   createWorktree,
+  existsOnRef,
+  pathsNotMatchingRef,
   removeWorktree,
   worktreeForBranch,
   worktreeNamesFor,
@@ -298,9 +300,17 @@ function claimPrdLocked(
   // CONTROL files that decide what runs there — config drives layout, the
   // gates manifest decides policy (a missing manifest silently falls back to
   // built-in defaults, changing the gates the agent runs, codex r16 P1).
+  // Presence is compared against the base too: a control file DELETED in the
+  // working tree but still committed would otherwise drop out of the list,
+  // and the provisioned checkout would silently restore policy the source
+  // checkout no longer has (codex r17 P1).
+  const baseRefName = `refs/heads/${config.branches.base}`;
+  const mainForRefs = mainRepoRoot(root);
   const requiredArtifacts = [prdRelPath];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
-    if (existsSync(resolve(root, control))) requiredArtifacts.push(control);
+    if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
+      requiredArtifacts.push(control);
+    }
   }
   containedPath(mainRepoRoot(root), config.dirs.locksDir);
   ensureLocksDir(locksDir(config, root));
@@ -539,6 +549,59 @@ function claimPrdLocked(
     // failure unlinks the fresh lease and restores the victims — claim and
     // checkout are one atomic outcome (W2). Only after provisioning do
     // quarantines become deletions.
+    /**
+     * Undo the lease THIS claim installed, then restore quarantined victims.
+     * Only our own bytes may be deleted: an external writer (checkout hook,
+     * rival tool) can replace the pathname while provisioning runs, and
+     * unlinking blind would destroy the replacement (codex r4 P1). Same
+     * protocol as steal — atomic move-aside, identity-check, then delete.
+     * Every post-rename failure keeps the quarantined file VISIBLE (codex r5
+     * P2), and an incomplete removal is REPORTED, never called a rollback
+     * (codex r1 P2). Returns issue lines naming whatever remains.
+     */
+    const rollbackInstalledLease = (): string[] => {
+      const notes: string[] = [];
+      let q: string | null = null;
+      try {
+        q = moveAside(leasePath);
+      } catch (qErr) {
+        if ((qErr as NodeJS.ErrnoException).code !== 'ENOENT') {
+          notes.push(
+            `the installed lease could not be removed; delete ${leasePath} manually before re-claiming`,
+          );
+        }
+      }
+      if (q !== null) {
+        let quarantinedBody: string | null;
+        try {
+          quarantinedBody = readFileSync(q, 'utf8');
+        } catch {
+          quarantinedBody = null;
+        }
+        if (quarantinedBody === leaseBody) {
+          try {
+            unlinkSync(q);
+          } catch {
+            notes.push(`our lease copy was preserved at ${q} — delete manually`);
+          }
+        } else {
+          try {
+            moveNoReplace(q, leasePath);
+            notes.push(
+              `${leasePath} was replaced by another writer mid-claim and was left in place — inspect before re-claiming`,
+            );
+          } catch {
+            notes.push(
+              `a replacement lease was preserved at ${q} (original path re-occupied) — inspect before re-claiming`,
+            );
+          }
+        }
+      }
+      notes.push(...rollback());
+      dropQuarantineDir();
+      return notes;
+    };
+
     let provisioned: WorktreeProvision | undefined;
     let weCreatedCheckout = false;
     if (wtNames !== null) {
@@ -572,9 +635,29 @@ function claimPrdLocked(
       // close would remove a worktree we never created (codex r1 P2).
       const ourStamps =
         priorWt === wtNames.relPath && priorBranch === wtNames.branch;
-      if (samePlace && expected !== null && ourStamps) {
+      const reusable = samePlace && expected !== null && ourStamps;
+      // Reuse must also prove the checkout is CURRENT: base may have moved
+      // since the first claim, and a refreshed lease protecting the new PRD
+      // surface while the tree still holds the old PRD and gate policy is the
+      // same defect as provisioning stale (codex r17 P1).
+      const reuseStale = reusable
+        ? pathsNotMatchingRef(expected!, baseRefName, requiredArtifacts)
+        : [];
+      if (reusable && reuseStale.length > 0) {
+        const notes = rollbackInstalledLease();
+        return {
+          ...base,
+          globs,
+          ok: false,
+          issues: [
+            `claim rolled back: the checkout at ${wtNames.relPath} carries workflow artifacts differing from '${config.branches.base}' (${reuseStale.join(', ')}) — merge or rebase ${config.branches.base} into ${wtNames.branch} first`,
+            ...notes,
+          ],
+        };
+      }
+      if (reusable) {
         // Idempotent refresh: our branch already lives in the expected worktree.
-        provisioned = { path: expected, relPath: wtNames.relPath, branch: wtNames.branch };
+        provisioned = { path: expected!, relPath: wtNames.relPath, branch: wtNames.branch };
       } else {
         weCreatedCheckout = true;
         try {
@@ -591,66 +674,17 @@ function claimPrdLocked(
             requireOnBase: requiredArtifacts,
           });
         } catch (err) {
-          // Rollback may only delete the lease THIS claim installed: an
-          // external writer (checkout hook, rival tool) can replace the
-          // pathname while `worktree add` runs, and unlinking blind would
-          // destroy the replacement (codex r4 P1). Same protocol as steal:
-          // atomic move-aside, identity-check the quarantined bytes, only
-          // then delete. A failed unlink is an INCOMPLETE rollback — the
-          // stamped lease stays live, and saying "rolled back" would be a
-          // lie (codex r1 P2). ENOENT counts as removed.
-          let leaseRemoved = false;
-          let leaseNote: string | null = null;
-          let q: string | null = null;
-          try {
-            q = moveAside(leasePath);
-          } catch (qErr) {
-            if ((qErr as NodeJS.ErrnoException).code === 'ENOENT') {
-              leaseRemoved = true;
-            } else {
-              leaseNote = `the installed lease could not be removed; delete ${leasePath} manually before re-claiming`;
-            }
-          }
-          if (q !== null) {
-            // Every post-rename failure must keep the quarantined file VISIBLE
-            // (restored to the pathname or reported at its quarantine path) —
-            // an unreadable replacement silently parked in .quarantine-* is
-            // invisible to lock listing and a later claim would proceed over
-            // it (codex r5 P2).
-            let quarantinedBody: string | null = null;
-            try {
-              quarantinedBody = readFileSync(q, 'utf8');
-            } catch {
-              quarantinedBody = null;
-            }
-            if (quarantinedBody === leaseBody) {
-              try {
-                unlinkSync(q);
-                leaseRemoved = true;
-              } catch {
-                leaseNote = `our lease copy was preserved at ${q} — delete manually`;
-              }
-            } else {
-              try {
-                moveNoReplace(q, leasePath);
-                leaseNote = `${leasePath} was replaced by another writer mid-claim and was left in place — inspect before re-claiming`;
-              } catch {
-                leaseNote = `a replacement lease was preserved at ${q} (original path re-occupied) — inspect before re-claiming`;
-              }
-            }
-          }
-          const stranded = rollback();
-          dropQuarantineDir();
+          const notes = rollbackInstalledLease();
           const msg = err instanceof Error ? err.message : String(err);
           return {
             ...base,
             globs,
             ok: false,
             issues: [
-              leaseRemoved
+              notes.length === 0
                 ? `claim rolled back: ${msg}`
-                : `claim rollback INCOMPLETE: ${msg} — ${leaseNote ?? 'state unknown'}`,
-              ...stranded,
+                : `claim rollback INCOMPLETE: ${msg}`,
+              ...notes,
             ],
           };
         }

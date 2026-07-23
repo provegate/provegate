@@ -588,8 +588,12 @@ describe('codex r10 regressions', () => {
       join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-first-name.md`),
       join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-second-name.md`),
     );
+    await commitArtifacts(root);
+    // The stamped checkout must carry the renamed PRD too, or reuse refuses
+    // on staleness (r17) — merge the moved base into the feature branch.
+    await run('git', ['-C', first.worktree!.path, 'merge', '--no-ff', 'main', '-m', 'sync base']);
     const again = claimPrd(cfg, root, id, { worktree: true });
-    expect(again.ok).toBe(true);
+    expect(again.ok, again.issues.join(' ')).toBe(true);
     expect(again.worktree?.relPath).toBe(first.worktree!.relPath);
     // No second tree provisioned under the new name.
     expect(existsSync(join(root, `.worktrees/${id.toLowerCase()}-second-name`))).toBe(false);
@@ -845,6 +849,40 @@ describe('codex r15 regressions', () => {
     const refused = claimPrd(cfg, root, id, { worktree: true });
     expect(refused.ok).toBe(false);
     expect(refused.issues.join(' ')).toContain('gates.manifest.json');
+  });
+
+  it('reuse refuses when the stamped checkout carries stale artifacts (r17 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'drifted', ['src/drifted/**']);
+    await commitArtifacts(root);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Base advances: the PRD's surface changes, the checkout keeps the old one.
+    const prdPath = join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-drifted.md`);
+    writeFileSync(prdPath, readFileSync(prdPath, 'utf8').replace('src/drifted/**', 'src/moved/**'));
+    await commitArtifacts(root);
+
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok).toBe(false);
+    expect(again.issues.join(' ')).toContain('differing from');
+    expect(again.issues.join(' ')).toContain('merge or rebase');
+    // The checkout survives untouched — this is a refusal, not a teardown.
+    expect(existsSync(first.worktree!.path)).toBe(true);
+  });
+
+  it('a deleted-but-committed control file is treated as a mismatch (r17 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'dropped-config', ['src/dropped/**']);
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      `${JSON.stringify({ branches: { base: 'main' } }, null, 2)}\n`,
+    );
+    await commitArtifacts(root);
+    rmSync(join(root, 'workflow.config.json'));
+
+    const refused = claimPrd(cfg, root, id, { worktree: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('workflow.config.json');
   });
 
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
