@@ -34,6 +34,17 @@
       "reason": "reviewed four codex rounds (3 criticals fixed, incl. the quorum gate's own bypass) and the fix commits; accepting autonomous close via gate run",
       "date": "2026-07-23",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-005",
+      "owner": "owner",
+      "items": [
+        "7.0 codex review session authorized and completed (verdict pass after 2 rounds, 0 critical)",
+        "8.0 operator acceptance of autonomous close and dogfood trigger"
+      ],
+      "reason": "reviewed both codex rounds (pack-manifest critical fixed) and the release surface; accepting autonomous close via gate run",
+      "date": "2026-07-23",
+      "method": "interactive"
     }
   ]
 }
