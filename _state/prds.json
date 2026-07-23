@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T08:48:38.275Z",
+  "generatedAt": "2026-07-23T09:08:56.047Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -218,6 +218,117 @@
         "checkedCount": 18,
         "uncheckedCount": 0,
         "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-23"
+    },
+    {
+      "prd": "PRD-007",
+      "number": 7,
+      "slug": "worktree-lifecycle",
+      "status": "Draft",
+      "cyclePhase": "2 (Readiness Scored)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-007-worktree-lifecycle.md",
+        "readiness": "_readiness/wip/readiness-007-worktree-lifecycle.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.4,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-23"
+    },
+    {
+      "prd": "PRD-008",
+      "number": 8,
+      "slug": "lease-commands",
+      "status": "Draft",
+      "cyclePhase": "2 (Readiness Scored)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-008-lease-commands.md",
+        "readiness": "_readiness/wip/readiness-008-lease-commands.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.7,
+        "verdict": "PASS",
+        "modelTierExecution": "medium",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-23"
+    },
+    {
+      "prd": "PRD-009",
+      "number": 9,
+      "slug": "conflict-structural-hardening",
+      "status": "Draft",
+      "cyclePhase": "2 (Readiness Scored)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-009-conflict-structural-hardening.md",
+        "readiness": "_readiness/wip/readiness-009-conflict-structural-hardening.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.6,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
