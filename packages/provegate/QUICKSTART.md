@@ -22,16 +22,24 @@ npx gate status
 
 ## 2. Write the spec (Phase 1)
 
-Copy the PRD template into your tree and fill the hotfix skeleton:
+Create the item — id allocation, template, dates all handled:
 
 ```sh
-cp node_modules/provegate/templates/prd-template.md _prds/wip/prd-001-fix-login-timeout.md
+npx gate new fix-login-timeout --class=hotfix
 ```
 
-For a hotfix: class `hotfix` (+ one Class Rationale line), the repro in §1, one or two
-FRs with `**Targets:**` paths, the smallest §11 table that proves the fix — the
-failing command that now passes, plus your test command. Keep `Autonomous Close:
-operator-gated` until you trust the gates. Then lint it:
+That writes `_prds/wip/prd-001-fix-login-timeout.md` from the shipped template. Fill
+the hotfix skeleton: the repro in §1, one or two FRs with `**Targets:**` paths, the
+smallest §11 table that proves the fix — the failing command that now passes, plus
+your test command. Replace the example `## Conflict Surface` globs with the paths you
+will actually touch, then claim them:
+
+```sh
+npx gate open PRD-001
+```
+
+Overlap with another active claim refuses here — at claim time, not merge time. Keep
+`Autonomous Close: operator-gated` until you trust the gates. Then lint it:
 
 ```sh
 npx gate check PRD-001

@@ -35,3 +35,17 @@ export {
   mergeToLocalBase,
   type MergeOutcome,
 } from './merge.js';
+export {
+  createPrd,
+  highestPrdNumber,
+  instantiateTemplate,
+  type CreatePrdOptions,
+  type CreatePrdResult,
+} from './new.js';
+export {
+  claimPrd,
+  DEFAULT_LEASE_HOURS,
+  type ClaimOptions,
+  type ClaimResult,
+  type StolenLease,
+} from './open.js';

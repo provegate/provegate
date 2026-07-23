@@ -11,4 +11,7 @@ export default defineConfig({
   target: 'node22',
   dts: true,
   clean: true,
+  // No shared chunks: the pack manifest (test/pack-manifest.json) is an exact
+  // file list, and hashed chunk names would churn it every build.
+  splitting: false,
 });

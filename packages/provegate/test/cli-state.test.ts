@@ -101,10 +101,12 @@ describe('unchanged surfaces', () => {
     expect(result.stderr).toContain('No. Push is yours.');
   });
 
-  it('remaining stubs still exit 1 with their phase', async () => {
-    const result = await cli('open');
-    expect(result.code).toBe(1);
-    expect(result.stderr).toContain('roadmap Phase B');
+  it('bare open/new without arguments exit 1 with usage (no stubs remain)', async () => {
+    for (const cmd of ['open', 'new']) {
+      const result = await cli(cmd);
+      expect(result.code, cmd).toBe(1);
+      expect(result.stderr, cmd).toContain(`usage: gate ${cmd}`);
+    }
   });
 });
 

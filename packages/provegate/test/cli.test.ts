@@ -40,10 +40,11 @@ describe('cli skeleton', () => {
     }
   });
 
-  it('stub commands exit 1 and name their roadmap phase', async () => {
+  it('zero stubs remain: bare open asks for usage, not a roadmap IOU', async () => {
     const result = await cli('open');
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('not implemented yet (roadmap Phase B)');
+    expect(result.stderr).toContain('usage: gate open');
+    expect(result.stderr).not.toContain('not implemented');
   });
 
   it('unknown commands exit 1', async () => {

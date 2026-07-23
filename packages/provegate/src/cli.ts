@@ -34,6 +34,8 @@ import {
   RUN_ACTIVE_ENV,
   archivePrdArtifacts,
   buildGateChain,
+  claimPrd,
+  createPrd,
   initWorkspace,
   handoffCard,
   mergePreconditions,
@@ -48,20 +50,7 @@ import {
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
 
-interface StubCommand {
-  summary: string;
-  phase: string;
-}
-
-const STUBS: Record<string, StubCommand> = {
-  new: { summary: 'create a PRD and register it in workflow state', phase: 'Phase B' },
-  open: { summary: 'claim a PRD: acquire locks, declare conflict surfaces', phase: 'Phase B' },
-};
-
 function usage(): string {
-  const stubLines = Object.entries(STUBS).map(
-    ([name, cmd]) => `  ${name.padEnd(8)} ${cmd.summary}`,
-  );
   return [
     'ProveGate — prove it, then let it propagate.',
     '',
@@ -69,12 +58,13 @@ function usage(): string {
     '',
     'Commands:',
     '  init     scaffold the workflow tree + starter configs (--dry-run)',
+    '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
+    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
     '  land     merge step only (alias for run --from-phase=merge)',
-    ...stubLines,
     '  push     (refuses — push is always yours)',
     '',
     'Options:',
@@ -129,6 +119,63 @@ function runInit(args: string[]): number {
   );
   console.log('[init] next: see QUICKSTART.md (npm home: provegate/QUICKSTART.md)');
   return 0;
+}
+
+function runNew(args: string[]): number {
+  const slug = args.find((a) => !a.startsWith('--'));
+  if (!slug) {
+    console.error('usage: gate new <slug> [--class=X] [--template=path]');
+    return 1;
+  }
+  const cls = args.find((a) => a.startsWith('--class='))?.slice('--class='.length);
+  const templatePath = args.find((a) => a.startsWith('--template='))?.slice('--template='.length);
+  const { root, config } = loadConfig();
+  try {
+    const result = createPrd(config, root, { slug, cls, templatePath });
+    console.log(`[new] created ${result.relPath} (${result.id})`);
+    if (result.retries > 0) {
+      console.log(`[new] id allocation raced ${result.retries}x with a concurrent gate new — resolved`);
+    }
+    if (result.createdParents) {
+      console.log('[new] parent directories were missing — run `gate init` for the full workflow tree');
+    }
+    console.log(`[new] next: fill the template, then \`gate check ${result.id}\``);
+    return 0;
+  } catch (error) {
+    console.error(`[new] ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+function runOpen(args: string[]): number {
+  const id = args.find((a) => !a.startsWith('--'));
+  if (!id) {
+    console.error('usage: gate open <PRD-XXX> [--steal]');
+    return 1;
+  }
+  const steal = args.includes('--steal');
+  const { root, config } = loadConfig();
+  try {
+    const result = claimPrd(config, root, id, { steal });
+    if (!result.ok) {
+      console.error(`[open] REFUSED — ${result.id} not claimed:`);
+      for (const issue of result.issues) console.error(`  ✗ ${issue}`);
+      return 1;
+    }
+    for (const victim of result.stolen) {
+      console.log(
+        `[open] STOLE stale lease of ${victim.prd} (agent ${victim.agent}, expired ${victim.expiredAt})`,
+      );
+    }
+    console.log(
+      `[open] ${result.refreshed ? 'refreshed (already held)' : 'claimed'} ${result.id} — ${result.globs.length} surface glob(s)`,
+    );
+    console.log(`[open] lease: ${result.leasePath}`);
+    return 0;
+  } catch (error) {
+    console.error(`[open] ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
 }
 
 function runStatus(): number {
@@ -407,6 +454,8 @@ export function main(argv: string[]): number {
 
   try {
     if (command === 'init') return runInit(rest);
+    if (command === 'new') return runNew(rest);
+    if (command === 'open') return runOpen(rest);
     if (command === 'status') return runStatus();
     if (command === 'queue') return runQueue(rest.includes('--json'));
     if (command === 'check') return runCheck(rest);
@@ -418,12 +467,6 @@ export function main(argv: string[]): number {
       return 1;
     }
     throw error;
-  }
-
-  const stub = STUBS[command];
-  if (stub !== undefined) {
-    console.error(`${command}: not implemented yet (roadmap ${stub.phase})`);
-    return 1;
   }
 
   console.error(`unknown command: ${command}\n`);
