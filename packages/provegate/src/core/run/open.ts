@@ -1,5 +1,14 @@
-import { linkSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import {
+  linkSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmdirSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import {
   candidateConflicts,
@@ -251,19 +260,45 @@ function claimPrdLocked(
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);
 
-  // Steal = QUARANTINE, not delete. Every move is a NO-REPLACE two-step
-  // (linkSync fails on an existing destination, then the source is unlinked):
-  // quarantining can never clobber a crash artifact, and rollback can never
-  // clobber a rival that re-occupied the original path — in that case the
-  // quarantine file stays on disk and is reported by name. The QUARANTINED
-  // object is what gets identity-validated; victims are deleted only after
-  // the new lease is installed.
+  // Steal = QUARANTINE, not delete. Moving a victim aside is a SINGLE ATOMIC
+  // renameSync into a freshly created private quarantine directory (unique
+  // per claim, so the destination never pre-exists): there is no
+  // link-then-unlink window in which a rival's replacement of the source
+  // could be deleted while we validate the old inode. A rival that replaces
+  // the source BEFORE the rename gets moved and identity-MISMATCHES
+  // (rollback restores it); one that lands AFTER keeps the path and the
+  // install EEXISTs. Restoration is a no-replace link move: rollback never
+  // clobbers a re-occupied path — the quarantine copy stays and is reported.
+  // Victims are deleted only after the new lease is installed.
   const IDENTITY_FIELDS = ['lockId', 'prd', 'agent', 'startedAt', 'expiresAt'] as const;
   const quarantined: { from: string; to: string; victim: StolenLease }[] = [];
   let quarantineSeq = 0;
+  const quarantineDir = join(
+    locksDir(config, root),
+    `.quarantine-${process.pid}-${now.getTime()}`,
+  );
+  let quarantineDirMade = false;
+  const moveAside = (from: string): string => {
+    if (!quarantineDirMade) {
+      mkdirSync(quarantineDir); // unique per claim — collision = hard error
+      quarantineDirMade = true;
+    }
+    quarantineSeq += 1;
+    const to = join(quarantineDir, `${basename(from)}.${quarantineSeq}`);
+    renameSync(from, to); // atomic; destination cannot pre-exist
+    return to;
+  };
   const moveNoReplace = (from: string, to: string): void => {
     linkSync(from, to); // fails EEXIST — never replaces
     unlinkSync(from);
+  };
+  const dropQuarantineDir = (): void => {
+    if (!quarantineDirMade) return;
+    try {
+      rmdirSync(quarantineDir);
+    } catch {
+      /* not empty (stranded copies) or already gone — reported elsewhere */
+    }
   };
   const rollback = (): string[] => {
     const stranded: string[] = [];
@@ -281,11 +316,9 @@ function claimPrdLocked(
   try {
     if (steal) {
       for (const l of staleBlockers) {
-        quarantineSeq += 1;
-        const to = `${l.file}.stolen-${process.pid}-${now.getTime()}-${quarantineSeq}`;
         let mismatch = 'unreadable or vanished';
         try {
-          moveNoReplace(l.file, to);
+          const to = moveAside(l.file);
           quarantined.push({ from: l.file, to, victim: asStolen(l) });
           const fresh = JSON.parse(readFileSync(to, 'utf8')) as Record<string, unknown>;
           const identical = IDENTITY_FIELDS.every(
@@ -300,6 +333,7 @@ function claimPrdLocked(
         }
         if (mismatch !== '') {
           const stranded = rollback();
+          dropQuarantineDir();
           return {
             ...base,
             globs,
@@ -341,15 +375,19 @@ function claimPrdLocked(
     // inode it validated; link-into-place makes the pathname itself the
     // atomic commit.
     const staged = `${leasePath}.staged-${process.pid}-${now.getTime()}`;
-    writeFileSync(staged, leaseBody, { flag: 'wx' });
     let installIssue: string | null = null;
     try {
+      try {
+        writeFileSync(staged, leaseBody, { flag: 'wx' });
+      } catch (err) {
+        // A partial staged file may exist; the finally below sweeps it, and
+        // if even that fails the pathname is surfaced on the rethrow.
+        throw new Error(`could not stage the lease at ${staged}`, { cause: err });
+      }
       if (selfAtDestination) {
-        quarantineSeq += 1;
-        const selfQuarantine = `${leasePath}.stolen-${process.pid}-${now.getTime()}-${quarantineSeq}`;
         let selfOk = false;
         try {
-          moveNoReplace(leasePath, selfQuarantine);
+          const selfQuarantine = moveAside(leasePath);
           quarantined.push({
             from: leasePath,
             to: selfQuarantine,
@@ -377,15 +415,28 @@ function claimPrdLocked(
           installIssue = `${leasePath} changed on disk during the claim (unseen rival)`;
         }
       }
-    } finally {
+    } catch (err) {
+      let swept = true;
       try {
         unlinkSync(staged);
       } catch {
-        /* staged already gone */
+        swept = false;
       }
+      throw swept
+        ? err
+        : new Error(
+            `${err instanceof Error ? err.message : String(err)} — staged file left at ${staged}, delete manually`,
+            { cause: err },
+          );
+    }
+    try {
+      unlinkSync(staged);
+    } catch {
+      /* staged already consumed or gone */
     }
     if (installIssue !== null) {
       const stranded = rollback();
+      dropQuarantineDir();
       return {
         ...base,
         globs,
@@ -415,6 +466,7 @@ function claimPrdLocked(
         warnings.push(`superseded self lease left at ${l.file} — delete manually`);
       }
     }
+    dropQuarantineDir();
 
     return {
       ...base,
@@ -431,6 +483,7 @@ function claimPrdLocked(
     // Exception path: stranded-rollback messages must not vanish with the
     // stack — they name real files needing manual attention.
     const stranded = rollback();
+    dropQuarantineDir();
     if (stranded.length > 0) {
       throw new Error(
         `${err instanceof Error ? err.message : String(err)} — additionally: ${stranded.join('; ')}`,
