@@ -258,9 +258,10 @@ function claimPrdLocked(
   // the checkout's contents, and branch creation must all name the same base
   // commit, or a concurrent base advance desynchronizes lease and tree
   // (codex r19 P1). Null (no git / no base) simply skips worktree work.
-  const baseRefName =
-    resolveRef(mainForRefs, `refs/heads/${config.branches.base}`) ??
-    `refs/heads/${config.branches.base}`;
+  const baseRefName = !worktree
+    ? `refs/heads/${config.branches.base}`
+    : (resolveRef(mainForRefs, `refs/heads/${config.branches.base}`) ??
+      `refs/heads/${config.branches.base}`);
   // Snapshot the bytes this claim actually parses: validation compares THESE
   // against the base, so an edit between parse and check cannot slip through
   // (codex r20 P1). A control file absent locally but committed on base gets
@@ -285,17 +286,22 @@ function claimPrdLocked(
       };
     }
   }
-  const requiredArtifacts: ArtifactSnapshot[] = [
-    {
-      rel: prdRelPath,
-      sha:
-        candidate.sourceContent !== undefined
-          ? blobShaOfBuffer(prdRoot, prdRelPath, candidate.sourceContent)
-          : blobShaOfFile(prdRoot, prdRelPath),
-      content: candidate.sourceContent,
-    },
-  ];
-  for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
+  // Provenance hashing is WORKTREE-ONLY work: `git hash-object --path` can
+  // execute path-based clean filters, and a plain claim must stay free of
+  // side effects it never needed (codex r27 P2).
+  const requiredArtifacts: ArtifactSnapshot[] = !worktree
+    ? []
+    : [
+        {
+          rel: prdRelPath,
+          sha:
+            candidate.sourceContent !== undefined
+              ? blobShaOfBuffer(prdRoot, prdRelPath, candidate.sourceContent)
+              : blobShaOfFile(prdRoot, prdRelPath),
+          content: candidate.sourceContent,
+        },
+      ];
+  for (const control of worktree ? [CONFIG_FILENAME, MANIFEST_FILENAME] : []) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
       // Control files get the same provenance binding as the PRD: hash the
       // bytes the loader actually parsed, so restoring a file after parsing

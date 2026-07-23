@@ -387,7 +387,21 @@ function worktreeStamps(
   if (!live?.data) return { stamps: null, malformed };
   const wt = live.data['worktree'];
   const br = live.data['branch'];
-  if (typeof wt !== 'string' || typeof br !== 'string') return { stamps: null, malformed };
+  // Only a lease with NEITHER stamp is a plain claim. One-sided stamps mean
+  // the worktree metadata is damaged: treating that as plain mode would skip
+  // the branch guard, source pinning, and cleanup (codex r27 P1).
+  const hasWt = typeof wt === 'string';
+  const hasBr = typeof br === 'string';
+  if (hasWt !== hasBr) {
+    return {
+      stamps: null,
+      malformed: [
+        ...malformed,
+        `${live.name}: only ${hasWt ? 'worktree' : 'branch'} is stamped — worktree metadata is incomplete`,
+      ],
+    };
+  }
+  if (!hasWt || !hasBr) return { stamps: null, malformed };
   return {
     stamps: {
       worktree: wt,

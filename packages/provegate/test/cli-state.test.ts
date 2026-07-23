@@ -113,11 +113,19 @@ describe('unchanged surfaces', () => {
 describe('codex review regressions', () => {
   it('a lock file containing JSON null does not crash queue', async () => {
     mkdirSync(resolve(root, '_state/locks'), { recursive: true });
-    writeFileSync(resolve(root, '_state/locks/broken.json'), 'null');
-    const result = await cli('queue', '--json');
-    expect(result.code).toBe(0);
-    const queue = JSON.parse(result.stdout);
-    expect(queue.inFlight).toEqual([]);
+    const brokenLock = resolve(root, '_state/locks/broken.json');
+    writeFileSync(brokenLock, 'null');
+    try {
+      const result = await cli('queue', '--json');
+      expect(result.code).toBe(0);
+      const queue = JSON.parse(result.stdout);
+      expect(queue.inFlight).toEqual([]);
+    } finally {
+      // The suite shares one root: an unreadable lease makes ownership
+      // unknowable, and `gate run/land` now (correctly) fails closed on it —
+      // leaving this fixture behind would hijack every later test here.
+      rmSync(brokenLock, { force: true });
+    }
   });
 });
 
