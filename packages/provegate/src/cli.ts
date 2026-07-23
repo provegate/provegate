@@ -41,11 +41,13 @@ import {
   handoffCard,
   mergePreconditions,
   mergeToLocalBase,
+  claimMutexPath,
   parseFromPhase,
   planChain,
   removeWorktree,
   runChain,
   stopCard,
+  withWorkspaceMutex,
   type FromPhase,
 } from './core/run/index.js';
 
@@ -305,18 +307,30 @@ function runCheck(args: string[]): number {
   return 0;
 }
 
+interface WorktreeStamps {
+  worktree: string;
+  branch: string;
+  /** Lease identity snapshot — cleanup revalidates against these under the
+   * claim mutex so a refresh by a rival claimant is never torn down. */
+  startedAt: string;
+  expiresAt: string;
+}
+
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
  * wrote them — the merge guard and post-merge cleanup key off these. */
-function worktreeStamps(
-  config: WorkflowConfig,
-  root: string,
-  id: string,
-): { worktree: string; branch: string } | null {
+function worktreeStamps(config: WorkflowConfig, root: string, id: string): WorktreeStamps | null {
   for (const lock of listLockFiles(config, root)) {
     if (!lock.data || String(lock.data['prd']) !== id) continue;
     const wt = lock.data['worktree'];
     const br = lock.data['branch'];
-    if (typeof wt === 'string' && typeof br === 'string') return { worktree: wt, branch: br };
+    if (typeof wt === 'string' && typeof br === 'string') {
+      return {
+        worktree: wt,
+        branch: br,
+        startedAt: String(lock.data['startedAt'] ?? ''),
+        expiresAt: String(lock.data['expiresAt'] ?? ''),
+      };
+    }
   }
   return null;
 }
@@ -493,15 +507,34 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
         /* removal will degrade to a warning if the cwd blocks it */
       }
     }
-    const removal = removeWorktree(config, root, stamps);
-    cleanupDone = removal.removed;
-    if (removal.removed) {
-      outcome.results.push([
-        `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
-        'passed',
-      ]);
-    }
-    cleanupWarnings = removal.warnings;
+    // Teardown holds the SAME mutex as claims and revalidates the lease
+    // identity first: a rival `gate open --worktree` that refreshed the
+    // lease after our stamps snapshot owns the checkout now — deleting it
+    // would tear down an active claim (codex r13 P1).
+    withWorkspaceMutex(claimMutexPath(config, root), () => {
+      const fresh = worktreeStamps(config, root, id);
+      if (
+        !fresh ||
+        fresh.worktree !== stamps.worktree ||
+        fresh.branch !== stamps.branch ||
+        fresh.startedAt !== stamps.startedAt ||
+        fresh.expiresAt !== stamps.expiresAt
+      ) {
+        cleanupWarnings = [
+          'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',
+        ];
+        return;
+      }
+      const removal = removeWorktree(config, root, stamps);
+      cleanupDone = removal.removed;
+      if (removal.removed) {
+        outcome.results.push([
+          `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+          'passed',
+        ]);
+      }
+      cleanupWarnings = removal.warnings;
+    });
   }
 
   console.log(

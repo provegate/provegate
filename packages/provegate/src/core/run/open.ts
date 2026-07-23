@@ -144,6 +144,13 @@ function parseLocks(config: WorkflowConfig, root: string, now: Date): LockParse 
   return { locks, malformed };
 }
 
+/** The workspace-mutex path every lock-domain mutation serializes on —
+ * exported so post-merge worktree cleanup can hold the SAME mutex and
+ * revalidate the lease before deleting anything (codex r13 P1). */
+export function claimMutexPath(config: WorkflowConfig, root: string): string {
+  return resolve(containedPath(mainRepoRoot(root), config.dirs.locksDir), '.gate-open.mutex');
+}
+
 export function claimPrd(
   config: WorkflowConfig,
   root: string,
@@ -164,8 +171,7 @@ export function claimPrd(
   // live on the MAIN checkout (worktree claimants share one lock domain), and
   // the configured locksDir must be contained there — lexically and through
   // its existing symlink ancestors — before anything is created under it.
-  const lockRoot = containedPath(mainRepoRoot(root), config.dirs.locksDir);
-  return withWorkspaceMutex(resolve(lockRoot, '.gate-open.mutex'), () =>
+  return withWorkspaceMutex(claimMutexPath(config, root), () =>
     claimPrdLocked(config, root, id, options),
   );
 }

@@ -44,6 +44,7 @@ export {
   type CreatePrdResult,
 } from './new.js';
 export {
+  claimMutexPath,
   claimPrd,
   DEFAULT_LEASE_HOURS,
   type ClaimOptions,

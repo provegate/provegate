@@ -222,6 +222,18 @@ export function createWorktree(
   if (wtDir === '.' || wtDir === '') {
     throw new Error(`worktree.dir must name a subdirectory, not the repository root — refused`);
   }
+  // A symlink alias (`alias -> .`) spells like a subdirectory but RESOLVES to
+  // the repository root — provisioning through it would land checkouts at the
+  // root, outside every ignore/dirt prefix (codex r13 P2).
+  try {
+    const wtRootProbe = resolve(mainRoot, wtDir);
+    if (existsSync(wtRootProbe) && realpathSync(wtRootProbe) === realpathSync(mainRoot)) {
+      throw new Error(`worktree.dir resolves to the repository root — refused`);
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('repository root')) throw err;
+    /* realpath probe failure falls through to containment below */
+  }
   const path = containedPath(mainRoot, relPath);
   // Public-API guard: a non-interpolating pattern plus a hostile slug could
   // normalize the path outside worktree.dir — the stamp would then be
@@ -360,6 +372,15 @@ export function removeWorktree(
   if (wtDirGuard === '.' || wtDirGuard === '') {
     warnings.push('cleanup refused: worktree.dir is the repository root — fix the config');
     return { removed, branchDeleted, warnings };
+  }
+  try {
+    const wtRootProbe = resolve(mainRoot, wtDirGuard);
+    if (existsSync(wtRootProbe) && realpathSync(wtRootProbe) === realpathSync(mainRoot)) {
+      warnings.push('cleanup refused: worktree.dir resolves to the repository root — fix the config');
+      return { removed, branchDeleted, warnings };
+    }
+  } catch {
+    /* probe failure — the containment checks below still gate the removal */
   }
 
   let path: string;

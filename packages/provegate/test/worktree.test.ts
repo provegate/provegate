@@ -711,6 +711,25 @@ describe('codex r12 regressions', () => {
   });
 });
 
+describe('codex r13 regressions', () => {
+  it('a symlink alias resolving to the repository root refuses provisioning and cleanup (P2)', async () => {
+    const root = await gitRoot();
+    const { symlinkSync } = await import('node:fs');
+    symlinkSync('.', join(root, 'alias'));
+    const aliased = { ...cfg, worktree: { dir: 'alias' } };
+    expect(() => createWorktree(aliased, root, { id: 'PRD-001', slug: 'sneaky' })).toThrow(
+      /repository root/,
+    );
+    expect(existsSync(join(root, 'prd-001-sneaky'))).toBe(false);
+    const removal = removeWorktree(aliased, root, {
+      worktree: 'alias/prd-001-sneaky',
+      branch: 'feat/prd-001-sneaky',
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('repository root');
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
