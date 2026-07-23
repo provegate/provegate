@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-22T21:04:14.900Z",
+  "generatedAt": "2026-07-23T03:12:08.689Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -149,6 +149,80 @@
         "shipReadiness": "Unknown"
       },
       "lastUpdated": "2026-07-22"
+    },
+    {
+      "prd": "PRD-005",
+      "number": 5,
+      "slug": "release-readiness",
+      "status": "Draft",
+      "cyclePhase": "2 (Readiness Scored)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-005-release-readiness.md",
+        "readiness": "_readiness/wip/readiness-005-release-readiness.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.7,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-23"
+    },
+    {
+      "prd": "PRD-006",
+      "number": 6,
+      "slug": "new-open",
+      "status": "Draft",
+      "cyclePhase": "2 (Readiness Scored)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-006-new-open.md",
+        "readiness": "_readiness/wip/readiness-006-new-open.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.5,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-23"
     }
   ]
 }
