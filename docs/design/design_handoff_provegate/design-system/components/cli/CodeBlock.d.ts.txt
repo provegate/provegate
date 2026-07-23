@@ -1,0 +1,17 @@
+import * as React from "react";
+
+export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Code/command text (string children recommended so copy works). */
+  children?: React.ReactNode;
+  /** Filename tab, e.g. "gate.toml". */
+  filename?: string;
+  /** Language label shown when no filename, e.g. "bash". */
+  lang?: string;
+  /** Prefix each line with a green "$ " prompt. */
+  prompt?: boolean;
+  /** Show the copy button. Default true. */
+  copyable?: boolean;
+}
+
+/** Terminal code block — always dark. Evidence is monospace. */
+export function CodeBlock(props: CodeBlockProps): React.JSX.Element;

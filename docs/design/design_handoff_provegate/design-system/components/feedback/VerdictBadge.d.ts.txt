@@ -1,0 +1,30 @@
+import * as React from "react";
+
+export type Verdict = "passed" | "failed" | "partial" | "skipped" | "operator" | "blocked";
+
+/**
+ * @startingPoint section="Feedback" subtitle="the fixed ledger vocabulary: passed / failed / partial / skipped / operator / blocked" viewport="760x120"
+ * VerdictBadge props.
+ */
+export interface VerdictBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  /**
+   * The verdict — the closed ledger vocabulary a `gate run` writes.
+   * Never "PROVEN"/"VIOLATED". `operator` and `blocked` are the two honest
+   * escape hatches (needs a human / dependency broken), never a silent pass.
+   */
+  verdict?: Verdict;
+  /** Override the label text (still rendered lowercase, monospace). */
+  label?: string;
+  /** Optional exit code appended as "· exit N" (evidence). */
+  code?: number | string;
+  /** Filled chip instead of tinted. Use sparingly. */
+  solid?: boolean;
+  size?: "sm" | "md";
+}
+
+/**
+ * Machine-checkable verdict, evidence-styled (monospace, lowercase). The glyph
+ * carries the status; color is redundant so NO_COLOR loses nothing. `passed` is
+ * green ONLY because a check exited 0; `failed` is red ONLY for real failure.
+ */
+export function VerdictBadge(props: VerdictBadgeProps): React.JSX.Element;

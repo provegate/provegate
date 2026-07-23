@@ -1,0 +1,75 @@
+import React from "react";
+import { VerdictBadge } from "../feedback/VerdictBadge.jsx";
+
+// Evidence ledger. A record of what was checked, by what command, and the
+// machine result. Commands / codes / paths are monospace (they are evidence);
+// labels are grotesk. Verdict cells use VerdictBadge (color law applies).
+export function EvidenceTable({
+  rows = [],
+  caption,
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const th = {
+    textAlign: "left",
+    fontFamily: "var(--pg-font-mono)",
+    fontSize: "0.6875rem",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "var(--pg-text-subtle)",
+    fontWeight: 500,
+    padding: "10px 14px",
+    borderBottom: "1px solid var(--pg-border)",
+    whiteSpace: "nowrap",
+  };
+  const td = {
+    padding: "11px 14px",
+    fontSize: "0.875rem",
+    color: "var(--pg-text)",
+    borderBottom: "1px solid var(--pg-border)",
+    verticalAlign: "middle",
+  };
+  const mono = { fontFamily: "var(--pg-font-mono)", fontSize: "0.8125rem", color: "var(--pg-text-muted)" };
+  return (
+    <div
+      className={`pg-evidence ${className}`}
+      style={{
+        border: "1px solid var(--pg-border)",
+        borderRadius: "var(--pg-radius-md)",
+        overflow: "hidden",
+        background: "var(--pg-surface)",
+        ...style,
+      }}
+      {...rest}
+    >
+      <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "var(--pg-font-sans)" }}>
+        {caption ? (
+          <caption style={{ captionSide: "top", textAlign: "left", padding: "12px 14px 0", fontFamily: "var(--pg-font-mono)", fontSize: "0.75rem", color: "var(--pg-text-subtle)" }}>
+            {caption}
+          </caption>
+        ) : null}
+        <thead>
+          <tr>
+            <th style={th}>check</th>
+            <th style={th}>command</th>
+            <th style={th}>verdict</th>
+            <th style={{ ...th, textAlign: "right" }}>exit</th>
+            <th style={th}>evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} style={i === rows.length - 1 ? { } : {}}>
+              <td style={{ ...td, fontWeight: 500 }}>{r.check}</td>
+              <td style={{ ...td, ...mono }}>{r.command}</td>
+              <td style={td}><VerdictBadge verdict={r.verdict} size="sm" /></td>
+              <td style={{ ...td, ...mono, textAlign: "right", color: r.verdict === "failed" ? "var(--pg-fail-text)" : "var(--pg-text-muted)" }}>{r.code != null ? r.code : "—"}</td>
+              <td style={{ ...td, ...mono, color: "var(--pg-text-subtle)" }}>{r.evidence || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

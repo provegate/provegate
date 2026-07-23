@@ -1,0 +1,27 @@
+import * as React from "react";
+
+export interface Phase {
+  n: number | string;
+  label: string;
+  authority: "human" | "machine";
+}
+
+/**
+ * @startingPoint section="Diagram" subtitle="7-phase gate pipeline, human vs machine" viewport="960x220"
+ * PhasePipeline props.
+ */
+export interface PhasePipelineProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Defaults to the 7-phase model (1-3 human, 4-7 machine). */
+  phases?: Phase[];
+  /** Append the always-human Push gate. Default true. */
+  showPush?: boolean;
+  /** Highlight the active phase number (or "push"). */
+  active?: number | string;
+}
+
+/**
+ * The phase pipeline diagram. Human gates (person glyph, operator-blue, pill) and
+ * machine gates (chip glyph, neutral, square) are drawn distinctly; the boundary
+ * between them is marked "hand off". Push is always human.
+ */
+export function PhasePipeline(props: PhasePipelineProps): React.JSX.Element;

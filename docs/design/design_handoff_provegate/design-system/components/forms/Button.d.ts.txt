@@ -1,0 +1,31 @@
+import * as React from "react";
+
+export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonSize = "sm" | "md" | "lg";
+
+/**
+ * @startingPoint section="Forms" subtitle="Primary / secondary / ghost actions" viewport="700x160"
+ * Button props.
+ */
+export interface ButtonProps extends React.HTMLAttributes<HTMLElement> {
+  /** Visual weight. `primary` is NEUTRAL (never green — green is earned). Default "primary". */
+  variant?: ButtonVariant;
+  /** Default "md". */
+  size?: ButtonSize;
+  /** Icon element before the label (use <Icon />). */
+  leftIcon?: React.ReactNode;
+  /** Icon element after the label. */
+  rightIcon?: React.ReactNode;
+  /** Full-width. */
+  block?: boolean;
+  disabled?: boolean;
+  /** Render as another tag; auto-becomes <a> when href is set. */
+  as?: keyof React.JSX.IntrinsicElements;
+  href?: string;
+}
+
+/**
+ * ProveGate button. Neutral primary, outline secondary, quiet ghost. Never use
+ * green as a button color — reserve proof-green for passed/earned states.
+ */
+export function Button(props: ButtonProps): React.JSX.Element;

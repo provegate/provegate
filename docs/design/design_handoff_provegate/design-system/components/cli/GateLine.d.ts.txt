@@ -1,0 +1,19 @@
+import * as React from "react";
+
+export type GateStatus = "passed" | "failed" | "partial" | "skipped" | "operator" | "blocked";
+
+export interface GateLineProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The closed ledger vocabulary. The glyph carries status; color is redundant. */
+  status?: GateStatus;
+  /** Gate/check name, e.g. "phase 5: §11 verification commands". */
+  name?: string;
+  /** The command that produced it, e.g. "pnpm test". */
+  command?: string;
+  /** Exit code (evidence). */
+  code?: number | string;
+  /** Render just the line without the terminal panel wrapper. */
+  bare?: boolean;
+}
+
+/** One line of `gate run` output — glyph, name, dotted leader, verdict, exit code. */
+export function GateLine(props: GateLineProps): React.JSX.Element;

@@ -1,0 +1,70 @@
+import React from "react";
+
+// The card family — how `gate run` summarizes a phase and hands off, refuses,
+// or stops. Copy-exact box-drawing: these specimens become string builders in
+// packages/provegate (src/core/run/cards.ts). 56-char rule, "│" gutter.
+// The glyph carries status; color is redundant (NO_COLOR loses nothing).
+const GLYPH = {
+  passed:  ["\u2713", "var(--pg-term-green)"],
+  failed:  ["\u2717", "var(--pg-term-red)"],
+  partial: ["\u26a0", "var(--pg-term-amber)"],
+  skipped: ["=",      "var(--pg-term-dim)"],
+  operator:["\u2192", "var(--pg-term-human)"],
+  blocked: ["!",      "var(--pg-term-stale)"],
+};
+
+function Line({ children, style }) {
+  return <div style={{ whiteSpace: "pre", ...style }}>{children}</div>;
+}
+
+export function HandoffCard({
+  variant = "handoff",
+  title,
+  width = 56,
+  lines = [],
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const headColor = variant === "stopped" ? "var(--pg-term-red)" : "var(--pg-term-green)";
+  const head = title || (variant === "stopped" ? "STOPPED" : "HANDOFF CARD");
+  const gutter = <span style={{ color: "var(--pg-term-border)" }}>{"\u2502"}</span>;
+  const topFill = "\u2500".repeat(Math.max(2, width - 4 - head.length));
+  const bottom = "\u2500".repeat(Math.max(4, width - 1));
+
+  return (
+    <div
+      className={`pg-handoff pg-handoff--${variant} ${className}`}
+      style={{
+        background: "var(--pg-term-bg)",
+        border: "1px solid var(--pg-term-border)",
+        borderRadius: "var(--pg-radius-md)",
+        fontFamily: "var(--pg-font-mono)",
+        fontSize: "0.8125rem",
+        lineHeight: 1.75,
+        color: "var(--pg-term-fg)",
+        padding: "14px 18px",
+        overflowX: "auto",
+        ...style,
+      }}
+      {...rest}
+    >
+      <Line style={{ color: headColor }}>{`\u250c\u2500 ${head} ${topFill}`}</Line>
+      {lines.map((ln, i) => {
+        if (ln == null || ln.blank) return <Line key={i}>{gutter}</Line>;
+        if (typeof ln === "string")
+          return <Line key={i}>{gutter}<span> {ln}</span></Line>;
+        if (ln.gate) {
+          const [g, c] = GLYPH[ln.gate] || GLYPH.passed;
+          return (
+            <Line key={i}>{gutter}<span>{"   "}</span><span style={{ color: c, fontWeight: 700 }}>{g}</span><span>{` ${ln.text}`}</span></Line>
+          );
+        }
+        if (ln.arrow)
+          return <Line key={i}>{gutter}<span style={{ color: "var(--pg-term-human)" }}>{` \u2192 ${ln.text}`}</span></Line>;
+        return <Line key={i}>{gutter}<span>{` ${ln.text || ""}`}</span></Line>;
+      })}
+      <Line style={{ color: headColor }}>{`\u2514${bottom}`}</Line>
+    </div>
+  );
+}

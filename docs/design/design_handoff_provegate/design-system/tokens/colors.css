@@ -1,0 +1,181 @@
+/* ============================================================
+   ProveGate — Color system
+   All tokens prefixed --pg-*. Base ramps + semantic aliases.
+   Light theme on :root; dark theme on [data-theme="dark"] and
+   via prefers-color-scheme. WCAG AA targeted throughout.
+
+   USAGE LAW (encoded, not suggested):
+   - GREEN IS EARNED. Use --pg-pass / --pg-accent ONLY to mark work
+     that passed a machine check or an operator verdict. Never as
+     decoration, never for "nice" UI accents, never on hover states.
+   - RED IS REAL FAILURE. Use --pg-fail ONLY for a check that exited
+     non-zero or a fail verdict. Never for generic emphasis/danger styling.
+   ============================================================ */
+:root {
+  /* --- Base: warm-leaning neutral ramp --- */
+  --pg-warm-50:  #faf9f6;
+  --pg-warm-100: #f3f1eb;
+  --pg-warm-200: #e7e4db;
+  --pg-warm-300: #d6d2c6;
+  --pg-warm-400: #b4af9f;
+  --pg-warm-500: #8f8a7b;
+  --pg-warm-600: #6b6659;
+  --pg-warm-700: #4a463d;
+  --pg-warm-800: #2e2b25;
+  --pg-warm-900: #1c1a16;
+  --pg-warm-950: #14130d;
+
+  /* --- Proof green (exit-0 semantics) --- */
+  --pg-green-400: #4fd08a;
+  --pg-green-500: #1fa45e;
+  --pg-green-600: #147d45;
+  --pg-green-700: #0e5e34;
+
+  /* --- Fail red --- */
+  --pg-red-400: #f4776b;
+  --pg-red-500: #db4437;
+  --pg-red-600: #c13328;
+  --pg-red-700: #9a2820;
+
+  /* --- Pending amber --- */
+  --pg-amber-400: #e8b44a;
+  --pg-amber-500: #c98a17;
+  --pg-amber-600: #a66e08;
+
+  /* --- Human authority (operator gate) --- */
+  --pg-human-400: #6fa8f5;
+  --pg-human-500: #2f6fe0;
+  --pg-human-600: #2258c0;
+
+  /* --- Plan / dry-run (muted cyan, low chroma — informational, not a brand hue) --- */
+  --pg-cyan-400: #63b6c2;
+  --pg-cyan-500: #3a8b98;
+  --pg-cyan-600: #2b6d78;
+
+  /* --- Stale (dim amber — a lease/verdict past its TTL) --- */
+  --pg-stale-400: #b39a52;
+  --pg-stale-600: #7c6a34;
+
+  /* ===== Semantic aliases — LIGHT THEME ===== */
+  --pg-bg:              var(--pg-warm-50);
+  --pg-bg-subtle:       var(--pg-warm-100);
+  --pg-surface:         #ffffff;
+  --pg-surface-raised:  #ffffff;
+  --pg-border:          var(--pg-warm-200);
+  --pg-border-strong:   var(--pg-warm-300);
+
+  --pg-text:            var(--pg-warm-900);
+  --pg-text-muted:      var(--pg-warm-700);
+  --pg-text-subtle:     var(--pg-warm-600);
+  --pg-text-inverted:   var(--pg-warm-50);
+
+  /* proof green (earned only) */
+  --pg-accent:          var(--pg-green-600);
+  --pg-accent-hover:    var(--pg-green-700);
+  --pg-accent-contrast: #ffffff;
+  --pg-accent-text:     var(--pg-green-600);
+  --pg-accent-bg:       #e8f4ec;
+
+  /* status */
+  --pg-pass:            var(--pg-green-600);
+  --pg-pass-text:       var(--pg-green-600);
+  --pg-pass-bg:         #e8f4ec;
+  --pg-fail:            var(--pg-red-600);
+  --pg-fail-text:       var(--pg-red-600);
+  --pg-fail-bg:         #fbe9e7;
+  --pg-pending:         var(--pg-amber-600);
+  --pg-pending-text:    var(--pg-amber-600);
+  --pg-pending-bg:      #fbf1dc;
+  --pg-human:           var(--pg-human-600);
+  --pg-human-text:      var(--pg-human-600);
+  --pg-human-bg:        #e7effc;
+
+  /* extended semantic slots (brief §9): derived from the hues above */
+  --pg-warn:            var(--pg-amber-600);   /* ⚠ advisory — not a failure */
+  --pg-warn-text:       var(--pg-amber-600);
+  --pg-warn-bg:         #fbf1dc;
+  --pg-refusal:         var(--pg-human-600);   /* a decision, not a failure */
+  --pg-refusal-text:    var(--pg-human-600);
+  --pg-refusal-bg:      #e7effc;
+  --pg-plan:            var(--pg-cyan-600);    /* dry-run / what WILL run */
+  --pg-plan-text:       var(--pg-cyan-600);
+  --pg-plan-bg:         #e4f1f3;
+  --pg-stale:           var(--pg-stale-600);   /* lease/verdict past TTL */
+  --pg-stale-text:      var(--pg-stale-600);
+  --pg-stale-bg:        #f4efdf;
+  --pg-muted:           var(--pg-text-subtle); /* metadata */
+
+  --pg-link:            var(--pg-human-600);
+  --pg-link-hover:      var(--pg-human-500);
+
+  --pg-focus-ring:      var(--pg-human-500);
+
+  /* ===== Terminal surface — ALWAYS dark, theme-independent =====
+     Each slot declares its 16-color ANSI floor + truecolor. The GLYPH
+     always carries status; color is redundant so NO_COLOR loses nothing. */
+  --pg-term-bg:     #14130d;  /* default bg */
+  --pg-term-fg:     #e7e4db;  /* default fg */
+  --pg-term-dim:    #8f8a7b;  /* ANSI 90 bright-black · 38;2;143;138;123 · muted metadata */
+  --pg-term-green:  #4fd08a;  /* ANSI 32/92 green   · 38;2;79;208;138  · pass */
+  --pg-term-red:    #f4776b;  /* ANSI 31/91 red     · 38;2;244;119;107 · fail */
+  --pg-term-amber:  #e8b44a;  /* ANSI 33/93 yellow  · 38;2;232;180;74  · warn */
+  --pg-term-human:  #6fa8f5;  /* ANSI 34/94 blue    · 38;2;111;168;245 · human / refusal */
+  --pg-term-plan:   #63b6c2;  /* ANSI 36/96 cyan    · 38;2;99;182;194  · dry-run / plan */
+  --pg-term-stale:  #b39a52;  /* ANSI 33 yellow dim · 38;2;179;154;82  · stale lease */
+  --pg-term-border: #2e2b25;
+}
+
+/* ===== Semantic aliases — DARK THEME ===== */
+[data-theme="dark"] {
+  --pg-bg:              var(--pg-warm-950);
+  --pg-bg-subtle:       #191712;
+  --pg-surface:         var(--pg-warm-900);
+  --pg-surface-raised:  var(--pg-warm-800);
+  --pg-border:          #2a2721;
+  --pg-border-strong:   var(--pg-warm-700);
+
+  --pg-text:            var(--pg-warm-100);
+  --pg-text-muted:      var(--pg-warm-400);
+  --pg-text-subtle:     var(--pg-warm-500);
+  --pg-text-inverted:   var(--pg-warm-950);
+
+  --pg-accent:          var(--pg-green-400);
+  --pg-accent-hover:    #6fdca1;
+  --pg-accent-contrast: var(--pg-warm-950);
+  --pg-accent-text:     var(--pg-green-400);
+  --pg-accent-bg:       rgba(79,208,138,0.14);
+
+  --pg-pass:            var(--pg-green-400);
+  --pg-pass-text:       var(--pg-green-400);
+  --pg-pass-bg:         rgba(79,208,138,0.14);
+  --pg-fail:            var(--pg-red-400);
+  --pg-fail-text:       var(--pg-red-400);
+  --pg-fail-bg:         rgba(244,119,107,0.15);
+  --pg-pending:         var(--pg-amber-400);
+  --pg-pending-text:    var(--pg-amber-400);
+  --pg-pending-bg:      rgba(232,180,74,0.15);
+  --pg-human:           var(--pg-human-400);
+  --pg-human-text:      var(--pg-human-400);
+  --pg-human-bg:        rgba(111,168,245,0.15);
+
+  /* extended semantic slots (dark) */
+  --pg-warn:            var(--pg-amber-400);
+  --pg-warn-text:       var(--pg-amber-400);
+  --pg-warn-bg:         rgba(232,180,74,0.15);
+  --pg-refusal:         var(--pg-human-400);
+  --pg-refusal-text:    var(--pg-human-400);
+  --pg-refusal-bg:      rgba(111,168,245,0.15);
+  --pg-plan:            var(--pg-cyan-400);
+  --pg-plan-text:       var(--pg-cyan-400);
+  --pg-plan-bg:         rgba(99,182,194,0.15);
+  --pg-stale:           var(--pg-stale-400);
+  --pg-stale-text:      var(--pg-stale-400);
+  --pg-stale-bg:        rgba(179,154,82,0.15);
+  --pg-muted:           var(--pg-text-subtle);
+
+  --pg-link:            var(--pg-human-400);
+  --pg-link-hover:      #9cc2f8;
+  --pg-focus-ring:      var(--pg-human-400);
+}
+/* Auto dark: consumers opt in with <html data-theme="dark">. A tiny inline
+   script (see readme) can mirror prefers-color-scheme onto that attribute. */

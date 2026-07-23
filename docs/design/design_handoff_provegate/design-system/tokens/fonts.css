@@ -1,0 +1,5 @@
+/* ProveGate webfonts. Substitution note: no brand font files were provided.
+   Prose + UI = IBM Plex Sans; evidence (commands, exit codes, logs, verdicts) = IBM Plex Mono.
+   One engineered superfamily, drawn as a pair. Loaded from Google Fonts.
+   Swap the @import for local @font-face src if you license/self-host the files. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');

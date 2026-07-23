@@ -1,0 +1,55 @@
+import React from "react";
+import { Icon } from "../core/Icon.jsx";
+
+// Docs admonition / callout. Terminal-adjacent: flat, tinted, thin left rule.
+const MAP = {
+  note:    { icon: "terminal", accent: "var(--pg-human)",    bg: "var(--pg-bg-subtle)",     title: "Note" },
+  tip:     { icon: "check",    accent: "var(--pg-accent)",   bg: "var(--pg-accent-bg)",     title: "Tip" },
+  warning: { icon: "pending",  accent: "var(--pg-pending)",  bg: "var(--pg-pending-bg)",    title: "Warning" },
+  pass:    { icon: "check",    accent: "var(--pg-pass)",     bg: "var(--pg-pass-bg)",       title: "Passed" },
+  fail:    { icon: "cross",    accent: "var(--pg-fail)",     bg: "var(--pg-fail-bg)",       title: "Failed" },
+  human:   { icon: "human",    accent: "var(--pg-human)",    bg: "var(--pg-human-bg)",      title: "Human gate" },
+};
+
+export function Admonition({ type = "note", title, children, className = "", style = {}, ...rest }) {
+  const m = MAP[type] || MAP.note;
+  return (
+    <div
+      className={`pg-admonition pg-admonition--${type} ${className}`}
+      style={{
+        display: "flex",
+        gap: "12px",
+        padding: "14px 16px",
+        background: m.bg,
+        borderRadius: "var(--pg-radius-md)",
+        borderLeft: `3px solid ${m.accent}`,
+        fontFamily: "var(--pg-font-sans)",
+        color: "var(--pg-text)",
+        ...style,
+      }}
+      {...rest}
+    >
+      <span style={{ color: m.accent, flex: "none", marginTop: "1px" }}>
+        <Icon name={m.icon} size={18} strokeWidth={2.2} />
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            fontSize: "0.8125rem",
+            letterSpacing: "0.02em",
+            color: m.accent,
+            marginBottom: children ? "3px" : 0,
+          }}
+        >
+          {title || m.title}
+        </div>
+        {children ? (
+          <div style={{ fontSize: "0.9375rem", lineHeight: 1.55, color: "var(--pg-text-muted)" }}>
+            {children}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

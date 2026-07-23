@@ -1,0 +1,103 @@
+import React from "react";
+import { Icon } from "../core/Icon.jsx";
+
+// The phase pipeline. Human gates and machine gates are drawn distinctly:
+// human = person glyph + operator-authority blue; machine = chip glyph + neutral.
+// Default: phases 1-3 human, 4-7 autonomous, push always human.
+const DEFAULT_PHASES = [
+  { n: 1, label: "PRD", authority: "human" },
+  { n: 2, label: "Readiness", authority: "human" },
+  { n: 3, label: "Tasks", authority: "human" },
+  { n: 4, label: "Implement", authority: "machine" },
+  { n: 5, label: "Test", authority: "machine" },
+  { n: 6, label: "Audit", authority: "machine" },
+  { n: 7, label: "Learn", authority: "machine" },
+];
+
+function Node({ p, active }) {
+  const human = p.authority === "human";
+  const color = human ? "var(--pg-human)" : "var(--pg-text-muted)";
+  const bg = human ? "var(--pg-human-bg)" : "var(--pg-bg-subtle)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minWidth: 78 }}>
+      <div
+        style={{
+          width: 46, height: 46, borderRadius: human ? "var(--pg-radius-pill)" : "var(--pg-radius-md)",
+          background: bg, border: `1.5px solid ${active ? color : `color-mix(in srgb, ${color} 45%, transparent)`}`,
+          display: "flex", alignItems: "center", justifyContent: "center", color,
+          position: "relative",
+        }}
+      >
+        <Icon name={human ? "human" : "machine"} size={22} strokeWidth={2} />
+        <span style={{
+          position: "absolute", top: -7, right: -7, width: 18, height: 18, borderRadius: "50%",
+          background: "var(--pg-surface)", border: `1px solid ${color}`, color,
+          fontFamily: "var(--pg-font-mono)", fontSize: "0.625rem", fontWeight: 600,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>{p.n}</span>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontFamily: "var(--pg-font-sans)", fontSize: "0.8125rem", fontWeight: 600, color: "var(--pg-text)", letterSpacing: "-0.01em" }}>{p.label}</div>
+        <div style={{ fontFamily: "var(--pg-font-mono)", fontSize: "0.625rem", letterSpacing: "0.06em", textTransform: "uppercase", color }}>{human ? "human" : "auto"}</div>
+      </div>
+    </div>
+  );
+}
+
+function Connector({ boundary }) {
+  return (
+    <div style={{ flex: 1, minWidth: 16, display: "flex", alignItems: "center", height: 46, position: "relative", justifyContent: "center" }}>
+      <div style={{ width: "100%", height: 0, borderTop: boundary ? "1.5px dashed var(--pg-border-strong)" : "1.5px solid var(--pg-border-strong)" }} />
+      {boundary ? (
+        <span style={{ position: "absolute", top: -20, fontFamily: "var(--pg-font-mono)", fontSize: "0.5625rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--pg-text-subtle)", background: "var(--pg-surface)", padding: "0 4px", whiteSpace: "nowrap" }}>hand off</span>
+      ) : null}
+    </div>
+  );
+}
+
+export function PhasePipeline({
+  phases = DEFAULT_PHASES,
+  showPush = true,
+  active,
+  className = "",
+  style = {},
+  ...rest
+}) {
+  return (
+    <div
+      className={`pg-pipeline ${className}`}
+      style={{
+        background: "var(--pg-surface)", border: "1px solid var(--pg-border)",
+        borderRadius: "var(--pg-radius-lg)", padding: "26px 22px 20px", ...style,
+      }}
+      {...rest}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 4, flexWrap: "wrap", rowGap: 20 }}>
+        {phases.map((p, i) => {
+          const prev = phases[i - 1];
+          const boundary = prev && prev.authority === "human" && p.authority === "machine";
+          return (
+            <React.Fragment key={p.n}>
+              {i > 0 ? <Connector boundary={boundary} /> : null}
+              <Node p={p} active={active === p.n} />
+            </React.Fragment>
+          );
+        })}
+        {showPush ? (
+          <>
+            <Connector boundary />
+            <Node p={{ n: "↑", label: "Push", authority: "human" }} active={active === "push"} />
+          </>
+        ) : null}
+      </div>
+      <div style={{ display: "flex", gap: 18, marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--pg-border)", flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--pg-font-mono)", fontSize: "0.6875rem", color: "var(--pg-text-subtle)" }}>
+          <Icon name="human" size={14} style={{ color: "var(--pg-human)" }} /> human gate — you decide
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--pg-font-mono)", fontSize: "0.6875rem", color: "var(--pg-text-subtle)" }}>
+          <Icon name="machine" size={14} style={{ color: "var(--pg-text-muted)" }} /> machine gate — a command decides
+        </span>
+      </div>
+    </div>
+  );
+}

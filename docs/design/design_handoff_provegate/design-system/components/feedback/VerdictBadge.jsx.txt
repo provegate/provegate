@@ -1,0 +1,61 @@
+import React from "react";
+
+// Verdict chip — the fixed ledger vocabulary a `gate run` writes.
+// Vocabulary is closed: passed / failed / partial / skipped / operator / blocked.
+// Never "PROVEN" / "VIOLATED" (that jargon belongs to a dead competitor).
+// The GLYPH carries status; color is redundant (NO_COLOR loses nothing).
+const MAP = {
+  passed:  { glyph: "\u2713", label: "passed",  fg: "var(--pg-pass-text)",  bg: "var(--pg-pass-bg)",  bd: "var(--pg-pass)" },
+  failed:  { glyph: "\u2717", label: "failed",  fg: "var(--pg-fail-text)",  bg: "var(--pg-fail-bg)",  bd: "var(--pg-fail)" },
+  partial: { glyph: "\u26a0", label: "partial", fg: "var(--pg-warn-text)",  bg: "var(--pg-warn-bg)",  bd: "var(--pg-warn)" },
+  skipped: { glyph: "=",      label: "skipped", fg: "var(--pg-muted)",      bg: "var(--pg-bg-subtle)",bd: "var(--pg-border-strong)" },
+  operator:{ glyph: "\u2192", label: "operator",fg: "var(--pg-human-text)", bg: "var(--pg-human-bg)", bd: "var(--pg-human)" },
+  blocked: { glyph: "!",      label: "blocked", fg: "var(--pg-stale-text)", bg: "var(--pg-stale-bg)", bd: "var(--pg-stale)" },
+};
+const SIZES = {
+  sm: { fontSize: "0.6875rem", padding: "2px 7px", gap: 5 },
+  md: { fontSize: "0.8125rem", padding: "3px 9px", gap: 6 },
+};
+
+export function VerdictBadge({
+  verdict = "passed",
+  label,
+  code,
+  solid = false,
+  size = "md",
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const v = MAP[verdict] || MAP.passed;
+  const sz = SIZES[size] || SIZES.md;
+  const solidStyle = solid
+    ? { background: v.bd, color: "var(--pg-term-bg)", borderColor: v.bd }
+    : { background: v.bg, color: v.fg, borderColor: `color-mix(in srgb, ${v.bd} 35%, transparent)` };
+  return (
+    <span
+      className={`pg-verdict pg-verdict--${verdict} ${className}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: sz.gap,
+        fontFamily: "var(--pg-font-mono)",
+        fontWeight: 500,
+        fontSize: sz.fontSize,
+        lineHeight: 1,
+        letterSpacing: "0.01em",
+        textTransform: "lowercase",
+        padding: sz.padding,
+        borderRadius: "var(--pg-radius-sm)",
+        border: "1px solid",
+        ...solidStyle,
+        ...style,
+      }}
+      {...rest}
+    >
+      <span aria-hidden="true" style={{ fontWeight: 700 }}>{v.glyph}</span>
+      {label || v.label}
+      {code != null ? <span style={{ opacity: 0.7 }}>· exit {code}</span> : null}
+    </span>
+  );
+}

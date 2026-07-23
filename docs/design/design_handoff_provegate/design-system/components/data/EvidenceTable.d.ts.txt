@@ -1,0 +1,26 @@
+import * as React from "react";
+
+export interface EvidenceRow {
+  check: string;
+  command?: string;
+  verdict: "passed" | "failed" | "partial" | "skipped" | "operator" | "blocked";
+  code?: number | string;
+  /** Evidence pointer: duration, log path, artifact hash, etc. */
+  evidence?: string;
+}
+
+/**
+ * @startingPoint section="Data" subtitle="Evidence ledger table" viewport="900x300"
+ * EvidenceTable props.
+ */
+export interface EvidenceTableProps extends React.HTMLAttributes<HTMLDivElement> {
+  rows?: EvidenceRow[];
+  caption?: string;
+}
+
+/**
+ * The evidence ledger: check, command, verdict, exit code, evidence pointer.
+ * Commands & codes render monospace (they are evidence). Verdict cells obey the
+ * color law via VerdictBadge.
+ */
+export function EvidenceTable(props: EvidenceTableProps): React.JSX.Element;

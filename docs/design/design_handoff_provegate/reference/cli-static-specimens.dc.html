@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="CLI" description="ProveGate terminal surface — copy-exact static specimens: cards, tables, plan, refusals, help, color/NO_COLOR" -->
+<helmet>
+<script src="./ds-base.js"></script>
+</helmet>
+<div style="min-height:100vh;background:#14130d;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#e7e4db;padding:56px 40px 90px">
+<div style="max-width:920px;margin:0 auto">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:#8f8a7b;margin-bottom:14px">ProveGate · the CLI surface</div>
+  <h1 style="margin:0 0 16px;font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.04;color:#f4f2ec">The CLI is the primary brand surface.</h1>
+  <p style="margin:0 0 8px;max-width:64ch;font-size:18px;line-height:1.6;color:#a8a396">Most people meet ProveGate as lines of terminal output, so the output is designed: a fixed grammar of glyphs, colour-as-signal, and box-drawing for the moments that matter. Every block below is a copy-exact string the CLI prints — no animation, no fabricated output. The glyph carries status, so nothing is lost under <span style="font-family:'IBM Plex Mono',monospace;color:#e7e4db">NO_COLOR</span>.</p>
+  <p style="margin:0 0 52px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#63b6c2">zero runtime deps · hand-rolled ANSI · respects NO_COLOR + non-TTY · --json for machines</p>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">Install</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><div style="padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.85;color:#e7e4db">
+<div style="white-space:pre"><span style="color:#8f8a7b">$</span> npm i -g provegate</div>
+<div style="white-space:pre"><span style="color:#8f8a7b">$</span> gate init            <span style="color:#8f8a7b"># scaffold the workflow tree</span></div>
+<div style="white-space:pre"><span style="color:#8f8a7b">$</span> gate new my-feature  <span style="color:#8f8a7b"># then: gate open / gate run</span></div>
+</div></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">Command surface</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><div style="padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.95">
+<div style="white-space:pre"><span style="color:#4fd08a">gate init</span>    <span style="color:#e7e4db">scaffold the workflow tree + starter configs</span>   <span style="color:#8f8a7b">--dry-run</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate new</span>     <span style="color:#e7e4db">create the next PRD from the template</span>          <span style="color:#8f8a7b">&lt;slug&gt; [--class=X]</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate open</span>    <span style="color:#e7e4db">claim a PRD: lease its surface or refuse</span>       <span style="color:#8f8a7b">[--steal] [--worktree]</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate status</span>  <span style="color:#e7e4db">rebuild workflow state from artifacts</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate queue</span>   <span style="color:#e7e4db">show the PRD queue</span>                             <span style="color:#8f8a7b">--json</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate check</span>   <span style="color:#e7e4db">lint a PRD for readiness</span>                       <span style="color:#8f8a7b">PRD-XXX | --wiring</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate run</span>     <span style="color:#e7e4db">run gated phases 4-7 + local merge</span>             <span style="color:#8f8a7b">--from-phase=N</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate land</span>    <span style="color:#e7e4db">merge step only (alias for run --from-phase=merge)</span></div>
+<div style="white-space:pre"><span style="color:#4fd08a">gate push</span>    <span style="color:#6fa8f5">refuses — push is always yours</span></div>
+</div></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">gate run · gated phases 4-7</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.85;white-space:pre"><span style="color:#8f8a7b">$</span> gate run
+<span style="color:#8f8a7b">[run]</span> PRD-001 <span style="color:#8f8a7b">·</span> phases 4-7 <span style="color:#8f8a7b">·</span> worktree feat/prd-001-fix-login-timeout
+  <span style="color:#4fd08a">✓</span> phase 4  <span style="color:#e7e4db">typecheck + lint + build</span>       <span style="color:#8f8a7b">exit 0</span>   <span style="color:#4fd08a">passed</span>
+  <span style="color:#4fd08a">✓</span> phase 5  <span style="color:#e7e4db">§11 verification commands</span>      <span style="color:#8f8a7b">exit 0</span>   <span style="color:#4fd08a">passed</span>
+  <span style="color:#4fd08a">✓</span> phase 6  <span style="color:#e7e4db">review artifact (Critical 0)</span>            <span style="color:#4fd08a">passed</span>
+  <span style="color:#4fd08a">✓</span> phase 7  <span style="color:#e7e4db">durable artifacts in diff</span>              <span style="color:#4fd08a">passed</span>
+  <span style="color:#6fa8f5">→</span> merge    <span style="color:#e7e4db">LOCAL main (no-ff)</span>                     <span style="color:#4fd08a">passed</span></pre></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">The card family · 56-char rule, │ gutter</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:18px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.7;white-space:pre"><span style="color:#4fd08a">┌─ HANDOFF CARD ─────────────────────────────────────────</span>
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">PRD-001 (fix-login-timeout)</span>
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">merged: feat/prd-001-fix-login-timeout → LOCAL main (no-ff)</span>
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">diff:   6 files changed, 214 insertions(+), 12 deletions(-)</span>
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">gates:</span>
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> phase 4: typecheck + lint + build
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> phase 5: §11 verification commands
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> phase 6: review artifact (verdict pass, Critical 0)
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> phase 7: durable artifacts in diff
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> post-merge: build green
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">operator rows: 0 | Autonomous Close: operator-gated</span>
+<span style="color:#2e2b25">│</span> <span style="color:#8f8a7b">metrics: _state/metrics.jsonl (local JSONL, yours)</span>
+<span style="color:#2e2b25">│</span> <span style="color:#6fa8f5">→ READY TO PUSH — run `git push` yourself (the runner never pushes)</span>
+<span style="color:#4fd08a">└────────────────────────────────────────────────────────</span></pre></div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.7;white-space:pre"><span style="color:#f4776b">┌─ STOPPED at Phase 5 ───────────────────────────────────</span>
+<span style="color:#2e2b25">│</span> <span style="color:#e7e4db">PRD-001: verification command exited 1</span>
+<span style="color:#2e2b25">│</span>   <span style="color:#4fd08a">✓</span> phase 4: typecheck + lint + build
+<span style="color:#2e2b25">│</span>   <span style="color:#f4776b">✗</span> phase 5: §11 verification commands
+<span style="color:#2e2b25">│</span> <span style="color:#8f8a7b">worktree left intact — fix and re-run with --from-phase=N, or hand back to a human</span>
+<span style="color:#f4776b">└────────────────────────────────────────────────────────</span></pre></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">gate status · aligned columns, greppable</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.85;white-space:pre"><span style="color:#8f8a7b">ID       STATE      READINESS      TASKS   SLUG</span>
+<span style="color:#e7e4db">PRD-001  </span><span style="color:#e8b44a">wip      </span>  <span style="color:#4fd08a">PASS · 9.1</span>     <span style="color:#e7e4db">4/7</span>     <span style="color:#8f8a7b">fix-login-timeout</span>
+<span style="color:#e7e4db">PRD-002  </span><span style="color:#6fa8f5">in-review</span>  <span style="color:#4fd08a">PASS · 8.4</span>     <span style="color:#e7e4db">7/7</span>     <span style="color:#8f8a7b">add-oauth</span>
+<span style="color:#e7e4db">PRD-003  </span><span style="color:#f4776b">blocked  </span>  <span style="color:#b39a52">ITERATE</span>        <span style="color:#e7e4db">0/5</span>     <span style="color:#8f8a7b">rework-billing</span>
+<span style="color:#e7e4db">PRD-004  </span><span style="color:#8f8a7b">queued   </span>  <span style="color:#8f8a7b">—</span>              <span style="color:#8f8a7b">—</span>       <span style="color:#8f8a7b">sso-callback</span></pre></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">gate run --dry-run · the plan view</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.8;white-space:pre"><span style="color:#8f8a7b">$</span> gate run --dry-run
+<span style="color:#8f8a7b">[run]</span> <span style="color:#63b6c2">DRY-RUN</span> <span style="color:#8f8a7b">·</span> PRD-001 <span style="color:#8f8a7b">·</span> plan for phases 4-7
+  <span style="color:#e7e4db">phase 4  implementation</span>
+    <span style="color:#8f8a7b">·</span> tsc --noEmit
+    <span style="color:#8f8a7b">·</span> eslint .
+    <span style="color:#8f8a7b">·</span> vite build
+  <span style="color:#e7e4db">phase 5  §11 verification commands</span>
+    <span style="color:#8f8a7b">·</span> pnpm test -- auth
+    <span style="color:#8f8a7b">·</span> pnpm test:contract auth-callback
+  <span style="color:#e7e4db">phase 6  final auditing</span>
+    <span style="color:#8f8a7b">·</span> independent reviewer (cross-family) · Critical must be 0
+  <span style="color:#e7e4db">phase 7  learning</span>
+    <span style="color:#8f8a7b">·</span> durable artifacts present in merge diff
+  <span style="color:#6fa8f5">→</span> merge  <span style="color:#e7e4db">no-ff into LOCAL main · post-merge build</span>
+<span style="color:#63b6c2">nothing runs · nothing merges · this is a plan</span></pre></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">Refusals read as decisions, not failures</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:18px"><pre style="margin:0;padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.8;white-space:pre"><span style="color:#8f8a7b">$</span> gate open PRD-004
+<span style="color:#8f8a7b">[open]</span> <span style="color:#f4776b">REFUSED</span> <span style="color:#e7e4db">— conflict surface overlaps an active lease</span>
+  <span style="color:#b39a52">!</span> PRD-002 (add-oauth) <span style="color:#8f8a7b">owns</span>  src/auth/**
+    PRD-004 (sso)       <span style="color:#8f8a7b">wants</span> src/auth/oauth/callback.ts
+  <span style="color:#8f8a7b">lease held by agent-2 · phase 4 · ttl 38m</span>
+  <span style="color:#6fa8f5">→</span> <span style="color:#e7e4db">resolve: narrow PRD-004's Conflict Surface, or --steal if the lease is stale</span></pre></div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><pre style="margin:0;padding:22px 20px;font-family:'IBM Plex Mono',monospace;font-size:15px;line-height:1.9;white-space:pre"><span style="color:#8f8a7b">$</span> gate push
+<span style="color:#6fa8f5">No. Push is yours.</span>
+<span style="color:#8f8a7b">the runner contains no code path that pushes to a remote.</span></pre></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">gate --help</div>
+  <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto;margin-bottom:44px"><div style="padding:18px 20px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;line-height:1.8">
+<div style="white-space:pre"><span style="color:#8f8a7b">$</span> gate --help</div>
+<div style="white-space:pre"><span style="color:#f4f2ec">provegate</span> <span style="color:#8f8a7b">· prove it, then let it propagate</span>              <span style="color:#8f8a7b">v1.2.0</span></div>
+<div style="height:1.6em"></div>
+<div style="white-space:pre"><span style="color:#8f8a7b">USAGE</span></div>
+<div style="white-space:pre">  gate <span style="color:#e7e4db">&lt;command&gt;</span> <span style="color:#8f8a7b">[options]</span></div>
+<div style="height:1.6em"></div>
+<div style="white-space:pre"><span style="color:#8f8a7b">COMMANDS</span></div>
+<div style="white-space:pre">  <span style="color:#4fd08a">init</span>      scaffold the workflow tree</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">new</span>       create the next PRD</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">open</span>      claim a PRD (lease its conflict surface)</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">status</span>    show workflow state</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">queue</span>     show the PRD queue          <span style="color:#8f8a7b">--json</span></div>
+<div style="white-space:pre">  <span style="color:#4fd08a">check</span>     lint a PRD for readiness</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">run</span>       run gated phases 4-7 + merge <span style="color:#8f8a7b">--from-phase=N</span></div>
+<div style="white-space:pre">  <span style="color:#4fd08a">land</span>      merge step only</div>
+<div style="white-space:pre">  <span style="color:#4fd08a">push</span>      <span style="color:#6fa8f5">(refused — push is yours)</span></div>
+<div style="height:1.6em"></div>
+<div style="white-space:pre">  <span style="color:#8f8a7b">humans own intent and release · the machine owns the verified middle</span></div>
+</div></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b;margin-bottom:12px">Colour is redundant · the glyph carries status</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:44px">
+    <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto">
+      <div style="padding:10px 16px;border-bottom:1px solid #2e2b25;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8f8a7b">with colour</div>
+      <div style="padding:16px 18px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.9">
+        <div style="white-space:pre"><span style="color:#4fd08a">✓</span> phase 5  <span style="color:#4fd08a">passed</span></div>
+        <div style="white-space:pre"><span style="color:#f4776b">✗</span> phase 5  <span style="color:#f4776b">failed</span></div>
+        <div style="white-space:pre"><span style="color:#e8b44a">⚠</span> phase 5  <span style="color:#e8b44a">partial</span></div>
+        <div style="white-space:pre"><span style="color:#8f8a7b">=</span> phase 5  <span style="color:#8f8a7b">skipped</span></div>
+        <div style="white-space:pre"><span style="color:#6fa8f5">→</span> phase 5  <span style="color:#6fa8f5">operator</span></div>
+        <div style="white-space:pre"><span style="color:#b39a52">!</span> phase 5  <span style="color:#b39a52">blocked</span></div>
+      </div>
+    </div>
+    <div style="border:1px solid #2e2b25;border-radius:10px;background:#0f0e09;overflow-x:auto">
+      <div style="padding:10px 16px;border-bottom:1px solid #2e2b25;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8f8a7b">NO_COLOR=1</div>
+      <pre style="margin:0;padding:16px 18px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.9;white-space:pre;color:#e7e4db">✓ phase 5  passed
+✗ phase 5  failed
+⚠ phase 5  partial
+= phase 5  skipped
+→ phase 5  operator
+! phase 5  blocked</pre>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px 26px;padding-top:24px;border-top:1px solid #2e2b25;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#a8a396">
+    <span style="color:#4fd08a">✓ passed · exit 0</span>
+    <span style="color:#f4776b">✗ failed · exit ≠ 0</span>
+    <span style="color:#e8b44a">⚠ partial / warn</span>
+    <span style="color:#8f8a7b">= skipped</span>
+    <span style="color:#6fa8f5">→ operator · handoff · human</span>
+    <span style="color:#b39a52">! blocked · overlap · stale</span>
+    <span style="color:#63b6c2">DRY-RUN · plan</span>
+  </div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,17 @@
+import * as React from "react";
+
+export type AdmonitionType = "note" | "tip" | "warning" | "pass" | "fail" | "human";
+
+export interface AdmonitionProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Callout kind. `pass`/`fail` carry verdict semantics; `human` marks operator-gate notes. */
+  type?: AdmonitionType;
+  /** Optional heading; defaults to the type's name. */
+  title?: string;
+  children?: React.ReactNode;
+}
+
+/**
+ * Docs callout box for the ProveGate docs site. Flat tinted panel with a thin
+ * left rule and a glyph. Keep `pass`/`fail` for genuine verdict context.
+ */
+export function Admonition(props: AdmonitionProps): React.JSX.Element;

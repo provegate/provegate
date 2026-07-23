@@ -1,0 +1,31 @@
+import * as React from "react";
+import { GateStatus } from "./GateLine";
+
+export type HandoffLine =
+  | string
+  | { blank: true }
+  | { gate: GateStatus; text: string }
+  | { arrow: true; text: string }
+  | { text: string };
+
+/**
+ * @startingPoint section="CLI" subtitle="The card family: handoff (READY TO PUSH) + stopped" viewport="760x400"
+ * HandoffCard props.
+ */
+export interface HandoffCardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** "handoff" (green rule, READY TO PUSH) or "stopped" (red rule). */
+  variant?: "handoff" | "stopped";
+  /** Header label; uppercased loud state, e.g. "HANDOFF CARD" or "STOPPED at Phase 5". */
+  title?: string;
+  /** Box rule width in chars (the CLI uses 56). */
+  width?: number;
+  /** Body lines: plain string, {gate,text} check, {arrow,text} handoff, or {blank}. */
+  lines?: HandoffLine[];
+}
+
+/**
+ * The card family — how a gate summarizes a phase then hands off, refuses, or
+ * stops. Copy-exact box-drawing (these specimens become CLI string builders).
+ * The refusal ("→ READY TO PUSH … the runner never pushes") is a brand moment.
+ */
+export function HandoffCard(props: HandoffCardProps): React.JSX.Element;

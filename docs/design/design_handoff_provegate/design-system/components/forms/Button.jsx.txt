@@ -1,0 +1,87 @@
+import React from "react";
+
+// ProveGate Button.
+// NOTE ON COLOR LAW: primary is NEUTRAL (near-black / inverted), never green.
+// Green is earned — it marks passed work, not call-to-action buttons.
+const SIZES = {
+  sm: { padding: "6px 12px", fontSize: "0.8125rem", gap: "6px", height: 32 },
+  md: { padding: "9px 16px", fontSize: "0.9375rem", gap: "8px", height: 40 },
+  lg: { padding: "12px 22px", fontSize: "1.0625rem", gap: "10px", height: 48 },
+};
+
+function variantStyle(variant) {
+  switch (variant) {
+    case "secondary":
+      return {
+        background: "var(--pg-surface)",
+        color: "var(--pg-text)",
+        border: "1px solid var(--pg-border-strong)",
+      };
+    case "ghost":
+      return {
+        background: "transparent",
+        color: "var(--pg-text-muted)",
+        border: "1px solid transparent",
+      };
+    case "primary":
+    default:
+      return {
+        background: "var(--pg-text)",
+        color: "var(--pg-text-inverted)",
+        border: "1px solid var(--pg-text)",
+      };
+  }
+}
+
+export function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  leftIcon = null,
+  rightIcon = null,
+  block = false,
+  disabled = false,
+  as,
+  href,
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const Tag = as || (href ? "a" : "button");
+  const sz = SIZES[size] || SIZES.md;
+  const base = {
+    display: block ? "flex" : "inline-flex",
+    width: block ? "100%" : undefined,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: sz.gap,
+    padding: sz.padding,
+    fontFamily: "var(--pg-font-sans)",
+    fontWeight: 600,
+    fontSize: sz.fontSize,
+    lineHeight: 1,
+    letterSpacing: "-0.005em",
+    borderRadius: "var(--pg-radius-md)",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+    transition: "background var(--pg-dur) var(--pg-ease), border-color var(--pg-dur) var(--pg-ease), transform var(--pg-dur-fast) var(--pg-ease)",
+    ...variantStyle(variant),
+    ...style,
+  };
+  return (
+    <Tag
+      href={href}
+      disabled={Tag === "button" ? disabled : undefined}
+      aria-disabled={disabled || undefined}
+      className={`pg-button pg-button--${variant} ${className}`}
+      style={base}
+      {...rest}
+    >
+      {leftIcon}
+      {children}
+      {rightIcon}
+    </Tag>
+  );
+}

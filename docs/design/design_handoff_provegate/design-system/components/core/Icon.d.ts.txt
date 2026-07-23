@@ -1,0 +1,24 @@
+import * as React from "react";
+
+export type IconName =
+  | "gate" | "check" | "cross" | "pending"
+  | "human" | "machine" | "lock" | "exit0" | "merge"
+  | "terminal" | "copy" | "arrowRight" | "chevronRight" | "github";
+
+export interface IconProps extends React.SVGProps<SVGSVGElement> {
+  /** Which glyph to render. `human` and `machine` are the distinct gate authorities. */
+  name: IconName;
+  /** Pixel size (width = height). Default 20. */
+  size?: number;
+  /** Stroke weight. Default 2. */
+  strokeWidth?: number;
+  /** Accessible label; when omitted the icon is aria-hidden. */
+  title?: string;
+}
+
+/**
+ * ProveGate inline icon. Geometric single-stroke set drawn on a 24px grid,
+ * inherits color via `currentColor`. Use `human` vs `machine` to distinguish
+ * operator gates from autonomous machine checks.
+ */
+export function Icon(props: IconProps): React.JSX.Element;

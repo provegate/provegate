@@ -1,0 +1,80 @@
+import React from "react";
+import { Icon } from "../core/Icon.jsx";
+
+// Terminal code block. ALWAYS dark (terminal is its own always-dark surface).
+// Evidence is monospace — commands, config, logs. Optional filename tab + copy.
+export function CodeBlock({
+  children,
+  filename,
+  lang,
+  prompt = false,
+  copyable = true,
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const [copied, setCopied] = React.useState(false);
+  const text = typeof children === "string" ? children : "";
+  const doCopy = () => {
+    if (text && navigator.clipboard) navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
+  const lines = String(children).replace(/\n$/, "").split("\n");
+  return (
+    <div
+      className={`pg-code ${className}`}
+      style={{
+        background: "var(--pg-term-bg)",
+        border: "1px solid var(--pg-term-border)",
+        borderRadius: "var(--pg-radius-md)",
+        overflow: "hidden",
+        fontFamily: "var(--pg-font-mono)",
+        ...style,
+      }}
+      {...rest}
+    >
+      {(filename || lang || copyable) && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 12px",
+            borderBottom: "1px solid var(--pg-term-border)",
+            color: "var(--pg-term-dim)",
+            fontSize: "0.75rem",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {filename ? <Icon name="terminal" size={14} /> : null}
+            {filename || <span style={{ textTransform: "uppercase", letterSpacing: "0.08em" }}>{lang}</span>}
+          </span>
+          {copyable && (
+            <button
+              onClick={doCopy}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5, background: "transparent",
+                border: "none", cursor: "pointer", color: copied ? "var(--pg-term-green)" : "var(--pg-term-dim)",
+                fontFamily: "var(--pg-font-mono)", fontSize: "0.7rem", padding: 0,
+              }}
+            >
+              <Icon name={copied ? "check" : "copy"} size={13} />
+              {copied ? "copied" : "copy"}
+            </button>
+          )}
+        </div>
+      )}
+      <pre style={{ margin: 0, padding: "14px 16px", overflowX: "auto", fontSize: "0.8125rem", lineHeight: 1.6 }}>
+        <code style={{ color: "var(--pg-term-fg)", fontFamily: "var(--pg-font-mono)" }}>
+          {lines.map((ln, i) => (
+            <div key={i} style={{ whiteSpace: "pre" }}>
+              {prompt ? <span style={{ color: "var(--pg-term-green)", userSelect: "none" }}>$ </span> : null}
+              {ln}
+            </div>
+          ))}
+        </code>
+      </pre>
+    </div>
+  );
+}

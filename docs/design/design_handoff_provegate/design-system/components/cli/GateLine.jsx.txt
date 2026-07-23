@@ -1,0 +1,55 @@
+import React from "react";
+
+// A single gate-result line, as printed by `gate run`. Terminal surface.
+// The glyph carries status (color is redundant → NO_COLOR loses nothing).
+// Vocabulary is the closed ledger set. Glyph + name (left), verdict + exit (right).
+const MAP = {
+  passed:  { glyph: "\u2713", color: "var(--pg-term-green)", label: "passed" },
+  failed:  { glyph: "\u2717", color: "var(--pg-term-red)",   label: "failed" },
+  partial: { glyph: "\u26a0", color: "var(--pg-term-amber)", label: "partial" },
+  skipped: { glyph: "=",      color: "var(--pg-term-dim)",   label: "skipped" },
+  operator:{ glyph: "\u2192", color: "var(--pg-term-human)", label: "operator" },
+  blocked: { glyph: "!",      color: "var(--pg-term-stale)", label: "blocked" },
+};
+
+export function GateLine({
+  status = "passed",
+  name,
+  command,
+  code,
+  bare = false,
+  className = "",
+  style = {},
+  ...rest
+}) {
+  const m = MAP[status] || MAP.passed;
+  const body = (
+    <div
+      className={`pg-gateline pg-gateline--${status} ${className}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        fontFamily: "var(--pg-font-mono)",
+        fontSize: "0.8125rem",
+        lineHeight: 1.7,
+        color: "var(--pg-term-fg)",
+        ...style,
+      }}
+      {...rest}
+    >
+      <span aria-hidden="true" style={{ color: m.color, flex: "none", fontWeight: 700, width: "1ch", textAlign: "center" }}>{m.glyph}</span>
+      <span style={{ color: "var(--pg-term-fg)" }}>{name}</span>
+      {command ? <span style={{ color: "var(--pg-term-dim)" }}>{command}</span> : null}
+      <span style={{ flex: 1, borderBottom: "1px dotted var(--pg-term-border)", margin: "0 2px", transform: "translateY(-3px)" }} />
+      <span style={{ color: m.color, textTransform: "lowercase" }}>{m.label}</span>
+      {code != null ? <span style={{ color: "var(--pg-term-dim)" }}>exit {code}</span> : null}
+    </div>
+  );
+  if (bare) return body;
+  return (
+    <div style={{ background: "var(--pg-term-bg)", border: "1px solid var(--pg-term-border)", borderRadius: "var(--pg-radius-md)", padding: "12px 16px" }}>
+      {body}
+    </div>
+  );
+}
