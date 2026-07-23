@@ -157,16 +157,30 @@ export function createWorktree(
     // debris tree FIRST or `branch -d` fails silently; anything that survives
     // is named in the error so no retry collides blind (codex r2 P1).
     const debris: string[] = [];
-    try {
-      git(mainRoot, ['worktree', 'remove', path]);
-    } catch {
+    // Only OUR debris is removable: an external manager may have won the race
+    // between the existsSync pre-check and the add — a path now occupied by a
+    // foreign branch is someone else's checkout, not debris (codex r3 P2).
+    const occupant = branchAtWorktree(mainRoot, path);
+    if (occupant === branch) {
+      try {
+        git(mainRoot, ['worktree', 'remove', path]);
+      } catch {
+        try {
+          git(mainRoot, ['worktree', 'prune']);
+        } catch {
+          /* best-effort */
+        }
+      }
+    } else if (occupant === null) {
       try {
         git(mainRoot, ['worktree', 'prune']);
       } catch {
         /* best-effort */
       }
     }
-    if (existsSync(path)) debris.push(`worktree debris at ${relPath}`);
+    if (existsSync(path) && branchAtWorktree(mainRoot, path) === branch) {
+      debris.push(`worktree debris at ${relPath}`);
+    }
     try {
       git(mainRoot, ['branch', '-d', branch]);
     } catch {
@@ -216,6 +230,22 @@ export function removeWorktree(
   }
 
   if (existsSync(path)) {
+    // The stamped entry may itself be a symlink whose TARGET lives outside
+    // worktree.dir — `git worktree remove` follows it, so containment must
+    // hold for the RESOLVED path too, not just the lexical one (codex r3 P2).
+    try {
+      const real = realpathSync(path);
+      const wtRootReal = realpathSync(resolve(mainRoot, config.worktree.dir));
+      if (real !== wtRootReal && !real.startsWith(`${wtRootReal}${sep}`)) {
+        warnings.push(
+          `worktree not removed: ${worktree} resolves outside ${config.worktree.dir}/ — remove manually`,
+        );
+        return { removed, branchDeleted, warnings };
+      }
+    } catch {
+      warnings.push(`worktree not removed: ${worktree} could not be resolved — remove manually`);
+      return { removed, branchDeleted, warnings };
+    }
     // The path must still hold the STAMPED branch: if the claimed tree was
     // moved and an unrelated checkout now occupies the old path, removing it
     // would destroy someone else's work (codex r2 P2).

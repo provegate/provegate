@@ -273,6 +273,44 @@ describe('codex r2 regressions', () => {
   });
 });
 
+describe('codex r3 regressions', () => {
+  it('a symlinked stamp resolving outside worktree.dir refuses cleanup (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    await run('git', ['-C', root, 'branch', 'feat/outside']);
+    await run('git', ['-C', root, 'worktree', 'add', join(root, 'outside-tree'), 'feat/outside']);
+    const { mkdirSync: mkdir, symlinkSync } = await import('node:fs');
+    mkdir(join(root, '.worktrees'), { recursive: true });
+    symlinkSync(join(root, 'outside-tree'), join(root, '.worktrees/prd-001-link'));
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: '.worktrees/prd-001-link',
+      branch: 'feat/outside',
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('resolves outside');
+    expect(existsSync(join(root, 'outside-tree', 'seed.txt'))).toBe(true);
+  });
+
+  it('failed worktree add (post-checkout hook) cleans only OUR debris, loudly (r2 P1 + r3 P2)', async () => {
+    const root = await gitRoot();
+    const { mkdirSync: mkdir, writeFileSync: write, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    write(join(root, '.git/hooks/post-checkout'), '#!/bin/sh\nexit 1\n');
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    expect(() => createWorktree(cfg, root, { id: 'PRD-001', slug: 'hooked' })).toThrow(
+      /worktree add failed/,
+    );
+    // Our debris was removed and our branch deleted — retry-able, no silent leftovers.
+    expect(existsSync(join(root, '.worktrees/prd-001-hooked'))).toBe(false);
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).not.toContain(
+      'feat/prd-001-hooked',
+    );
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
