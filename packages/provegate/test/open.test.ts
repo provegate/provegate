@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -195,17 +195,53 @@ describe('claimPrd (FR-2, W3)', () => {
     expect(lease2['agent']).toBe('operator');
   });
 
-  it('steal revalidates from disk: a lease refreshed after inspection aborts the steal', () => {
+  it('steal aborts + rolls back when the victim is refreshed INSIDE the race window', () => {
     const root = tempRoot();
     const id = prdWithSurface(root, 'patient', ['src/patient/**']);
     foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**'], { expired: true });
-    // Refresh the sleeper INSIDE the steal path is not injectable without a
-    // hook; assert the guard exists at the API level instead: refresh it just
-    // before the steal call — parse sees it valid, steal never engages.
-    foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']);
-    const result = claimPrd(cfg, root, id, { steal: true });
+    // The hook fires after claimPrd's parse (which saw the lease stale) and
+    // before any mutation: the victim is refreshed in exactly the window the
+    // quarantine validation must catch.
+    const result = claimPrd(cfg, root, id, {
+      steal: true,
+      raceWindow: () =>
+        foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']),
+    });
     expect(result.ok).toBe(false);
-    expect(existsSync(join(root, '_state/locks/prd-094-sleeper.json'))).toBe(true);
+    expect(result.issues.join(' ')).toContain('all victims restored');
+    // Rolled back: the REFRESHED lease survives at its original path.
+    const survivor = JSON.parse(
+      readFileSync(join(root, '_state/locks/prd-094-sleeper.json'), 'utf8'),
+    ) as Record<string, string>;
+    expect(Date.parse(survivor['expiresAt']!)).toBeGreaterThan(Date.now());
+  });
+
+  it('a rival landing at the canonical destination inside the race window aborts (wx), victims restored', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'squatter-target', ['src/sq/**']);
+    foreignLease(root, 'prd-093-old.json', 'PRD-093', ['src/sq/**'], { expired: true });
+    const canonical = join(root, '_state/locks', `${id.toLowerCase()}-squatter-target.json`);
+    const result = claimPrd(cfg, root, id, {
+      steal: true,
+      raceWindow: () => writeFileSync(canonical, '{"planted":"rival"}\n'),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('all victims restored');
+    // The planted file is untouched and the quarantined victim is back.
+    expect(readFileSync(canonical, 'utf8')).toContain('planted');
+    expect(existsSync(join(root, '_state/locks/prd-093-old.json'))).toBe(true);
+  });
+
+  it('a stale mutex from a dead pid fails CLOSED with manual-recovery instructions', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'mutexed', ['src/mx/**']);
+    const mutexPath = join(root, '_state/locks/.gate-open.mutex');
+    writeFileSync(mutexPath, '999999999:1:2020-01-01T00:00:00Z\n');
+    utimesSync(mutexPath, new Date(Date.now() - 120_000), new Date(Date.now() - 120_000));
+    expect(() => claimPrd(cfg, root, id)).toThrow(/stale workspace mutex/);
+    expect(() => claimPrd(cfg, root, id)).toThrow(/delete that file manually/);
+    rmSync(mutexPath);
+    expect(claimPrd(cfg, root, id).ok).toBe(true);
   });
 
   it('non-overlapping foreign leases do not block', () => {

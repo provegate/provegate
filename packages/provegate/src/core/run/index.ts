@@ -49,3 +49,4 @@ export {
   type ClaimResult,
   type StolenLease,
 } from './open.js';
+export { withWorkspaceMutex } from './mutex.js';

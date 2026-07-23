@@ -7,13 +7,12 @@ import { dirname } from 'node:path';
  * ownership token. Same-machine only — which is the lock domain that matters:
  * leases and artifact dirs live on one checkout.
  *
- * Ownership rules (overlap-proof):
- * - release deletes the marker ONLY while it still carries our token — a
- *   marker stale-broken and re-won by a successor is never torn down by the
- *   previous holder's `finally`;
- * - stale-breaking requires the holder to be BOTH old (mtime) and dead
- *   (`process.kill(pid, 0)` fails) — a live long-running holder is waited
- *   out, never broken.
+ * Stale markers FAIL CLOSED. Automatic lock-breaking cannot be made race-free
+ * with plain files (any break decision is made on a read that may already be
+ * stale, so a breaker can destroy a successor's live marker — the exact
+ * overlap the mutex exists to prevent). A marker whose holder pid is dead and
+ * whose mtime is old therefore throws with explicit manual-recovery
+ * instructions instead of being silently broken. Live holders are waited out.
  */
 
 const STALE_MS = 30_000;
@@ -57,14 +56,11 @@ export function withWorkspaceMutex<T>(mutexPath: string, body: () => T): T {
         continue; // holder released between attempt and inspection — retry now
       }
       if (age > STALE_MS && !pidAlive(holderPid)) {
-        // Old AND dead: crashed holder. Break and re-contend (the wx above
-        // decides the new winner).
-        try {
-          unlinkSync(mutexPath);
-        } catch {
-          /* someone else broke it first */
-        }
-        continue;
+        throw new Error(
+          `stale workspace mutex ${mutexPath} (holder pid ${holderPid} is gone) — ` +
+            `verify no gate process is running, then delete that file manually and re-run`,
+          { cause: err },
+        );
       }
       sleepSync(SPIN_MS);
     }
