@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,10 @@ const pkgDir = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 
 /** FR-3/FR-4: the tarball is the product's first artifact — its contents are a
- * tested invariant, not a hope. */
+ * tested invariant, not a hope. The invariant is an EXPLICIT manifest
+ * (test/pack-manifest.json): any add/remove/rename in the packed set is a
+ * conscious, reviewed diff of that fixture — whole-directory allowlisting
+ * would let a stray file (or a gutted prompts/) pass unseen. */
 
 async function packedFiles(): Promise<string[]> {
   let stdout: string;
@@ -26,47 +29,44 @@ async function packedFiles(): Promise<string[]> {
     throw err;
   }
   const parsed = JSON.parse(stdout) as [{ files: { path: string }[] }];
-  return parsed[0].files.map((f) => f.path);
+  return parsed[0].files.map((f) => f.path).sort();
 }
 
-const ROOT_FILES = new Set([
-  'LICENSE',
-  'README.md',
-  'METHOD.md',
-  'QUICKSTART.md',
-  'CHANGELOG.md',
-  'package.json',
-]);
-const ROOT_DIRS = ['dist/', 'prompts/', 'templates/', 'schemas/', 'examples/'];
+const manifest = (): string[] =>
+  JSON.parse(readFileSync(join(pkgDir, 'test/pack-manifest.json'), 'utf8')) as string[];
 
 describe('pack audit (FR-3)', () => {
-  it('required files are all present', async () => {
+  it('the packed file set equals the committed manifest exactly', async () => {
     const files = await packedFiles();
+    const expected = [...manifest()].sort();
+    const extra = files.filter((f) => !expected.includes(f));
+    const missing = expected.filter((f) => !files.includes(f));
+    expect(extra, `NOT in pack-manifest.json (add consciously): ${extra.join(', ')}`).toEqual([]);
+    expect(missing, `in pack-manifest.json but not packed: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('the manifest itself still carries the load-bearing files', () => {
+    // Belt to the manifest's suspenders: a bad manifest edit must not be able
+    // to wave the essentials through.
+    const m = manifest();
     for (const required of [
       'LICENSE',
       'README.md',
       'METHOD.md',
       'QUICKSTART.md',
       'CHANGELOG.md',
+      'package.json',
       'dist/cli.js',
       'dist/index.js',
     ]) {
-      expect(files, `tarball is missing ${required}`).toContain(required);
+      expect(m, `pack-manifest.json lost ${required}`).toContain(required);
     }
     for (const dir of ['prompts/', 'templates/', 'schemas/', 'examples/']) {
       expect(
-        files.some((f) => f.startsWith(dir)),
-        `tarball has no files under ${dir}`,
+        m.some((f) => f.startsWith(dir)),
+        `pack-manifest.json has nothing under ${dir}`,
       ).toBe(true);
     }
-  });
-
-  it('every packed file lives under a whitelisted root (nothing leaks)', async () => {
-    const files = await packedFiles();
-    const unexpected = files.filter(
-      (f) => !ROOT_FILES.has(f) && !ROOT_DIRS.some((d) => f.startsWith(d)),
-    );
-    expect(unexpected, `unexpected paths in tarball: ${unexpected.join(', ')}`).toEqual([]);
   });
 
   it('package LICENSE is byte-identical to the root LICENSE (anti-drift, W1)', () => {
@@ -76,12 +76,12 @@ describe('pack audit (FR-3)', () => {
     expect(pkg).toContain('ProveGate contributors');
   });
 
-  it('built dist carries no parent-project residue (hygiene on the shipping artifact)', () => {
-    const distDir = join(pkgDir, 'dist');
-    for (const name of readdirSync(distDir)) {
-      const content = readFileSync(join(distDir, name), 'utf8').toLowerCase();
-      expect(content.includes('emofy'), `${name} contains "emofy"`).toBe(false);
-      expect(content.includes('rayvaz'), `${name} contains "rayvaz"`).toBe(false);
+  it('EVERY packed text file is residue-free (hygiene on the full shipping set)', async () => {
+    for (const file of await packedFiles()) {
+      const content = readFileSync(join(pkgDir, file), 'utf8').toLowerCase();
+      expect(content.includes('emofy'), `${file} contains "emofy"`).toBe(false);
+      expect(content.includes('rayvaz'), `${file} contains "rayvaz"`).toBe(false);
+      expect(content.includes('ramazan'), `${file} contains a personal name`).toBe(false);
     }
   });
 });
@@ -96,13 +96,29 @@ describe('version single-sourcing (FR-4)', () => {
   });
 
   it('shipped docs hardcode no version pins (W2: version-shaped patterns only)', () => {
-    // Precision matters: calibration decimals like "r = −0.03" are content, not
-    // versions. Only version-shaped forms are banned.
-    const versionPin = /provegate@\d|"version"\s*:|\bv\d+\.\d+\.\d+\b/;
+    // Catches provegate@0.1.0, provegate@^0.1.0, provegate@~0.1.0, "version":,
+    // and any bare three-part semver (v-prefixed or not). Calibration decimals
+    // (r = −0.03) are two-part and never match.
+    const versionPin = /provegate@[^\s`"']+|"version"\s*:|\bv?\d+\.\d+\.\d+\b/;
     for (const doc of ['README.md', 'QUICKSTART.md', 'METHOD.md']) {
       const content = readFileSync(join(pkgDir, doc), 'utf8');
       const m = versionPin.exec(content);
       expect(m, `${doc} pins a version: "${m?.[0]}"`).toBeNull();
     }
+  });
+
+  it('the deliberate-violation fixtures fail (the pin scan is not vacuous)', () => {
+    const versionPin = /provegate@[^\s`"']+|"version"\s*:|\bv?\d+\.\d+\.\d+\b/;
+    for (const bad of [
+      'install provegate@0.1.0 today',
+      'requires provegate@^0.1.0',
+      'requires provegate@~0.1.0',
+      'as of v1.2.3 the gate',
+      'since 1.2.3 this works',
+    ]) {
+      expect(versionPin.test(bad), bad).toBe(true);
+    }
+    expect(versionPin.test('the score had r = −0.03 correlation')).toBe(false);
+    expect(versionPin.test('scores clustered in 8.0–9.4')).toBe(false);
   });
 });

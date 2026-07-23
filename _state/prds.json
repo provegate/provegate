@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T03:23:08.298Z",
+  "generatedAt": "2026-07-23T03:12:08.689Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -155,19 +155,19 @@
       "number": 5,
       "slug": "release-readiness",
       "status": "Draft",
-      "cyclePhase": "3 (Tasks Generated)",
+      "cyclePhase": "2 (Readiness Scored)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-005-release-readiness.md",
         "readiness": "_readiness/wip/readiness-005-release-readiness.md",
-        "tasks": "_tasks/wip/tasks-005-release-readiness.md",
+        "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "wip",
+        "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
@@ -177,10 +177,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
+        "status": "Unknown",
         "checkedCount": 0,
-        "uncheckedCount": 17,
-        "operatorHandoffCount": 2
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -192,19 +192,19 @@
       "number": 6,
       "slug": "new-open",
       "status": "Draft",
-      "cyclePhase": "3 (Tasks Generated)",
+      "cyclePhase": "2 (Readiness Scored)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-006-new-open.md",
         "readiness": "_readiness/wip/readiness-006-new-open.md",
-        "tasks": "_tasks/wip/tasks-006-new-open.md",
+        "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "wip",
+        "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
@@ -214,10 +214,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
+        "status": "Unknown",
         "checkedCount": 0,
-        "uncheckedCount": 18,
-        "operatorHandoffCount": 2
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
