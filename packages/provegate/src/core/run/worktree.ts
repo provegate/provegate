@@ -97,9 +97,22 @@ function deleteBranchSafely(
   } catch {
     return { deleted: false, why: `not merged into ${base}` };
   }
+  // `-d` may only run in a context whose HEAD IS the base — judging against a
+  // parked primary HEAD is race-unsafe both ways: a feature ref advanced
+  // after the ancestry proof into a parked-contained commit would delete an
+  // unproven tip (codex r11 P1). No base-pinned live context → go straight
+  // to the scratch fallback, which re-evaluates at the base tip.
   const baseDir = worktreeForBranch(mainRoot, base);
-  const dir = baseDir !== null && existsSync(baseDir) ? baseDir : mainRoot;
+  let dir: string | null = baseDir !== null && existsSync(baseDir) ? baseDir : null;
+  if (dir === null) {
+    try {
+      if (git(mainRoot, ['rev-parse', '--abbrev-ref', 'HEAD']) === base) dir = mainRoot;
+    } catch {
+      /* detached or unreadable — scratch fallback below */
+    }
+  }
   try {
+    if (dir === null) throw new Error('no base-pinned context');
     git(dir, ['branch', '-d', branch]);
     return { deleted: true };
   } catch {
@@ -195,10 +208,18 @@ function branchAtWorktree(mainRoot: string, path: string): string | null {
 export function createWorktree(
   config: WorkflowConfig,
   root: string,
-  { id, slug }: { id: string; slug: string },
+  {
+    id,
+    slug,
+    names,
+  }: { id: string; slug: string; names?: { relPath: string; branch: string } },
 ): WorktreeProvision {
   const mainRoot = mainRepoRoot(root);
-  const { relPath, branch } = worktreeNamesFor(config, id, slug);
+  // Explicit names let a claim RE-provision the checkout its lease stamps
+  // already name (prior stamps after the tree was removed) — deriving fresh
+  // names there would leave the lease pointing at a nonexistent path (codex
+  // r11 P2). All guards below apply to explicit names identically.
+  const { relPath, branch } = names ?? worktreeNamesFor(config, id, slug);
   // An expanded featurePattern is DATA, never argv: an option-like value
   // (`-m…`) would mutate git state before any rollback exists (codex r8 P2);
   // a configured protected branch is never a provisioning target either.

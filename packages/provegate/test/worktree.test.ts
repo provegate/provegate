@@ -627,6 +627,54 @@ describe('codex r10 regressions', () => {
   });
 });
 
+describe('codex r11 regressions', () => {
+  it('branch delete uses a base-pinned context when no checkout holds base (P1)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'pinned' });
+    await run('git', ['-C', root, 'worktree', 'remove', made.path]);
+    // Primary parks elsewhere; NOTHING holds main. Branch is at the base tip.
+    await run('git', ['-C', root, 'checkout', '-b', 'parked']);
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.removed).toBe(true);
+    expect(removal.branchDeleted).toBe(true);
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).not.toContain(made.branch);
+  });
+
+  it('fallback provisioning after stamp-target removal recreates the STAMPED names (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'origin-name', ['src/refab/**']);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Checkout and branch vanish; PRD gets renamed.
+    await run('git', ['-C', root, 'worktree', 'remove', first.worktree!.path]);
+    await run('git', ['-C', root, 'branch', '-d', first.worktree!.branch]);
+    const { renameSync } = await import('node:fs');
+    renameSync(
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-origin-name.md`),
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-fresh-name.md`),
+    );
+
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok).toBe(true);
+    // Recreated under the ORIGINAL stamped names — lease and checkout agree.
+    expect(again.worktree?.relPath).toBe(first.worktree!.relPath);
+    expect(existsSync(again.worktree!.path)).toBe(true);
+    const lease = JSON.parse(readFileSync(again.leasePath!, 'utf8')) as Record<string, unknown>;
+    expect(lease['worktree']).toBe(first.worktree!.relPath);
+    expect(existsSync(join(root, `.worktrees/${id.toLowerCase()}-fresh-name`))).toBe(false);
+  });
+
+  it('windows-style config spelling canonicalizes on posix too (P2)', async () => {
+    const { normalizedWorktreeDir } = await import('../src/core/config/index.js');
+    expect(normalizedWorktreeDir({ ...cfg, worktree: { dir: '.\\.worktrees\\' } })).toBe(
+      '.worktrees',
+    );
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

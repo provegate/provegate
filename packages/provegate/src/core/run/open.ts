@@ -560,7 +560,10 @@ function claimPrdLocked(
         provisioned = { path: expected, relPath: wtNames.relPath, branch: wtNames.branch };
       } else {
         try {
-          provisioned = createWorktree(config, root, { id: normalized, slug });
+          // Provision under the SAME names the lease body carries — with
+          // prior stamps this recreates the stamped checkout, never a
+          // second one under a renamed slug (codex r11 P2).
+          provisioned = createWorktree(config, root, { id: normalized, slug, names: wtNames });
         } catch (err) {
           // Rollback may only delete the lease THIS claim installed: an
           // external writer (checkout hook, rival tool) can replace the

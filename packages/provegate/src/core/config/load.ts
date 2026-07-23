@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, normalize, resolve } from 'node:path';
+import { dirname, posix, resolve } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
 import { validateConfig, validateResolvedConfig } from './validate.js';
@@ -95,7 +95,9 @@ export function loadConfig(cwd: string = process.cwd()): { root: string; config:
 export function normalizedWorktreeDir(config: WorkflowConfig): string {
   // Canonical repo-relative paths are POSIX-separated on EVERY platform: the
   // spelling is compared against git porcelain output and written into
-  // leases and ignore patterns, all of which use `/` (codex prd-007 r10).
-  const flat = normalize(config.worktree.dir).replaceAll('\\', '/');
+  // leases and ignore patterns, all of which use `/`. Separator conversion
+  // happens BEFORE normalization so a shared Windows-style spelling
+  // (`.\\.worktrees\\`) canonicalizes on POSIX too (codex prd-007 r10/r11).
+  const flat = posix.normalize(config.worktree.dir.replaceAll('\\', '/'));
   return flat.endsWith('/') ? flat.slice(0, -1) : flat;
 }
