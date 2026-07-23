@@ -208,7 +208,7 @@ describe('claimPrd (FR-2, W3)', () => {
         foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']),
     });
     expect(result.ok).toBe(false);
-    expect(result.issues.join(' ')).toContain('all victims restored');
+    expect(result.issues.join(' ')).toContain('victims restored');
     // Rolled back: the REFRESHED lease survives at its original path.
     const survivor = JSON.parse(
       readFileSync(join(root, '_state/locks/prd-094-sleeper.json'), 'utf8'),
@@ -226,7 +226,7 @@ describe('claimPrd (FR-2, W3)', () => {
       raceWindow: () => writeFileSync(canonical, '{"planted":"rival"}\n'),
     });
     expect(result.ok).toBe(false);
-    expect(result.issues.join(' ')).toContain('all victims restored');
+    expect(result.issues.join(' ')).toContain('victims restored');
     // The planted file is untouched and the quarantined victim is back.
     expect(readFileSync(canonical, 'utf8')).toContain('planted');
     expect(existsSync(join(root, '_state/locks/prd-093-old.json'))).toBe(true);

@@ -1,4 +1,15 @@
-import { lstatSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  constants as fsConstants,
+  ftruncateSync,
+  linkSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import {
@@ -251,29 +262,41 @@ function claimPrdLocked(
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);
 
-  // Steal = QUARANTINE, not delete: each victim is atomically renamed aside
-  // (rename preserves content and loses nothing), the QUARANTINED object is
-  // what gets identity-validated, and any mismatch rolls every quarantine
-  // back. Victims are finally deleted only after the new lease is installed.
+  // Steal = QUARANTINE, not delete. Every move is a NO-REPLACE two-step
+  // (linkSync fails on an existing destination, then the source is unlinked):
+  // quarantining can never clobber a crash artifact, and rollback can never
+  // clobber a rival that re-occupied the original path — in that case the
+  // quarantine file stays on disk and is reported by name. The QUARANTINED
+  // object is what gets identity-validated; victims are deleted only after
+  // the new lease is installed.
   const IDENTITY_FIELDS = ['lockId', 'prd', 'agent', 'startedAt', 'expiresAt'] as const;
   const quarantined: { from: string; to: string; victim: StolenLease }[] = [];
-  const rollback = (): void => {
+  let quarantineSeq = 0;
+  const moveNoReplace = (from: string, to: string): void => {
+    linkSync(from, to); // fails EEXIST — never replaces
+    unlinkSync(from);
+  };
+  const rollback = (): string[] => {
+    const stranded: string[] = [];
     for (const q of quarantined.splice(0)) {
       try {
-        renameSync(q.to, q.from);
+        moveNoReplace(q.to, q.from);
       } catch {
-        /* original path re-occupied — leave the quarantine file in place, named loudly */
+        // Original path re-occupied by a rival: leave BOTH intact and say so.
+        stranded.push(`victim of ${q.victim.prd} preserved at ${q.to} (original path re-occupied)`);
       }
     }
+    return stranded;
   };
   const stolen: StolenLease[] = [];
   try {
     if (steal) {
       for (const l of staleBlockers) {
-        const to = `${l.file}.stolen-${process.pid}`;
+        quarantineSeq += 1;
+        const to = `${l.file}.stolen-${process.pid}-${now.getTime()}-${quarantineSeq}`;
         let mismatch = 'unreadable or vanished';
         try {
-          renameSync(l.file, to);
+          moveNoReplace(l.file, to);
           quarantined.push({ from: l.file, to, victim: asStolen(l) });
           const fresh = JSON.parse(readFileSync(to, 'utf8')) as Record<string, unknown>;
           const identical = IDENTITY_FIELDS.every(
@@ -287,12 +310,15 @@ function claimPrdLocked(
           /* mismatch already set */
         }
         if (mismatch !== '') {
-          rollback();
+          const stranded = rollback();
           return {
             ...base,
             globs,
             ok: false,
-            issues: [`steal aborted, all victims restored: lease of ${l.prd} ${mismatch}`],
+            issues: [
+              `steal aborted, victims restored: lease of ${l.prd} ${mismatch}`,
+              ...stranded,
+            ],
           };
         }
       }
@@ -310,53 +336,88 @@ function claimPrdLocked(
       ownedPaths: globs,
     };
     const refreshed = self.length > 0;
-    // Overwrite mode ('w') is decided by revalidating the DESTINATION at
-    // write time, not by the earlier scan: the path must currently be a
-    // regular file whose lease identity matches the self lease we parsed
-    // there. Anything else — symlink, replacement, surprise appearance —
-    // gets wx (and EEXIST aborts).
-    let destinationIsSelf = false;
+    const leaseBody = `${JSON.stringify(lease, null, 2)}\n`;
     const selfAtDestination = self.find((l) => l.file === leasePath);
-    if (selfAtDestination) {
-      try {
-        if (lstatSync(leasePath).isFile()) {
-          const current = JSON.parse(readFileSync(leasePath, 'utf8')) as Record<string, unknown>;
-          destinationIsSelf = IDENTITY_FIELDS.every(
-            (f) => String(current[f] ?? '') === String(selfAtDestination.snapshot[f] ?? ''),
-          );
-        }
-      } catch {
-        /* destination unreadable now — treat as not-self, wx decides */
-      }
-    }
+    // Install the lease through ONE file descriptor. Refresh path: open the
+    // existing destination with O_NOFOLLOW (a symlink is refused by the OS,
+    // not by a racy pre-check), validate the CONTENT READ THROUGH THAT FD
+    // against the parsed self lease, then truncate+write the same fd — no
+    // validate-vs-write gap exists for a rival to slip into. Anything else:
+    // O_EXCL creation, EEXIST aborts.
+    let installIssue: string | null = null;
     try {
-      writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
-        flag: destinationIsSelf ? 'w' : 'wx',
-      });
+      if (selfAtDestination) {
+        let fd: number;
+        try {
+          fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_NOFOLLOW);
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            // Self lease vanished mid-claim — fall through to exclusive create.
+            fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_CREAT | fsConstants.O_EXCL);
+            writeSync(fd, leaseBody, 0, 'utf8');
+            closeSync(fd);
+            fd = -1;
+          } else if ((err as NodeJS.ErrnoException).code === 'ELOOP') {
+            throw new Error(`refusing symlinked lease destination ${leasePath}`, { cause: err });
+          } else {
+            throw err;
+          }
+        }
+        if (fd >= 0) {
+          try {
+            const current = JSON.parse(readFileSync(fd, 'utf8')) as Record<string, unknown>;
+            const isSelf = IDENTITY_FIELDS.every(
+              (f) => String(current[f] ?? '') === String(selfAtDestination.snapshot[f] ?? ''),
+            );
+            if (!isSelf) {
+              installIssue = `${leasePath} no longer carries our lease (replaced mid-claim)`;
+            } else {
+              ftruncateSync(fd, 0);
+              writeSync(fd, leaseBody, 0, 'utf8');
+            }
+          } finally {
+            closeSync(fd);
+          }
+        }
+      } else {
+        const fd = openSync(leasePath, fsConstants.O_RDWR | fsConstants.O_CREAT | fsConstants.O_EXCL);
+        writeSync(fd, leaseBody, 0, 'utf8');
+        closeSync(fd);
+      }
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
-      rollback();
+      installIssue = `${leasePath} changed on disk during the claim (unseen rival)`;
+    }
+    if (installIssue !== null) {
+      const stranded = rollback();
       return {
         ...base,
         globs,
         ok: false,
-        issues: [
-          `claim aborted, all victims restored: ${leasePath} changed on disk during the claim — re-run gate open`,
-        ],
+        issues: [`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
       };
     }
-    // New lease installed: NOW the quarantined victims are gone for good.
+
+    // COMMIT POINT — the new lease is installed. Everything after here is
+    // cleanup and must never throw the claim into a half-rolled-back state:
+    // failures are collected and REPORTED on the successful result instead.
+    const warnings: string[] = [];
     for (const q of quarantined.splice(0)) {
       try {
         unlinkSync(q.to);
       } catch {
-        /* already gone */
+        warnings.push(`stale victim copy left at ${q.to} — delete manually`);
       }
       stolen.push(q.victim);
     }
     // Self leases under a different filename (hand-written era) are superseded.
     for (const l of self) {
-      if (l.file !== leasePath) unlinkSync(l.file);
+      if (l.file === leasePath) continue;
+      try {
+        unlinkSync(l.file);
+      } catch {
+        warnings.push(`superseded self lease left at ${l.file} — delete manually`);
+      }
     }
 
     return {
@@ -368,7 +429,7 @@ function claimPrdLocked(
       conflicts: [],
       staleBlockers: [],
       stolen,
-      issues: [],
+      issues: warnings,
     };
   } catch (err) {
     rollback();
