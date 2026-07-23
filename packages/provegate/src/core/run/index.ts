@@ -50,3 +50,11 @@ export {
   type StolenLease,
 } from './open.js';
 export { withWorkspaceMutex } from './mutex.js';
+export {
+  createWorktree,
+  removeWorktree,
+  worktreeForBranch,
+  worktreeNamesFor,
+  type WorktreeProvision,
+  type WorktreeRemoval,
+} from './worktree.js';

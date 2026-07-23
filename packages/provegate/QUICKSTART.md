@@ -38,8 +38,20 @@ will actually touch, then claim them:
 npx gate open PRD-001
 ```
 
-Overlap with another active claim refuses here — at claim time, not merge time. Keep
-`Autonomous Close: operator-gated` until you trust the gates. Then lint it:
+Overlap with another active claim refuses here — at claim time, not merge time.
+
+Running agents in parallel? Add `--worktree` and the claim also provisions an
+isolated checkout — one atomic step:
+
+```sh
+npx gate open PRD-001 --worktree
+# claimed PRD-001 — worktree: .worktrees/prd-001-fix-login-timeout (branch feat/prd-001-fix-login-timeout)
+```
+
+Each agent works in its own tree with the lease already held; `gate run` later
+merges from the worktree and cleans it up (a dirty tree is never force-removed).
+Claim and checkout succeed or fail together — a branch collision rolls the lease
+back. Keep `Autonomous Close: operator-gated` until you trust the gates. Then lint it:
 
 ```sh
 npx gate check PRD-001

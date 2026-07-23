@@ -1,8 +1,10 @@
 import {
+  existsSync,
   linkSync,
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   renameSync,
   rmdirSync,
   unlinkSync,
@@ -27,6 +29,12 @@ import { mainRepoRoot } from '../state/io.js';
 import { escapeRegExp } from '../state/markdown.js';
 import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
+import {
+  createWorktree,
+  worktreeForBranch,
+  worktreeNamesFor,
+  type WorktreeProvision,
+} from './worktree.js';
 
 /**
  * `gate open PRD-XXX` — claim a work item's declared conflict surface. The
@@ -48,6 +56,9 @@ export interface ClaimOptions {
   agent?: string;
   leaseHours?: number;
   now?: Date;
+  /** Provision a feature branch + linked worktree with the claim (atomic:
+   * provisioning failure rolls the installed lease back). */
+  worktree?: boolean;
   /** Test-only injection point: runs after the lock-dir parse, before any
    * mutation — lets a test change leases inside the race window. */
   raceWindow?: () => void;
@@ -70,6 +81,8 @@ export interface ClaimResult {
   /** Foreign stale leases blocking the claim (steal candidates). */
   staleBlockers: StolenLease[];
   stolen: StolenLease[];
+  /** Set when `--worktree` provisioned (or reused) a checkout. */
+  worktree?: WorktreeProvision;
   issues: string[];
 }
 
@@ -166,6 +179,7 @@ function claimPrdLocked(
     agent,
     leaseHours = DEFAULT_LEASE_HOURS,
     now = new Date(),
+    worktree = false,
     raceWindow,
   }: ClaimOptions = {},
 ): ClaimResult {
@@ -363,6 +377,17 @@ function claimPrdLocked(
       }
     }
 
+    const selfAtDestination = self.find((l) => l.file === leasePath);
+    // Worktree stamps are decided BEFORE install so the lease body carries
+    // them from birth. A refresh WITHOUT --worktree must not strip stamps an
+    // earlier --worktree claim wrote — cleanup after merge depends on them.
+    const wtNames = worktree ? worktreeNamesFor(config, normalized, slug) : null;
+    const priorWt = selfAtDestination?.snapshot['worktree'];
+    const priorBranch = selfAtDestination?.snapshot['branch'];
+    const carried =
+      wtNames === null && typeof priorWt === 'string' && typeof priorBranch === 'string'
+        ? { worktree: priorWt, branch: priorBranch }
+        : null;
     const lease = {
       schemaVersion: 2,
       lockId: `${normalized.toLowerCase()}-${slug}`,
@@ -373,10 +398,11 @@ function claimPrdLocked(
       expiresAt: new Date(now.getTime() + leaseHours * 3_600_000).toISOString(),
       touchedFiles: globs,
       ownedPaths: globs,
+      ...(wtNames ? { worktree: wtNames.relPath, branch: wtNames.branch } : {}),
+      ...(carried ?? {}),
     };
     const refreshed = self.length > 0;
     const leaseBody = `${JSON.stringify(lease, null, 2)}\n`;
-    const selfAtDestination = self.find((l) => l.file === leasePath);
     // Uniform install protocol — refresh and fresh claim take the SAME path:
     //  1. the full lease body is STAGED to a private file (writeFileSync
     //     completes short writes internally; a failure here has touched
@@ -472,9 +498,58 @@ function claimPrdLocked(
       };
     }
 
-    // COMMIT POINT — the new lease is linked into place. Everything after
-    // here is cleanup and must never throw the claim into a half-rolled-back
-    // state: failures are collected and REPORTED on the successful result.
+    // COMMIT POINT — the new lease is linked into place. Worktree provisioning
+    // runs NOW, while every quarantined victim is still on disk: a provisioning
+    // failure unlinks the fresh lease and restores the victims — claim and
+    // checkout are one atomic outcome (W2). Only after provisioning do
+    // quarantines become deletions.
+    let provisioned: WorktreeProvision | undefined;
+    if (wtNames !== null) {
+      const mainRoot = mainRepoRoot(root);
+      const registered = worktreeForBranch(mainRoot, wtNames.branch);
+      let expected: string | null = null;
+      try {
+        expected = containedPath(mainRoot, wtNames.relPath);
+      } catch {
+        /* falls through to createWorktree, which throws the containment error */
+      }
+      // Realpath both sides: git reports canonical paths (macOS /var is a
+      // symlink to /private/var) while config-derived paths may not be.
+      const samePlace =
+        registered !== null &&
+        expected !== null &&
+        existsSync(expected) &&
+        realpathSync(registered) === realpathSync(expected);
+      if (samePlace && expected !== null) {
+        // Idempotent refresh: our branch already lives in the expected worktree.
+        provisioned = { path: expected, relPath: wtNames.relPath, branch: wtNames.branch };
+      } else {
+        try {
+          provisioned = createWorktree(config, root, { id: normalized, slug });
+        } catch (err) {
+          try {
+            unlinkSync(leasePath);
+          } catch {
+            /* the refusal below still names the failure */
+          }
+          const stranded = rollback();
+          dropQuarantineDir();
+          return {
+            ...base,
+            globs,
+            ok: false,
+            issues: [
+              `claim rolled back: ${err instanceof Error ? err.message : String(err)}`,
+              ...stranded,
+            ],
+          };
+        }
+      }
+    }
+
+    // Everything after here is cleanup and must never throw the claim into a
+    // half-rolled-back state: failures are collected and REPORTED on the
+    // successful result.
     const warnings: string[] = [];
     for (const q of quarantined.splice(0)) {
       try {
@@ -504,6 +579,7 @@ function claimPrdLocked(
       conflicts: [],
       staleBlockers: [],
       stolen,
+      ...(provisioned ? { worktree: provisioned } : {}),
       issues: warnings,
     };
   } catch (err) {

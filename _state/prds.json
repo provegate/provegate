@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T09:08:56.047Z",
+  "generatedAt": "2026-07-23T09:23:17.757Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -235,13 +235,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-007-worktree-lifecycle.md",
         "readiness": "_readiness/wip/readiness-007-worktree-lifecycle.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-007-worktree-lifecycle.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -251,10 +251,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 21,
+        "operatorHandoffCount": 2
       },
       "summary": {
         "shipReadiness": "Unknown"

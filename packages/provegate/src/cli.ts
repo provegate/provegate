@@ -42,6 +42,7 @@ import {
   mergeToLocalBase,
   parseFromPhase,
   planChain,
+  removeWorktree,
   runChain,
   stopCard,
   type FromPhase,
@@ -59,7 +60,7 @@ function usage(): string {
     'Commands:',
     '  init     scaffold the workflow tree + starter configs (--dry-run)',
     '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
-    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal])',
+    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal] [--worktree])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
@@ -150,14 +151,15 @@ function runNew(args: string[]): number {
 function runOpen(args: string[]): number {
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
-    console.error('usage: gate open <PRD-XXX> [--steal] [--agent=identity]');
+    console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--agent=identity]');
     return 1;
   }
   const steal = args.includes('--steal');
+  const worktree = args.includes('--worktree');
   const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
   const { root, config } = loadConfig();
   try {
-    const result = claimPrd(config, root, id, { steal, agent });
+    const result = claimPrd(config, root, id, { steal, agent, worktree });
     if (!result.ok) {
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
       for (const issue of result.issues) console.error(`  ✗ ${issue}`);
@@ -172,6 +174,11 @@ function runOpen(args: string[]): number {
       `[open] ${result.refreshed ? 'refreshed (already held)' : 'claimed'} ${result.id} — ${result.globs.length} surface glob(s)`,
     );
     console.log(`[open] lease: ${result.leasePath}`);
+    if (result.worktree) {
+      console.log(
+        `[open] worktree: ${result.worktree.relPath} (branch ${result.worktree.branch})`,
+      );
+    }
     for (const warning of result.issues) console.error(`[open] WARNING: ${warning}`);
     return 0;
   } catch (error) {
@@ -297,6 +304,22 @@ function runCheck(args: string[]): number {
   return 0;
 }
 
+/** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
+ * wrote them — the merge guard and post-merge cleanup key off these. */
+function worktreeStamps(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+): { worktree: string; branch: string } | null {
+  for (const lock of listLockFiles(config, root)) {
+    if (!lock.data || String(lock.data['prd']) !== id) continue;
+    const wt = lock.data['worktree'];
+    const br = lock.data['branch'];
+    if (typeof wt === 'string' && typeof br === 'string') return { worktree: wt, branch: br };
+  }
+  return null;
+}
+
 function runRun(args: string[], { mergeOnly = false } = {}): number {
   const dryRun = args.includes('--dry-run');
   if (process.env[RUN_ACTIVE_ENV] && !dryRun) {
@@ -391,6 +414,21 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     );
     return 1;
   }
+  // Worktree-mode branch guard: a --worktree lease pins the branch the close
+  // must run from — merging a different checkout under a stamped lease is a
+  // wrong-tree merge, not a variant.
+  const stamps = worktreeStamps(config, root, id);
+  if (stamps && pre.branch !== stamps.branch) {
+    console.error(
+      stopCard({
+        id,
+        phase: 'merge',
+        why: `lease pins branch ${stamps.branch} but the checkout is on ${pre.branch ?? '?'} — run from the claimed worktree`,
+        results: outcome.results,
+      }),
+    );
+    return 1;
+  }
 
   try {
     const archived = archivePrdArtifacts(config, root, record);
@@ -419,6 +457,21 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     return 1;
   }
 
+  // Post-merge cleanup (worktree-stamped leases only). Runs LAST among
+  // filesystem work: it may remove the very directory this process runs in.
+  // Failures degrade to card warnings — the landed merge is immutable (W3).
+  let cleanupWarnings: string[] = [];
+  if (stamps) {
+    const removal = removeWorktree(config, root, stamps);
+    if (removal.removed) {
+      outcome.results.push([
+        `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+        'passed',
+      ]);
+    }
+    cleanupWarnings = removal.warnings;
+  }
+
   console.log(
     handoffCard({
       id,
@@ -430,8 +483,12 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       operatorRows: record.task.operatorHandoffCount,
       autonomousClose: record.autonomousClose,
       metricsHint: `${config.dirs.metricsFile} (local JSONL, yours)`,
+      warnings: cleanupWarnings,
     }),
   );
+  if (stamps) {
+    console.log(`[run] worktree cleanup done — if your shell sat in it, cd to the main checkout`);
+  }
   console.log(`[run] ${id} merged to local ${config.branches.base}; push is yours`);
   return 0;
 }

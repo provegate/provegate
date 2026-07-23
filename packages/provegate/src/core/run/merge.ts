@@ -26,6 +26,9 @@ function git(dir: string, args: string[]): string {
 
 function isCoordinationPath(config: WorkflowConfig, p: string): boolean {
   if (config.branches.allowedDirectFiles.includes(p)) return true;
+  // The linked-worktree dir living inside the main checkout is coordination
+  // machinery, not source dirt — its presence must not block a merge.
+  if (p === `${config.worktree.dir}/` || p.startsWith(`${config.worktree.dir}/`)) return true;
   return config.branches.allowedDirectPrefixes.some((prefix) => p.startsWith(prefix));
 }
 
