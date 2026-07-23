@@ -2,8 +2,8 @@ import { execFileSync, execSync } from 'node:child_process';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
+import { normalizedWorktreeDir } from '../config/index.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
-import { normalizedWorktreeDir } from './worktree.js';
 
 /**
  * Local no-ff merge with post-merge verification and auto-revert. Two

@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
-import { join, normalize, resolve, sep } from 'node:path';
-import type { WorkflowConfig } from '../config/index.js';
+import { join, resolve, sep } from 'node:path';
+import { normalizedWorktreeDir, type WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 import { containedPath } from './init.js';
+
+export { normalizedWorktreeDir };
 
 /**
  * Worktree provisioning and teardown for `gate open --worktree` and the
@@ -36,13 +38,6 @@ function git(dir: string, args: string[]): string {
   return execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
 }
 
-/** The configured worktree dir in canonical relative spelling: `./.worktrees`
- * and `.worktrees/` both mean `.worktrees` — exclude entries, dirt-path
- * prefixes, and lease stamps must all agree on ONE spelling or a valid
- * noncanonical config refuses every close (codex r8 P2). */
-export function normalizedWorktreeDir(config: WorkflowConfig): string {
-  return normalize(config.worktree.dir).replace(new RegExp(`${sep === '\\' ? '\\\\' : sep}+$`), '');
-}
 
 function branchExists(mainRoot: string, branch: string): boolean {
   try {
@@ -88,8 +83,11 @@ function deleteBranchSafely(
     return { deleted: false, why: 'option-like branch name refused' };
   }
   // Configured protected branches are NEVER teardown targets, whatever a
-  // (tamperable) lease stamp claims (codex r8 P1).
-  if (config.branches.protected.includes(branch)) {
+  // (tamperable) lease stamp claims (codex r8 P1) — and the base is
+  // protected UNCONDITIONALLY, whether or not the config lists it: it is
+  // trivially an ancestor of itself, so nothing downstream would refuse
+  // (codex r9 P1).
+  if (branch === config.branches.base || config.branches.protected.includes(branch)) {
     return { deleted: false, why: 'protected branch' };
   }
   if (!branchExists(mainRoot, branch)) return { deleted: true };
@@ -209,10 +207,17 @@ export function createWorktree(
       `branches.featurePattern expands to option-like branch "${branch}" — fix the pattern`,
     );
   }
-  if (config.branches.protected.includes(branch)) {
+  if (branch === config.branches.base || config.branches.protected.includes(branch)) {
     throw new Error(`branches.featurePattern expands to protected branch "${branch}" — refused`);
   }
   const path = containedPath(mainRoot, relPath);
+  // Public-API guard: a non-interpolating pattern plus a hostile slug could
+  // normalize the path outside worktree.dir — the stamp would then be
+  // uncleanable (codex r9 P2). Strict child of the canonical dir, always.
+  const wtRoot = resolve(mainRoot, normalizedWorktreeDir(config));
+  if (!path.startsWith(`${wtRoot}${sep}`)) {
+    throw new Error(`worktree path ${relPath} escapes ${normalizedWorktreeDir(config)}/ — refused`);
+  }
 
   if (branchExists(mainRoot, branch)) {
     throw new Error(`branch ${branch} already exists — remove it or claim without --worktree`);
@@ -314,7 +319,11 @@ export function removeWorktree(
 
   // Stamp values are DATA: option-like or protected branch names refuse the
   // whole teardown before any git call (codex r8 P1/P2).
-  if (branch.startsWith('-') || config.branches.protected.includes(branch)) {
+  if (
+    branch.startsWith('-') ||
+    branch === config.branches.base ||
+    config.branches.protected.includes(branch)
+  ) {
     warnings.push(
       `cleanup refused: stamped branch ${branch} is ${branch.startsWith('-') ? 'option-like' : 'protected'} — clean up manually if intended`,
     );

@@ -19,5 +19,6 @@ export {
   deepMerge,
   findRepoRoot,
   loadConfig,
+  normalizedWorktreeDir,
   resolveConfig,
 } from './load.js';

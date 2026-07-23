@@ -381,9 +381,18 @@ function claimPrdLocked(
     // Worktree stamps are decided BEFORE install so the lease body carries
     // them from birth. A refresh WITHOUT --worktree must not strip stamps an
     // earlier --worktree claim wrote — cleanup after merge depends on them.
+    // Stamps carry from ANY self lease, not only one at the destination
+    // pathname: a PRD renamed to a new slug derives a new leasePath, and the
+    // old stamped lease will be superseded below (codex r9 P2).
     const wtNames = worktree ? worktreeNamesFor(config, normalized, slug) : null;
-    const priorWt = selfAtDestination?.snapshot['worktree'];
-    const priorBranch = selfAtDestination?.snapshot['branch'];
+    const stampSource =
+      selfAtDestination ??
+      self.find(
+        (l) =>
+          typeof l.snapshot['worktree'] === 'string' && typeof l.snapshot['branch'] === 'string',
+      );
+    const priorWt = stampSource?.snapshot['worktree'];
+    const priorBranch = stampSource?.snapshot['branch'];
     const carried =
       wtNames === null && typeof priorWt === 'string' && typeof priorBranch === 'string'
         ? { worktree: priorWt, branch: priorBranch }

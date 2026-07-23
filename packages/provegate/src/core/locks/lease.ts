@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { resolve } from 'node:path';
-import type { WorkflowConfig } from '../config/index.js';
+import { normalizedWorktreeDir, type WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 
 /**
@@ -192,10 +192,14 @@ export function validateLock(
   }
   const worktree = data['worktree'];
   if (worktree !== undefined) {
+    // Stamps are written in the CANONICAL dir spelling — validate against the
+    // same, or a `./.worktrees/` config invalidates every lease it produces
+    // (codex prd-007 r9).
+    const wtDir = normalizedWorktreeDir(config);
     if (typeof worktree !== 'string' || worktree.length === 0) {
       issues.push('worktree must be a non-empty string when set');
-    } else if (!worktree.startsWith(`${config.worktree.dir}/`)) {
-      issues.push(`worktree must live under ${config.worktree.dir}/ (got ${worktree})`);
+    } else if (!worktree.startsWith(`${wtDir}/`)) {
+      issues.push(`worktree must live under ${wtDir}/ (got ${worktree})`);
     }
   }
   const branch = data['branch'];

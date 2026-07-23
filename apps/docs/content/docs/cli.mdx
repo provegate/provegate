@@ -95,12 +95,13 @@ configured `worktree.dir` are provisioned, and the lease is stamped with both.
 Provisioning failure (branch or path collision) rolls the lease back — claim and
 checkout are one outcome. After `gate run` lands the merge, the runner removes the
 worktree and deletes the merged branch; a dirty worktree refuses removal and
-degrades to a handoff-card warning (never `--force`). Branch deletion is decided by
-an explicit `merge-base --is-ancestor` proof against the configured base — a branch
-not provably merged is never deleted; when a parked primary checkout makes plain
-`-d` refuse a proven-merged branch, deletion escalates through git's atomic
-compare-and-delete (`update-ref -d` pinned to the proven tip), so a branch advanced
-mid-flight always survives. Locks stay platform-agnostic: external worktree
+degrades to a handoff-card warning (never `--force` on user trees). Branch deletion
+is decided by an explicit `merge-base --is-ancestor` proof against the configured
+base — a branch not provably merged, the base itself, or any configured protected
+branch is never deleted. When a parked primary checkout makes plain `-d` refuse a
+proven-merged branch, deletion retries `-d` from a throwaway detached scratch
+context at the base tip, so git's own mergedness and checked-out-branch guards
+re-evaluate at delete time. Locks stay platform-agnostic: external worktree
 managers keep working, the flag is optional sugar.
 
 Layout, id pattern, status vocabulary, and branch policy come from an optional

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, normalize, resolve, sep } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
 import { validateConfig, validateResolvedConfig } from './validate.js';
@@ -85,4 +85,14 @@ export function resolveConfig(root: string): WorkflowConfig {
 export function loadConfig(cwd: string = process.cwd()): { root: string; config: WorkflowConfig } {
   const root = findRepoRoot(cwd);
   return { root, config: resolveConfig(root) };
+}
+
+/** The configured worktree dir in canonical relative spelling: `./.worktrees`
+ * and `.worktrees/` both mean `.worktrees`. Every consumer — lease stamps,
+ * schema validation, exclude entries, dirt-path prefixes, containment bases —
+ * must agree on ONE spelling or a valid noncanonical config produces
+ * schema-invalid leases and refused closes (codex prd-007 r8/r9). */
+export function normalizedWorktreeDir(config: WorkflowConfig): string {
+  const flat = normalize(config.worktree.dir);
+  return flat.endsWith(sep) ? flat.slice(0, -sep.length) : flat;
 }

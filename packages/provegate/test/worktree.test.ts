@@ -509,6 +509,60 @@ describe('codex r8 regressions', () => {
   });
 });
 
+describe('codex r9 regressions', () => {
+  it('the configured base branch is protected even when not in branches.protected (P1)', async () => {
+    const root = await gitRoot();
+    const bareProtect = { ...cfg, branches: { ...cfg.branches, protected: [] as string[] } };
+    const removal = removeWorktree(bareProtect, root, {
+      worktree: '.worktrees/prd-001-x',
+      branch: 'main',
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('cleanup refused');
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).toContain('main');
+  });
+
+  it('a noncanonical worktree.dir still produces a SCHEMA-VALID lease (P2)', async () => {
+    const root = await gitRoot();
+    const dotted = { ...cfg, worktree: { dir: './.worktrees/' } };
+    const id = prdWithSurface(root, 'canonical', ['src/canonical/**']);
+    const result = claimPrd(dotted, root, id, { worktree: true });
+    expect(result.ok).toBe(true);
+    const lease = JSON.parse(readFileSync(result.leasePath!, 'utf8')) as Record<string, unknown>;
+    expect(validateLock(dotted, lease)).toEqual([]);
+    expect(lease['worktree']).toBe(`.worktrees/${id.toLowerCase()}-canonical`);
+  });
+
+  it('a hostile slug through the public API cannot escape worktree.dir (P2)', async () => {
+    const root = await gitRoot();
+    const flat = { ...cfg, branches: { ...cfg.branches, featurePattern: 'feat/static-{id}' } };
+    expect(() =>
+      createWorktree(flat, root, { id: 'PRD-001', slug: '../../../escaped' }),
+    ).toThrow(/escapes \.worktrees/);
+    expect(existsSync(join(root, 'escaped'))).toBe(false);
+  });
+
+  it('stamps survive a plain refresh after the PRD slug is renamed (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'old-name', ['src/renamed/**']);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    const { renameSync } = await import('node:fs');
+    renameSync(
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-old-name.md`),
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-new-name.md`),
+    );
+    const refreshed = claimPrd(cfg, root, id);
+    expect(refreshed.ok).toBe(true);
+    const lease = JSON.parse(readFileSync(refreshed.leasePath!, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(lease['worktree']).toBe(first.worktree!.relPath);
+    expect(lease['branch']).toBe(first.worktree!.branch);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
