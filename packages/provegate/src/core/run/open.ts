@@ -520,26 +520,41 @@ function claimPrdLocked(
         expected !== null &&
         existsSync(expected) &&
         realpathSync(registered) === realpathSync(expected);
-      if (samePlace && expected !== null) {
+      // Reuse requires OUR OWN prior stamps, not just a matching layout: a
+      // manually managed checkout that happens to sit at the deterministic
+      // path must hit the collision refusal, never be adopted — a later green
+      // close would remove a worktree we never created (codex r1 P2).
+      const ourStamps =
+        priorWt === wtNames.relPath && priorBranch === wtNames.branch;
+      if (samePlace && expected !== null && ourStamps) {
         // Idempotent refresh: our branch already lives in the expected worktree.
         provisioned = { path: expected, relPath: wtNames.relPath, branch: wtNames.branch };
       } else {
         try {
           provisioned = createWorktree(config, root, { id: normalized, slug });
         } catch (err) {
+          // A failed lease unlink means the rollback is INCOMPLETE — the
+          // stamped lease stays installed, and saying "rolled back" would be
+          // a lie that leaves a live claim over a missing checkout (codex r1
+          // P2). ENOENT counts as removed (someone beat us to it).
+          let leaseRemoved = false;
           try {
             unlinkSync(leasePath);
-          } catch {
-            /* the refusal below still names the failure */
+            leaseRemoved = true;
+          } catch (unlinkErr) {
+            leaseRemoved = (unlinkErr as NodeJS.ErrnoException).code === 'ENOENT';
           }
           const stranded = rollback();
           dropQuarantineDir();
+          const msg = err instanceof Error ? err.message : String(err);
           return {
             ...base,
             globs,
             ok: false,
             issues: [
-              `claim rolled back: ${err instanceof Error ? err.message : String(err)}`,
+              leaseRemoved
+                ? `claim rolled back: ${msg}`
+                : `claim rollback INCOMPLETE: ${msg} — the installed lease could not be removed; delete ${leasePath} manually before re-claiming`,
               ...stranded,
             ],
           };

@@ -33,6 +33,7 @@ import { dirname as pathDirname } from 'node:path';
 import {
   RUN_ACTIVE_ENV,
   archivePrdArtifacts,
+  baseWorktreeReady,
   buildGateChain,
   claimPrd,
   createPrd,
@@ -428,6 +429,24 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       }),
     );
     return 1;
+  }
+  // Worktree-mode base invariants, BEFORE the archive mutates anything: the
+  // base branch must live in another (clean) checkout, or the merge would
+  // refuse — or worse, fall back to merging inside the feature worktree —
+  // after archive commits already landed (codex r1 P1).
+  if (stamps) {
+    const baseReady = baseWorktreeReady(config, root);
+    if (!baseReady.ok) {
+      console.error(
+        stopCard({
+          id,
+          phase: 'merge',
+          why: baseReady.why ?? 'base checkout not ready',
+          results: outcome.results,
+        }),
+      );
+      return 1;
+    }
   }
 
   try {

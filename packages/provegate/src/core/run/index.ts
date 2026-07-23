@@ -28,6 +28,7 @@ export {
 export { archiveCommitMessage, archivePrdArtifacts, type ArchiveResult } from './archive.js';
 export { initWorkspace, planInit, type InitAction, type InitReport } from './init.js';
 export {
+  baseWorktreeReady,
   ensureCheckoutClean,
   findBaseWorktree,
   mergeMessage,

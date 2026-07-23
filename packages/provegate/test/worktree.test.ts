@@ -8,9 +8,11 @@ import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import type { GatesManifest } from '../src/core/gates/manifest.js';
 import { validateLock } from '../src/core/locks/index.js';
 import {
+  baseWorktreeReady,
   claimPrd,
   createPrd,
   createWorktree,
+  ensureCheckoutClean,
   initWorkspace,
   mergeToLocalBase,
   removeWorktree,
@@ -128,6 +130,97 @@ describe('createWorktree / removeWorktree (FR-1, W4)', () => {
     expect(removal.removed).toBe(false);
     expect(removal.warnings.join(' ')).toContain('outside');
     expect(existsSync(join(root, '_prds/wip'))).toBe(true);
+  });
+});
+
+describe('codex r1 regressions', () => {
+  it('branches from the CONFIGURED base, not a diverged main-checkout HEAD (P1)', async () => {
+    const root = await gitRoot();
+    const mainTip = (await run('git', ['-C', root, 'rev-parse', 'main'], {})).stdout.trim();
+    await run('git', ['-C', root, 'checkout', '-b', 'parked']);
+    writeFileSync(join(root, 'diverged.txt'), 'not for the worktree\n');
+    await run('git', ['-C', root, 'add', 'diverged.txt']);
+    await run('git', ['-C', root, 'commit', '-m', 'diverged']);
+
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'based' });
+    const wtTip = (await run('git', ['-C', made.path, 'rev-parse', 'HEAD'], {})).stdout.trim();
+    expect(wtTip).toBe(mainTip);
+    expect(existsSync(join(made.path, 'diverged.txt'))).toBe(false);
+  });
+
+  it('missing base branch refuses provisioning', async () => {
+    const root = await gitRoot();
+    const noBase = { ...cfg, branches: { ...cfg.branches, base: 'trunk' } };
+    expect(() => createWorktree(noBase, root, { id: 'PRD-001', slug: 'no-base' })).toThrow(
+      /base branch 'trunk' not found/,
+    );
+  });
+
+  it('tracked modifications under worktree.dir REFUSE the merge, never reset (P1)', async () => {
+    const root = await gitRoot();
+    const trackedDir = { ...cfg, worktree: { dir: 'trackedwt' } };
+    writeFileSync(join(root, 'trackedwt-seed.txt'), 'x\n');
+    await run('git', ['-C', root, 'add', '.'], {});
+    await run('git', ['-C', root, 'commit', '-m', 'seed2'], {});
+    // A TRACKED file inside the configured worktree dir:
+    const { mkdirSync: mkdir } = await import('node:fs');
+    mkdir(join(root, 'trackedwt'), { recursive: true });
+    writeFileSync(join(root, 'trackedwt/source.ts'), 'original\n');
+    await run('git', ['-C', root, 'add', 'trackedwt/source.ts']);
+    await run('git', ['-C', root, 'commit', '-m', 'tracked under wt dir']);
+    writeFileSync(join(root, 'trackedwt/source.ts'), 'MODIFIED\n');
+
+    const result = ensureCheckoutClean(trackedDir, root);
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('trackedwt/source.ts');
+    expect(readFileSync(join(root, 'trackedwt/source.ts'), 'utf8')).toBe('MODIFIED\n');
+  });
+
+  it('untracked worktree dir stays tolerated and untouched', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    createWorktree(cfg, root, { id: 'PRD-001', slug: 'noise' });
+    const result = ensureCheckoutClean(cfg, root);
+    expect(result.ok).toBe(true);
+    expect(existsSync(join(root, '.worktrees/prd-001-noise'))).toBe(true);
+  });
+
+  it('baseWorktreeReady: refuses when no checkout holds base or base is dirty (P1)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'ready' });
+
+    expect(baseWorktreeReady(cfg, made.path).ok).toBe(true);
+
+    writeFileSync(join(root, 'seed.txt'), 'dirty source change\n');
+    const dirty = baseWorktreeReady(cfg, made.path);
+    expect(dirty.ok).toBe(false);
+    expect(dirty.why).toContain('base checkout');
+    await run('git', ['-C', root, 'checkout', '--', 'seed.txt']);
+
+    await run('git', ['-C', root, 'checkout', '-b', 'elsewhere']);
+    const parked = baseWorktreeReady(cfg, made.path);
+    expect(parked.ok).toBe(false);
+    expect(parked.why).toContain("no checkout holds 'main'");
+  });
+
+  it('a manually managed checkout at the deterministic path is refused, never adopted (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'squat', ['src/squat/**']);
+    const stem = `${id.toLowerCase()}-squat`;
+    await run('git', ['-C', root, 'branch', `feat/${stem}`]);
+    const { mkdirSync: mkdir } = await import('node:fs');
+    mkdir(join(root, '.worktrees'), { recursive: true });
+    await run('git', ['-C', root, 'worktree', 'add', join(root, `.worktrees/${stem}`), `feat/${stem}`]);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('claim rolled back');
+    expect(existsSync(join(root, '_state/locks', `${stem}.json`))).toBe(false);
+    // The manually managed checkout survives untouched.
+    expect(existsSync(join(root, `.worktrees/${stem}`))).toBe(true);
   });
 });
 

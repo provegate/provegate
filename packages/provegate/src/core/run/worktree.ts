@@ -109,7 +109,14 @@ export function createWorktree(
     /* best-effort — the merge-side coordination rule covers the dirt check */
   }
 
-  git(mainRoot, ['branch', branch]);
+  // Branch from the CONFIGURED base ref, never the main checkout's current
+  // HEAD — a main checkout parked on a diverged branch must not leak its
+  // commits into the provisioned worktree (codex r1 P1).
+  const base = config.branches.base;
+  if (!branchExists(mainRoot, base)) {
+    throw new Error(`base branch '${base}' not found in the main checkout — cannot provision`);
+  }
+  git(mainRoot, ['branch', branch, `refs/heads/${base}`]);
   try {
     git(mainRoot, ['worktree', 'add', path, branch]);
   } catch (err) {
