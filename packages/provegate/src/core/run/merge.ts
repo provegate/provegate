@@ -179,16 +179,21 @@ export function mergeToLocalBase(options: {
   manifest: GatesManifest;
   root: string;
   id: string;
+  /** The exact commit the caller verified (archive tip). Merging THIS rather
+   * than re-resolving the branch name closes the check-to-use window in which
+   * a rival could commit or reset the branch (codex r25 P1). */
+  sourceSha?: string;
 }): MergeOutcome {
-  const { config, manifest, root, id } = options;
+  const { config, manifest, root, id, sourceSha } = options;
   const base = config.branches.base;
   const pre = mergePreconditions(config, root);
   if (!pre.ok) return { ok: false, why: pre.why };
   const branch = pre.branch!;
+  const source = sourceSha ?? branch;
 
   const worktreeDir = findBaseWorktree(root, base);
   if (worktreeDir !== null && worktreeDir !== root) {
-    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, id });
+    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
   }
 
   try {
@@ -196,7 +201,7 @@ export function mergeToLocalBase(options: {
   } catch {
     return { ok: false, why: `no local branch '${base}' to merge into` };
   }
-  return mergeSingleCheckout({ config, manifest, root, base, branch, id });
+  return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
 }
 
 function mergeInWorktree(options: {
@@ -205,9 +210,10 @@ function mergeInWorktree(options: {
   baseDir: string;
   base: string;
   branch: string;
+  source: string;
   id: string;
 }): MergeOutcome {
-  const { config, manifest, baseDir, base, branch, id } = options;
+  const { config, manifest, baseDir, base, branch, source, id } = options;
   const clean = ensureCheckoutClean(config, baseDir);
   if (!clean.ok) return { ok: false, why: `base checkout: ${clean.why}` };
 
@@ -215,7 +221,7 @@ function mergeInWorktree(options: {
   // commands is not guaranteed to be the pre-merge tip (codex P1 finding).
   const preMergeSha = git(baseDir, ['rev-parse', 'HEAD']);
   try {
-    git(baseDir, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+    git(baseDir, ['merge', '--no-ff', source, '-m', mergeMessage(id)]);
   } catch (error) {
     try {
       execFileSync('git', ['merge', '--abort'], { cwd: baseDir, stdio: 'ignore' });
@@ -251,13 +257,14 @@ function mergeSingleCheckout(options: {
   root: string;
   base: string;
   branch: string;
+  source: string;
   id: string;
 }): MergeOutcome {
-  const { config, manifest, root, base, branch, id } = options;
+  const { config, manifest, root, base, branch, source, id } = options;
   git(root, ['checkout', base]);
   const preMergeSha = git(root, ['rev-parse', 'HEAD']);
   try {
-    git(root, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+    git(root, ['merge', '--no-ff', source, '-m', mergeMessage(id)]);
   } catch (error) {
     try {
       execFileSync('git', ['merge', '--abort'], { cwd: root, stdio: 'ignore' });

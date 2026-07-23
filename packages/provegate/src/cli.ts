@@ -20,7 +20,7 @@ import {
   type StateRecord,
 } from './core/state/index.js';
 import type { QueueLockInfo } from './core/state/index.js';
-import { listLockFiles } from './core/locks/index.js';
+import { listLockFiles, validateLock } from './core/locks/index.js';
 import {
   ManifestError,
   auditWiring,
@@ -343,27 +343,52 @@ interface WorktreeStamps {
  * superseded self lease survived an earlier cleanup warning, several valid
  * files name this PRD; the NEWEST install is the live claim, so filename sort
  * order must not decide which identity cleanup guards (codex r22 P1). */
-function worktreeStamps(config: WorkflowConfig, root: string, id: string): WorktreeStamps | null {
+function worktreeStamps(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+): { stamps: WorktreeStamps | null; malformed: string[] } {
   // Rank ALL of the PRD's leases first, THEN read the winner's stamps: an
   // older stamped lease must not outrank a newer unstamped one (an external
   // worktree claim), or its stale stamps would drive the branch guard and
-  // tear down a checkout the live claim never named (codex r24 P1).
-  const live = listLockFiles(config, root)
-    .filter((lock) => lock.data && String(lock.data['prd']) === id)
-    .sort(
-      (a, b) =>
-        (Date.parse(String(b.data!['startedAt'] ?? '')) || 0) -
-        (Date.parse(String(a.data!['startedAt'] ?? '')) || 0),
-    )[0];
-  if (!live?.data) return null;
+  // tear down a checkout the live claim never named (codex r24 P1). Leases we
+  // cannot reason about FAIL CLOSED exactly as `gate open` does — ranking a
+  // malformed object as live would silently drop worktree mode and merge an
+  // unrelated branch (codex r25 P1).
+  const malformed: string[] = [];
+  const candidates = listLockFiles(config, root).filter((lock) => {
+    if (!lock.data) {
+      // Unparseable files are not attributable to this PRD; `gate open`
+      // already refuses on them, and the chain's own gates ran on them.
+      return false;
+    }
+    if (String(lock.data['prd']) !== id) return false;
+    const issues = validateLock(config, lock.data, { now: 0 });
+    if (issues.length > 0) {
+      malformed.push(`${lock.name}: ${issues.join('; ')}`);
+      return false;
+    }
+    return true;
+  });
+  if (malformed.length > 0) return { stamps: null, malformed };
+
+  const live = candidates.sort(
+    (a, b) =>
+      (Date.parse(String(b.data!['startedAt'] ?? '')) || 0) -
+      (Date.parse(String(a.data!['startedAt'] ?? '')) || 0),
+  )[0];
+  if (!live?.data) return { stamps: null, malformed };
   const wt = live.data['worktree'];
   const br = live.data['branch'];
-  if (typeof wt !== 'string' || typeof br !== 'string') return null;
+  if (typeof wt !== 'string' || typeof br !== 'string') return { stamps: null, malformed };
   return {
-    worktree: wt,
-    branch: br,
-    startedAt: String(live.data['startedAt'] ?? ''),
-    expiresAt: String(live.data['expiresAt'] ?? ''),
+    stamps: {
+      worktree: wt,
+      branch: br,
+      startedAt: String(live.data['startedAt'] ?? ''),
+      expiresAt: String(live.data['expiresAt'] ?? ''),
+    },
+    malformed,
   };
 }
 
@@ -437,7 +462,19 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // long chain bumps startedAt/expiresAt, and snapshotting afterwards would
   // adopt the new claimant's identity — final revalidation would then "match"
   // and tear down a checkout that now belongs to someone else (codex r21 P1).
-  const stamps = worktreeStamps(config, root, id);
+  const leaseState = worktreeStamps(config, root, id);
+  if (leaseState.malformed.length > 0) {
+    console.error(
+      stopCard({
+        id,
+        phase: 'merge',
+        why: `malformed lease(s) for ${id} (${leaseState.malformed.join('; ')}) — ownership is unknowable; repair or delete them, then re-run`,
+        results: [],
+      }),
+    );
+    return 1;
+  }
+  const stamps = leaseState.stamps;
 
   const outcome = runChain({ config, root, id, chain, fromPhase });
   if (outcome.stopped) {
@@ -546,7 +583,15 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     }
   }
 
-  const merge = mergeToLocalBase({ config, manifest, root, id });
+  // Merge the VERIFIED commit, not the branch name — the name can move
+  // between the check above and the merge below (codex r25 P1).
+  const merge = mergeToLocalBase({
+    config,
+    manifest,
+    root,
+    id,
+    ...(stamps && archivedTip !== null ? { sourceSha: archivedTip } : {}),
+  });
   for (const row of merge.postMergeResults ?? []) outcome.results.push(row);
   if (!merge.ok) {
     console.error(
@@ -579,7 +624,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     // handoff card, never a crash without one (W3, codex r14 P1).
     try {
       withWorkspaceMutex(claimMutexPath(config, root), () => {
-        const fresh = worktreeStamps(config, root, id);
+        const fresh = worktreeStamps(config, root, id).stamps;
         if (
           !fresh ||
           fresh.worktree !== stamps.worktree ||

@@ -68,9 +68,11 @@ export function archivePrdArtifacts(
     '--',
     ...paths,
   ]);
-  // `git commit` prints `[branch abbrev] subject`; fall back to HEAD when the
-  // porcelain text is localized or absent.
-  const abbrev = /^\[[^\]\s]+ (?:\(root-commit\) )?([0-9a-f]{7,40})\]/m.exec(out)?.[1];
+  // `git commit` prints `[<branch> <abbrev>] <subject>`. Branch names may
+  // legally contain `]`, so anchor on the hash: the LAST space-delimited hex
+  // token closing the bracket group (codex prd-007 r25 P2). Falls back to
+  // HEAD when the porcelain text is localized or absent.
+  const abbrev = /^\[.*\s([0-9a-f]{7,40})\]/m.exec(out)?.[1];
   let commitSha: string | undefined;
   try {
     commitSha = git(root, ['rev-parse', abbrev ?? 'HEAD']);

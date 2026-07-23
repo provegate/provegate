@@ -12,7 +12,7 @@ import {
 } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import { CONFIG_FILENAME, configSourceFor, type WorkflowConfig } from '../config/index.js';
-import { MANIFEST_FILENAME, manifestSourceFor } from '../gates/manifest.js';
+import { MANIFEST_FILENAME, loadManifest, manifestSourceFor } from '../gates/manifest.js';
 import {
   candidateConflicts,
   candidateFromPrd,
@@ -268,6 +268,23 @@ function claimPrdLocked(
   // The PRD entry hashes the EXACT buffer candidateFromPrd parsed, so the
   // lease's globs and the validated bytes can never come from different
   // reads — or different checkouts (codex r21 P1).
+  // The manifest's parse-time bytes only exist once something loaded it —
+  // and the `gate open` process never does. Load it HERE for worktree claims
+  // so its provenance is real rather than a later re-read (codex r25 P1); a
+  // manifest we cannot load makes gate policy unknowable, so fail closed.
+  if (worktree) {
+    try {
+      loadManifest(config, root);
+    } catch (error) {
+      return {
+        ...base,
+        ok: false,
+        issues: [
+          `cannot verify gate policy for a worktree claim: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`,
+        ],
+      };
+    }
+  }
   const requiredArtifacts: ArtifactSnapshot[] = [
     {
       rel: prdRelPath,

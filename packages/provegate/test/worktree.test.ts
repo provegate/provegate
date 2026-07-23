@@ -1124,6 +1124,51 @@ describe('codex r15 regressions', () => {
     expect(existsSync(join(root, '.worktrees/ghost-path'))).toBe(false);
   });
 
+  it('a --worktree claim captures manifest provenance and fails closed on a bad one (r25 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'policy', ['src/policy/**']);
+    writeFileSync(
+      join(root, 'gates.manifest.json'),
+      `${JSON.stringify({ phases: { '4': [] }, postMerge: [] }, null, 2)}\n`,
+    );
+    await commitArtifacts(root);
+    const ok = claimPrd(cfg, root, id, { worktree: true });
+    expect(ok.ok, ok.issues.join(' ')).toBe(true);
+    const { manifestSourceFor } = await import('../src/core/gates/index.js');
+    // Provenance was captured by the claim itself, not a later re-read.
+    expect(manifestSourceFor(root)).toContain('postMerge');
+
+    // An unloadable manifest makes gate policy unknowable → refuse.
+    const other = prdWithSurface(root, 'policy-two', ['src/policy2/**']);
+    writeFileSync(join(root, 'gates.manifest.json'), '{ not json');
+    await commitArtifacts(root);
+    const refused = claimPrd(cfg, root, other, { worktree: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('cannot verify gate policy');
+  });
+
+  it('a malformed lease for the PRD is not silently ranked live (r25 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'failclosed', ['src/fc/**']);
+    await commitArtifacts(root);
+    const live = claimPrd(cfg, root, id, { worktree: true });
+    expect(live.ok).toBe(true);
+    // Newer, syntactically valid, schema-INVALID object for the same PRD.
+    writeFileSync(
+      join(root, '_state/locks', `zzz-${id.toLowerCase()}-broken.json`),
+      `${JSON.stringify({ prd: id, startedAt: new Date(Date.now() + 60_000).toISOString() })}\n`,
+    );
+    const { validateLock: validate } = await import('../src/core/locks/index.js');
+    const broken = JSON.parse(
+      readFileSync(join(root, '_state/locks', `zzz-${id.toLowerCase()}-broken.json`), 'utf8'),
+    ) as Record<string, unknown>;
+    expect(validate(cfg, broken, { now: 0 }).length).toBeGreaterThan(0);
+    // A claim refuses outright — ownership is unknowable while it exists.
+    const after = claimPrd(cfg, root, id, { worktree: true });
+    expect(after.ok).toBe(false);
+    expect(after.issues.join(' ')).toContain('fail closed');
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
