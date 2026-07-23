@@ -499,6 +499,20 @@ function claimPrdLocked(
     const stampSource = newestSelf ?? selfAtDestination;
     const priorWt = stampSource?.snapshot['worktree'];
     const priorBranch = stampSource?.snapshot['branch'];
+    // Stamps are a PAIR. A lease carrying only one of them has damaged
+    // worktree metadata: silently refreshing it into a fully unstamped lease
+    // would launder the damage past `gate run`'s malformed-stamp guard and
+    // let a later close merge an unrelated branch (codex r28 P1).
+    if ((typeof priorWt === 'string') !== (typeof priorBranch === 'string')) {
+      return {
+        ...base,
+        globs,
+        ok: false,
+        issues: [
+          `existing lease ${stampSource?.file ?? '(unknown)'} stamps only ${typeof priorWt === 'string' ? 'worktree' : 'branch'} — worktree metadata is incomplete; repair or delete it before re-claiming`,
+        ],
+      };
+    }
     // `--worktree` on a PRD that ALREADY has a stamped checkout reuses that
     // checkout — deriving fresh names after a slug/pattern change would
     // provision a second tree and orphan the first with its work (codex r10

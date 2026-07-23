@@ -333,9 +333,15 @@ interface WorktreeStamps {
   worktree: string;
   branch: string;
   /** Lease identity snapshot — cleanup revalidates against these under the
-   * claim mutex so a refresh by a rival claimant is never torn down. */
+   * claim mutex so a refresh by a rival claimant is never torn down. The
+   * timestamps alone are not identity: a rival refreshing with the same
+   * injected clock would match while owning a different claim, so lockId and
+   * agent travel with them (codex r28 P1). */
   startedAt: string;
   expiresAt: string;
+  lockId: string;
+  agent: string;
+  file: string;
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
@@ -408,6 +414,9 @@ function worktreeStamps(
       branch: br,
       startedAt: String(live.data['startedAt'] ?? ''),
       expiresAt: String(live.data['expiresAt'] ?? ''),
+      lockId: String(live.data['lockId'] ?? ''),
+      agent: String(live.data['agent'] ?? ''),
+      file: live.name,
     },
     malformed,
   };
@@ -656,7 +665,10 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
           fresh.worktree !== stamps.worktree ||
           fresh.branch !== stamps.branch ||
           fresh.startedAt !== stamps.startedAt ||
-          fresh.expiresAt !== stamps.expiresAt
+          fresh.expiresAt !== stamps.expiresAt ||
+          fresh.lockId !== stamps.lockId ||
+          fresh.agent !== stamps.agent ||
+          fresh.file !== stamps.file
         ) {
           cleanupWarnings = [
             'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',

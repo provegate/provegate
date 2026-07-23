@@ -1184,6 +1184,25 @@ describe('codex r15 regressions', () => {
     expect(ready.why).toMatch(/unusable|no checkout holds/);
   });
 
+  it('a one-sided stamp refuses the claim instead of being laundered away (r28 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'halfstamp', ['src/hs/**']);
+    await commitArtifacts(root);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Damage the lease: keep `worktree`, drop `branch`.
+    const lease = JSON.parse(readFileSync(first.leasePath!, 'utf8')) as Record<string, unknown>;
+    delete lease['branch'];
+    writeFileSync(first.leasePath!, `${JSON.stringify(lease, null, 2)}\n`);
+
+    // A plain refresh must NOT quietly rewrite it into an unstamped lease.
+    const refreshed = claimPrd(cfg, root, id);
+    expect(refreshed.ok).toBe(false);
+    expect(refreshed.issues.join(' ')).toContain('worktree metadata is incomplete');
+    const after = JSON.parse(readFileSync(first.leasePath!, 'utf8')) as Record<string, unknown>;
+    expect(after['worktree']).toBe(first.worktree!.relPath);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
