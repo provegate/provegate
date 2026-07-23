@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-007-worktree-lifecycle.md](../../_prds/wip/prd-007-worktree-lifecycle.md)
 > **Readiness**: [readiness-007-worktree-lifecycle.md](../../_readiness/wip/readiness-007-worktree-lifecycle.md)
-> **Status**: Phase 5 Complete — Testing Verified
+> **Status**: Phase 6 Complete — Independent Review Passed
 > **Readiness Score**: 8.4/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-23
@@ -25,7 +25,9 @@
 - W3: cleanup degrades, never reverts — post-merge cleanup failures are card
   warnings; landed merge immutable.
 - W4: containment first — worktree path checked before the first git invocation.
-- Never `worktree remove --force`, never `branch -D`. Lease schema frozen.
+- Never `worktree remove --force` on a user tree. Branch deletion requires a
+  merge-base ancestry proof against the base (see the PRD's DO-NOT for the
+  scratch-context escalation the review settled). Lease schema frozen.
 
 ## Relevant Files
 
@@ -74,7 +76,7 @@
 - [x] 7.0 Docs (FR-6)
   - [x] 7.1 cli.mdx open/run rows; QUICKSTART parallel-agent recipe
 - [x] 8.0 Phase 5 — §11 sweep, ledger evidence
-- [ ] 9.0 Phase 6 — codex review (brief: rollback atomicity, dirty-tree handling,
+- [x] 9.0 Phase 6 — codex review (brief: rollback atomicity, dirty-tree handling,
         base-checkout invariants, guard inversion)
 - [ ] 10.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-007`
 
@@ -86,12 +88,12 @@
 | FR-2               | `pnpm --filter provegate test test/open.test.ts`             | provegate | passed  | 15/15    | rollback, stamps           |
 | FR-3               | `pnpm --filter provegate test test/worktree.test.ts`         | provegate | passed  | 10/10    | merge relocation, cleanup  |
 | FR-4               | `grep -c "\-\-worktree" packages/provegate/src/cli.ts`       | provegate | passed  | 5        | usage advertises flag      |
-| FR-5               | `pnpm --filter provegate test`                               | provegate | passed  | 381/381  | full suite                 |
+| FR-5               | `pnpm --filter provegate test`                               | provegate | passed  | 440/440  | full suite                 |
 | FR-6               | `grep -c "\-\-worktree" packages/provegate/QUICKSTART.md`    | provegate | passed  | 2        | recipe documented          |
 | types              | `pnpm check-types`                                           | repo      | passed  | 0 errors |                            |
 | lint               | `pnpm lint`                                                  | repo      | passed  | 0 warn   |                            |
 | build              | `pnpm build`                                                 | repo      | passed  | clean    |                            |
-| independent-review | `_docs/reviews/review-007-worktree-lifecycle.md`             | repo      | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-007-worktree-lifecycle.md`             | repo      | passed  | 31 rounds | verdict pass, critical = 0 |
 
 ## Deferrals & Decisions
 
@@ -113,12 +115,22 @@
   validation, no-worktree pin live beside the module they test); `open.test.ts`
   itself is untouched — its 15 passing tests are the byte-identical regression
   evidence for FR-2.
+- The review reshaped the feature far past its plan: artifact provenance (the
+  claim proves the checkout carries the bytes it parsed), fail-closed lease
+  selection, mutex-serialized cleanup with whole-lease identity, and a pinned
+  base revision per claim. All are documented inline at their call sites with
+  the round that forced them.
+- `--worktree` now REFUSES while the claimed PRD or control files are
+  uncommitted on the base — the documented quickstart order changed to commit
+  first (r15). QUICKSTART and cli.mdx carry the new step.
+- 15 pre-existing worktree tests were updated to the real flow (commit, then
+  claim); `commitArtifacts` is the shared helper.
 
 ## Operator Handoff
 
 | Task | Category  | Owner | Required Check                                       | Status  | Notes               |
 | ---- | --------- | ----- | ---------------------------------------------------- | ------- | ------------------- |
-| 9.0  | external  | owner | Authorize codex review session                       | pending | per precedent       |
+| 9.0  | external  | owner | Authorize codex review session                       | resolved | 31 rounds, verdict pass |
 | 10.0 | manual-qa | owner | Acceptance; trigger `gate run PRD-007`; push (human) | pending | runner never pushes |
 
 ## Progress Log
@@ -128,6 +140,7 @@
 | 2026-07-23 | —       | Tasks generated (Go)                                              |
 | 2026-07-23 | 2.0–7.0 | worktree.ts + --worktree claim + relocation audit + 10 tests + docs |
 | 2026-07-23 | 8.0     | §11 sweep green: 381 tests, types/lint/build clean, hygiene clean |
+| 2026-07-23 | 9.0     | codex review r1-r31: 47 P1 + 34 P2 + 1 P3 fixed; r30 first zero-critical round, r31 confirmed clean; 440 tests |
 
 ## Blockers / Open Questions
 
