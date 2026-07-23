@@ -226,6 +226,12 @@ export interface ArtifactSnapshot {
   rel: string;
   /** null when the file was absent at parse time. */
   sha: string | null;
+  /** The parsed bytes themselves, when the caller captured them. Blob
+   * equality alone is not proof under a non-injective clean filter — two
+   * different working-tree contents can hash the same — so the checkout's
+   * text is compared against THIS buffer whenever it is available
+   * (codex r23 P1). */
+  content?: string;
 }
 
 /** Snapshot entries whose parsed bytes do NOT match `ref`. */
@@ -463,27 +469,39 @@ export function createWorktree(
   // hooks that can edit it (codex r17+r18 P1) — so prove it either way. Our
   // worktree is removed on mismatch; a pre-existing branch is left alone, and
   // debris that survives removal is NAMED, never silently pruned (r18 P2).
-  if (requireOnBase.length > 0) {
+  // Attachment is checked ALWAYS, artifacts or not: the exported API with a
+  // default empty requireOnBase must still refuse to hand back a provision
+  // claiming a branch the tree is not actually on (codex r23 P2).
+  let attached: string | null;
+  try {
+    attached = git(path, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
+  } catch {
+    attached = null;
+  }
+  const detached = attached !== branch;
+  if (requireOnBase.length > 0 || detached) {
     // The checkout's own bytes must equal the parsed snapshot. A freshly cut
     // branch must ALSO still point at the pinned base: a successful hook can
     // commit or reset it while leaving those blobs untouched, handing the
     // agent a tree missing base commits (codex r21 P2).
     const stale = requireOnBase
-      .filter((s) => blobShaOfFile(path, s.rel) !== s.sha)
+      .filter((s) => {
+        if (blobShaOfFile(path, s.rel) !== s.sha) return true;
+        // Content equality where the caller captured the bytes: a lossy
+        // clean filter can collapse different contents to one blob, and the
+        // lease must describe what the agent will actually read (r23 P1).
+        if (s.content === undefined) return false;
+        try {
+          return readFileSync(join(path, s.rel), 'utf8') !== s.content;
+        } catch {
+          return true;
+        }
+      })
       .map((s) => s.rel);
     if (!reattach && resolveRef(mainRoot, `refs/heads/${branch}`) !== baseRef) {
       stale.push(`branch ${branch} no longer points at the pinned base`);
     }
-    // …and the tree must actually be ON that branch: a hook can retarget or
-    // detach HEAD at the same commit, so matching blobs and a matching ref
-    // still leave work landing on the wrong branch (codex r22 P1).
-    let attached: string | null;
-    try {
-      attached = git(path, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
-    } catch {
-      attached = null;
-    }
-    if (attached !== branch) {
+    if (detached) {
       stale.push(`the checkout is on ${attached ?? 'a detached HEAD'}, not ${branch}`);
     }
     if (stale.length > 0) {

@@ -1060,6 +1060,53 @@ describe('codex r15 regressions', () => {
     expect(newest['branch']).toBe(live.worktree!.branch);
   });
 
+  it('createWorktree refuses a detached HEAD even with no artifact snapshots (r23 P2)', async () => {
+    const root = await gitRoot();
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\n[ -f "${join(root, '.git/detached-once')}" ] && exit 0\ntouch "${join(root, '.git/detached-once')}"\ngit checkout -q --detach HEAD\nexit 0\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    // Default requireOnBase = [] — attachment must still be proven.
+    expect(() => createWorktree(cfg, root, { id: 'PRD-001', slug: 'bare-detach' })).toThrow(
+      /detached HEAD/,
+    );
+  });
+
+  it('stamp carry prefers the NEWEST self lease, not the first file (r23 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'freshest', ['src/freshest/**']);
+    await commitArtifacts(root);
+    const live = claimPrd(cfg, root, id, { worktree: true });
+    expect(live.ok).toBe(true);
+    // Superseded self lease naming a stale checkout, sorting first by name.
+    writeFileSync(
+      join(root, '_state/locks', `aaa-${id.toLowerCase()}-stale.json`),
+      `${JSON.stringify({
+        schemaVersion: 2,
+        lockId: `${id.toLowerCase()}-stale`,
+        agent: 'owner',
+        prd: id,
+        phase: 'Phase 4',
+        startedAt: new Date(Date.now() - 7_200_000).toISOString(),
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['src/freshest/**'],
+        ownedPaths: ['src/freshest/**'],
+        worktree: '.worktrees/ghost-path',
+        branch: 'feat/ghost-branch',
+      })}\n`,
+    );
+
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok, again.issues.join(' ')).toBe(true);
+    // The live checkout is kept; the ghost stamps never resurrect.
+    expect(again.worktree?.relPath).toBe(live.worktree!.relPath);
+    expect(existsSync(join(root, '.worktrees/ghost-path'))).toBe(false);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);

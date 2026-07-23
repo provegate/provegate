@@ -274,6 +274,7 @@ function claimPrdLocked(
         candidate.sourceContent !== undefined
           ? blobShaOfBuffer(prdRoot, prdRelPath, candidate.sourceContent)
           : blobShaOfFile(prdRoot, prdRelPath),
+      content: candidate.sourceContent,
     },
   ];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
@@ -289,6 +290,7 @@ function claimPrdLocked(
           parsedSource !== null
             ? blobShaOfBuffer(root, control, parsedSource)
             : blobShaOfFile(root, control),
+        ...(parsedSource !== null ? { content: parsedSource } : {}),
       });
     }
   }
@@ -458,11 +460,20 @@ function claimPrdLocked(
     // while another self lease holds the only cleanup metadata (codex r9+r10
     // P2). A PRD renamed to a new slug derives a new leasePath; the old
     // stamped lease is superseded below.
+    // Among several self leases the NEWEST install is the live claim — file
+    // order must not resurrect a superseded lease's stale worktree/branch and
+    // rewrite the canonical lease to it (codex r23 P1, same rule cleanup uses).
     const stampSource =
-      self.find(
-        (l) =>
-          typeof l.snapshot['worktree'] === 'string' && typeof l.snapshot['branch'] === 'string',
-      ) ?? selfAtDestination;
+      self
+        .filter(
+          (l) =>
+            typeof l.snapshot['worktree'] === 'string' && typeof l.snapshot['branch'] === 'string',
+        )
+        .sort(
+          (a, b) =>
+            (Date.parse(String(b.snapshot['startedAt'] ?? '')) || 0) -
+            (Date.parse(String(a.snapshot['startedAt'] ?? '')) || 0),
+        )[0] ?? selfAtDestination;
     const priorWt = stampSource?.snapshot['worktree'];
     const priorBranch = stampSource?.snapshot['branch'];
     // `--worktree` on a PRD that ALREADY has a stamped checkout reuses that

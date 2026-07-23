@@ -308,6 +308,15 @@ function runCheck(args: string[]): number {
   return 0;
 }
 
+/** This checkout's HEAD commit, or null when unreadable. */
+function headSha(root: string): string | null {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+
 /** The branch this checkout is on, or null when detached/unreadable. */
 function currentBranch(root: string): string | null {
   try {
@@ -492,12 +501,17 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     cleanupChdirTarget = baseReady.baseDir ?? null;
   }
 
+  let archivedTip: string | null = null;
   try {
     const archived = archivePrdArtifacts(config, root, record);
     if (archived.moved.length > 0) {
       console.log(`[run] archived ${archived.moved.length} artifact(s)`);
       outcome.results.push(['archive: wip→completed', 'passed']);
     }
+    // The tip the archive produced. A post-commit hook can reset or amend the
+    // branch while leaving it checked out — merging then lands the wrong tip
+    // and orphans the archive commit (codex r23 P1).
+    archivedTip = headSha(root);
   } catch (error) {
     console.error(
       stopCard({
@@ -516,14 +530,16 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // Re-prove the pin immediately before the merge (codex r22 P1).
   if (stamps) {
     const branchNow = currentBranch(root);
-    if (branchNow !== stamps.branch) {
+    const tipNow = headSha(root);
+    const drift =
+      branchNow !== stamps.branch
+        ? `the checkout moved to ${branchNow ?? 'a detached HEAD'}; the lease pins ${stamps.branch}`
+        : archivedTip !== null && tipNow !== archivedTip
+          ? `${stamps.branch} was rewritten after archiving (${archivedTip.slice(0, 7)} → ${tipNow?.slice(0, 7) ?? '?'}), so the archive commit is no longer on it`
+          : null;
+    if (drift !== null) {
       console.error(
-        stopCard({
-          id,
-          phase: 'merge',
-          why: `the checkout moved to ${branchNow ?? 'a detached HEAD'} after archiving; the lease pins ${stamps.branch} — nothing was merged`,
-          results: outcome.results,
-        }),
+        stopCard({ id, phase: 'merge', why: `${drift} — nothing was merged`, results: outcome.results }),
       );
       return 1;
     }
