@@ -338,6 +338,64 @@ describe('codex r4 regressions', () => {
   });
 });
 
+describe('codex r5 regressions', () => {
+  it('a MOVED worktree is not reported as cleaned up (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'roamer' });
+    await run('git', ['-C', root, 'worktree', 'move', made.path, join(root, '.worktrees/parked')]);
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.removed).toBe(false);
+    expect(removal.branchDeleted).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('moved to');
+    expect(existsSync(join(root, '.worktrees/parked'))).toBe(true);
+  });
+
+  it('branch deletes after a green close even when the primary checkout is parked (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'parked-base' });
+    writeFileSync(join(made.path, 'feature.txt'), 'work\n');
+    await run('git', ['-C', made.path, 'add', 'feature.txt']);
+    await run('git', ['-C', made.path, 'commit', '-m', 'feat: work']);
+
+    // Layout: primary parked on another branch; base 'main' held by a linked worktree.
+    await run('git', ['-C', root, 'checkout', '-b', 'parked']);
+    await run('git', ['-C', root, 'worktree', 'add', join(root, 'base-holder'), 'main']);
+    await run('git', ['-C', join(root, 'base-holder'), 'merge', '--no-ff', made.branch, '-m', 'land']);
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.removed).toBe(true);
+    expect(removal.branchDeleted).toBe(true);
+    expect(removal.warnings).toEqual([]);
+  });
+
+  it('an UNREADABLE replacement lease is preserved and reported (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'masked', ['src/masked/**']);
+    const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-masked.json`);
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\nprintf '{"rival":true}' > "${leaseFile}"\nchmod 000 "${leaseFile}"\nexit 1\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('rollback INCOMPLETE');
+    // Restored to the pathname (or reported at quarantine) — never invisible.
+    const visible =
+      existsSync(leaseFile) || result.issues.join(' ').includes('preserved at');
+    expect(visible).toBe(true);
+    chmodSync(leaseFile, 0o644);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

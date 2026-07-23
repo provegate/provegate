@@ -269,6 +269,16 @@ export function removeWorktree(
       warnings.push(`worktree left at ${worktree} (dirty or busy) — remove manually`);
     }
   } else {
+    // Absent stamped path is only "already removed" when the branch has no
+    // registered worktree ANYWHERE — a `git worktree move`d checkout survives
+    // elsewhere and must not be reported as cleaned up (codex r5 P2).
+    const elsewhere = worktreeForBranch(mainRoot, branch);
+    if (elsewhere !== null) {
+      warnings.push(
+        `worktree for ${branch} moved to ${elsewhere} — not removed; clean up manually`,
+      );
+      return { removed, branchDeleted, warnings };
+    }
     try {
       git(mainRoot, ['worktree', 'prune']);
     } catch {
@@ -278,8 +288,14 @@ export function removeWorktree(
   }
 
   if (removed) {
+    // `branch -d` judges mergedness against the CURRENT checkout's HEAD; when
+    // the primary checkout is parked elsewhere and the base lives in a linked
+    // worktree, deletion must run relative to the checkout that HOLDS the
+    // base — otherwise a genuinely merged branch falsely refuses (codex r5
+    // P2). Never -D: -d against the base checkout is the safe equivalent.
+    const baseDir = worktreeForBranch(mainRoot, config.branches.base) ?? mainRoot;
     try {
-      git(mainRoot, ['branch', '-d', branch]);
+      git(baseDir, ['branch', '-d', branch]);
       branchDeleted = true;
     } catch {
       warnings.push(`branch ${branch} not deleted (unmerged or absent) — delete manually`);

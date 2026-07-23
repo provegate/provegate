@@ -552,11 +552,35 @@ function claimPrdLocked(
           // lie (codex r1 P2). ENOENT counts as removed.
           let leaseRemoved = false;
           let leaseNote: string | null = null;
+          let q: string | null = null;
           try {
-            const q = moveAside(leasePath);
-            if (readFileSync(q, 'utf8') === leaseBody) {
-              unlinkSync(q);
+            q = moveAside(leasePath);
+          } catch (qErr) {
+            if ((qErr as NodeJS.ErrnoException).code === 'ENOENT') {
               leaseRemoved = true;
+            } else {
+              leaseNote = `the installed lease could not be removed; delete ${leasePath} manually before re-claiming`;
+            }
+          }
+          if (q !== null) {
+            // Every post-rename failure must keep the quarantined file VISIBLE
+            // (restored to the pathname or reported at its quarantine path) —
+            // an unreadable replacement silently parked in .quarantine-* is
+            // invisible to lock listing and a later claim would proceed over
+            // it (codex r5 P2).
+            let quarantinedBody: string | null = null;
+            try {
+              quarantinedBody = readFileSync(q, 'utf8');
+            } catch {
+              quarantinedBody = null;
+            }
+            if (quarantinedBody === leaseBody) {
+              try {
+                unlinkSync(q);
+                leaseRemoved = true;
+              } catch {
+                leaseNote = `our lease copy was preserved at ${q} — delete manually`;
+              }
             } else {
               try {
                 moveNoReplace(q, leasePath);
@@ -564,12 +588,6 @@ function claimPrdLocked(
               } catch {
                 leaseNote = `a replacement lease was preserved at ${q} (original path re-occupied) — inspect before re-claiming`;
               }
-            }
-          } catch (qErr) {
-            if ((qErr as NodeJS.ErrnoException).code === 'ENOENT') {
-              leaseRemoved = true;
-            } else {
-              leaseNote = `the installed lease could not be removed; delete ${leasePath} manually before re-claiming`;
             }
           }
           const stranded = rollback();
