@@ -7,7 +7,6 @@ import {
   readFileSync,
   readdirSync,
   unlinkSync,
-  writeFileSync,
   writeSync,
 } from 'node:fs';
 import { resolve } from 'node:path';
