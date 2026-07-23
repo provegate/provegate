@@ -55,14 +55,31 @@ export function deepMerge<T>(base: T, override: unknown): T {
   return out as T;
 }
 
+/** The raw config bytes the LAST resolveConfig parsed, per repo root. A
+ * caller proving "the checkout carries the config this claim ran on" must
+ * hash these exact bytes — re-reading the path leaves a window in which the
+ * file can be restored to its committed form (codex prd-007 r22 P1). */
+const configSourceByRoot = new Map<string, string>();
+
+/** The bytes resolveConfig parsed for `root`, or null when the repo has no
+ * config file (defaults in effect). */
+export function configSourceFor(root: string): string | null {
+  return configSourceByRoot.get(resolve(root)) ?? null;
+}
+
 /** Resolve the effective config for a repo root. Absent file = pure defaults. */
 export function resolveConfig(root: string): WorkflowConfig {
   const file = resolve(root, CONFIG_FILENAME);
-  if (!existsSync(file)) return DEFAULT_CONFIG;
+  if (!existsSync(file)) {
+    configSourceByRoot.delete(resolve(root));
+    return DEFAULT_CONFIG;
+  }
 
   let parsed: unknown;
+  let source: string;
   try {
-    parsed = JSON.parse(readFileSync(file, 'utf8'));
+    source = readFileSync(file, 'utf8');
+    parsed = JSON.parse(source);
   } catch (error) {
     throw new ConfigError(
       `${CONFIG_FILENAME} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
@@ -73,6 +90,7 @@ export function resolveConfig(root: string): WorkflowConfig {
   if (issues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is invalid`, issues);
   }
+  configSourceByRoot.set(resolve(root), source);
   const merged = deepMerge(DEFAULT_CONFIG, parsed as PartialWorkflowConfig);
   const semanticIssues = validateResolvedConfig(merged);
   if (semanticIssues.length > 0) {

@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
-import { CONFIG_FILENAME, type WorkflowConfig } from '../config/index.js';
+import { CONFIG_FILENAME, configSourceFor, type WorkflowConfig } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
 import {
   candidateConflicts,
@@ -272,13 +272,24 @@ function claimPrdLocked(
       rel: prdRelPath,
       sha:
         candidate.sourceContent !== undefined
-          ? blobShaOfBuffer(prdRoot, candidate.sourceContent)
+          ? blobShaOfBuffer(prdRoot, prdRelPath, candidate.sourceContent)
           : blobShaOfFile(prdRoot, prdRelPath),
     },
   ];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
-      requiredArtifacts.push({ rel: control, sha: blobShaOfFile(root, control) });
+      // The config gets the same provenance binding as the PRD: hash the
+      // bytes resolveConfig actually parsed, so restoring the file after
+      // parsing cannot validate committed content while the claim runs on
+      // an uncommitted layout (codex r22 P1).
+      const parsedSource = control === CONFIG_FILENAME ? configSourceFor(root) : null;
+      requiredArtifacts.push({
+        rel: control,
+        sha:
+          parsedSource !== null
+            ? blobShaOfBuffer(root, control, parsedSource)
+            : blobShaOfFile(root, control),
+      });
     }
   }
 

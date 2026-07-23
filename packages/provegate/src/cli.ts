@@ -6,6 +6,7 @@
  * Remaining stubs name their roadmap phase. `push` refuses — the runner never
  * pushes to a remote. That invariant ships (and is tested) from commit one.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -307,6 +308,18 @@ function runCheck(args: string[]): number {
   return 0;
 }
 
+/** The branch this checkout is on, or null when detached/unreadable. */
+function currentBranch(root: string): string | null {
+  try {
+    return execFileSync('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 interface WorktreeStamps {
   worktree: string;
   branch: string;
@@ -317,22 +330,31 @@ interface WorktreeStamps {
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
- * wrote them — the merge guard and post-merge cleanup key off these. */
+ * wrote them — the merge guard and post-merge cleanup key off these. When a
+ * superseded self lease survived an earlier cleanup warning, several valid
+ * files name this PRD; the NEWEST install is the live claim, so filename sort
+ * order must not decide which identity cleanup guards (codex r22 P1). */
 function worktreeStamps(config: WorkflowConfig, root: string, id: string): WorktreeStamps | null {
+  let newest: WorktreeStamps | null = null;
+  let newestAt = Number.NEGATIVE_INFINITY;
   for (const lock of listLockFiles(config, root)) {
     if (!lock.data || String(lock.data['prd']) !== id) continue;
     const wt = lock.data['worktree'];
     const br = lock.data['branch'];
-    if (typeof wt === 'string' && typeof br === 'string') {
-      return {
-        worktree: wt,
-        branch: br,
-        startedAt: String(lock.data['startedAt'] ?? ''),
-        expiresAt: String(lock.data['expiresAt'] ?? ''),
-      };
-    }
+    if (typeof wt !== 'string' || typeof br !== 'string') continue;
+    const startedAt = String(lock.data['startedAt'] ?? '');
+    const at = Date.parse(startedAt);
+    const rank = Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
+    if (newest !== null && rank <= newestAt) continue;
+    newestAt = rank;
+    newest = {
+      worktree: wt,
+      branch: br,
+      startedAt,
+      expiresAt: String(lock.data['expiresAt'] ?? ''),
+    };
   }
-  return null;
+  return newest;
 }
 
 function runRun(args: string[], { mergeOnly = false } = {}): number {
@@ -486,6 +508,25 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       }),
     );
     return 1;
+  }
+
+  // Archiving commits, and a post-commit hook can switch this checkout to
+  // another branch — merging whatever HEAD now names would land unrelated
+  // work and leave the claimed branch (and the archive commit) unmerged.
+  // Re-prove the pin immediately before the merge (codex r22 P1).
+  if (stamps) {
+    const branchNow = currentBranch(root);
+    if (branchNow !== stamps.branch) {
+      console.error(
+        stopCard({
+          id,
+          phase: 'merge',
+          why: `the checkout moved to ${branchNow ?? 'a detached HEAD'} after archiving; the lease pins ${stamps.branch} — nothing was merged`,
+          results: outcome.results,
+        }),
+      );
+      return 1;
+    }
   }
 
   const merge = mergeToLocalBase({ config, manifest, root, id });

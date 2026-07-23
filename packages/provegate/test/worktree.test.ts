@@ -992,6 +992,74 @@ describe('codex r15 regressions', () => {
     expect(result.issues.join(' ')).toContain('no longer points at the pinned base');
   });
 
+  it('a hook that DETACHES the fresh checkout is caught (r22 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'detached-head', ['src/dh/**']);
+    await commitArtifacts(root);
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    // Same commit, same blobs — only HEAD's attachment changes. The sentinel
+    // keeps the nested checkout from re-entering this hook forever.
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\n[ -f "${join(root, '.git/detach-done')}" ] && exit 0\ntouch "${join(root, '.git/detach-done')}"\ngit checkout -q --detach HEAD\nexit 0\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('detached HEAD');
+  });
+
+  it('CRLF-filtered artifacts still claim cleanly (r22 P1)', async () => {
+    const root = await gitRoot();
+    writeFileSync(join(root, '.gitattributes'), '*.md text eol=crlf\n');
+    const id = prdWithSurface(root, 'crlf', ['src/crlf/**']);
+    await commitArtifacts(root);
+    // Re-normalize so the working tree carries the filtered (CRLF) bytes
+    // while the index keeps LF — the split the hash must reconcile.
+    await run('git', ['-C', root, 'rm', '--cached', '-r', '-q', '--', '.']);
+    await run('git', ['-C', root, 'reset', '-q', '--hard', 'HEAD']);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok, result.issues.join(' ')).toBe(true);
+  });
+
+  it('cleanup identity tracks the NEWEST lease, not the first filename (r22 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'newest', ['src/newest/**']);
+    await commitArtifacts(root);
+    const live = claimPrd(cfg, root, id, { worktree: true });
+    expect(live.ok).toBe(true);
+    // A superseded self lease that an earlier cleanup could not delete, whose
+    // filename sorts BEFORE the canonical one.
+    writeFileSync(
+      join(root, '_state/locks', `aaa-${id.toLowerCase()}-old.json`),
+      `${JSON.stringify({
+        schemaVersion: 2,
+        lockId: `${id.toLowerCase()}-old`,
+        agent: 'owner',
+        prd: id,
+        phase: 'Phase 4',
+        startedAt: new Date(Date.now() - 7_200_000).toISOString(),
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['src/newest/**'],
+        ownedPaths: ['src/newest/**'],
+        worktree: '.worktrees/stale-path',
+        branch: 'feat/stale-branch',
+      })}\n`,
+    );
+
+    const { listLockFiles } = await import('../src/core/locks/index.js');
+    const forPrd = listLockFiles(cfg, root).filter((l) => l.data && l.data['prd'] === id);
+    expect(forPrd.length).toBeGreaterThan(1);
+    // The live claim's stamps must win over the older, first-sorting file.
+    const newest = forPrd
+      .map((l) => l.data!)
+      .sort((a, b) => Date.parse(String(b['startedAt'])) - Date.parse(String(a['startedAt'])))[0]!;
+    expect(newest['branch']).toBe(live.worktree!.branch);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);

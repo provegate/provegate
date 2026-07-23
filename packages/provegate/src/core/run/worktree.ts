@@ -202,10 +202,13 @@ export function blobShaOfFile(dir: string, rel: string): string | null {
 
 /** Blob SHA of an in-memory buffer — the provenance-preserving form: hashing
  * the bytes a caller already parsed leaves no window for an edit between the
- * parse and the hash (codex r21 P1). */
-export function blobShaOfBuffer(dir: string, content: string): string | null {
+ * parse and the hash (codex r21 P1). `rel` is passed to git so path-based
+ * attributes (CRLF conversion, clean filters) apply exactly as they did when
+ * the blob was committed; without it a filtered file reads as "uncommitted"
+ * forever (codex r22 P1). */
+export function blobShaOfBuffer(dir: string, rel: string, content: string): string | null {
   try {
-    return execFileSync('git', ['hash-object', '--stdin'], {
+    return execFileSync('git', ['hash-object', '--path', rel, '--stdin'], {
       cwd: dir,
       encoding: 'utf8',
       input: content,
@@ -470,6 +473,18 @@ export function createWorktree(
       .map((s) => s.rel);
     if (!reattach && resolveRef(mainRoot, `refs/heads/${branch}`) !== baseRef) {
       stale.push(`branch ${branch} no longer points at the pinned base`);
+    }
+    // …and the tree must actually be ON that branch: a hook can retarget or
+    // detach HEAD at the same commit, so matching blobs and a matching ref
+    // still leave work landing on the wrong branch (codex r22 P1).
+    let attached: string | null;
+    try {
+      attached = git(path, ['symbolic-ref', '--quiet', '--short', 'HEAD']);
+    } catch {
+      attached = null;
+    }
+    if (attached !== branch) {
+      stale.push(`the checkout is on ${attached ?? 'a detached HEAD'}, not ${branch}`);
     }
     if (stale.length > 0) {
       const debris: string[] = [];
