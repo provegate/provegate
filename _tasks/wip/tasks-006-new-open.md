@@ -69,11 +69,11 @@
 
 | Gate | Command / Check                                                    | Scope     | Result  | Evidence | Notes                     |
 | ---- | ------------------------------------------------------------------ | --------- | ------- | -------- | ------------------------- |
-| FR-1 | `pnpm --filter provegate test test/new.test.ts`                    | passed | 11/11 | alloc, substitution, W1/W2, race window | alloc, substitution, W1/W2 |
-| FR-2 | `pnpm --filter provegate test test/open.test.ts`                   | passed | 8/8 | matrix, steal, refusals | matrix, steal, refusals   |
-| FR-3 | `grep -c "phase B" packages/provegate/src/cli.ts`                  | passed | 0 matches (exit 1) | stub table gone | expect exit 1 (0 matches) |
-| FR-4 | `pnpm --filter provegate test test/new.test.ts test/open.test.ts`  | passed | 19/19 |          | grouped rerun             |
-| FR-5 | `grep -c "gate new" packages/provegate/QUICKSTART.md`              | passed | 1 |          |                           |
+| FR-1 | `pnpm --filter provegate test test/new.test.ts`                    | provegate | passed | 11/11              | alloc, substitution, W1/W2, race window |
+| FR-2 | `pnpm --filter provegate test test/open.test.ts`                   | provegate | passed | 8/8                | matrix, steal, refusals   |
+| FR-3 | `grep -c "phase B" packages/provegate/src/cli.ts`                  | provegate | passed | 0 matches (exit 1) | stub table gone           |
+| FR-4 | `pnpm --filter provegate test test/new.test.ts test/open.test.ts`  | provegate | passed | 19/19              | grouped rerun             |
+| FR-5 | `grep -c "gate new" packages/provegate/QUICKSTART.md`              | provegate | passed | 1                  |                           |
 
 ## Deferrals & Decisions
 
