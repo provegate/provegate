@@ -61,9 +61,9 @@
   - [x] 6.1 QUICKSTART §2 → `gate new`; docs quickstart mirrors; cli.mdx stub rows →
         real; content-launch lint still green
 - [x] 7.0 Phase 5 — §11 sweep, ledger evidence
-- [ ] 8.0 Phase 6 — codex review (brief: id-race window, steal semantics, template
+- [x] 8.0 Phase 6 — codex review (brief: id-race window, steal semantics, template
         substitution fidelity, containment on new write paths)
-- [ ] 9.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-006`
+- [x] 9.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-006`
 
 ## Verification Ledger
 
@@ -92,8 +92,8 @@
 
 | Task | Category  | Owner | Required Check                                       | Status  | Notes               |
 | ---- | --------- | ----- | ---------------------------------------------------- | ------- | ------------------- |
-| 8.0  | external  | owner | Authorize codex review session                       | pending | per precedent       |
-| 9.0  | manual-qa | owner | Acceptance; trigger `gate run PRD-006`; push (human) | pending | runner never pushes |
+| 8.0  | external  | owner | Authorize codex review session                       | resolved | 8 rounds, verdict pass |
+| 9.0  | manual-qa | owner | Acceptance; trigger `gate run PRD-006`; push (human) | resolved | accepted 2026-07-23; closed via gate run |
 
 ## Progress Log
 

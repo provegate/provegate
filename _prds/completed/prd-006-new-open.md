@@ -1,6 +1,6 @@
 # PRD-006: Kill the Stubs — `gate new` + `gate open`
 
-> **Status**: Draft
+> **Status**: Ship Verified
 > **Created**: 2026-07-23
 > **Updated**: 2026-07-23
 > **Author**: rayvaz
