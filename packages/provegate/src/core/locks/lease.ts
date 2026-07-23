@@ -79,17 +79,29 @@ export interface LockFileEntry {
   error?: string;
 }
 
-/** List lock files, migrating worktree-local ones first. Parse errors are
- * carried as entries, never thrown — a corrupt lease must fail loud downstream,
- * not crash the listing. */
+/** List lock files: the central dir plus any worktree-local stragglers, as a
+ * READ-ONLY union (central wins on filename collision, mirroring migration).
+ * Migration is a write and belongs to mutex-holding claimants — a listing
+ * reader that migrated could move an overlapping lease into the central dir
+ * between a claim's parse and its install. Parse errors are carried as
+ * entries, never thrown — a corrupt lease must fail loud downstream, not
+ * crash the listing. */
 export function listLockFiles(config: WorkflowConfig, root: string): LockFileEntry[] {
-  migrateWorktreeLocks(config, root);
-  const dir = locksDir(config, root);
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => {
+  const central = locksDir(config, root);
+  const local = localLocksDir(config, root);
+  const found: { dir: string; name: string }[] = [];
+  const seen = new Set<string>();
+  for (const dir of local === central ? [central] : [central, local]) {
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      found.push({ dir, name });
+    }
+  }
+  return found
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    .map(({ dir, name }) => {
       const path = resolve(dir, name);
       try {
         const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));

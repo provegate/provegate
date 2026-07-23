@@ -1,12 +1,20 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
-import { validateLock } from '../src/core/locks/index.js';
+import { listLockFiles, validateLock } from '../src/core/locks/index.js';
 import { claimPrd, createPrd, initWorkspace } from '../src/core/run/index.js';
 
 const run = promisify(execFile);
@@ -249,6 +257,58 @@ describe('claimPrd (FR-2, W3)', () => {
     const id = prdWithSurface(root, 'parallel-ok', ['apps/web/**']);
     foreignLease(root, 'prd-097-other.json', 'PRD-097', ['packages/engine/**']);
     expect(claimPrd(cfg, root, id).ok).toBe(true);
+  });
+});
+
+describe('codex review regressions (r8)', () => {
+  it('rejects non-positive or non-finite lease durations before any mutation', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'timed', ['src/timed/**']);
+    for (const leaseHours of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => claimPrd(cfg, root, id, { leaseHours }), String(leaseHours)).toThrow(
+        /invalid leaseHours/,
+      );
+    }
+    expect(existsSync(join(root, '_state/locks', `${id.toLowerCase()}-timed.json`))).toBe(false);
+    expect(claimPrd(cfg, root, id, { leaseHours: 1 }).ok).toBe(true);
+  });
+
+  it('listing worktree leases is read-only; only a mutex-holding claim migrates them', async () => {
+    // Real git worktree: locks are central on the MAIN checkout, the linked
+    // worktree has its own local _state/locks that must migrate only under
+    // the claim mutex — an unlocked reader moving it mid-claim was the race.
+    const main = mkdtempSync(join(tmpdir(), 'provegate-open-wt-'));
+    roots.push(main);
+    await run('git', ['init', '-b', 'main'], { cwd: main });
+    await run('git', ['-C', main, 'config', 'user.email', 'test@example.com']);
+    await run('git', ['-C', main, 'config', 'user.name', 'Test']);
+    writeFileSync(join(main, 'seed.txt'), 'seed\n');
+    await run('git', ['-C', main, 'add', 'seed.txt']);
+    await run('git', ['-C', main, 'commit', '-m', 'seed']);
+    const wt = join(main, '.worktrees', 'wt-a');
+    await run('git', ['-C', main, 'worktree', 'add', wt]);
+    // Artifacts (and the PRD being claimed) live on the MAIN checkout; the
+    // worktree only carries its own local locks dir.
+    initWorkspace(cfg, main);
+    mkdirSync(join(wt, '_state/locks'), { recursive: true });
+
+    foreignLease(wt, 'prd-099-local.json', 'PRD-099', ['src/shared/**']);
+    const localLease = join(wt, '_state/locks/prd-099-local.json');
+    const centralLease = join(main, '_state/locks/prd-099-local.json');
+
+    // Reader: the local lease is VISIBLE but NOT moved.
+    const listed = listLockFiles(cfg, wt);
+    expect(listed.map((l) => l.name)).toContain('prd-099-local.json');
+    expect(existsSync(localLease)).toBe(true);
+    expect(existsSync(centralLease)).toBe(false);
+
+    // Claimant: overlap refused AND the lease migrated inside the mutex.
+    const id = prdWithSurface(main, 'wt-claimer', ['src/shared/inner/**']);
+    const result = claimPrd(cfg, wt, id);
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('PRD-099');
+    expect(existsSync(localLease)).toBe(false);
+    expect(existsSync(centralLease)).toBe(true);
   });
 });
 

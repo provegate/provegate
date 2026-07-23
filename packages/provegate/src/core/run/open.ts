@@ -17,12 +17,14 @@ import {
   listLockFiles,
   lockPathFor,
   locksDir,
+  migrateWorktreeLocks,
   trackedFiles,
   validateLock,
   type PathConflict,
   type SurfacedLock,
 } from '../locks/index.js';
 import { mainRepoRoot } from '../state/io.js';
+import { escapeRegExp } from '../state/markdown.js';
 import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 
@@ -135,6 +137,14 @@ export function claimPrd(
   id: string,
   options: ClaimOptions = {},
 ): ClaimResult {
+  // Public-API guard, BEFORE any mutation: a zero/negative/NaN duration would
+  // install a lease that is already expired while the claim reports success.
+  const leaseHours = options.leaseHours ?? DEFAULT_LEASE_HOURS;
+  if (typeof leaseHours !== 'number' || !Number.isFinite(leaseHours) || leaseHours <= 0) {
+    throw new Error(
+      `invalid leaseHours ${String(leaseHours)} — the lease duration must be a positive, finite number of hours`,
+    );
+  }
   // Check -> steal -> write must be one atomic step per workspace: without the
   // mutex, two non-conflicting snapshots let two OVERLAPPING claims both land,
   // and a stale-steal could unlink a lease refreshed after our parse. Locks
@@ -172,6 +182,12 @@ function claimPrdLocked(
     staleBlockers: [],
     stolen: [],
   };
+
+  // Worktree-local leases migrate HERE, inside the claim mutex. Listing is
+  // read-only, so no unlocked reader (`gate queue` in a linked worktree) can
+  // move an overlapping lease into the central dir between our parse and the
+  // install below.
+  migrateWorktreeLocks(config, root);
 
   // candidateFromPrd throws on malformed/missing/duplicated PRD; a null return
   // means the PRD exists but declares no surface — refusal with guidance.
@@ -509,7 +525,7 @@ function claimPrdLocked(
 function slugOf(config: WorkflowConfig, root: string, id: string): string {
   const prdKind = config.dirs.artifacts.prd;
   const num = id.slice(config.idPattern.prefix.length + 1);
-  const re = new RegExp(`^${prdKind.prefix}-${num}-(.+)\\.md$`);
+  const re = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${escapeRegExp(num)}-(.+)\\.md$`);
   for (const state of config.dirs.states) {
     const dir = resolve(root, prdKind.dir, state);
     let names: string[];

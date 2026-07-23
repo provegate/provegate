@@ -200,6 +200,35 @@ describe('createPrd (FR-1)', () => {
   });
 });
 
+describe('codex review regressions (r8)', () => {
+  it('a configured prefix with regex metacharacters still allocates sequential ids', () => {
+    const root = tempRoot();
+    const plused = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: { ...cfg.dirs.artifacts, prd: { dir: '_prds', prefix: 'prd+' } },
+      },
+    };
+    // Pre-fix, `prd+` compiled as a PATTERN (`prd`, one-or-more `d`): the id
+    // scan never matched its own files, so both creates allocated PRD-001.
+    const first = createPrd(plused, root, { slug: 'metachar-one' });
+    const second = createPrd(plused, root, { slug: 'metachar-two' });
+    expect(first.relPath).toBe('_prds/wip/prd+-001-metachar-one.md');
+    expect(first.id).toBe('PRD-001');
+    expect(second.id).toBe('PRD-002');
+    // The slug-uniqueness scan must see literal-prefix files too.
+    expect(() => createPrd(plused, root, { slug: 'metachar-one' })).toThrow(/already used/);
+  });
+
+  it('omitted class defaults to the FIRST configured class, not the template literal', () => {
+    const root = tempRoot();
+    const rotated = { ...cfg, classes: ['test-hardening', 'feature'] };
+    const result = createPrd(rotated, root, { slug: 'classy' });
+    expect(readFileSync(result.path, 'utf8')).toContain('> **PRD Class**: test-hardening');
+  });
+});
+
 describe('instantiateTemplate anchors track the shipped template (W4)', () => {
   it('every anchor createPrd substitutes exists in the template as shipped', () => {
     const template = readFileSync(shippedTemplate, 'utf8');

@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { WorkflowConfig } from '../config/index.js';
+import { escapeRegExp } from '../state/markdown.js';
 import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 
@@ -63,7 +64,11 @@ function defaultTemplatePath(): string {
  * deferred ids are never reused. */
 export function highestPrdNumber(config: WorkflowConfig, root: string): number {
   const prdKind = config.dirs.artifacts.prd;
-  const fileRe = new RegExp(`^${prdKind.prefix}-(\\d{${config.idPattern.width}})-.+\\.md$`);
+  // Configured prefixes are literals, not patterns: an unescaped metacharacter
+  // (`prd+`) would stop the scan matching its own files — duplicate ids.
+  const fileRe = new RegExp(
+    `^${escapeRegExp(prdKind.prefix)}-(\\d{${config.idPattern.width}})-.+\\.md$`,
+  );
   let max = 0;
   for (const state of config.dirs.states) {
     const dir = containedPath(root, `${prdKind.dir}/${state}`);
@@ -84,7 +89,9 @@ export function highestPrdNumber(config: WorkflowConfig, root: string): number {
 /** The slug's current holder, if any lifecycle state already has it. */
 export function slugHolder(config: WorkflowConfig, root: string, slug: string): string | null {
   const prdKind = config.dirs.artifacts.prd;
-  const re = new RegExp(`^${prdKind.prefix}-(\\d{${config.idPattern.width}})-${slug}\\.md$`);
+  const re = new RegExp(
+    `^${escapeRegExp(prdKind.prefix)}-(\\d{${config.idPattern.width}})-${escapeRegExp(slug)}\\.md$`,
+  );
   for (const state of config.dirs.states) {
     let names: string[];
     try {
@@ -125,11 +132,13 @@ export function instantiateTemplate(
   out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`);
   out = substituteAnchor(out, /^> \*\*Slug\*\*: `\[short-name\]`$/m, `> **Slug**: \`${slug}\``);
   // Class anchor is ALWAYS validated (a template whose class line vanished is
-  // drift even when --class is absent); substituted only when a class is given.
+  // drift even when --class is absent). The default is the FIRST configured
+  // class, not the template's literal: a config without `feature` must never
+  // produce an artifact whose header names an unconfigured class.
   out = substituteAnchor(
     out,
     /^> \*\*PRD Class\*\*: feature$/m,
-    `> **PRD Class**: ${cls ?? 'feature'}`,
+    `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
   );
   // Status anchor is verified even though its value is already correct — a
   // template whose lifecycle line vanished should fail loudly here too.
@@ -220,7 +229,7 @@ export function createPrd(
     // W1: id-allocation race. Another `gate new` may have computed the same
     // number and written a different slug. Re-scan; if the number is now
     // duplicated, withdraw OUR file and retry with the next number.
-    const fileRe = new RegExp(`^${prdKind.prefix}-${padded}-.+\\.md$`);
+    const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${padded}-.+\\.md$`);
     let holders = 0;
     for (const state of config.dirs.states) {
       try {
