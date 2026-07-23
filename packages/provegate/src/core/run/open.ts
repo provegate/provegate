@@ -514,12 +514,21 @@ function claimPrdLocked(
         /* falls through to createWorktree, which throws the containment error */
       }
       // Realpath both sides: git reports canonical paths (macOS /var is a
-      // symlink to /private/var) while config-derived paths may not be.
-      const samePlace =
-        registered !== null &&
-        expected !== null &&
-        existsSync(expected) &&
-        realpathSync(registered) === realpathSync(expected);
+      // symlink to /private/var) while config-derived paths may not be. The
+      // probe itself must not throw past the rollback handler — a worktree
+      // vanishing between existsSync and realpathSync would otherwise strand
+      // the freshly installed lease (codex r2 P1): any probe failure means
+      // "not reusable" and falls through to createWorktree's guarded path.
+      let samePlace = false;
+      try {
+        samePlace =
+          registered !== null &&
+          expected !== null &&
+          existsSync(expected) &&
+          realpathSync(registered) === realpathSync(expected);
+      } catch {
+        samePlace = false;
+      }
       // Reuse requires OUR OWN prior stamps, not just a matching layout: a
       // manually managed checkout that happens to sit at the deterministic
       // path must hit the collision refusal, never be adopted — a later green

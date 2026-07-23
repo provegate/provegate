@@ -224,6 +224,55 @@ describe('codex r1 regressions', () => {
   });
 });
 
+describe('codex r2 regressions', () => {
+  it('honors branches.featurePattern for the provisioned branch (P2)', async () => {
+    const root = await gitRoot();
+    const patterned = {
+      ...cfg,
+      branches: { ...cfg.branches, featurePattern: 'work/{id}/{slug}' },
+    };
+    const made = createWorktree(patterned, root, { id: 'PRD-001', slug: 'shaped' });
+    expect(made.branch).toBe('work/prd-001/shaped');
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).toContain('work/prd-001/shaped');
+  });
+
+  it('tampered stamp escaping worktree.dir refuses cleanup even inside the repo (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    // A real registered worktree OUTSIDE worktree.dir — the tampered stamp's target.
+    await run('git', ['-C', root, 'branch', 'feat/elsewhere']);
+    await run('git', ['-C', root, 'worktree', 'add', join(root, 'other-tree'), 'feat/elsewhere']);
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: '.worktrees/../other-tree',
+      branch: 'feat/elsewhere',
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('outside');
+    expect(existsSync(join(root, 'other-tree'))).toBe(true);
+  });
+
+  it('cleanup refuses a path occupied by a DIFFERENT branch (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'moved' });
+    // Simulate: claimed tree moved away, an unrelated checkout now occupies the path.
+    await run('git', ['-C', root, 'worktree', 'move', made.path, join(root, '.worktrees/parked')]);
+    await run('git', ['-C', root, 'branch', 'feat/intruder']);
+    await run('git', ['-C', root, 'worktree', 'add', made.path, 'feat/intruder']);
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('feat/intruder');
+    expect(existsSync(made.path)).toBe(true);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
