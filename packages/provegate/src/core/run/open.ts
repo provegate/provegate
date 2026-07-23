@@ -504,12 +504,18 @@ function claimPrdLocked(
     // would launder the damage past `gate run`'s malformed-stamp guard and
     // let a later close merge an unrelated branch (codex r28 P1).
     if ((typeof priorWt === 'string') !== (typeof priorBranch === 'string')) {
+      // `--steal` may already have quarantined stale blockers: returning
+      // without restoring them would refuse the claim while silently freeing
+      // their surface for overlapping work (codex r29 P1).
+      const stranded = rollback();
+      dropQuarantineDir();
       return {
         ...base,
         globs,
         ok: false,
         issues: [
           `existing lease ${stampSource?.file ?? '(unknown)'} stamps only ${typeof priorWt === 'string' ? 'worktree' : 'branch'} — worktree metadata is incomplete; repair or delete it before re-claiming`,
+          ...stranded,
         ],
       };
     }

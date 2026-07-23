@@ -1,5 +1,13 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -1201,6 +1209,43 @@ describe('codex r15 regressions', () => {
     expect(refreshed.issues.join(' ')).toContain('worktree metadata is incomplete');
     const after = JSON.parse(readFileSync(first.leasePath!, 'utf8')) as Record<string, unknown>;
     expect(after['worktree']).toBe(first.worktree!.relPath);
+  });
+
+  it('a partial-stamp refusal restores stolen leases instead of stranding them (r29 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'stealer', ['src/steal/**']);
+    await commitArtifacts(root);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Damage our own lease (one-sided stamp)…
+    const lease = JSON.parse(readFileSync(first.leasePath!, 'utf8')) as Record<string, unknown>;
+    delete lease['branch'];
+    writeFileSync(first.leasePath!, `${JSON.stringify(lease, null, 2)}\n`);
+    // …and add a STALE foreign lease overlapping our surface.
+    const ghost = join(root, '_state/locks', 'prd-099-ghost.json');
+    writeFileSync(
+      ghost,
+      `${JSON.stringify({
+        schemaVersion: 2,
+        lockId: 'prd-099-ghost',
+        agent: 'rival',
+        prd: 'PRD-099',
+        phase: 'Phase 4',
+        startedAt: new Date(Date.now() - 7_200_000).toISOString(),
+        expiresAt: new Date(Date.now() - 3_600_000).toISOString(),
+        touchedFiles: ['src/steal/**'],
+        ownedPaths: ['src/steal/**'],
+      })}\n`,
+    );
+
+    const refused = claimPrd(cfg, root, id, { steal: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('worktree metadata is incomplete');
+    // The victim is back in the active lock domain, not stranded in quarantine.
+    expect(existsSync(ghost)).toBe(true);
+    expect(
+      readdirSync(join(root, '_state/locks')).some((n) => n.startsWith('.quarantine-')),
+    ).toBe(false);
   });
 
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {

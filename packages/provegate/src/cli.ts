@@ -332,15 +332,12 @@ function currentBranch(root: string): string | null {
 interface WorktreeStamps {
   worktree: string;
   branch: string;
-  /** Lease identity snapshot — cleanup revalidates against these under the
-   * claim mutex so a refresh by a rival claimant is never torn down. The
-   * timestamps alone are not identity: a rival refreshing with the same
-   * injected clock would match while owning a different claim, so lockId and
-   * agent travel with them (codex r28 P1). */
-  startedAt: string;
-  expiresAt: string;
-  lockId: string;
-  agent: string;
+  /** The COMPLETE lease as serialized at snapshot time, plus the file it came
+   * from. Cleanup compares this whole document under the claim mutex: any
+   * field subset can collide when claimants share the default agent identity
+   * and an injected clock, and a rival's refreshed claim must never be torn
+   * down (codex r28+r29 P1). */
+  identity: string;
   file: string;
 }
 
@@ -412,10 +409,9 @@ function worktreeStamps(
     stamps: {
       worktree: wt,
       branch: br,
-      startedAt: String(live.data['startedAt'] ?? ''),
-      expiresAt: String(live.data['expiresAt'] ?? ''),
-      lockId: String(live.data['lockId'] ?? ''),
-      agent: String(live.data['agent'] ?? ''),
+      // Key order is whatever the parse produced; an identical rewrite by the
+      // same writer reproduces it, and ANY field change breaks equality.
+      identity: JSON.stringify(live.data),
       file: live.name,
     },
     malformed,
@@ -660,16 +656,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     try {
       withWorkspaceMutex(claimMutexPath(config, root), () => {
         const fresh = worktreeStamps(config, root, id).stamps;
-        if (
-          !fresh ||
-          fresh.worktree !== stamps.worktree ||
-          fresh.branch !== stamps.branch ||
-          fresh.startedAt !== stamps.startedAt ||
-          fresh.expiresAt !== stamps.expiresAt ||
-          fresh.lockId !== stamps.lockId ||
-          fresh.agent !== stamps.agent ||
-          fresh.file !== stamps.file
-        ) {
+        if (!fresh || fresh.file !== stamps.file || fresh.identity !== stamps.identity) {
           cleanupWarnings = [
             'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',
           ];
