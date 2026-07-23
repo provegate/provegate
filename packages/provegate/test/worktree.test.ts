@@ -563,6 +563,70 @@ describe('codex r9 regressions', () => {
   });
 });
 
+describe('codex r10 regressions', () => {
+  it('--worktree refresh after a PRD rename REUSES the stamped checkout (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'first-name', ['src/reuse/**']);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    const { renameSync } = await import('node:fs');
+    renameSync(
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-first-name.md`),
+      join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-second-name.md`),
+    );
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok).toBe(true);
+    expect(again.worktree?.relPath).toBe(first.worktree!.relPath);
+    // No second tree provisioned under the new name.
+    expect(existsSync(join(root, `.worktrees/${id.toLowerCase()}-second-name`))).toBe(false);
+  });
+
+  it('a stamped legacy self lease outranks an unstamped destination lease (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const id = prdWithSurface(root, 'legacy', ['src/legacy/**']);
+    const plain = claimPrd(cfg, root, id);
+    expect(plain.ok).toBe(true);
+    // Legacy-era second self lease carrying the only stamps.
+    const made = createWorktree(cfg, root, { id, slug: 'legacy' });
+    writeFileSync(
+      join(root, '_state/locks', `${id.toLowerCase()}-legacy-old.json`),
+      `${JSON.stringify({
+        schemaVersion: 2,
+        lockId: `${id.toLowerCase()}-legacy-old`,
+        agent: 'owner',
+        prd: id,
+        phase: 'Phase 4',
+        startedAt: new Date(Date.now() - 3_600_000).toISOString(),
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['src/legacy/**'],
+        ownedPaths: ['src/legacy/**'],
+        worktree: made.relPath,
+        branch: made.branch,
+      })}\n`,
+    );
+    const refreshed = claimPrd(cfg, root, id);
+    expect(refreshed.ok).toBe(true);
+    const lease = JSON.parse(readFileSync(refreshed.leasePath!, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(lease['worktree']).toBe(made.relPath);
+    expect(lease['branch']).toBe(made.branch);
+  });
+
+  it('normalizedWorktreeDir is POSIX-separated and canonical (P2)', async () => {
+    const { normalizedWorktreeDir } = await import('../src/core/config/index.js');
+    expect(normalizedWorktreeDir({ ...cfg, worktree: { dir: './.worktrees/' } })).toBe(
+      '.worktrees',
+    );
+    expect(normalizedWorktreeDir({ ...cfg, worktree: { dir: 'tools/worktrees' } })).toBe(
+      'tools/worktrees',
+    );
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

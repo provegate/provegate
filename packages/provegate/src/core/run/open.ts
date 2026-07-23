@@ -381,18 +381,29 @@ function claimPrdLocked(
     // Worktree stamps are decided BEFORE install so the lease body carries
     // them from birth. A refresh WITHOUT --worktree must not strip stamps an
     // earlier --worktree claim wrote — cleanup after merge depends on them.
-    // Stamps carry from ANY self lease, not only one at the destination
-    // pathname: a PRD renamed to a new slug derives a new leasePath, and the
-    // old stamped lease will be superseded below (codex r9 P2).
-    const wtNames = worktree ? worktreeNamesFor(config, normalized, slug) : null;
+    // Stamps carry from ANY self lease, PREFERRING a stamped one: the
+    // canonical-destination lease may be unstamped (legacy, superseded-era)
+    // while another self lease holds the only cleanup metadata (codex r9+r10
+    // P2). A PRD renamed to a new slug derives a new leasePath; the old
+    // stamped lease is superseded below.
     const stampSource =
-      selfAtDestination ??
       self.find(
         (l) =>
           typeof l.snapshot['worktree'] === 'string' && typeof l.snapshot['branch'] === 'string',
-      );
+      ) ?? selfAtDestination;
     const priorWt = stampSource?.snapshot['worktree'];
     const priorBranch = stampSource?.snapshot['branch'];
+    // `--worktree` on a PRD that ALREADY has a stamped checkout reuses that
+    // checkout — deriving fresh names after a slug/pattern change would
+    // provision a second tree and orphan the first with its work (codex r10
+    // P2).
+    const priorStamps =
+      typeof priorWt === 'string' && typeof priorBranch === 'string'
+        ? { relPath: priorWt, branch: priorBranch }
+        : null;
+    const wtNames = worktree
+      ? (priorStamps ?? worktreeNamesFor(config, normalized, slug))
+      : null;
     const carried =
       wtNames === null && typeof priorWt === 'string' && typeof priorBranch === 'string'
         ? { worktree: priorWt, branch: priorBranch }

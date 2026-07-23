@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, normalize, resolve, sep } from 'node:path';
+import { dirname, normalize, resolve } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
 import { validateConfig, validateResolvedConfig } from './validate.js';
@@ -93,6 +93,9 @@ export function loadConfig(cwd: string = process.cwd()): { root: string; config:
  * must agree on ONE spelling or a valid noncanonical config produces
  * schema-invalid leases and refused closes (codex prd-007 r8/r9). */
 export function normalizedWorktreeDir(config: WorkflowConfig): string {
-  const flat = normalize(config.worktree.dir);
-  return flat.endsWith(sep) ? flat.slice(0, -sep.length) : flat;
+  // Canonical repo-relative paths are POSIX-separated on EVERY platform: the
+  // spelling is compared against git porcelain output and written into
+  // leases and ignore patterns, all of which use `/` (codex prd-007 r10).
+  const flat = normalize(config.worktree.dir).replaceAll('\\', '/');
+  return flat.endsWith('/') ? flat.slice(0, -1) : flat;
 }
