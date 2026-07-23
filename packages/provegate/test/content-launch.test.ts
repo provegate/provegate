@@ -69,6 +69,7 @@ const SELF_COPY_PAGES = [
   'apps/docs/content/docs/index.mdx',
   'apps/docs/content/docs/quickstart.mdx',
   '_docs/launch/announcement-draft.md',
+  'RELEASING.md',
 ];
 
 const EVIDENCE_PAGES = [
