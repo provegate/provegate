@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-007-worktree-lifecycle.md](../../_prds/wip/prd-007-worktree-lifecycle.md)
 > **Readiness**: [readiness-007-worktree-lifecycle.md](../../_readiness/wip/readiness-007-worktree-lifecycle.md)
-> **Status**: Phase 6 Complete — Independent Review Passed
+> **Status**: Ship Verified
 > **Readiness Score**: 8.4/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-23
@@ -78,7 +78,7 @@
 - [x] 8.0 Phase 5 — §11 sweep, ledger evidence
 - [x] 9.0 Phase 6 — codex review (brief: rollback atomicity, dirty-tree handling,
         base-checkout invariants, guard inversion)
-- [ ] 10.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-007`
+- [x] 10.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-007`
 
 ## Verification Ledger
 
@@ -131,7 +131,7 @@
 | Task | Category  | Owner | Required Check                                       | Status  | Notes               |
 | ---- | --------- | ----- | ---------------------------------------------------- | ------- | ------------------- |
 | 9.0  | external  | owner | Authorize codex review session                       | resolved | 31 rounds, verdict pass |
-| 10.0 | manual-qa | owner | Acceptance; trigger `gate run PRD-007`; push (human) | pending | runner never pushes |
+| 10.0 | manual-qa | owner | Acceptance; trigger `gate run PRD-007`; push (human) | resolved | accepted 2026-07-23; closed via gate run |
 
 ## Progress Log
 
@@ -141,6 +141,7 @@
 | 2026-07-23 | 2.0–7.0 | worktree.ts + --worktree claim + relocation audit + 10 tests + docs |
 | 2026-07-23 | 8.0     | §11 sweep green: 381 tests, types/lint/build clean, hygiene clean |
 | 2026-07-23 | 9.0     | codex review r1-r31: 47 P1 + 34 P2 + 1 P3 fixed; r30 first zero-critical round, r31 confirmed clean; 440 tests |
+| 2026-07-23 | 10.0    | owner acceptance recorded; closed via `gate run PRD-007` (merge b862cec, all gates + post-merge green) |
 
 ## Blockers / Open Questions
 

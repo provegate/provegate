@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T14:23:18.104Z",
+  "generatedAt": "2026-07-23T14:26:10.567Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -228,20 +228,20 @@
       "prd": "PRD-007",
       "number": 7,
       "slug": "worktree-lifecycle",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "2 (Readiness Scored)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-007-worktree-lifecycle.md",
-        "readiness": "_readiness/wip/readiness-007-worktree-lifecycle.md",
-        "tasks": "_tasks/wip/tasks-007-worktree-lifecycle.md",
+        "prd": "_prds/completed/prd-007-worktree-lifecycle.md",
+        "readiness": "_readiness/completed/readiness-007-worktree-lifecycle.md",
+        "tasks": "_tasks/completed/tasks-007-worktree-lifecycle.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
@@ -251,9 +251,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
-        "checkedCount": 20,
-        "uncheckedCount": 1,
+        "status": "Ship Verified",
+        "checkedCount": 21,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 2
       },
       "summary": {
