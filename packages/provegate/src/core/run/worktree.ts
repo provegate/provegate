@@ -61,6 +61,43 @@ export function worktreeForBranch(mainRoot: string, branch: string): string | nu
   return null;
 }
 
+/**
+ * Delete a feature branch only when PROVABLY merged into the configured base.
+ * `branch -d` judges mergedness against the CURRENT checkout's HEAD — a
+ * primary checkout parked on an unrelated branch makes that check both too
+ * strict (refuses genuinely merged branches, codex r6 P2) and too loose
+ * (deletes branches merged only into the parked branch, codex r6 P2). The
+ * explicit ancestry check against `refs/heads/<base>` decides; after that
+ * proof a refused `-d` may escalate to `-D`, because the proof IS `-d`'s own
+ * safety condition evaluated against the right ref.
+ */
+function deleteBranchSafely(
+  config: WorkflowConfig,
+  mainRoot: string,
+  branch: string,
+): { deleted: boolean; why?: string } {
+  if (!branchExists(mainRoot, branch)) return { deleted: true };
+  const base = config.branches.base;
+  try {
+    git(mainRoot, ['merge-base', '--is-ancestor', branch, `refs/heads/${base}`]);
+  } catch {
+    return { deleted: false, why: `not merged into ${base}` };
+  }
+  const baseDir = worktreeForBranch(mainRoot, base);
+  const dir = baseDir !== null && existsSync(baseDir) ? baseDir : mainRoot;
+  try {
+    git(dir, ['branch', '-d', branch]);
+    return { deleted: true };
+  } catch {
+    try {
+      git(mainRoot, ['branch', '-D', branch]); // safe: ancestry into base proven above
+      return { deleted: true };
+    } catch {
+      return { deleted: false, why: 'delete refused (checked out elsewhere?)' };
+    }
+  }
+}
+
 export function worktreeNamesFor(
   config: WorkflowConfig,
   id: string,
@@ -187,11 +224,11 @@ export function createWorktree(
       if (after === branch) debris.push(`worktree debris at ${relPath}`);
       else if (after === null) debris.push(`unregistered debris directory at ${relPath}`);
     }
-    try {
-      git(mainRoot, ['branch', '-d', branch]);
-    } catch {
-      if (branchExists(mainRoot, branch)) debris.push(`branch ${branch}`);
-    }
+    // The just-created branch sits AT the base tip — the ancestry-proving
+    // delete succeeds even when the primary checkout is parked elsewhere,
+    // so a failed provision never leaves a colliding branch (codex r6 P2).
+    const del = deleteBranchSafely(config, mainRoot, branch);
+    if (!del.deleted) debris.push(`branch ${branch}${del.why ? ` (${del.why})` : ''}`);
     const detail = err instanceof Error ? err.message.split('\n')[0] : String(err);
     throw new Error(
       `worktree add failed for ${relPath}: ${detail}${debris.length > 0 ? ` — provisioning debris left: ${debris.join(', ')}; remove manually` : ''}`,
@@ -270,10 +307,11 @@ export function removeWorktree(
     }
   } else {
     // Absent stamped path is only "already removed" when the branch has no
-    // registered worktree ANYWHERE — a `git worktree move`d checkout survives
-    // elsewhere and must not be reported as cleaned up (codex r5 P2).
+    // LIVE registered worktree anywhere: a `git worktree move`d checkout
+    // survives elsewhere (codex r5 P2), but a stale registration whose
+    // directory is gone is prunable leftovers, not a move (codex r6 P2).
     const elsewhere = worktreeForBranch(mainRoot, branch);
-    if (elsewhere !== null) {
+    if (elsewhere !== null && existsSync(elsewhere)) {
       warnings.push(
         `worktree for ${branch} moved to ${elsewhere} — not removed; clean up manually`,
       );
@@ -288,17 +326,13 @@ export function removeWorktree(
   }
 
   if (removed) {
-    // `branch -d` judges mergedness against the CURRENT checkout's HEAD; when
-    // the primary checkout is parked elsewhere and the base lives in a linked
-    // worktree, deletion must run relative to the checkout that HOLDS the
-    // base — otherwise a genuinely merged branch falsely refuses (codex r5
-    // P2). Never -D: -d against the base checkout is the safe equivalent.
-    const baseDir = worktreeForBranch(mainRoot, config.branches.base) ?? mainRoot;
-    try {
-      git(baseDir, ['branch', '-d', branch]);
+    const del = deleteBranchSafely(config, mainRoot, branch);
+    if (del.deleted) {
       branchDeleted = true;
-    } catch {
-      warnings.push(`branch ${branch} not deleted (unmerged or absent) — delete manually`);
+    } else {
+      warnings.push(
+        `branch ${branch} not deleted${del.why ? ` (${del.why})` : ''} — delete manually`,
+      );
     }
   }
   return { removed, branchDeleted, warnings };

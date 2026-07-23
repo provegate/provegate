@@ -396,6 +396,77 @@ describe('codex r5 regressions', () => {
   });
 });
 
+describe('codex r6 regressions', () => {
+  it('metrics from a worktree run land on the MAIN checkout (P1)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'measured' });
+    const { appendMetric } = await import('../src/core/run/index.js');
+    const ok = appendMetric(cfg, made.path, {
+      prd: 'PRD-001',
+      phase: '5 Testing',
+      gate: 'unit',
+      result: 'passed',
+    });
+    expect(ok).toBe(true);
+    expect(existsSync(join(root, '_state/prd-metrics.jsonl'))).toBe(true);
+    expect(existsSync(join(made.path, '_state/prd-metrics.jsonl'))).toBe(false);
+  });
+
+  it('refuses deleting a branch NOT merged into base, even if the parked primary contains it (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'unlanded' });
+    writeFileSync(join(made.path, 'feature.txt'), 'work\n');
+    await run('git', ['-C', made.path, 'add', 'feature.txt']);
+    await run('git', ['-C', made.path, 'commit', '-m', 'feat: work']);
+    await run('git', ['-C', root, 'worktree', 'remove', made.path]);
+    // Primary parks on a branch that MERGED the feature; base did not.
+    await run('git', ['-C', root, 'checkout', '-b', 'parked']);
+    await run('git', ['-C', root, 'merge', '--no-ff', made.branch, '-m', 'side-merge']);
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.removed).toBe(true);
+    expect(removal.branchDeleted).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('not merged into main');
+  });
+
+  it('a stale prunable registration is pruned, not reported as moved (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'stale' });
+    rmSync(made.path, { recursive: true, force: true });
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.removed).toBe(true);
+    expect(removal.branchDeleted).toBe(true);
+    expect(removal.warnings.join(' ')).not.toContain('moved to');
+  });
+
+  it('failed provision deletes its branch even from a parked primary missing the base tip (P2)', async () => {
+    const root = await gitRoot();
+    const seedSha = (await run('git', ['-C', root, 'rev-parse', 'HEAD'], {})).stdout.trim();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    // Park BEFORE the workspace commit: parked HEAD does not contain main's tip.
+    await run('git', ['-C', root, 'checkout', '-b', 'parked', seedSha]);
+    const { mkdirSync: mkdir, writeFileSync: write, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    write(join(root, '.git/hooks/post-checkout'), '#!/bin/sh\nexit 1\n');
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    expect(() => createWorktree(cfg, root, { id: 'PRD-001', slug: 'parked-fail' })).toThrow(
+      /worktree add failed/,
+    );
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).not.toContain(
+      'feat/prd-001-parked-fail',
+    );
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
