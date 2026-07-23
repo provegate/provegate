@@ -138,6 +138,60 @@ describe('createPrd (FR-1)', () => {
     ).toThrow(/raced 3 times/);
   });
 
+  it('same slug twice refuses (§6) — even with a free id', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'once-only' });
+    expect(() => createPrd(cfg, root, { slug: 'once-only' })).toThrow(/already used by PRD-001/);
+  });
+
+  it('destination is role-keyed: a config whose wip state is not states[0] still lands in wip', () => {
+    const root = tempRoot();
+    const rotated = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        states: ['completed', 'wip', 'deferred'],
+        stateRoles: { wip: 'wip', completed: 'completed', deferred: 'deferred' },
+      },
+    };
+    const result = createPrd(rotated, root, { slug: 'role-keyed' });
+    expect(result.relPath).toBe('_prds/wip/prd-001-role-keyed.md');
+  });
+
+  it('config templates.prd override resolves (contained) and drift in it still fails loud', () => {
+    const root = tempRoot();
+    const forked = readFileSync(shippedTemplate, 'utf8').replace(
+      '[Feature Name]',
+      '[Forked Feature]',
+    );
+    writeFileSync(join(root, 'my-template.md'), forked);
+    const withTemplate = { ...cfg, templates: { prd: 'my-template.md' } };
+    const result = createPrd(withTemplate, root, { slug: 'forked' });
+    expect(readFileSync(result.path, 'utf8')).toContain('[Forked Feature]');
+    const escaping = { ...cfg, templates: { prd: '../outside.md' } };
+    expect(() => createPrd(escaping, root, { slug: 'escapee' })).toThrow(/escap/);
+  });
+
+  it('a template missing its class line fails even without --class (anchors always validated)', () => {
+    const root = tempRoot();
+    const drifted = readFileSync(shippedTemplate, 'utf8').replace(
+      '> **PRD Class**: feature',
+      '> classless now',
+    );
+    writeFileSync(join(root, 'no-class.md'), drifted);
+    expect(() => createPrd(cfg, root, { slug: 'no-class', templatePath: join(root, 'no-class.md') })).toThrow(
+      /anchor not found/,
+    );
+  });
+
+  it('only supported date sites are substituted; the changelog row is one of them', () => {
+    const root = tempRoot();
+    const result = createPrd(cfg, root, { slug: 'dated', now: new Date('2026-07-23T09:00:00Z') });
+    const content = readFileSync(result.path, 'utf8');
+    expect(content).toContain('| 2026-07-23 | [role] | Initial draft |');
+    expect(content).not.toContain('[YYYY-MM-DD]');
+  });
+
   it('uninitialized repo: parents created, init pointer signaled (W2)', () => {
     const root = tempRoot(false);
     const result = createPrd(cfg, root, { slug: 'cold-start' });

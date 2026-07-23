@@ -150,13 +150,14 @@ function runNew(args: string[]): number {
 function runOpen(args: string[]): number {
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
-    console.error('usage: gate open <PRD-XXX> [--steal]');
+    console.error('usage: gate open <PRD-XXX> [--steal] [--agent=identity]');
     return 1;
   }
   const steal = args.includes('--steal');
+  const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
   const { root, config } = loadConfig();
   try {
-    const result = claimPrd(config, root, id, { steal });
+    const result = claimPrd(config, root, id, { steal, agent });
     if (!result.ok) {
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
       for (const issue of result.issues) console.error(`  ✗ ${issue}`);

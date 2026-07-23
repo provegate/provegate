@@ -106,8 +106,15 @@ export interface WorkflowConfig {
   classes: string[];
   /** Regex source matching package.json script names that count as gates. */
   verifyScriptPattern: string;
+  /** Artifact template overrides; empty string = use the shipped template. */
+  templates: TemplatesConfig;
   /** Append-only manifests excluded from exclusive path-ownership overlap. */
   sharedAppendOnly: string[];
+}
+
+export interface TemplatesConfig {
+  /** Path (repo-root relative) to a forked PRD template; '' = shipped one. */
+  prd: string;
 }
 
 /** A single validation problem, tagged with its config path. */

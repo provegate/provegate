@@ -1,4 +1,4 @@
-import { readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import {
@@ -9,9 +9,13 @@ import {
   lockPathFor,
   locksDir,
   trackedFiles,
+  validateLock,
   type PathConflict,
   type SurfacedLock,
 } from '../locks/index.js';
+import { mainRepoRoot } from '../state/io.js';
+import { containedPath } from './init.js';
+import { withWorkspaceMutex } from './mutex.js';
 
 /**
  * `gate open PRD-XXX` — claim a work item's declared conflict surface. The
@@ -65,42 +69,77 @@ interface ParsedLock {
   surfaced: SurfacedLock;
 }
 
-function parseLocks(config: WorkflowConfig, root: string, now: Date): ParsedLock[] {
-  const parsed: ParsedLock[] = [];
+interface LockParse {
+  locks: ParsedLock[];
+  /** Fail CLOSED: any lease we cannot fully reason about blocks claiming. */
+  malformed: string[];
+}
+
+function parseLocks(config: WorkflowConfig, root: string, now: Date): LockParse {
+  const locks: ParsedLock[] = [];
+  const malformed: string[] = [];
   for (const entry of listLockFiles(config, root)) {
-    if (!entry.data) continue; // corrupt leases fail loud in gate check, not here
+    if (!entry.data) {
+      malformed.push(`${entry.name}: ${entry.error ?? 'unreadable'}`);
+      continue;
+    }
     const d = entry.data;
-    const expiresAt = String(d['expiresAt'] ?? '');
+    // Shape-validate with expiry neutralized (now: 0): a well-formed but
+    // EXPIRED lease is stale, not malformed; an unparseable expiresAt or any
+    // other shape defect makes ownership unknowable -> malformed, fail closed.
+    const shapeIssues = validateLock(config, d, { now: 0 });
+    if (shapeIssues.length > 0) {
+      malformed.push(`${entry.name}: ${shapeIssues.join('; ')}`);
+      continue;
+    }
+    const expiresAt = String(d['expiresAt']);
     const expiry = Date.parse(expiresAt);
     const globs = Array.isArray(d['ownedPaths'])
       ? (d['ownedPaths'] as string[])
-      : Array.isArray(d['touchedFiles'])
-        ? (d['touchedFiles'] as string[])
-        : [];
-    parsed.push({
+      : (d['touchedFiles'] as string[]);
+    locks.push({
       file: entry.path,
-      prd: String(d['prd'] ?? ''),
-      agent: String(d['agent'] ?? 'unknown'),
-      phase: String(d['phase'] ?? ''),
+      prd: String(d['prd']),
+      agent: String(d['agent']),
+      phase: String(d['phase']),
       expiresAt,
-      stale: !Number.isFinite(expiry) || expiry < now.getTime(),
+      stale: expiry < now.getTime(),
       surfaced: {
-        prd: String(d['prd'] ?? ''),
-        phase: String(d['phase'] ?? ''),
+        prd: String(d['prd']),
+        phase: String(d['phase']),
         ownedPaths: globs,
       },
     });
   }
-  return parsed;
+  return { locks, malformed };
 }
 
 export function claimPrd(
   config: WorkflowConfig,
   root: string,
   id: string,
-  { steal = false, agent = 'cli', leaseHours = DEFAULT_LEASE_HOURS, now = new Date() }: ClaimOptions = {},
+  options: ClaimOptions = {},
+): ClaimResult {
+  // Check -> steal -> write must be one atomic step per workspace: without the
+  // mutex, two non-conflicting snapshots let two OVERLAPPING claims both land,
+  // and a stale-steal could unlink a lease refreshed after our parse. Locks
+  // live on the MAIN checkout (worktree claimants share one lock domain), and
+  // the configured locksDir must be contained there — lexically and through
+  // its existing symlink ancestors — before anything is created under it.
+  const lockRoot = containedPath(mainRepoRoot(root), config.dirs.locksDir);
+  return withWorkspaceMutex(resolve(lockRoot, '.gate-open.mutex'), () =>
+    claimPrdLocked(config, root, id, options),
+  );
+}
+
+function claimPrdLocked(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+  { steal = false, agent, leaseHours = DEFAULT_LEASE_HOURS, now = new Date() }: ClaimOptions = {},
 ): ClaimResult {
   const normalized = id.toUpperCase();
+  const leaseAgent = agent ?? config.owners[0] ?? 'operator';
   const base: Omit<ClaimResult, 'ok' | 'issues'> = {
     id: normalized,
     refreshed: false,
@@ -124,7 +163,17 @@ export function claimPrd(
   }
   const globs = candidate.ownedPaths ?? [];
 
-  const locks = parseLocks(config, root, now);
+  const { locks, malformed } = parseLocks(config, root, now);
+  if (malformed.length > 0) {
+    return {
+      ...base,
+      ok: false,
+      issues: [
+        ...malformed.map((m) => `malformed lease (fail closed): ${m}`),
+        'ownership is unknowable while malformed leases exist — repair or delete them explicitly, then re-run',
+      ],
+    };
+  }
   const self = locks.filter((l) => l.prd === normalized);
   const foreign = locks.filter((l) => l.prd !== normalized);
 
@@ -178,22 +227,45 @@ export function claimPrd(
     };
   }
 
-  // Clear (or stealing stale blockers): write/refresh the lease.
+  // Clear (or stealing stale blockers): write/refresh the lease. All under
+  // the workspace mutex — but each victim is REVALIDATED from disk right
+  // before the unlink anyway (belt for mutex-less writers): a lease refreshed
+  // since our parse is no longer stale and aborts the steal.
   const stolen: StolenLease[] = [];
   if (steal) {
     for (const l of staleBlockers) {
+      let expiry = Number.NaN;
+      try {
+        const fresh = JSON.parse(readFileSync(l.file, 'utf8')) as Record<string, unknown>;
+        expiry = Date.parse(String(fresh['expiresAt'] ?? ''));
+      } catch {
+        // vanished or unreadable now -> not ours to reason about
+      }
+      if (!(expiry < now.getTime())) {
+        return {
+          ...base,
+          globs,
+          ok: false,
+          issues: [
+            `steal aborted: lease of ${l.prd} changed on disk since inspection (refreshed or unreadable)`,
+          ],
+        };
+      }
       unlinkSync(l.file);
       stolen.push(asStolen(l));
     }
   }
 
   const slug = slugOf(config, root, normalized);
+  // Containment (incl. symlink-ancestor walk) before any mkdir/write: the
+  // lease path is config-derived like every other write target.
+  containedPath(mainRepoRoot(root), config.dirs.locksDir);
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);
   const lease = {
     schemaVersion: 2,
     lockId: `${normalized.toLowerCase()}-${slug}`,
-    agent,
+    agent: leaseAgent,
     prd: normalized,
     phase: candidate.phase,
     startedAt: now.toISOString(),
@@ -202,7 +274,11 @@ export function claimPrd(
     ownedPaths: globs,
   };
   const refreshed = self.length > 0;
-  writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`);
+  // wx for a NEW claim (never clobber an unseen rival); refresh overwrites
+  // our own lease deliberately.
+  writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
+    flag: refreshed ? 'w' : 'wx',
+  });
   // Self leases under a different filename (hand-written era) are superseded.
   for (const l of self) {
     if (l.file !== leasePath) unlinkSync(l.file);

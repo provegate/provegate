@@ -89,5 +89,8 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
   executionPhases: ['Phase 2b', 'Phase 3', 'Phase 4', 'Maintenance'],
   classes: ['feature', 'test-hardening', 'hotfix', 'infra'],
   verifyScriptPattern: '^verify:',
+  templates: {
+    prd: '',
+  },
   sharedAppendOnly: ['package.json', 'pnpm-lock.yaml', 'README.md', 'CLAUDE.md', 'AGENTS.md'],
 };

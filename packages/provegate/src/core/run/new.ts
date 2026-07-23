@@ -1,8 +1,10 @@
 import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { WorkflowConfig } from '../config/index.js';
+import { containedPath } from './init.js';
+import { withWorkspaceMutex } from './mutex.js';
 
 /**
  * `gate new <slug>` — instantiate the shipped PRD template as the next work
@@ -37,18 +39,6 @@ export interface CreatePrdResult {
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/** Contained-write guard (init discipline): config paths stay inside root. */
-function containedResolve(root: string, rel: string): string {
-  if (isAbsolute(rel)) throw new Error(`refusing absolute path from config: ${rel}`);
-  const rootAbs = resolve(root);
-  const full = resolve(rootAbs, rel);
-  const r = relative(rootAbs, full);
-  if (r === '..' || r.startsWith(`..${sep}`) || isAbsolute(r)) {
-    throw new Error(`refusing path escaping the workspace root: ${rel}`);
-  }
-  return full;
-}
-
 function defaultTemplatePath(): string {
   // Robust against bundling: dist/ is flat while src/ is nested, so a fixed
   // relative hop is wrong in one of the two. Walk up from the module until
@@ -76,7 +66,7 @@ export function highestPrdNumber(config: WorkflowConfig, root: string): number {
   const fileRe = new RegExp(`^${prdKind.prefix}-(\\d{${config.idPattern.width}})-.+\\.md$`);
   let max = 0;
   for (const state of config.dirs.states) {
-    const dir = containedResolve(root, `${prdKind.dir}/${state}`);
+    const dir = containedPath(root, `${prdKind.dir}/${state}`);
     let names: string[];
     try {
       names = readdirSync(dir);
@@ -89,6 +79,25 @@ export function highestPrdNumber(config: WorkflowConfig, root: string): number {
     }
   }
   return max;
+}
+
+/** The slug's current holder, if any lifecycle state already has it. */
+export function slugHolder(config: WorkflowConfig, root: string, slug: string): string | null {
+  const prdKind = config.dirs.artifacts.prd;
+  const re = new RegExp(`^${prdKind.prefix}-(\\d{${config.idPattern.width}})-${slug}\\.md$`);
+  for (const state of config.dirs.states) {
+    let names: string[];
+    try {
+      names = readdirSync(containedPath(root, `${prdKind.dir}/${state}`));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      const m = re.exec(name);
+      if (m) return `${config.idPattern.prefix}-${m[1]!}`;
+    }
+  }
+  return null;
 }
 
 /** Substitute one anchored line; a missing anchor is a template-drift ERROR,
@@ -115,15 +124,24 @@ export function instantiateTemplate(
   out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`);
   out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`);
   out = substituteAnchor(out, /^> \*\*Slug\*\*: `\[short-name\]`$/m, `> **Slug**: \`${slug}\``);
-  if (cls !== undefined) {
-    out = substituteAnchor(out, /^> \*\*PRD Class\*\*: feature$/m, `> **PRD Class**: ${cls}`);
-  }
+  // Class anchor is ALWAYS validated (a template whose class line vanished is
+  // drift even when --class is absent); substituted only when a class is given.
+  out = substituteAnchor(
+    out,
+    /^> \*\*PRD Class\*\*: feature$/m,
+    `> **PRD Class**: ${cls ?? 'feature'}`,
+  );
   // Status anchor is verified even though its value is already correct — a
   // template whose lifecycle line vanished should fail loudly here too.
   out = substituteAnchor(out, /^> \*\*Status\*\*: Draft$/m, '> **Status**: Draft');
-  // Remaining date placeholders (e.g. the changelog's initial row) are all
-  // "today" at creation time.
-  out = out.replaceAll('[YYYY-MM-DD]', date);
+  // Only the EXPLICITLY supported date sites are touched (blanket replaceAll
+  // could rewrite unrelated literals in a forked template): the metadata pair
+  // above and the changelog's initial row. Anything else stays user-fill.
+  out = substituteAnchor(
+    out,
+    /^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/m,
+    `| ${date} | [role] | Initial draft |`,
+  );
   return out;
 }
 
@@ -138,14 +156,27 @@ export function createPrd(
   if (cls !== undefined && !config.classes.includes(cls)) {
     throw new Error(`unknown class "${cls}" — configured classes: ${config.classes.join(', ')}`);
   }
-  const template = readFileSync(templatePath ?? defaultTemplatePath(), 'utf8');
+  const resolvedTemplate =
+    templatePath ??
+    (config.templates.prd !== '' ? containedPath(root, config.templates.prd) : defaultTemplatePath());
+  const template = readFileSync(resolvedTemplate, 'utf8');
   const prdKind = config.dirs.artifacts.prd;
-  const wipState = config.dirs.states[0];
-  if (wipState === undefined) throw new Error('config.dirs.states must not be empty');
+  // Role-keyed, never position-keyed: states[0] is not necessarily wip.
+  const wipState = config.dirs.stateRoles.wip;
 
-  const MAX_RETRIES = 3;
-  let retries = 0;
-  for (;;) {
+  const holder = slugHolder(config, root, slug);
+  if (holder !== null) {
+    throw new Error(`slug "${slug}" is already used by ${holder} — pick a distinct slug`);
+  }
+
+  // The whole allocate-and-write sequence is serialized by a workspace mutex:
+  // scan-based protocols alone cannot durably reserve an id across processes
+  // (a rival that scanned before our write can land the same number after our
+  // re-scan). The re-scan below stays as a belt for mutex-less writers.
+  return withWorkspaceMutex(resolve(dirname(containedPath(root, config.dirs.stateFile)), '.gate-new.mutex'), () => {
+    const MAX_RETRIES = 3;
+    let retries = 0;
+    for (;;) {
     const num = highestPrdNumber(config, root) + 1;
     const padded = String(num).padStart(config.idPattern.width, '0');
     if (padded.length > config.idPattern.width) {
@@ -155,7 +186,7 @@ export function createPrd(
     }
     const id = `${config.idPattern.prefix}-${padded}`;
     const relPath = `${prdKind.dir}/${wipState}/${prdKind.prefix}-${padded}-${slug}.md`;
-    const full = containedResolve(root, relPath);
+    const full = containedPath(root, relPath);
 
     const parentDir = dirname(full);
     let createdParents = false;
@@ -194,7 +225,7 @@ export function createPrd(
     let holders = 0;
     for (const state of config.dirs.states) {
       try {
-        holders += readdirSync(containedResolve(root, `${prdKind.dir}/${state}`)).filter((n) =>
+        holders += readdirSync(containedPath(root, `${prdKind.dir}/${state}`)).filter((n) =>
           fileRe.test(n),
         ).length;
       } catch {
@@ -211,6 +242,7 @@ export function createPrd(
       }
       continue;
     }
-    return { id, path: full, relPath, createdParents, retries };
-  }
+      return { id, path: full, relPath, createdParents, retries };
+    }
+  });
 }

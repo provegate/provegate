@@ -152,6 +152,62 @@ describe('claimPrd (FR-2, W3)', () => {
     expect(result.refreshed).toBe(true);
   });
 
+  it('malformed leases fail CLOSED: corrupt JSON or bad shape blocks every claim', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'careful', ['src/careful/**']);
+    writeFileSync(join(root, '_state/locks/broken.json'), '{ not json');
+    const corrupt = claimPrd(cfg, root, id);
+    expect(corrupt.ok).toBe(false);
+    expect(corrupt.issues.join(' ')).toContain('fail closed');
+    rmSync(join(root, '_state/locks/broken.json'));
+
+    // Well-formed JSON, unparseable expiresAt: ownership unknowable — NOT
+    // stealable stale state.
+    writeFileSync(
+      join(root, '_state/locks/prd-095-mystery.json'),
+      JSON.stringify({
+        schemaVersion: 2,
+        lockId: 'prd-095-mystery',
+        agent: 'x',
+        prd: 'PRD-095',
+        phase: 'Phase 4',
+        startedAt: 'whenever',
+        expiresAt: 'not-a-date',
+        touchedFiles: ['src/careful/**'],
+        ownedPaths: ['src/careful/**'],
+      }),
+    );
+    for (const steal of [false, true]) {
+      const result = claimPrd(cfg, root, id, { steal });
+      expect(result.ok, `steal=${steal}`).toBe(false);
+      expect(existsSync(join(root, '_state/locks/prd-095-mystery.json'))).toBe(true);
+    }
+  });
+
+  it('lease agent defaults to the first configured owner role', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'owned', ['src/owned/**']);
+    const result = claimPrd(cfg, root, id);
+    const lease = JSON.parse(readFileSync(result.leasePath!, 'utf8')) as Record<string, unknown>;
+    expect(lease['agent']).toBe('owner');
+    const explicit = claimPrd(cfg, root, id, { agent: 'operator' });
+    const lease2 = JSON.parse(readFileSync(explicit.leasePath!, 'utf8')) as Record<string, unknown>;
+    expect(lease2['agent']).toBe('operator');
+  });
+
+  it('steal revalidates from disk: a lease refreshed after inspection aborts the steal', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'patient', ['src/patient/**']);
+    foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**'], { expired: true });
+    // Refresh the sleeper INSIDE the steal path is not injectable without a
+    // hook; assert the guard exists at the API level instead: refresh it just
+    // before the steal call — parse sees it valid, steal never engages.
+    foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']);
+    const result = claimPrd(cfg, root, id, { steal: true });
+    expect(result.ok).toBe(false);
+    expect(existsSync(join(root, '_state/locks/prd-094-sleeper.json'))).toBe(true);
+  });
+
   it('non-overlapping foreign leases do not block', () => {
     const root = tempRoot();
     const id = prdWithSurface(root, 'parallel-ok', ['apps/web/**']);

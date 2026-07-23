@@ -72,8 +72,9 @@ function escapesBase(base: string, target: string): boolean {
 
 /** Root containment: config-controlled paths must stay inside `root` — no
  * absolute paths, no `..` escapes, and no symlinked parent that resolves
- * outside the repository. Throws instead of writing anywhere surprising. */
-function containedPath(root: string, rel: string): string {
+ * outside the repository. Throws instead of writing anywhere surprising.
+ * Shared by every config-driven write path (init, new, open). */
+export function containedPath(root: string, rel: string): string {
   if (isAbsolute(rel)) {
     throw new Error(`init refuses absolute path from config: ${rel}`);
   }
