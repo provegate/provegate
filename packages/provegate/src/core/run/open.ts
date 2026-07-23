@@ -376,12 +376,19 @@ function claimPrdLocked(
     // atomic commit.
     const staged = `${leasePath}.staged-${process.pid}-${now.getTime()}`;
     let installIssue: string | null = null;
+    // Sweep ONLY what we own: wx-EEXIST means a RIVAL owns that pathname and
+    // we created nothing — deleting it would destroy someone else's staging.
+    let stagedOwned = false;
     try {
       try {
         writeFileSync(staged, leaseBody, { flag: 'wx' });
+        stagedOwned = true;
       } catch (err) {
-        // A partial staged file may exist; the finally below sweeps it, and
-        // if even that fails the pathname is surfaced on the rethrow.
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
+          // Creation may have happened before the failure (e.g. ENOSPC mid
+          // write) — that partial file is OURS to sweep.
+          stagedOwned = true;
+        }
         throw new Error(`could not stage the lease at ${staged}`, { cause: err });
       }
       if (selfAtDestination) {
@@ -417,10 +424,12 @@ function claimPrdLocked(
       }
     } catch (err) {
       let swept = true;
-      try {
-        unlinkSync(staged);
-      } catch {
-        swept = false;
+      if (stagedOwned) {
+        try {
+          unlinkSync(staged);
+        } catch {
+          swept = false;
+        }
       }
       throw swept
         ? err
@@ -429,10 +438,12 @@ function claimPrdLocked(
             { cause: err },
           );
     }
-    try {
-      unlinkSync(staged);
-    } catch {
-      /* staged already consumed or gone */
+    if (stagedOwned) {
+      try {
+        unlinkSync(staged);
+      } catch {
+        /* staged already consumed or gone */
+      }
     }
     if (installIssue !== null) {
       const stranded = rollback();
