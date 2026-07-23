@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T09:23:17.757Z",
+  "generatedAt": "2026-07-23T14:23:18.104Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -251,9 +251,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 21,
+        "status": "Unknown",
+        "checkedCount": 20,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 2
       },
       "summary": {
