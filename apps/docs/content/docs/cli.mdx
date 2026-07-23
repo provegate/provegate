@@ -78,7 +78,7 @@ substitutes id/slug/dates/status/class into the template, and writes
 and retried with the next id. `--template` points at a forked template (its metadata
 anchors must survive the fork — a drifted template fails loudly).
 
-### `gate open <PRD-XXX> [--steal]`
+### `gate open <PRD-XXX> [--steal] [--worktree]`
 
 Claims the PRD's declared `## Conflict Surface`: checks the globs against every active
 lease with the same overlap engine `gate queue` uses, then either writes a lease into the
@@ -88,6 +88,25 @@ written while any conflict exists. Re-claiming your own PRD refreshes the lease
 the takeover prints the victim's PRD, agent, and expiry; a *valid* foreign lease is never
 stealable. A PRD with no conflict surface is refused: a claim over nothing protects
 nothing.
+
+`--worktree` extends the atomic claim to the checkout: after the lease installs, a
+feature branch (from `branches.featurePattern`) and a linked worktree under the
+configured `worktree.dir` are provisioned, and the lease is stamped with both.
+The checkout is cut from the configured base ref, so the PRD and the control
+files that decide what runs there (`workflow.config.json`, `gates.manifest.json`,
+when present) must match the base ref first — missing OR edited-since-commit
+both refuse, instead of producing a checkout whose PRD, layout, or gate policy
+differs from the one just claimed. Provisioning failure (branch or path collision) rolls the
+lease back — claim and checkout are one outcome. After `gate run` lands the merge, the runner removes the
+worktree and deletes the merged branch; a dirty worktree refuses removal and
+degrades to a handoff-card warning (never `--force` on user trees). Branch deletion
+is decided by an explicit `merge-base --is-ancestor` proof against the configured
+base — a branch not provably merged, the base itself, or any configured protected
+branch is never deleted. When a parked primary checkout makes plain `-d` refuse a
+proven-merged branch, deletion retries `-d` from a throwaway detached scratch
+context at the base tip, so git's own mergedness and checked-out-branch guards
+re-evaluate at delete time. Locks stay platform-agnostic: external worktree
+managers keep working, the flag is optional sugar.
 
 Layout, id pattern, status vocabulary, and branch policy come from an optional
 `workflow.config.json`; gate membership and policy from an optional `gates.manifest.json` —

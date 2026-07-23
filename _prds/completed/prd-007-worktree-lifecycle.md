@@ -278,8 +278,15 @@ Cross-cutting (all green before Code Complete):
 
 ## 12. DO NOT (Anti-Patterns)
 
-- DO NOT pass `--force` to `git worktree remove` or use `git branch -D` — dirty
-  trees and unmerged branches refuse, and the refusal is surfaced, not overridden.
+- DO NOT pass `--force` to `git worktree remove` — dirty trees refuse, and the
+  refusal is surfaced, not overridden.
+- DO NOT delete a branch that is not PROVABLY merged into the configured base
+  (`merge-base --is-ancestor`). A parked-HEAD `-d` refusal may escalate ONLY by
+  retrying `-d` from a throwaway `--no-checkout` detached scratch worktree at
+  the base tip — git's own mergedness and checked-out-branch guards re-evaluate
+  at delete time; never `update-ref -d` (skips the checked-out guard), never a
+  blind `-D` (codex r6-r9). The base and configured protected branches are
+  never deletion targets at all.
 - DO NOT write the lease and the worktree as separate outcomes — provisioning
   failure rolls the lease back under the same mutex hold.
 - DO NOT let the worktree check out the base branch or touch the base checkout's

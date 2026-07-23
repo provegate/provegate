@@ -22,6 +22,10 @@ export interface SurfacedLock {
   prd: string;
   phase: string;
   ownedPaths?: string[];
+  /** Set by `candidateFromPrd`: the PRD file read, and the exact buffer whose
+   * `## Conflict Surface` produced `ownedPaths`. */
+  sourcePath?: string;
+  sourceContent?: string;
 }
 
 export interface PathConflict {
@@ -152,14 +156,24 @@ export function candidateFromPrd(
       `multiple PRD files for ${normalized}: ${found.map((p) => relative(mainRoot, p)).join(', ')}`,
     );
   }
-  const globs = declaredGlobs(readFileSync(found[0]!, 'utf8'));
+  // The BYTES parsed here are the candidate's provenance: callers that must
+  // prove "the checkout carries exactly what this lease describes" have to
+  // hash this buffer, not a later re-read of the path (codex prd-007 r21).
+  const source = readFileSync(found[0]!, 'utf8');
+  const globs = declaredGlobs(source);
   if (globs.length === 0) return null;
   // Stamp as an execution-phase entry — validated non-empty at config load.
   const executionPhase = config.executionPhases[0];
   if (executionPhase === undefined) {
     throw new Error('executionPhases must not be empty');
   }
-  return { prd: normalized, phase: executionPhase, ownedPaths: globs };
+  return {
+    prd: normalized,
+    phase: executionPhase,
+    ownedPaths: globs,
+    sourcePath: found[0]!,
+    sourceContent: source,
+  };
 }
 
 /** Conflicts between a candidate and the ACTIVE locks — the candidate's own

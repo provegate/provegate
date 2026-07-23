@@ -16,8 +16,10 @@ export { validateConfig, validateResolvedConfig } from './validate.js';
 export {
   CONFIG_FILENAME,
   ConfigError,
+  configSourceFor,
   deepMerge,
   findRepoRoot,
   loadConfig,
+  normalizedWorktreeDir,
   resolveConfig,
 } from './load.js';

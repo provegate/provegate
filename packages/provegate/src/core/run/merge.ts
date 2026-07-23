@@ -2,6 +2,7 @@ import { execFileSync, execSync } from 'node:child_process';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
+import { normalizedWorktreeDir } from '../config/index.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
 
 /**
@@ -29,14 +30,32 @@ function isCoordinationPath(config: WorkflowConfig, p: string): boolean {
   return config.branches.allowedDirectPrefixes.some((prefix) => p.startsWith(prefix));
 }
 
-function dirtyPaths(dir: string): string[] {
+/** The linked-worktree dir living inside the main checkout is coordination
+ * machinery — but ONLY as an untracked entry. A tracked file under a
+ * (mis)configured worktree.dir is source, and its modifications must refuse
+ * the merge, never be silently reset (codex r1 P1). */
+function isUntrackedWorktreeEntry(config: WorkflowConfig, p: string, untracked: boolean): boolean {
+  if (!untracked) return false;
+  // Compare in the canonical spelling: `./.worktrees` in config vs
+  // `.worktrees/` from `git status` must still match (codex r8 P2).
+  const dir = normalizedWorktreeDir(config);
+  return p === `${dir}/` || p.startsWith(`${dir}/`);
+}
+
+interface DirtyEntry {
+  path: string;
+  untracked: boolean;
+}
+
+function dirtyPaths(dir: string): DirtyEntry[] {
   return git(dir, ['status', '--porcelain'])
     .split('\n')
-    .map((line) => line.trim())
+    .map((line) => line.trimEnd())
     .filter(Boolean)
     .map((line) => {
+      const untracked = line.startsWith('??') || line.startsWith('!!');
       const rest = line.replace(/^(?:[ MADRCU?!]{1,2})\s+/, '');
-      return rest.split(' -> ')[0]!.trim();
+      return { path: rest.split(' -> ')[0]!.trim(), untracked };
     });
 }
 
@@ -45,23 +64,60 @@ export function ensureCheckoutClean(
   config: WorkflowConfig,
   dir: string,
 ): { ok: boolean; why?: string } {
-  const paths = dirtyPaths(dir);
-  if (paths.length === 0) return { ok: true };
-  if (!paths.every((p) => isCoordinationPath(config, p))) {
-    const offenders = paths.filter((p) => !isCoordinationPath(config, p));
+  const entries = dirtyPaths(dir);
+  if (entries.length === 0) return { ok: true };
+  const tolerated = (e: DirtyEntry): boolean =>
+    isCoordinationPath(config, e.path) || isUntrackedWorktreeEntry(config, e.path, e.untracked);
+  if (!entries.every(tolerated)) {
+    const offenders = entries.filter((e) => !tolerated(e)).map((e) => e.path);
     return {
       ok: false,
       why: `checkout is dirty with non-coordination files (${offenders.slice(0, 5).join(', ')}) — commit or stash before merge`,
     };
   }
-  for (const p of paths) {
+  for (const e of entries) {
+    if (!isCoordinationPath(config, e.path)) continue; // untracked worktree entries stay put
     try {
-      execFileSync('git', ['checkout', 'HEAD', '--', p], { cwd: dir, stdio: 'ignore' });
+      execFileSync('git', ['checkout', 'HEAD', '--', e.path], { cwd: dir, stdio: 'ignore' });
     } catch {
       // untracked coordination file — leave it, merge tolerates it
     }
   }
   return { ok: true };
+}
+
+/**
+ * Invariants a worktree-stamped close needs from the BASE checkout, checked
+ * BEFORE any artifact mutation: some other checkout must hold the base branch
+ * (otherwise the single-checkout fallback would merge inside the feature
+ * worktree), and that checkout must be clean of source dirt (codex r1 P1 —
+ * archive commits must not land before an inevitable merge refusal).
+ */
+export function baseWorktreeReady(
+  config: WorkflowConfig,
+  root: string,
+): { ok: boolean; why?: string; baseDir?: string } {
+  const base = config.branches.base;
+  const dir = findBaseWorktree(root, base);
+  if (dir === null) {
+    return {
+      ok: false,
+      why: `no checkout holds '${base}' — check the main checkout out on ${base} before closing a worktree claim`,
+    };
+  }
+  // A registration whose directory was deleted still lists — probing it would
+  // throw ENOENT out of this promised-refusal path (codex r26 P2).
+  let clean: { ok: boolean; why?: string };
+  try {
+    clean = ensureCheckoutClean(config, dir);
+  } catch (error) {
+    return {
+      ok: false,
+      why: `the checkout registered for '${base}' at ${dir} is unusable (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — run \`git worktree prune\` and re-run`,
+    };
+  }
+  if (!clean.ok) return { ok: false, why: `base checkout: ${clean.why}` };
+  return { ok: true, baseDir: dir };
 }
 
 /** Directory of a linked worktree with `base` checked out, or null. */
@@ -133,16 +189,21 @@ export function mergeToLocalBase(options: {
   manifest: GatesManifest;
   root: string;
   id: string;
+  /** The exact commit the caller verified (archive tip). Merging THIS rather
+   * than re-resolving the branch name closes the check-to-use window in which
+   * a rival could commit or reset the branch (codex r25 P1). */
+  sourceSha?: string;
 }): MergeOutcome {
-  const { config, manifest, root, id } = options;
+  const { config, manifest, root, id, sourceSha } = options;
   const base = config.branches.base;
   const pre = mergePreconditions(config, root);
   if (!pre.ok) return { ok: false, why: pre.why };
   const branch = pre.branch!;
+  const source = sourceSha ?? branch;
 
   const worktreeDir = findBaseWorktree(root, base);
   if (worktreeDir !== null && worktreeDir !== root) {
-    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, id });
+    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
   }
 
   try {
@@ -150,7 +211,7 @@ export function mergeToLocalBase(options: {
   } catch {
     return { ok: false, why: `no local branch '${base}' to merge into` };
   }
-  return mergeSingleCheckout({ config, manifest, root, base, branch, id });
+  return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
 }
 
 function mergeInWorktree(options: {
@@ -159,9 +220,10 @@ function mergeInWorktree(options: {
   baseDir: string;
   base: string;
   branch: string;
+  source: string;
   id: string;
 }): MergeOutcome {
-  const { config, manifest, baseDir, base, branch, id } = options;
+  const { config, manifest, baseDir, base, branch, source, id } = options;
   const clean = ensureCheckoutClean(config, baseDir);
   if (!clean.ok) return { ok: false, why: `base checkout: ${clean.why}` };
 
@@ -169,7 +231,7 @@ function mergeInWorktree(options: {
   // commands is not guaranteed to be the pre-merge tip (codex P1 finding).
   const preMergeSha = git(baseDir, ['rev-parse', 'HEAD']);
   try {
-    git(baseDir, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+    git(baseDir, ['merge', '--no-ff', source, '-m', mergeMessage(id)]);
   } catch (error) {
     try {
       execFileSync('git', ['merge', '--abort'], { cwd: baseDir, stdio: 'ignore' });
@@ -205,13 +267,14 @@ function mergeSingleCheckout(options: {
   root: string;
   base: string;
   branch: string;
+  source: string;
   id: string;
 }): MergeOutcome {
-  const { config, manifest, root, base, branch, id } = options;
+  const { config, manifest, root, base, branch, source, id } = options;
   git(root, ['checkout', base]);
   const preMergeSha = git(root, ['rev-parse', 'HEAD']);
   try {
-    git(root, ['merge', '--no-ff', branch, '-m', mergeMessage(id)]);
+    git(root, ['merge', '--no-ff', source, '-m', mergeMessage(id)]);
   } catch (error) {
     try {
       execFileSync('git', ['merge', '--abort'], { cwd: root, stdio: 'ignore' });

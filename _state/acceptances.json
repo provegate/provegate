@@ -56,6 +56,17 @@
       "reason": "authorized codex rounds r1-r8 interactively; reviewed the r8 report and fix commit, then instructed apply and go; accepting autonomous close via gate run",
       "date": "2026-07-23",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-007",
+      "owner": "owner",
+      "items": [
+        "9.0 codex review session authorized and completed (31 rounds; r30 first zero-critical round, r31 confirmation clean; 47 P1 + 34 P2 + 1 P3 fixed)",
+        "10.0 operator acceptance of autonomous close and dogfood trigger (push stays human)"
+      ],
+      "reason": "authorized the review loop and instructed continue through every round; reviewed the r31 confirmation and the review artifact, then instructed close",
+      "date": "2026-07-23",
+      "method": "interactive"
     }
   ]
 }

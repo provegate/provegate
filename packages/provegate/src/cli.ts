@@ -6,6 +6,7 @@
  * Remaining stubs name their roadmap phase. `push` refuses — the runner never
  * pushes to a remote. That invariant ships (and is tested) from commit one.
  */
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -19,7 +20,7 @@ import {
   type StateRecord,
 } from './core/state/index.js';
 import type { QueueLockInfo } from './core/state/index.js';
-import { listLockFiles } from './core/locks/index.js';
+import { listLockFiles, validateLock } from './core/locks/index.js';
 import {
   ManifestError,
   auditWiring,
@@ -33,6 +34,7 @@ import { dirname as pathDirname } from 'node:path';
 import {
   RUN_ACTIVE_ENV,
   archivePrdArtifacts,
+  baseWorktreeReady,
   buildGateChain,
   claimPrd,
   createPrd,
@@ -40,10 +42,13 @@ import {
   handoffCard,
   mergePreconditions,
   mergeToLocalBase,
+  claimMutexPath,
   parseFromPhase,
   planChain,
+  removeWorktree,
   runChain,
   stopCard,
+  withWorkspaceMutex,
   type FromPhase,
 } from './core/run/index.js';
 
@@ -59,7 +64,7 @@ function usage(): string {
     'Commands:',
     '  init     scaffold the workflow tree + starter configs (--dry-run)',
     '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
-    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal])',
+    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal] [--worktree])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
@@ -150,14 +155,15 @@ function runNew(args: string[]): number {
 function runOpen(args: string[]): number {
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
-    console.error('usage: gate open <PRD-XXX> [--steal] [--agent=identity]');
+    console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--agent=identity]');
     return 1;
   }
   const steal = args.includes('--steal');
+  const worktree = args.includes('--worktree');
   const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
   const { root, config } = loadConfig();
   try {
-    const result = claimPrd(config, root, id, { steal, agent });
+    const result = claimPrd(config, root, id, { steal, agent, worktree });
     if (!result.ok) {
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
       for (const issue of result.issues) console.error(`  ✗ ${issue}`);
@@ -172,6 +178,11 @@ function runOpen(args: string[]): number {
       `[open] ${result.refreshed ? 'refreshed (already held)' : 'claimed'} ${result.id} — ${result.globs.length} surface glob(s)`,
     );
     console.log(`[open] lease: ${result.leasePath}`);
+    if (result.worktree) {
+      console.log(
+        `[open] worktree: ${result.worktree.relPath} (branch ${result.worktree.branch})`,
+      );
+    }
     for (const warning of result.issues) console.error(`[open] WARNING: ${warning}`);
     return 0;
   } catch (error) {
@@ -297,6 +308,116 @@ function runCheck(args: string[]): number {
   return 0;
 }
 
+/** This checkout's HEAD commit, or null when unreadable. */
+function headSha(root: string): string | null {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+
+/** The branch this checkout is on, or null when detached/unreadable. */
+function currentBranch(root: string): string | null {
+  try {
+    return execFileSync('git', ['symbolic-ref', '--quiet', '--short', 'HEAD'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+interface WorktreeStamps {
+  worktree: string;
+  branch: string;
+  /** The COMPLETE lease as serialized at snapshot time, plus the file it came
+   * from. Cleanup compares this whole document under the claim mutex: any
+   * field subset can collide when claimants share the default agent identity
+   * and an injected clock, and a rival's refreshed claim must never be torn
+   * down (codex r28+r29 P1). */
+  identity: string;
+  file: string;
+}
+
+/** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
+ * wrote them — the merge guard and post-merge cleanup key off these. When a
+ * superseded self lease survived an earlier cleanup warning, several valid
+ * files name this PRD; the NEWEST install is the live claim, so filename sort
+ * order must not decide which identity cleanup guards (codex r22 P1). */
+function worktreeStamps(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+): { stamps: WorktreeStamps | null; malformed: string[] } {
+  // Rank ALL of the PRD's leases first, THEN read the winner's stamps: an
+  // older stamped lease must not outrank a newer unstamped one (an external
+  // worktree claim), or its stale stamps would drive the branch guard and
+  // tear down a checkout the live claim never named (codex r24 P1). Leases we
+  // cannot reason about FAIL CLOSED exactly as `gate open` does — ranking a
+  // malformed object as live would silently drop worktree mode and merge an
+  // unrelated branch (codex r25 P1).
+  const malformed: string[] = [];
+  const candidates = listLockFiles(config, root).filter((lock) => {
+    // Unreadable or ownership-less entries cannot be ruled OUT as ours, and
+    // silently ignoring them would drop worktree mode and merge an unrelated
+    // branch — the same fail-closed rule `gate open` applies (codex r26 P1).
+    if (!lock.data) {
+      malformed.push(`${lock.name}: ${lock.error ?? 'unreadable'}`);
+      return false;
+    }
+    const owner = lock.data['prd'];
+    if (typeof owner !== 'string' || owner.length === 0) {
+      malformed.push(`${lock.name}: missing or non-string prd — ownership unknowable`);
+      return false;
+    }
+    if (owner !== id) return false;
+    const issues = validateLock(config, lock.data, { now: 0 });
+    if (issues.length > 0) {
+      malformed.push(`${lock.name}: ${issues.join('; ')}`);
+      return false;
+    }
+    return true;
+  });
+  if (malformed.length > 0) return { stamps: null, malformed };
+
+  const live = candidates.sort(
+    (a, b) =>
+      (Date.parse(String(b.data!['startedAt'] ?? '')) || 0) -
+      (Date.parse(String(a.data!['startedAt'] ?? '')) || 0),
+  )[0];
+  if (!live?.data) return { stamps: null, malformed };
+  const wt = live.data['worktree'];
+  const br = live.data['branch'];
+  // Only a lease with NEITHER stamp is a plain claim. One-sided stamps mean
+  // the worktree metadata is damaged: treating that as plain mode would skip
+  // the branch guard, source pinning, and cleanup (codex r27 P1).
+  const hasWt = typeof wt === 'string';
+  const hasBr = typeof br === 'string';
+  if (hasWt !== hasBr) {
+    return {
+      stamps: null,
+      malformed: [
+        ...malformed,
+        `${live.name}: only ${hasWt ? 'worktree' : 'branch'} is stamped — worktree metadata is incomplete`,
+      ],
+    };
+  }
+  if (!hasWt || !hasBr) return { stamps: null, malformed };
+  return {
+    stamps: {
+      worktree: wt,
+      branch: br,
+      // Key order is whatever the parse produced; an identical rewrite by the
+      // same writer reproduces it, and ANY field change breaks equality.
+      identity: JSON.stringify(live.data),
+      file: live.name,
+    },
+    malformed,
+  };
+}
+
 function runRun(args: string[], { mergeOnly = false } = {}): number {
   const dryRun = args.includes('--dry-run');
   if (process.env[RUN_ACTIVE_ENV] && !dryRun) {
@@ -363,6 +484,24 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     return 0;
   }
 
+  // Lease identity is captured BEFORE the gates run: a rival refresh during a
+  // long chain bumps startedAt/expiresAt, and snapshotting afterwards would
+  // adopt the new claimant's identity — final revalidation would then "match"
+  // and tear down a checkout that now belongs to someone else (codex r21 P1).
+  const leaseState = worktreeStamps(config, root, id);
+  if (leaseState.malformed.length > 0) {
+    console.error(
+      stopCard({
+        id,
+        phase: 'merge',
+        why: `malformed lease(s) for ${id} (${leaseState.malformed.join('; ')}) — ownership is unknowable; repair or delete them, then re-run`,
+        results: [],
+      }),
+    );
+    return 1;
+  }
+  const stamps = leaseState.stamps;
+
   const outcome = runChain({ config, root, id, chain, fromPhase });
   if (outcome.stopped) {
     console.error(
@@ -391,13 +530,52 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     );
     return 1;
   }
+  // Worktree-mode branch guard: a --worktree lease pins the branch the close
+  // must run from — merging a different checkout under a stamped lease is a
+  // wrong-tree merge, not a variant.
+  if (stamps && pre.branch !== stamps.branch) {
+    console.error(
+      stopCard({
+        id,
+        phase: 'merge',
+        why: `lease pins branch ${stamps.branch} but the checkout is on ${pre.branch ?? '?'} — run from the claimed worktree`,
+        results: outcome.results,
+      }),
+    );
+    return 1;
+  }
+  // Worktree-mode base invariants, BEFORE the archive mutates anything: the
+  // base branch must live in another (clean) checkout, or the merge would
+  // refuse — or worse, fall back to merging inside the feature worktree —
+  // after archive commits already landed (codex r1 P1).
+  let cleanupChdirTarget: string | null = null;
+  if (stamps) {
+    const baseReady = baseWorktreeReady(config, root);
+    if (!baseReady.ok) {
+      console.error(
+        stopCard({
+          id,
+          phase: 'merge',
+          why: baseReady.why ?? 'base checkout not ready',
+          results: outcome.results,
+        }),
+      );
+      return 1;
+    }
+    cleanupChdirTarget = baseReady.baseDir ?? null;
+  }
 
+  let archivedTip: string | null;
   try {
     const archived = archivePrdArtifacts(config, root, record);
     if (archived.moved.length > 0) {
       console.log(`[run] archived ${archived.moved.length} artifact(s)`);
       outcome.results.push(['archive: wip→completed', 'passed']);
     }
+    // The commit the archive itself created — read from `git commit`, not a
+    // later HEAD lookup a post-commit hook may already have rewritten (codex
+    // r23+r24 P1). Nothing archived → nothing to pin.
+    archivedTip = archived.commitSha ?? null;
   } catch (error) {
     console.error(
       stopCard({
@@ -410,13 +588,95 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     return 1;
   }
 
-  const merge = mergeToLocalBase({ config, manifest, root, id });
+  // Archiving commits, and a post-commit hook can switch this checkout to
+  // another branch — merging whatever HEAD now names would land unrelated
+  // work and leave the claimed branch (and the archive commit) unmerged.
+  // Re-prove the pin immediately before the merge (codex r22 P1).
+  let pinnedSource: string | null = null;
+  if (stamps) {
+    const branchNow = currentBranch(root);
+    const tipNow = headSha(root);
+    const drift =
+      branchNow !== stamps.branch
+        ? `the checkout moved to ${branchNow ?? 'a detached HEAD'}; the lease pins ${stamps.branch}`
+        : archivedTip !== null && tipNow !== archivedTip
+          ? `${stamps.branch} no longer has the archive commit ${archivedTip.slice(0, 7)} at its tip (now ${tipNow?.slice(0, 7) ?? '?'}) — a hook rewrote it`
+          : null;
+    if (drift !== null) {
+      console.error(
+        stopCard({ id, phase: 'merge', why: `${drift} — nothing was merged`, results: outcome.results }),
+      );
+      return 1;
+    }
+    // A resumed close archives nothing, so there is no archive commit to pin
+    // — the tip just verified is the pin instead; never fall back to the
+    // mutable branch name (codex r26 P1).
+    pinnedSource = archivedTip ?? tipNow;
+  }
+
+  // Merge the VERIFIED commit, not the branch name — the name can move
+  // between the check above and the merge below (codex r25 P1).
+  const merge = mergeToLocalBase({
+    config,
+    manifest,
+    root,
+    id,
+    ...(pinnedSource !== null ? { sourceSha: pinnedSource } : {}),
+  });
   for (const row of merge.postMergeResults ?? []) outcome.results.push(row);
   if (!merge.ok) {
     console.error(
       stopCard({ id, phase: 'merge', why: merge.why ?? 'merge failed', results: outcome.results }),
     );
     return 1;
+  }
+
+  // Post-merge cleanup (worktree-stamped leases only). Runs LAST among
+  // filesystem work: it may remove the very directory this process runs in.
+  // Failures degrade to card warnings — the landed merge is immutable (W3).
+  let cleanupWarnings: string[] = [];
+  let cleanupDone = false;
+  if (stamps) {
+    // Windows refuses deleting a process's current directory — step out of
+    // the worktree (into the base checkout) before teardown (codex r8 P1).
+    if (cleanupChdirTarget !== null) {
+      try {
+        process.chdir(cleanupChdirTarget);
+      } catch {
+        /* removal will degrade to a warning if the cwd blocks it */
+      }
+    }
+    // Teardown holds the SAME mutex as claims and revalidates the lease
+    // identity first: a rival `gate open --worktree` that refreshed the
+    // lease after our stamps snapshot owns the checkout now — deleting it
+    // would tear down an active claim (codex r13 P1).
+    // The merge has LANDED — nothing past this point may throw the close
+    // away. A busy or stale mutex degrades to a cleanup warning on the
+    // handoff card, never a crash without one (W3, codex r14 P1).
+    try {
+      withWorkspaceMutex(claimMutexPath(config, root), () => {
+        const fresh = worktreeStamps(config, root, id).stamps;
+        if (!fresh || fresh.file !== stamps.file || fresh.identity !== stamps.identity) {
+          cleanupWarnings = [
+            'worktree cleanup skipped: the lease was refreshed or replaced by another claimant — the checkout stays',
+          ];
+          return;
+        }
+        const removal = removeWorktree(config, root, stamps);
+        cleanupDone = removal.removed;
+        if (removal.removed) {
+          outcome.results.push([
+            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+            'passed',
+          ]);
+        }
+        cleanupWarnings = removal.warnings;
+      });
+    } catch (error) {
+      cleanupWarnings = [
+        `worktree cleanup skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; remove ${stamps.worktree} manually`,
+      ];
+    }
   }
 
   console.log(
@@ -430,8 +690,19 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       operatorRows: record.task.operatorHandoffCount,
       autonomousClose: record.autonomousClose,
       metricsHint: `${config.dirs.metricsFile} (local JSONL, yours)`,
+      warnings: cleanupWarnings,
     }),
   );
+  if (stamps) {
+    // Completion is claimed only when removal actually happened — a refused
+    // (dirty/busy/foreign-occupied) cleanup must not read as done (codex r4
+    // P3); the handoff warnings above name what remains.
+    console.log(
+      cleanupDone
+        ? '[run] worktree cleanup done — if your shell sat in it, cd to the main checkout'
+        : '[run] worktree cleanup INCOMPLETE — see handoff warnings; manual cleanup remains',
+    );
+  }
   console.log(`[run] ${id} merged to local ${config.branches.base}; push is yours`);
   return 0;
 }

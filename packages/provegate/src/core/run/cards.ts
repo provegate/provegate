@@ -30,6 +30,9 @@ export function handoffCard(options: {
   operatorRows: number;
   autonomousClose: string | null;
   metricsHint: string;
+  /** Cleanup degradations (dirty worktree, undeleted branch) — the merge is
+   * landed; these name manual follow-ups, they never roll anything back. */
+  warnings?: string[];
 }): string {
   const lines = [
     `┌─ HANDOFF CARD ${BAR.slice(15)}`,
@@ -38,6 +41,7 @@ export function handoffCard(options: {
     `│ diff:   ${options.diffstat}`,
     '│ gates:',
     ...options.results.map(([label, res]) => `│   ${res === 'passed' ? '✓' : '✗'} ${label}`),
+    ...(options.warnings ?? []).map((w) => `│ ⚠ ${w}`),
     `│ operator rows: ${options.operatorRows} | Autonomous Close: ${options.autonomousClose ?? '(unset)'}`,
     `│ metrics: ${options.metricsHint}`,
     '│ → READY TO PUSH — run `git push` yourself (the runner never pushes)',
