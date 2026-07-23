@@ -66,11 +66,11 @@
 
 | Gate | Command / Check                                                     | Scope     | Result  | Evidence | Notes                    |
 | ---- | ------------------------------------------------------------------- | --------- | ------- | -------- | ------------------------ |
-| FR-1 | `test -f packages/provegate/LICENSE`                                | passed | exists + byte-identity |          | byte-identity in FR-3    |
-| FR-2 | `grep -c "\"version\": \"0.1.0\"" packages/provegate/package.json`  | passed | 1 |          |                          |
-| FR-3 | `pnpm --filter provegate test test/pack.test.ts`                    | passed | 6/6 in pack suite | whitelist + hygiene | whitelist + hygiene      |
-| FR-4 | `pnpm --filter provegate test test/pack.test.ts`                    | passed | 6/6 in pack suite | version single-sourcing | version single-sourcing  |
-| FR-5 | `test -f RELEASING.md`                                              | passed | exists, linted |          | linted self-copy         |
+| FR-1 | `test -f packages/provegate/LICENSE`                                | provegate | passed | exists + byte-identity | byte-identity in FR-3   |
+| FR-2 | `grep -c "\"version\": \"0.1.0\"" packages/provegate/package.json`  | provegate | passed | 1                      |                         |
+| FR-3 | `pnpm --filter provegate test test/pack.test.ts`                    | provegate | passed | 6/6 in pack suite      | whitelist + hygiene     |
+| FR-4 | `pnpm --filter provegate test test/pack.test.ts`                    | provegate | passed | 6/6 in pack suite      | version single-sourcing |
+| FR-5 | `test -f RELEASING.md`                                              | repo      | passed | exists, linted         | linted self-copy        |
 
 ## Deferrals & Decisions
 
