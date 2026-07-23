@@ -117,11 +117,15 @@ describe('candidateFromPrd', () => {
   it('builds an execution-phase candidate from the Conflict Surface', () => {
     const root = repoWithPrd('prd-004-widget.md', '## Conflict Surface\n\n- `packages/x/**`\n');
     const candidate = candidateFromPrd(cfg, 'prd-004', root);
-    expect(candidate).toEqual({
+    expect(candidate).toMatchObject({
       prd: 'PRD-004',
       phase: cfg.executionPhases[0],
       ownedPaths: ['packages/x/**'],
     });
+    // Provenance travels with the candidate: the exact buffer parsed, so a
+    // caller can hash THOSE bytes rather than re-read the path (r21).
+    expect(candidate?.sourcePath).toContain('prd-004-widget.md');
+    expect(candidate?.sourceContent).toContain('packages/x/**');
   });
 
   it('returns null when no surface is declared', () => {

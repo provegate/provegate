@@ -200,6 +200,21 @@ export function blobShaOfFile(dir: string, rel: string): string | null {
   }
 }
 
+/** Blob SHA of an in-memory buffer — the provenance-preserving form: hashing
+ * the bytes a caller already parsed leaves no window for an edit between the
+ * parse and the hash (codex r21 P1). */
+export function blobShaOfBuffer(dir: string, content: string): string | null {
+  try {
+    return execFileSync('git', ['hash-object', '--stdin'], {
+      cwd: dir,
+      encoding: 'utf8',
+      input: content,
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 /** An artifact as the claim actually PARSED it: path plus the blob SHA of the
  * exact bytes used to build the lease. Validation compares this snapshot —
  * never a later re-read — so a file edited between parse and check cannot
@@ -446,10 +461,16 @@ export function createWorktree(
   // worktree is removed on mismatch; a pre-existing branch is left alone, and
   // debris that survives removal is NAMED, never silently pruned (r18 P2).
   if (requireOnBase.length > 0) {
-    // The checkout's own bytes must equal the parsed snapshot.
+    // The checkout's own bytes must equal the parsed snapshot. A freshly cut
+    // branch must ALSO still point at the pinned base: a successful hook can
+    // commit or reset it while leaving those blobs untouched, handing the
+    // agent a tree missing base commits (codex r21 P2).
     const stale = requireOnBase
       .filter((s) => blobShaOfFile(path, s.rel) !== s.sha)
       .map((s) => s.rel);
+    if (!reattach && resolveRef(mainRoot, `refs/heads/${branch}`) !== baseRef) {
+      stale.push(`branch ${branch} no longer points at the pinned base`);
+    }
     if (stale.length > 0) {
       const debris: string[] = [];
       try {

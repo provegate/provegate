@@ -973,6 +973,25 @@ describe('codex r15 regressions', () => {
     expect((await run('git', ['-C', root, 'branch'], {})).stdout).toContain(made.branch);
   });
 
+  it('a hook that COMMITS on the fresh branch is caught even with clean artifacts (r21 P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'hook-commits', ['src/hc/**']);
+    await commitArtifacts(root);
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    // Succeeds, leaves every required artifact byte-identical, but moves the
+    // branch off the pinned base.
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      '#!/bin/sh\nprintf "x\\n" > unrelated.txt\ngit add unrelated.txt\ngit -c user.email=h@x -c user.name=h commit -q -m "hook commit"\nexit 0\n',
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('no longer points at the pinned base');
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);

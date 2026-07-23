@@ -401,6 +401,12 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     return 0;
   }
 
+  // Lease identity is captured BEFORE the gates run: a rival refresh during a
+  // long chain bumps startedAt/expiresAt, and snapshotting afterwards would
+  // adopt the new claimant's identity — final revalidation would then "match"
+  // and tear down a checkout that now belongs to someone else (codex r21 P1).
+  const stamps = worktreeStamps(config, root, id);
+
   const outcome = runChain({ config, root, id, chain, fromPhase });
   if (outcome.stopped) {
     console.error(
@@ -432,7 +438,6 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // Worktree-mode branch guard: a --worktree lease pins the branch the close
   // must run from — merging a different checkout under a stamped lease is a
   // wrong-tree merge, not a variant.
-  const stamps = worktreeStamps(config, root, id);
   if (stamps && pre.branch !== stamps.branch) {
     console.error(
       stopCard({

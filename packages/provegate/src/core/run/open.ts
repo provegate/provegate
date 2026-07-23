@@ -10,7 +10,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, join, relative, resolve, sep } from 'node:path';
 import { CONFIG_FILENAME, type WorkflowConfig } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
 import {
@@ -31,6 +31,7 @@ import { escapeRegExp } from '../state/markdown.js';
 import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 import {
+  blobShaOfBuffer,
   blobShaOfFile,
   createWorktree,
   existsOnRef,
@@ -233,7 +234,16 @@ function claimPrdLocked(
   // Preconditions BEFORE any mutation: slug + containment + destination
   // resolution happen while every victim still sits untouched on disk — an
   // exception past this point can no longer follow destroyed leases.
-  const { slug, relPath: prdRelPath, dir: prdRoot } = prdFile(config, root, normalized);
+  const found = prdFile(config, root, normalized);
+  const { slug } = found;
+  // Path and root come from the file candidateFromPrd ACTUALLY parsed when it
+  // reported one — parsing one checkout's copy and validating another's is
+  // the defect this closes (codex r21 P1).
+  const prdRoot = candidate.sourcePath !== undefined ? mainRepoRoot(root) : found.dir;
+  const prdRelPath =
+    candidate.sourcePath !== undefined
+      ? relative(mainRepoRoot(root), candidate.sourcePath).split(sep).join('/')
+      : found.relPath;
   // Artifacts a provisioned checkout must carry: the PRD itself plus the
   // CONTROL files that decide what runs there — config drives layout, the
   // gates manifest decides policy (a missing manifest silently falls back to
@@ -254,8 +264,17 @@ function claimPrdLocked(
   // against the base, so an edit between parse and check cannot slip through
   // (codex r20 P1). A control file absent locally but committed on base gets
   // a null snapshot — a deletion is a mismatch, not an omission (r17 P1).
+  // The PRD entry hashes the EXACT buffer candidateFromPrd parsed, so the
+  // lease's globs and the validated bytes can never come from different
+  // reads — or different checkouts (codex r21 P1).
   const requiredArtifacts: ArtifactSnapshot[] = [
-    { rel: prdRelPath, sha: blobShaOfFile(prdRoot, prdRelPath) },
+    {
+      rel: prdRelPath,
+      sha:
+        candidate.sourceContent !== undefined
+          ? blobShaOfBuffer(prdRoot, candidate.sourceContent)
+          : blobShaOfFile(prdRoot, prdRelPath),
+    },
   ];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
