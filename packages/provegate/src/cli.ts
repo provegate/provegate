@@ -357,12 +357,19 @@ function worktreeStamps(
   // unrelated branch (codex r25 P1).
   const malformed: string[] = [];
   const candidates = listLockFiles(config, root).filter((lock) => {
+    // Unreadable or ownership-less entries cannot be ruled OUT as ours, and
+    // silently ignoring them would drop worktree mode and merge an unrelated
+    // branch — the same fail-closed rule `gate open` applies (codex r26 P1).
     if (!lock.data) {
-      // Unparseable files are not attributable to this PRD; `gate open`
-      // already refuses on them, and the chain's own gates ran on them.
+      malformed.push(`${lock.name}: ${lock.error ?? 'unreadable'}`);
       return false;
     }
-    if (String(lock.data['prd']) !== id) return false;
+    const owner = lock.data['prd'];
+    if (typeof owner !== 'string' || owner.length === 0) {
+      malformed.push(`${lock.name}: missing or non-string prd — ownership unknowable`);
+      return false;
+    }
+    if (owner !== id) return false;
     const issues = validateLock(config, lock.data, { now: 0 });
     if (issues.length > 0) {
       malformed.push(`${lock.name}: ${issues.join('; ')}`);
@@ -566,6 +573,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // another branch — merging whatever HEAD now names would land unrelated
   // work and leave the claimed branch (and the archive commit) unmerged.
   // Re-prove the pin immediately before the merge (codex r22 P1).
+  let pinnedSource: string | null = null;
   if (stamps) {
     const branchNow = currentBranch(root);
     const tipNow = headSha(root);
@@ -581,6 +589,10 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       );
       return 1;
     }
+    // A resumed close archives nothing, so there is no archive commit to pin
+    // — the tip just verified is the pin instead; never fall back to the
+    // mutable branch name (codex r26 P1).
+    pinnedSource = archivedTip ?? tipNow;
   }
 
   // Merge the VERIFIED commit, not the branch name — the name can move
@@ -590,7 +602,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     manifest,
     root,
     id,
-    ...(stamps && archivedTip !== null ? { sourceSha: archivedTip } : {}),
+    ...(pinnedSource !== null ? { sourceSha: pinnedSource } : {}),
   });
   for (const row of merge.postMergeResults ?? []) outcome.results.push(row);
   if (!merge.ok) {

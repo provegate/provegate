@@ -105,7 +105,17 @@ export function baseWorktreeReady(
       why: `no checkout holds '${base}' — check the main checkout out on ${base} before closing a worktree claim`,
     };
   }
-  const clean = ensureCheckoutClean(config, dir);
+  // A registration whose directory was deleted still lists — probing it would
+  // throw ENOENT out of this promised-refusal path (codex r26 P2).
+  let clean: { ok: boolean; why?: string };
+  try {
+    clean = ensureCheckoutClean(config, dir);
+  } catch (error) {
+    return {
+      ok: false,
+      why: `the checkout registered for '${base}' at ${dir} is unusable (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — run \`git worktree prune\` and re-run`,
+    };
+  }
   if (!clean.ok) return { ok: false, why: `base checkout: ${clean.why}` };
   return { ok: true, baseDir: dir };
 }

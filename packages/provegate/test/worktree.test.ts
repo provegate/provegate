@@ -1169,6 +1169,21 @@ describe('codex r15 regressions', () => {
     expect(after.issues.join(' ')).toContain('fail closed');
   });
 
+  it('a deleted base-worktree registration refuses instead of throwing (r26 P2)', async () => {
+    const root = await gitRoot();
+    await commitArtifacts(root);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'stale-base' });
+    // The main checkout parks elsewhere; a linked worktree holds main.
+    await run('git', ['-C', root, 'checkout', '-q', '-b', 'parked']);
+    await run('git', ['-C', root, 'worktree', 'add', '-q', join(root, 'base-holder'), 'main']);
+    // …and its directory is deleted by hand, leaving a stale registration.
+    rmSync(join(root, 'base-holder'), { recursive: true, force: true });
+
+    const ready = baseWorktreeReady(cfg, made.path);
+    expect(ready.ok).toBe(false);
+    expect(ready.why).toMatch(/unusable|no checkout holds/);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
