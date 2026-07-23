@@ -311,6 +311,33 @@ describe('codex r3 regressions', () => {
   });
 });
 
+describe('codex r4 regressions', () => {
+  it('rollback preserves a lease REPLACED mid-provisioning by an external writer (P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'swapped', ['src/swapped/**']);
+    const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-swapped.json`);
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    // The hook fires INSIDE `git worktree add`: it replaces the just-installed
+    // lease (external writer) and then fails the checkout (provisioning error).
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\nprintf '{"rival":true}' > "${leaseFile}"\nexit 1\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('rollback INCOMPLETE');
+    // The replacement lease survives — either restored in place or preserved
+    // in quarantine, never unlinked blind.
+    const preserved =
+      (existsSync(leaseFile) && readFileSync(leaseFile, 'utf8').includes('rival')) ||
+      result.issues.join(' ').includes('preserved at');
+    expect(preserved).toBe(true);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

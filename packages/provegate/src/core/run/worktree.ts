@@ -178,8 +178,14 @@ export function createWorktree(
         /* best-effort */
       }
     }
-    if (existsSync(path) && branchAtWorktree(mainRoot, path) === branch) {
-      debris.push(`worktree debris at ${relPath}`);
+    // Occupant checks gate REMOVAL, never reporting: any surviving path that
+    // is ours or unregistered is debris the retry will collide with — only a
+    // foreign occupant's live checkout is not ours to name as debris
+    // (codex r4 P2).
+    if (existsSync(path)) {
+      const after = branchAtWorktree(mainRoot, path);
+      if (after === branch) debris.push(`worktree debris at ${relPath}`);
+      else if (after === null) debris.push(`unregistered debris directory at ${relPath}`);
     }
     try {
       git(mainRoot, ['branch', '-d', branch]);

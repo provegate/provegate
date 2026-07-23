@@ -542,16 +542,35 @@ function claimPrdLocked(
         try {
           provisioned = createWorktree(config, root, { id: normalized, slug });
         } catch (err) {
-          // A failed lease unlink means the rollback is INCOMPLETE — the
-          // stamped lease stays installed, and saying "rolled back" would be
-          // a lie that leaves a live claim over a missing checkout (codex r1
-          // P2). ENOENT counts as removed (someone beat us to it).
+          // Rollback may only delete the lease THIS claim installed: an
+          // external writer (checkout hook, rival tool) can replace the
+          // pathname while `worktree add` runs, and unlinking blind would
+          // destroy the replacement (codex r4 P1). Same protocol as steal:
+          // atomic move-aside, identity-check the quarantined bytes, only
+          // then delete. A failed unlink is an INCOMPLETE rollback — the
+          // stamped lease stays live, and saying "rolled back" would be a
+          // lie (codex r1 P2). ENOENT counts as removed.
           let leaseRemoved = false;
+          let leaseNote: string | null = null;
           try {
-            unlinkSync(leasePath);
-            leaseRemoved = true;
-          } catch (unlinkErr) {
-            leaseRemoved = (unlinkErr as NodeJS.ErrnoException).code === 'ENOENT';
+            const q = moveAside(leasePath);
+            if (readFileSync(q, 'utf8') === leaseBody) {
+              unlinkSync(q);
+              leaseRemoved = true;
+            } else {
+              try {
+                moveNoReplace(q, leasePath);
+                leaseNote = `${leasePath} was replaced by another writer mid-claim and was left in place — inspect before re-claiming`;
+              } catch {
+                leaseNote = `a replacement lease was preserved at ${q} (original path re-occupied) — inspect before re-claiming`;
+              }
+            }
+          } catch (qErr) {
+            if ((qErr as NodeJS.ErrnoException).code === 'ENOENT') {
+              leaseRemoved = true;
+            } else {
+              leaseNote = `the installed lease could not be removed; delete ${leasePath} manually before re-claiming`;
+            }
           }
           const stranded = rollback();
           dropQuarantineDir();
@@ -563,7 +582,7 @@ function claimPrdLocked(
             issues: [
               leaseRemoved
                 ? `claim rolled back: ${msg}`
-                : `claim rollback INCOMPLETE: ${msg} — the installed lease could not be removed; delete ${leasePath} manually before re-claiming`,
+                : `claim rollback INCOMPLETE: ${msg} — ${leaseNote ?? 'state unknown'}`,
               ...stranded,
             ],
           };

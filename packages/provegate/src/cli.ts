@@ -480,8 +480,10 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // filesystem work: it may remove the very directory this process runs in.
   // Failures degrade to card warnings — the landed merge is immutable (W3).
   let cleanupWarnings: string[] = [];
+  let cleanupDone = false;
   if (stamps) {
     const removal = removeWorktree(config, root, stamps);
+    cleanupDone = removal.removed;
     if (removal.removed) {
       outcome.results.push([
         `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
@@ -506,7 +508,14 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     }),
   );
   if (stamps) {
-    console.log(`[run] worktree cleanup done — if your shell sat in it, cd to the main checkout`);
+    // Completion is claimed only when removal actually happened — a refused
+    // (dirty/busy/foreign-occupied) cleanup must not read as done (codex r4
+    // P3); the handoff warnings above name what remains.
+    console.log(
+      cleanupDone
+        ? '[run] worktree cleanup done — if your shell sat in it, cd to the main checkout'
+        : '[run] worktree cleanup INCOMPLETE — see handoff warnings; manual cleanup remains',
+    );
   }
   console.log(`[run] ${id} merged to local ${config.branches.base}; push is yours`);
   return 0;
