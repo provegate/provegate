@@ -562,8 +562,15 @@ function claimPrdLocked(
         try {
           // Provision under the SAME names the lease body carries — with
           // prior stamps this recreates the stamped checkout, never a
-          // second one under a renamed slug (codex r11 P2).
-          provisioned = createWorktree(config, root, { id: normalized, slug, names: wtNames });
+          // second one under a renamed slug (codex r11 P2). Prior stamps —
+          // and ONLY prior stamps — also authorize reattaching a surviving
+          // branch of that name (codex r12 P2).
+          provisioned = createWorktree(config, root, {
+            id: normalized,
+            slug,
+            names: wtNames,
+            reattachOwned: priorStamps !== null,
+          });
         } catch (err) {
           // Rollback may only delete the lease THIS claim installed: an
           // external writer (checkout hook, rival tool) can replace the

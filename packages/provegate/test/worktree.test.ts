@@ -675,6 +675,42 @@ describe('codex r11 regressions', () => {
   });
 });
 
+describe('codex r12 regressions', () => {
+  it('reprovision REATTACHES the surviving stamped branch, tip preserved (P2)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'attach', ['src/attach/**']);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Work committed on the branch, then the tree removed the NORMAL way —
+    // git leaves the branch behind.
+    writeFileSync(join(first.worktree!.path, 'progress.txt'), 'wip\n');
+    await run('git', ['-C', first.worktree!.path, 'add', 'progress.txt']);
+    await run('git', ['-C', first.worktree!.path, 'commit', '-m', 'wip']);
+    const tip = (await run('git', ['-C', root, 'rev-parse', first.worktree!.branch], {})).stdout;
+    await run('git', ['-C', root, 'worktree', 'remove', first.worktree!.path]);
+
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok).toBe(true);
+    expect(again.worktree?.relPath).toBe(first.worktree!.relPath);
+    // Same branch, same tip — the committed work is in the reattached tree.
+    const tipAfter = (await run('git', ['-C', root, 'rev-parse', first.worktree!.branch], {}))
+      .stdout;
+    expect(tipAfter).toBe(tip);
+    expect(existsSync(join(again.worktree!.path, 'progress.txt'))).toBe(true);
+  });
+
+  it('a repository-root worktree.dir refuses provisioning and cleanup (P2)', async () => {
+    const root = await gitRoot();
+    const rooted = { ...cfg, worktree: { dir: './' } };
+    expect(() => createWorktree(rooted, root, { id: 'PRD-001', slug: 'rooty' })).toThrow(
+      /repository root/,
+    );
+    const removal = removeWorktree(rooted, root, { worktree: 'prd-001-rooty', branch: 'feat/x' });
+    expect(removal.removed).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('repository root');
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

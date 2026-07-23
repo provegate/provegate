@@ -97,60 +97,36 @@ function deleteBranchSafely(
   } catch {
     return { deleted: false, why: `not merged into ${base}` };
   }
-  // `-d` may only run in a context whose HEAD IS the base — judging against a
-  // parked primary HEAD is race-unsafe both ways: a feature ref advanced
-  // after the ancestry proof into a parked-contained commit would delete an
-  // unproven tip (codex r11 P1). No base-pinned live context → go straight
-  // to the scratch fallback, which re-evaluates at the base tip.
-  const baseDir = worktreeForBranch(mainRoot, base);
-  let dir: string | null = baseDir !== null && existsSync(baseDir) ? baseDir : null;
-  if (dir === null) {
-    try {
-      if (git(mainRoot, ['rev-parse', '--abbrev-ref', 'HEAD']) === base) dir = mainRoot;
-    } catch {
-      /* detached or unreadable — scratch fallback below */
-    }
+  // Deletion ALWAYS runs in an immutable context WE own: a throwaway
+  // `--no-checkout` detached scratch tree pinned at the base tip. Any live
+  // checkout — even one that held the base a moment ago — can have its HEAD
+  // switched by another process between lookup and delete, letting `-d`
+  // judge an advanced feature ref against the wrong tip (codex r11+r12 P1).
+  // In the scratch context `-d`'s own mergedness and checked-out-branch
+  // guards re-evaluate at delete time against a HEAD nobody else can move.
+  const scratch = join(mainRoot, normalizedWorktreeDir(config), `.gate-branch-del-${process.pid}`);
+  try {
+    // --no-checkout: no files, no checkout hooks.
+    git(mainRoot, ['worktree', 'add', '--detach', '--no-checkout', scratch, `refs/heads/${base}`]);
+  } catch {
+    return { deleted: false, why: 'delete refused (no clean context to judge mergedness)' };
   }
   try {
-    if (dir === null) throw new Error('no base-pinned context');
-    git(dir, ['branch', '-d', branch]);
+    git(scratch, ['branch', '-d', branch]);
     return { deleted: true };
   } catch {
-    // `-d` refused against a parked HEAD. Escalate WITHOUT dropping any git
-    // guard: a throwaway detached checkout at the base tip makes `-d`'s own
-    // mergedness check evaluate against the right ref, while its
-    // checked-out-branch protection stays intact — an advanced tip or a
-    // checkout that appeared mid-flight refuses at delete time (codex r7+r8
-    // P1; update-ref was rejected because it skips the checked-out guard).
-    const scratch = join(
-      mainRoot,
-      normalizedWorktreeDir(config),
-      `.gate-branch-del-${process.pid}`,
-    );
+    return { deleted: false, why: 'branch advanced mid-delete or checked out elsewhere' };
+  } finally {
     try {
-      // --no-checkout: no files, no checkout hooks — the scratch tree exists
-      // only to give `-d` a HEAD at the base tip to judge mergedness against.
-      git(mainRoot, ['worktree', 'add', '--detach', '--no-checkout', scratch, `refs/heads/${base}`]);
+      // --force is legitimate HERE ONLY: the scratch tree is internal, just
+      // created, never populated — an unpopulated checkout reads as "dirty"
+      // to plain remove. User trees are never force-removed.
+      git(mainRoot, ['worktree', 'remove', '--force', scratch]);
     } catch {
-      return { deleted: false, why: 'delete refused (no clean context to judge mergedness)' };
-    }
-    try {
-      git(scratch, ['branch', '-d', branch]);
-      return { deleted: true };
-    } catch {
-      return { deleted: false, why: 'branch advanced mid-delete or checked out elsewhere' };
-    } finally {
       try {
-        // --force is legitimate HERE ONLY: the scratch tree is internal,
-        // just created, never populated — an unpopulated checkout reads as
-        // "dirty" to plain remove. User trees are never force-removed.
-        git(mainRoot, ['worktree', 'remove', '--force', scratch]);
+        git(mainRoot, ['worktree', 'prune']);
       } catch {
-        try {
-          git(mainRoot, ['worktree', 'prune']);
-        } catch {
-          /* best-effort */
-        }
+        /* best-effort */
       }
     }
   }
@@ -212,7 +188,15 @@ export function createWorktree(
     id,
     slug,
     names,
-  }: { id: string; slug: string; names?: { relPath: string; branch: string } },
+    reattachOwned = false,
+  }: {
+    id: string;
+    slug: string;
+    names?: { relPath: string; branch: string };
+    /** ONLY when prior lease stamps establish ownership of `names.branch` —
+     * a bare name match is NOT ownership (a rival's branch must refuse). */
+    reattachOwned?: boolean;
+  },
 ): WorktreeProvision {
   const mainRoot = mainRepoRoot(root);
   // Explicit names let a claim RE-provision the checkout its lease stamps
@@ -231,17 +215,33 @@ export function createWorktree(
   if (branch === config.branches.base || config.branches.protected.includes(branch)) {
     throw new Error(`branches.featurePattern expands to protected branch "${branch}" — refused`);
   }
+  // The repository root as worktree.dir would make EVERY repo path pass the
+  // containment prefix and every provisioned tree read as root-level source
+  // dirt — reject the configuration outright (codex r12 P2).
+  const wtDir = normalizedWorktreeDir(config);
+  if (wtDir === '.' || wtDir === '') {
+    throw new Error(`worktree.dir must name a subdirectory, not the repository root — refused`);
+  }
   const path = containedPath(mainRoot, relPath);
   // Public-API guard: a non-interpolating pattern plus a hostile slug could
   // normalize the path outside worktree.dir — the stamp would then be
   // uncleanable (codex r9 P2). Strict child of the canonical dir, always.
-  const wtRoot = resolve(mainRoot, normalizedWorktreeDir(config));
+  const wtRoot = resolve(mainRoot, wtDir);
   if (!path.startsWith(`${wtRoot}${sep}`)) {
-    throw new Error(`worktree path ${relPath} escapes ${normalizedWorktreeDir(config)}/ — refused`);
+    throw new Error(`worktree path ${relPath} escapes ${wtDir}/ — refused`);
   }
 
-  if (branchExists(mainRoot, branch)) {
+  // With explicit (stamped) names an existing branch is OURS to reattach: a
+  // normal `git worktree remove` leaves the branch behind, and a reprovision
+  // must check it out again rather than refuse its own leftovers (codex r12
+  // P2). Derived names keep the hard collision refusal.
+  const branchAlready = branchExists(mainRoot, branch);
+  const reattach = branchAlready && reattachOwned;
+  if (branchAlready && !reattach) {
     throw new Error(`branch ${branch} already exists — remove it or claim without --worktree`);
+  }
+  if (reattach && worktreeForBranch(mainRoot, branch) !== null) {
+    throw new Error(`branch ${branch} is checked out in another worktree — resolve it first`);
   }
   if (existsSync(path)) {
     throw new Error(`worktree path ${relPath} already exists — remove it or claim without --worktree`);
@@ -264,12 +264,15 @@ export function createWorktree(
 
   // Branch from the CONFIGURED base ref, never the main checkout's current
   // HEAD — a main checkout parked on a diverged branch must not leak its
-  // commits into the provisioned worktree (codex r1 P1).
+  // commits into the provisioned worktree (codex r1 P1). A reattach keeps
+  // the existing branch tip untouched.
   const base = config.branches.base;
-  if (!branchExists(mainRoot, base)) {
-    throw new Error(`base branch '${base}' not found in the main checkout — cannot provision`);
+  if (!reattach) {
+    if (!branchExists(mainRoot, base)) {
+      throw new Error(`base branch '${base}' not found in the main checkout — cannot provision`);
+    }
+    git(mainRoot, ['branch', branch, `refs/heads/${base}`]);
   }
-  git(mainRoot, ['branch', branch, `refs/heads/${base}`]);
   try {
     git(mainRoot, ['worktree', 'add', path, branch]);
   } catch (err) {
@@ -311,8 +314,11 @@ export function createWorktree(
     // The just-created branch sits AT the base tip — the ancestry-proving
     // delete succeeds even when the primary checkout is parked elsewhere,
     // so a failed provision never leaves a colliding branch (codex r6 P2).
-    const del = deleteBranchSafely(config, mainRoot, branch);
-    if (!del.deleted) debris.push(`branch ${branch}${del.why ? ` (${del.why})` : ''}`);
+    // A REATTACHED branch predates this call and is not ours to delete.
+    if (!reattach) {
+      const del = deleteBranchSafely(config, mainRoot, branch);
+      if (!del.deleted) debris.push(`branch ${branch}${del.why ? ` (${del.why})` : ''}`);
+    }
     const detail = err instanceof Error ? err.message.split('\n')[0] : String(err);
     throw new Error(
       `worktree add failed for ${relPath}: ${detail}${debris.length > 0 ? ` — provisioning debris left: ${debris.join(', ')}; remove manually` : ''}`,
@@ -348,6 +354,11 @@ export function removeWorktree(
     warnings.push(
       `cleanup refused: stamped branch ${branch} is ${branch.startsWith('-') ? 'option-like' : 'protected'} — clean up manually if intended`,
     );
+    return { removed, branchDeleted, warnings };
+  }
+  const wtDirGuard = normalizedWorktreeDir(config);
+  if (wtDirGuard === '.' || wtDirGuard === '') {
+    warnings.push('cleanup refused: worktree.dir is the repository root — fix the config');
     return { removed, branchDeleted, warnings };
   }
 
