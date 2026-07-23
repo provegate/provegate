@@ -907,6 +907,38 @@ describe('codex r15 regressions', () => {
     );
   });
 
+  it('reattachment validates caller artifacts too (r19 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'reattach-caller', ['src/rc/**']);
+    await commitArtifacts(root);
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok).toBe(true);
+    // Tree removed the normal way (branch survives) → next claim reattaches.
+    await run('git', ['-C', root, 'worktree', 'remove', first.worktree!.path]);
+    // Caller now has an uncommitted control-file edit.
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      `${JSON.stringify({ branches: { base: 'main' } }, null, 2)}\n`,
+    );
+
+    const again = claimPrd(cfg, root, id, { worktree: true });
+    expect(again.ok).toBe(false);
+    expect(again.issues.join(' ')).toContain('workflow.config.json');
+  });
+
+  it('provisioning pins ONE base revision for every comparison (r19 P1)', async () => {
+    const root = await gitRoot();
+    const { resolveRef } = await import('../src/core/run/index.js');
+    const pinned = resolveRef(root, 'refs/heads/main');
+    expect(pinned).toMatch(/^[0-9a-f]{40}$/);
+    // A moved base does not retroactively change the pinned revision.
+    writeFileSync(join(root, 'later.txt'), 'later\n');
+    await run('git', ['-C', root, 'add', 'later.txt']);
+    await run('git', ['-C', root, 'commit', '-m', 'base moves']);
+    expect(resolveRef(root, 'refs/heads/main')).not.toBe(pinned);
+    expect(resolveRef(root, pinned!)).toBe(pinned);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);

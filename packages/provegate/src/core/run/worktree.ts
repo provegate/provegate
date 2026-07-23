@@ -153,6 +153,19 @@ export function worktreeNamesFor(
  * lease was built from the edited file means the agent works against a
  * different PRD than the one protected (codex r16 P1).
  */
+/** Resolve `ref` to an immutable SHA, or null when it does not exist. Every
+ * artifact comparison, branch creation, and post-add validation in one
+ * provisioning operation must name the SAME revision: a base branch that
+ * advances mid-flight would otherwise let the lease and the checkout describe
+ * different PRDs (codex r19 P1). */
+export function resolveRef(mainRoot: string, ref: string): string | null {
+  try {
+    return git(mainRoot, ['rev-parse', '--verify', `${ref}^{commit}`]);
+  } catch {
+    return null;
+  }
+}
+
 /** Whether `rel` is reachable from `ref`. */
 export function existsOnRef(mainRoot: string, ref: string, rel: string): boolean {
   try {
@@ -226,10 +239,14 @@ export function createWorktree(
     names,
     reattachOwned = false,
     requireOnBase = [],
+    baseSha,
   }: {
     id: string;
     slug: string;
     names?: { relPath: string; branch: string };
+    /** The pinned base revision this whole claim reasons about; resolved
+     * internally when the caller does not supply one. */
+    baseSha?: string;
     /** ONLY when prior lease stamps establish ownership of `names.branch` —
      * a bare name match is NOT ownership (a rival's branch must refuse). */
     reattachOwned?: boolean;
@@ -319,30 +336,34 @@ export function createWorktree(
   // commits into the provisioned worktree (codex r1 P1). A reattach keeps
   // the existing branch tip untouched.
   const base = config.branches.base;
-  if (!reattach) {
-    if (!branchExists(mainRoot, base)) {
-      throw new Error(`base branch '${base}' not found in the main checkout — cannot provision`);
-    }
-    // A branch cut from the base ref cannot see UNCOMMITTED artifacts: the
-    // quickstart order (`gate new` → `gate open --worktree`) would otherwise
-    // hand back a checkout missing the very PRD it claims, and every
-    // subsequent `gate check/run` there would fail (codex r15 P1). BOTH the
-    // main checkout and the CALLER's checkout are compared: a claim launched
-    // from a linked worktree loads its config/PRD from there, so validating
-    // only the primary would admit an edited caller (codex r18 P1).
-    const callerRoot = resolve(root);
-    const stale = pathsNotMatchingRef(mainRoot, `refs/heads/${base}`, requireOnBase);
-    for (const rel of pathsNotMatchingRef(callerRoot, `refs/heads/${base}`, requireOnBase)) {
-      if (!stale.includes(rel)) stale.push(rel);
-    }
-    if (stale.length > 0) {
-      throw new Error(
-        `these workflow artifacts are missing or uncommitted on '${base}' (${stale.join(', ')}) — commit them first, or claim without --worktree`,
-      );
-    }
-    git(mainRoot, ['branch', branch, `refs/heads/${base}`]);
+  if (!branchExists(mainRoot, base)) {
+    throw new Error(`base branch '${base}' not found in the main checkout — cannot provision`);
   }
-  const baseRef = `refs/heads/${base}`;
+  const baseRef = baseSha ?? resolveRef(mainRoot, `refs/heads/${base}`);
+  if (baseRef === null) {
+    throw new Error(`base branch '${base}' could not be resolved — cannot provision`);
+  }
+  // A branch cut from the base ref cannot see UNCOMMITTED artifacts: the
+  // quickstart order (`gate new` → `gate open --worktree`) would otherwise
+  // hand back a checkout missing the very PRD it claims, and every subsequent
+  // `gate check/run` there would fail (codex r15 P1). BOTH the main checkout
+  // and the CALLER's checkout are compared: a claim launched from a linked
+  // worktree loads its config/PRD from there, so validating only the primary
+  // would admit an edited caller (codex r18/r19 P1). Reattachment is checked
+  // too — its lease is built from the same caller state.
+  const callerRoot = resolve(root);
+  const stale = pathsNotMatchingRef(mainRoot, baseRef, requireOnBase);
+  for (const rel of pathsNotMatchingRef(callerRoot, baseRef, requireOnBase)) {
+    if (!stale.includes(rel)) stale.push(rel);
+  }
+  if (stale.length > 0) {
+    throw new Error(
+      `these workflow artifacts are missing or uncommitted on '${base}' (${stale.join(', ')}) — commit them first, or claim without --worktree`,
+    );
+  }
+  if (!reattach) {
+    git(mainRoot, ['branch', branch, baseRef]);
+  }
   try {
     git(mainRoot, ['worktree', 'add', path, branch]);
   } catch (err) {

@@ -35,6 +35,7 @@ import {
   existsOnRef,
   pathsNotMatchingRef,
   removeWorktree,
+  resolveRef,
   worktreeForBranch,
   worktreeNamesFor,
   type WorktreeProvision,
@@ -304,8 +305,14 @@ function claimPrdLocked(
   // working tree but still committed would otherwise drop out of the list,
   // and the provisioned checkout would silently restore policy the source
   // checkout no longer has (codex r17 P1).
-  const baseRefName = `refs/heads/${config.branches.base}`;
   const mainForRefs = mainRepoRoot(root);
+  // ONE pinned revision for every comparison in this claim: presence checks,
+  // the checkout's contents, and branch creation must all name the same base
+  // commit, or a concurrent base advance desynchronizes lease and tree
+  // (codex r19 P1). Null (no git / no base) simply skips worktree work.
+  const baseRefName =
+    resolveRef(mainForRefs, `refs/heads/${config.branches.base}`) ??
+    `refs/heads/${config.branches.base}`;
   const requiredArtifacts = [prdRelPath];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
@@ -640,8 +647,16 @@ function claimPrdLocked(
       // since the first claim, and a refreshed lease protecting the new PRD
       // surface while the tree still holds the old PRD and gate policy is the
       // same defect as provisioning stale (codex r17 P1).
+      // Reuse validates the CHECKOUT and the caller's own tree: a refresh
+      // launched from a linked worktree with edited control files would
+      // otherwise build the lease from the caller's config while returning a
+      // checkout on base policy (codex r19 P1).
       const reuseStale = reusable
-        ? pathsNotMatchingRef(expected!, baseRefName, requiredArtifacts)
+        ? [
+            ...pathsNotMatchingRef(expected!, baseRefName, requiredArtifacts),
+            ...pathsNotMatchingRef(mainRoot, baseRefName, requiredArtifacts),
+            ...pathsNotMatchingRef(resolve(root), baseRefName, requiredArtifacts),
+          ].filter((rel, i, all) => all.indexOf(rel) === i)
         : [];
       if (reusable && reuseStale.length > 0) {
         const notes = rollbackInstalledLease();
@@ -672,6 +687,7 @@ function claimPrdLocked(
             names: wtNames,
             reattachOwned: priorStamps !== null,
             requireOnBase: requiredArtifacts,
+            baseSha: baseRefName,
           });
         } catch (err) {
           const notes = rollbackInstalledLease();
