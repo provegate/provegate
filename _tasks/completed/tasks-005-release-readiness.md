@@ -60,7 +60,7 @@
 - [x] 6.0 Phase 5 — Testing: §11 sweep, evidence in ledger
 - [x] 7.0 Phase 6 — codex review (brief: whitelist gaps, monorepo bleed, frozen-surface
         diff check, license identity)
-- [ ] 8.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-005`
+- [x] 8.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-005`
 
 ## Verification Ledger
 
@@ -84,8 +84,8 @@
 
 | Task | Category  | Owner | Required Check                                       | Status  | Notes               |
 | ---- | --------- | ----- | ---------------------------------------------------- | ------- | ------------------- |
-| 7.0  | external  | owner | Authorize codex review session                       | pending | per precedent       |
-| 8.0  | manual-qa | owner | Acceptance; trigger `gate run PRD-005`; push (human) | pending | runner never pushes |
+| 7.0  | external  | owner | Authorize codex review session                       | resolved | 2 rounds, verdict pass |
+| 8.0  | manual-qa | owner | Acceptance; trigger `gate run PRD-005`; push (human) | resolved | accepted 2026-07-23; closed via gate run |
 
 ## Progress Log
 
