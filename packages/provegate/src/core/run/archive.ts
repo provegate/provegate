@@ -72,9 +72,10 @@ export function archivePrdArtifacts(
   // legally contain `]`, so anchor on the hash: the LAST space-delimited hex
   // token closing the bracket group (codex prd-007 r25 P2). Falls back to
   // HEAD when the porcelain text is localized or absent.
-  // core.abbrev is configurable down to 4, so the hash token is not
-  // 7+ characters by contract (codex prd-007 r27 P1).
-  const abbrev = /^\[.*\s([0-9a-f]{4,40})\]/m.exec(out)?.[1];
+  // core.abbrev is configurable from 4 upward, and a SHA-256 repository's
+  // full id is 64 characters — neither bound is 7..40 by contract (codex
+  // prd-007 r27 P1, r30 P2).
+  const abbrev = /^\[.*\s([0-9a-f]{4,64})\]/m.exec(out)?.[1];
   let commitSha: string | undefined;
   try {
     commitSha = git(root, ['rev-parse', abbrev ?? 'HEAD']);
