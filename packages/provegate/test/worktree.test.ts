@@ -39,6 +39,14 @@ async function gitRoot(): Promise<string> {
   return root;
 }
 
+/** `gate open --worktree` provisions FROM the base ref, so the artifacts it
+ * claims must be committed there first (codex r15) — the real flow, and what
+ * these tests exercise unless they assert the refusal itself. */
+async function commitArtifacts(root: string): Promise<void> {
+  await run('git', ['-C', root, 'add', '-A']);
+  await run('git', ['-C', root, 'commit', '-m', 'workflow artifacts']);
+}
+
 /** PRD with a declared Conflict Surface (open.test.ts recipe). */
 function prdWithSurface(root: string, slug: string, globs: string[]): string {
   const { id, path } = createPrd(cfg, root, { slug });
@@ -209,6 +217,7 @@ describe('codex r1 regressions', () => {
   it('a manually managed checkout at the deterministic path is refused, never adopted (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'squat', ['src/squat/**']);
+    await commitArtifacts(root);
     const stem = `${id.toLowerCase()}-squat`;
     await run('git', ['-C', root, 'branch', `feat/${stem}`]);
     const { mkdirSync: mkdir } = await import('node:fs');
@@ -315,6 +324,7 @@ describe('codex r4 regressions', () => {
   it('rollback preserves a lease REPLACED mid-provisioning by an external writer (P1)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'swapped', ['src/swapped/**']);
+    await commitArtifacts(root);
     const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-swapped.json`);
     const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
     mkdir(join(root, '.git/hooks'), { recursive: true });
@@ -376,6 +386,7 @@ describe('codex r5 regressions', () => {
   it('an UNREADABLE replacement lease is preserved and reported (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'masked', ['src/masked/**']);
+    await commitArtifacts(root);
     const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-masked.json`);
     const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
     mkdir(join(root, '.git/hooks'), { recursive: true });
@@ -526,6 +537,7 @@ describe('codex r9 regressions', () => {
     const root = await gitRoot();
     const dotted = { ...cfg, worktree: { dir: './.worktrees/' } };
     const id = prdWithSurface(root, 'canonical', ['src/canonical/**']);
+    await commitArtifacts(root);
     const result = claimPrd(dotted, root, id, { worktree: true });
     expect(result.ok).toBe(true);
     const lease = JSON.parse(readFileSync(result.leasePath!, 'utf8')) as Record<string, unknown>;
@@ -545,6 +557,7 @@ describe('codex r9 regressions', () => {
   it('stamps survive a plain refresh after the PRD slug is renamed (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'old-name', ['src/renamed/**']);
+    await commitArtifacts(root);
     const first = claimPrd(cfg, root, id, { worktree: true });
     expect(first.ok).toBe(true);
     const { renameSync } = await import('node:fs');
@@ -567,6 +580,7 @@ describe('codex r10 regressions', () => {
   it('--worktree refresh after a PRD rename REUSES the stamped checkout (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'first-name', ['src/reuse/**']);
+    await commitArtifacts(root);
     const first = claimPrd(cfg, root, id, { worktree: true });
     expect(first.ok).toBe(true);
     const { renameSync } = await import('node:fs');
@@ -586,6 +600,7 @@ describe('codex r10 regressions', () => {
     await run('git', ['-C', root, 'add', '-A']);
     await run('git', ['-C', root, 'commit', '-m', 'workspace']);
     const id = prdWithSurface(root, 'legacy', ['src/legacy/**']);
+    await commitArtifacts(root);
     const plain = claimPrd(cfg, root, id);
     expect(plain.ok).toBe(true);
     // Legacy-era second self lease carrying the only stamps.
@@ -646,6 +661,7 @@ describe('codex r11 regressions', () => {
   it('fallback provisioning after stamp-target removal recreates the STAMPED names (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'origin-name', ['src/refab/**']);
+    await commitArtifacts(root);
     const first = claimPrd(cfg, root, id, { worktree: true });
     expect(first.ok).toBe(true);
     // Checkout and branch vanish; PRD gets renamed.
@@ -656,6 +672,7 @@ describe('codex r11 regressions', () => {
       join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-origin-name.md`),
       join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-fresh-name.md`),
     );
+    await commitArtifacts(root);
 
     const again = claimPrd(cfg, root, id, { worktree: true });
     expect(again.ok).toBe(true);
@@ -679,6 +696,7 @@ describe('codex r12 regressions', () => {
   it('reprovision REATTACHES the surviving stamped branch, tip preserved (P2)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'attach', ['src/attach/**']);
+    await commitArtifacts(root);
     const first = claimPrd(cfg, root, id, { worktree: true });
     expect(first.ok).toBe(true);
     // Work committed on the branch, then the tree removed the NORMAL way —
@@ -734,6 +752,7 @@ describe('codex r14 regressions', () => {
   it('a hook that replaces the lease during a SUCCESSFUL add aborts and tears our checkout down (P1)', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'hijacked', ['src/hijacked/**']);
+    await commitArtifacts(root);
     const leaseFile = join(root, '_state/locks', `${id.toLowerCase()}-hijacked.json`);
     const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
     mkdir(join(root, '.git/hooks'), { recursive: true });
@@ -775,10 +794,43 @@ describe('codex r14 regressions', () => {
   });
 });
 
+describe('codex r15 regressions', () => {
+  it('refuses --worktree while the claimed PRD is uncommitted, then succeeds once committed (P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'uncommitted', ['src/uncommitted/**']);
+    // Quickstart order: init → new → open --worktree, nothing committed yet.
+    const refused = claimPrd(cfg, root, id, { worktree: true });
+    expect(refused.ok).toBe(false);
+    expect(refused.issues.join(' ')).toContain('not committed');
+    expect(refused.issues.join(' ')).toContain('_prds/wip');
+    expect(existsSync(join(root, '_state/locks', `${id.toLowerCase()}-uncommitted.json`))).toBe(
+      false,
+    );
+
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'artifacts']);
+    const claimed = claimPrd(cfg, root, id, { worktree: true });
+    expect(claimed.ok, claimed.issues.join(' ')).toBe(true);
+    // The provisioned checkout CONTAINS the PRD it claims.
+    expect(
+      existsSync(
+        join(claimed.worktree!.path, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-uncommitted.md`),
+      ),
+    ).toBe(true);
+  });
+
+  it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
+    expect(claimPrd(cfg, root, id).ok).toBe(true);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'stamped', ['src/stamped/**']);
+    await commitArtifacts(root);
     const result = claimPrd(cfg, root, id, { worktree: true });
     expect(result.ok).toBe(true);
     expect(result.worktree?.relPath).toBe(`.worktrees/${id.toLowerCase()}-stamped`);
@@ -792,6 +844,7 @@ describe('claimPrd --worktree (FR-2, W2)', () => {
   it('W2 rollback: colliding branch → no lease, no worktree, rival branch intact', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'rolled', ['src/rolled/**']);
+    await commitArtifacts(root);
     await run('git', ['-C', root, 'branch', `feat/${id.toLowerCase()}-rolled`]);
     const result = claimPrd(cfg, root, id, { worktree: true });
     expect(result.ok).toBe(false);
@@ -806,6 +859,7 @@ describe('claimPrd --worktree (FR-2, W2)', () => {
   it('refresh with --worktree is idempotent; refresh WITHOUT it keeps the stamps', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'again', ['src/again/**']);
+    await commitArtifacts(root);
     const first = claimPrd(cfg, root, id, { worktree: true });
     expect(first.ok).toBe(true);
     const second = claimPrd(cfg, root, id, { worktree: true });
@@ -823,6 +877,7 @@ describe('claimPrd --worktree (FR-2, W2)', () => {
   it('without --worktree behavior is unchanged: no stamps, no worktree', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain', ['src/plain/**']);
+    await commitArtifacts(root);
     const result = claimPrd(cfg, root, id);
     expect(result.ok).toBe(true);
     expect(result.worktree).toBeUndefined();
@@ -839,8 +894,7 @@ describe('merge from a claimed worktree + cleanup (FR-3, W1, W3)', () => {
     await run('git', ['-C', root, 'add', '-A']);
     await run('git', ['-C', root, 'commit', '-m', 'workspace']);
     const id = prdWithSurface(root, 'landing', ['src/landing/**']);
-    await run('git', ['-C', root, 'add', '-A']);
-    await run('git', ['-C', root, 'commit', '-m', 'prd']);
+    await commitArtifacts(root);
 
     const claim = claimPrd(cfg, root, id, { worktree: true });
     expect(claim.ok).toBe(true);

@@ -41,9 +41,12 @@ npx gate open PRD-001
 Overlap with another active claim refuses here — at claim time, not merge time.
 
 Running agents in parallel? Add `--worktree` and the claim also provisions an
-isolated checkout — one atomic step:
+isolated checkout — one atomic step. Commit the PRD first: the checkout is cut
+from your base branch, so uncommitted artifacts would not be in it (the command
+refuses rather than hand you a checkout missing its own PRD).
 
 ```sh
+git add _prds/ && git commit -m "docs(prd): prd-001 draft"
 npx gate open PRD-001 --worktree
 # claimed PRD-001 — worktree: .worktrees/prd-001-fix-login-timeout (branch feat/prd-001-fix-login-timeout)
 ```

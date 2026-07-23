@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import type { WorkflowConfig } from '../config/index.js';
+import { CONFIG_FILENAME, type WorkflowConfig } from '../config/index.js';
 import {
   candidateConflicts,
   candidateFromPrd,
@@ -292,7 +292,11 @@ function claimPrdLocked(
   // Preconditions BEFORE any mutation: slug + containment + destination
   // resolution happen while every victim still sits untouched on disk — an
   // exception past this point can no longer follow destroyed leases.
-  const slug = slugOf(config, root, normalized);
+  const { slug, relPath: prdRelPath } = prdFile(config, root, normalized);
+  // Artifacts a provisioned checkout must carry: the PRD itself, plus the
+  // config file when the repo has one (layout drives every later command).
+  const requiredArtifacts = [prdRelPath];
+  if (existsSync(resolve(root, CONFIG_FILENAME))) requiredArtifacts.push(CONFIG_FILENAME);
   containedPath(mainRepoRoot(root), config.dirs.locksDir);
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);
@@ -579,6 +583,7 @@ function claimPrdLocked(
             slug,
             names: wtNames,
             reattachOwned: priorStamps !== null,
+            requireOnBase: requiredArtifacts,
           });
         } catch (err) {
           // Rollback may only delete the lease THIS claim installed: an
@@ -731,8 +736,12 @@ function claimPrdLocked(
   }
 }
 
-/** Slug from the unique PRD filename for this id. */
-function slugOf(config: WorkflowConfig, root: string, id: string): string {
+/** The PRD's slug and repo-relative path, from its unique filename. */
+function prdFile(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+): { slug: string; relPath: string } {
   const prdKind = config.dirs.artifacts.prd;
   const num = id.slice(config.idPattern.prefix.length + 1);
   const re = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${escapeRegExp(num)}-(.+)\\.md$`);
@@ -746,7 +755,7 @@ function slugOf(config: WorkflowConfig, root: string, id: string): string {
     }
     for (const name of names) {
       const m = re.exec(name);
-      if (m) return m[1]!;
+      if (m) return { slug: m[1]!, relPath: `${prdKind.dir}/${state}/${name}` };
     }
   }
   throw new Error(`no PRD file found for ${id} while deriving slug`);
