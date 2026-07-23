@@ -326,8 +326,15 @@ export function createWorktree(
     // A branch cut from the base ref cannot see UNCOMMITTED artifacts: the
     // quickstart order (`gate new` → `gate open --worktree`) would otherwise
     // hand back a checkout missing the very PRD it claims, and every
-    // subsequent `gate check/run` there would fail (codex r15 P1).
+    // subsequent `gate check/run` there would fail (codex r15 P1). BOTH the
+    // main checkout and the CALLER's checkout are compared: a claim launched
+    // from a linked worktree loads its config/PRD from there, so validating
+    // only the primary would admit an edited caller (codex r18 P1).
+    const callerRoot = resolve(root);
     const stale = pathsNotMatchingRef(mainRoot, `refs/heads/${base}`, requireOnBase);
+    for (const rel of pathsNotMatchingRef(callerRoot, `refs/heads/${base}`, requireOnBase)) {
+      if (!stale.includes(rel)) stale.push(rel);
+    }
     if (stale.length > 0) {
       throw new Error(
         `these workflow artifacts are missing or uncommitted on '${base}' (${stale.join(', ')}) — commit them first, or claim without --worktree`,
@@ -388,14 +395,16 @@ export function createWorktree(
       { cause: err },
     );
   }
-  // A REATTACHED branch was cut from an older base: its checkout can carry a
-  // stale PRD or gate policy while the fresh lease protects the new one. The
-  // freshly-cut path is current by construction; only reattach needs proving
-  // (codex r17 P1). Our own worktree is removed on mismatch; the pre-existing
-  // branch is left alone.
-  if (reattach && requireOnBase.length > 0) {
+  // The checkout that now exists must MATCH the base for every required
+  // artifact. A reattached branch may predate a base move; a freshly cut one
+  // is current by construction but `worktree add` runs arbitrary checkout
+  // hooks that can edit it (codex r17+r18 P1) — so prove it either way. Our
+  // worktree is removed on mismatch; a pre-existing branch is left alone, and
+  // debris that survives removal is NAMED, never silently pruned (r18 P2).
+  if (requireOnBase.length > 0) {
     const stale = pathsNotMatchingRef(path, baseRef, requireOnBase);
     if (stale.length > 0) {
+      const debris: string[] = [];
       try {
         git(mainRoot, ['worktree', 'remove', path]);
       } catch {
@@ -404,9 +413,17 @@ export function createWorktree(
         } catch {
           /* best-effort */
         }
+        if (existsSync(path)) debris.push(`the checkout at ${relPath} could NOT be removed`);
       }
+      if (!reattach && debris.length === 0) {
+        const del = deleteBranchSafely(config, mainRoot, branch);
+        if (!del.deleted) debris.push(`branch ${branch}${del.why ? ` (${del.why})` : ''}`);
+      }
+      const why = reattach
+        ? `the existing branch ${branch} carries workflow artifacts differing from '${base}' (${stale.join(', ')}) — merge or rebase ${base} into it first`
+        : `the provisioned checkout was modified during setup and no longer matches '${base}' (${stale.join(', ')}) — inspect your checkout hooks`;
       throw new Error(
-        `the existing branch ${branch} carries workflow artifacts differing from '${base}' (${stale.join(', ')}) — merge or rebase ${base} into it first`,
+        `${why}${debris.length > 0 ? ` — provisioning debris left: ${debris.join(', ')}; clean up manually` : ''}`,
       );
     }
   }

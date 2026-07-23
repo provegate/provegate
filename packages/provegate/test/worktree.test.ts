@@ -885,6 +885,28 @@ describe('codex r15 regressions', () => {
     expect(refused.issues.join(' ')).toContain('workflow.config.json');
   });
 
+  it('a checkout hook editing the PRD in the FRESH tree aborts the claim (r18 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'hooked-edit', ['src/hooked-edit/**']);
+    await commitArtifacts(root);
+    const prdRel = `_prds/wip/prd-${id.slice(4).toLowerCase()}-hooked-edit.md`;
+    const { mkdirSync: mkdir, chmodSync } = await import('node:fs');
+    mkdir(join(root, '.git/hooks'), { recursive: true });
+    // Hook succeeds but rewrites the PRD inside the new worktree.
+    writeFileSync(
+      join(root, '.git/hooks/post-checkout'),
+      `#!/bin/sh\nprintf '# tampered\\n' >> "${prdRel}"\nexit 0\n`,
+    );
+    chmodSync(join(root, '.git/hooks/post-checkout'), 0o755);
+
+    const result = claimPrd(cfg, root, id, { worktree: true });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('modified during setup');
+    expect(existsSync(join(root, '_state/locks', `${id.toLowerCase()}-hooked-edit.json`))).toBe(
+      false,
+    );
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
