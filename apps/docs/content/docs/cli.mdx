@@ -62,14 +62,33 @@ required-evidence rules). `--wiring` audits wire-or-delete: manifest commands mu
 real scripts; `verify:*`-pattern scripts must be wired in the manifest/CI or carry a
 shrink-only exception.
 
+### `gate init [--dry-run]`
+
+Scaffolds the workflow tree (artifact dirs × lifecycle states, state and locks dirs) plus
+starter `workflow.config.json` and `gates.manifest.json`. Additive-only and idempotent:
+nothing is ever overwritten; re-run any time. Roots at the nearest `.git` walking up from
+the current directory, else the current directory itself.
+
+### `gate new <slug> [--class=X] [--template=path]`
+
+Creates the next work item from the shipped PRD template: allocates the next free id
+(max across ALL lifecycle states + 1 — completed and deferred ids are never reused),
+substitutes id/slug/dates/status/class into the template, and writes
+`_prds/wip/prd-XXX-<slug>.md`. Never overwrites; a concurrent `gate new` race is detected
+and retried with the next id. `--template` points at a forked template (its metadata
+anchors must survive the fork — a drifted template fails loudly).
+
+### `gate open <PRD-XXX> [--steal]`
+
+Claims the PRD's declared `## Conflict Surface`: checks the globs against every active
+lease with the same overlap engine `gate queue` uses, then either writes a lease into the
+locks dir or refuses (exit 1) naming each overlap. Claiming is atomic — no lease is
+written while any conflict exists. Re-claiming your own PRD refreshes the lease
+("already held"). A *stale* foreign lease still blocks, but `--steal` may take it over —
+the takeover prints the victim's PRD, agent, and expiry; a *valid* foreign lease is never
+stealable. A PRD with no conflict surface is refused: a claim over nothing protects
+nothing.
+
 Layout, id pattern, status vocabulary, and branch policy come from an optional
 `workflow.config.json`; gate membership and policy from an optional `gates.manifest.json` —
 see the package README for both surfaces.
-
-## Stubs (exit 1, naming their roadmap phase)
-
-| Command | Will do                                              | Arrives |
-| ------- | ---------------------------------------------------- | ------- |
-| `init`  | scaffold workflow config + artifact tree             | Phase B |
-| `new`   | create a PRD and register it in workflow state       | Phase B |
-| `open`  | claim a PRD: acquire locks, declare conflict surface | Phase B |

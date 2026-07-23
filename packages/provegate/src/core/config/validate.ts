@@ -11,6 +11,7 @@ type Spec =
   | { kind: 'number' }
   | { kind: 'stringArray' }
   | { kind: 'stringRecord' }
+  | { kind: 'maybeEmptyString' }
   | { kind: 'object'; children: Record<string, Spec> };
 
 const str: Spec = { kind: 'string' };
@@ -18,6 +19,7 @@ const num: Spec = { kind: 'number' };
 const strArr: Spec = { kind: 'stringArray' };
 const strRec: Spec = { kind: 'stringRecord' };
 const obj = (children: Record<string, Spec>): Spec => ({ kind: 'object', children });
+const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
 
 const artifactKind = obj({ dir: str, prefix: str });
 
@@ -60,6 +62,7 @@ const CONFIG_SPEC = obj({
   sharedAppendOnly: strArr,
   classes: strArr,
   verifyScriptPattern: str,
+  templates: obj({ prd: strOrEmpty }),
 });
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -71,6 +74,11 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
     case 'string':
       if (typeof value !== 'string' || value.length === 0) {
         issues.push({ path, message: 'must be a non-empty string' });
+      }
+      return;
+    case 'maybeEmptyString':
+      if (typeof value !== 'string') {
+        issues.push({ path, message: 'must be a string' });
       }
       return;
     case 'number':

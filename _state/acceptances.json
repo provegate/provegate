@@ -45,6 +45,17 @@
       "reason": "reviewed both codex rounds (pack-manifest critical fixed) and the release surface; accepting autonomous close via gate run",
       "date": "2026-07-23",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-006",
+      "owner": "owner",
+      "items": [
+        "8.0 codex review sessions authorized and completed (verdict pass after 8 rounds, r8 gate PASS with 0 critical, 4 advisories fixed)",
+        "9.0 operator acceptance of autonomous close and dogfood trigger (push stays human)"
+      ],
+      "reason": "authorized codex rounds r1-r8 interactively; reviewed the r8 report and fix commit, then instructed apply and go; accepting autonomous close via gate run",
+      "date": "2026-07-23",
+      "method": "interactive"
     }
   ]
 }

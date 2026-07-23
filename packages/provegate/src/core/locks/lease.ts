@@ -79,17 +79,29 @@ export interface LockFileEntry {
   error?: string;
 }
 
-/** List lock files, migrating worktree-local ones first. Parse errors are
- * carried as entries, never thrown — a corrupt lease must fail loud downstream,
- * not crash the listing. */
+/** List lock files: the central dir plus any worktree-local stragglers, as a
+ * READ-ONLY union (central wins on filename collision, mirroring migration).
+ * Migration is a write and belongs to mutex-holding claimants — a listing
+ * reader that migrated could move an overlapping lease into the central dir
+ * between a claim's parse and its install. Parse errors are carried as
+ * entries, never thrown — a corrupt lease must fail loud downstream, not
+ * crash the listing. */
 export function listLockFiles(config: WorkflowConfig, root: string): LockFileEntry[] {
-  migrateWorktreeLocks(config, root);
-  const dir = locksDir(config, root);
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((name) => name.endsWith('.json'))
-    .sort()
-    .map((name) => {
+  const central = locksDir(config, root);
+  const local = localLocksDir(config, root);
+  const found: { dir: string; name: string }[] = [];
+  const seen = new Set<string>();
+  for (const dir of local === central ? [central] : [central, local]) {
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      found.push({ dir, name });
+    }
+  }
+  return found
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    .map(({ dir, name }) => {
       const path = resolve(dir, name);
       try {
         const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
@@ -150,11 +162,29 @@ export function validateLock(
 ): string[] {
   const issues: string[] = [];
   for (const field of REQUIRED_FIELDS) {
-    if (data[field] === undefined) issues.push(`missing ${field}`);
+    if (data[field] === undefined) {
+      issues.push(`missing ${field}`);
+    } else if (
+      field !== 'schemaVersion' &&
+      field !== 'touchedFiles' &&
+      (typeof data[field] !== 'string' || (data[field] as string).length === 0)
+    ) {
+      // Presence alone is not shape: a numeric prd or empty agent is as
+      // unknowable as a missing one — malformed ownership must fail closed.
+      issues.push(`${field} must be a non-empty string`);
+    }
+  }
+  const startedAt = data['startedAt'];
+  if (typeof startedAt === 'string' && !Number.isFinite(Date.parse(startedAt))) {
+    issues.push('startedAt is not a valid date-time');
   }
   const touched = data['touchedFiles'];
-  if (!Array.isArray(touched) || touched.length === 0) {
-    issues.push('touchedFiles must be a non-empty array');
+  if (
+    !Array.isArray(touched) ||
+    touched.length === 0 ||
+    !touched.every((t) => typeof t === 'string' && t.length > 0)
+  ) {
+    issues.push('touchedFiles must be a non-empty array of non-empty strings');
   }
   const schemaVersion = data['schemaVersion'];
   if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {
