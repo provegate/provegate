@@ -6,7 +6,7 @@
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `new-open`
-> **Cycle Phase**: 2 (Readiness Scored)
+> **Cycle Phase**: 3 (Tasks Generated)
 > **PRD Class**: feature
 > **Class Rationale**: (default class) — two new user-facing CLI behaviors completing
 > the workflow's entry path: create a PRD, claim it with locks.

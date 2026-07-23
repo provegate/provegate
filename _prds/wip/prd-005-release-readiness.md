@@ -6,7 +6,7 @@
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `release-readiness`
-> **Cycle Phase**: 2 (Readiness Scored)
+> **Cycle Phase**: 3 (Tasks Generated)
 > **PRD Class**: infra
 > **Class Rationale**: no product behavior changes — packaging, versioning, and release
 > mechanics so the human-triggered publish can happen; the engine and method content are
