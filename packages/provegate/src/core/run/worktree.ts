@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { join, normalize, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 import { containedPath } from './init.js';
@@ -34,6 +34,14 @@ export interface WorktreeRemoval {
 
 function git(dir: string, args: string[]): string {
   return execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+}
+
+/** The configured worktree dir in canonical relative spelling: `./.worktrees`
+ * and `.worktrees/` both mean `.worktrees` — exclude entries, dirt-path
+ * prefixes, and lease stamps must all agree on ONE spelling or a valid
+ * noncanonical config refuses every close (codex r8 P2). */
+export function normalizedWorktreeDir(config: WorkflowConfig): string {
+  return normalize(config.worktree.dir).replace(new RegExp(`${sep === '\\' ? '\\\\' : sep}+$`), '');
 }
 
 function branchExists(mainRoot: string, branch: string): boolean {
@@ -76,18 +84,18 @@ function deleteBranchSafely(
   mainRoot: string,
   branch: string,
 ): { deleted: boolean; why?: string } {
+  if (branch.startsWith('-')) {
+    return { deleted: false, why: 'option-like branch name refused' };
+  }
+  // Configured protected branches are NEVER teardown targets, whatever a
+  // (tamperable) lease stamp claims (codex r8 P1).
+  if (config.branches.protected.includes(branch)) {
+    return { deleted: false, why: 'protected branch' };
+  }
   if (!branchExists(mainRoot, branch)) return { deleted: true };
   const base = config.branches.base;
-  // Pin the tip the ancestry proof is about — the escalation below must
-  // delete EXACTLY this commit or nothing (codex r7 P1).
-  let tip: string;
   try {
-    tip = git(mainRoot, ['rev-parse', `refs/heads/${branch}`]);
-  } catch {
-    return { deleted: true }; // vanished between the checks
-  }
-  try {
-    git(mainRoot, ['merge-base', '--is-ancestor', tip, `refs/heads/${base}`]);
+    git(mainRoot, ['merge-base', '--is-ancestor', `refs/heads/${branch}`, `refs/heads/${base}`]);
   } catch {
     return { deleted: false, why: `not merged into ${base}` };
   }
@@ -97,19 +105,42 @@ function deleteBranchSafely(
     git(dir, ['branch', '-d', branch]);
     return { deleted: true };
   } catch {
-    // `-d` refused against a parked HEAD. Escalation must not trust the
-    // now-stale proof: `update-ref -d <ref> <expected>` is git's atomic
-    // compare-and-delete — a branch a rival advanced mid-flight mismatches
-    // and survives. update-ref skips the checked-out guard `-d` has, so
-    // refuse first if any worktree still holds the branch.
-    if (worktreeForBranch(mainRoot, branch) !== null) {
-      return { deleted: false, why: 'checked out in another worktree' };
+    // `-d` refused against a parked HEAD. Escalate WITHOUT dropping any git
+    // guard: a throwaway detached checkout at the base tip makes `-d`'s own
+    // mergedness check evaluate against the right ref, while its
+    // checked-out-branch protection stays intact — an advanced tip or a
+    // checkout that appeared mid-flight refuses at delete time (codex r7+r8
+    // P1; update-ref was rejected because it skips the checked-out guard).
+    const scratch = join(
+      mainRoot,
+      normalizedWorktreeDir(config),
+      `.gate-branch-del-${process.pid}`,
+    );
+    try {
+      // --no-checkout: no files, no checkout hooks — the scratch tree exists
+      // only to give `-d` a HEAD at the base tip to judge mergedness against.
+      git(mainRoot, ['worktree', 'add', '--detach', '--no-checkout', scratch, `refs/heads/${base}`]);
+    } catch {
+      return { deleted: false, why: 'delete refused (no clean context to judge mergedness)' };
     }
     try {
-      git(mainRoot, ['update-ref', '-d', `refs/heads/${branch}`, tip]);
+      git(scratch, ['branch', '-d', branch]);
       return { deleted: true };
     } catch {
-      return { deleted: false, why: 'branch advanced mid-delete or delete refused' };
+      return { deleted: false, why: 'branch advanced mid-delete or checked out elsewhere' };
+    } finally {
+      try {
+        // --force is legitimate HERE ONLY: the scratch tree is internal,
+        // just created, never populated — an unpopulated checkout reads as
+        // "dirty" to plain remove. User trees are never force-removed.
+        git(mainRoot, ['worktree', 'remove', '--force', scratch]);
+      } catch {
+        try {
+          git(mainRoot, ['worktree', 'prune']);
+        } catch {
+          /* best-effort */
+        }
+      }
     }
   }
 }
@@ -125,7 +156,7 @@ export function worktreeNamesFor(
   const branch = config.branches.featurePattern
     .replaceAll('{id}', id.toLowerCase())
     .replaceAll('{slug}', slug);
-  return { relPath: `${config.worktree.dir}/${stem}`, branch };
+  return { relPath: `${normalizedWorktreeDir(config)}/${stem}`, branch };
 }
 
 /** The branch currently registered at `path` (realpath-compared), or null. */
@@ -170,6 +201,17 @@ export function createWorktree(
 ): WorktreeProvision {
   const mainRoot = mainRepoRoot(root);
   const { relPath, branch } = worktreeNamesFor(config, id, slug);
+  // An expanded featurePattern is DATA, never argv: an option-like value
+  // (`-m…`) would mutate git state before any rollback exists (codex r8 P2);
+  // a configured protected branch is never a provisioning target either.
+  if (branch.startsWith('-')) {
+    throw new Error(
+      `branches.featurePattern expands to option-like branch "${branch}" — fix the pattern`,
+    );
+  }
+  if (config.branches.protected.includes(branch)) {
+    throw new Error(`branches.featurePattern expands to protected branch "${branch}" — refused`);
+  }
   const path = containedPath(mainRoot, relPath);
 
   if (branchExists(mainRoot, branch)) {
@@ -184,7 +226,7 @@ export function createWorktree(
   // untracked dirt forever. info/exclude is per-clone, additive, idempotent.
   try {
     const excludePath = join(mainRoot, '.git', 'info', 'exclude');
-    const entry = `/${config.worktree.dir}/`;
+    const entry = `/${normalizedWorktreeDir(config)}/`;
     const current = existsSync(excludePath) ? readFileSync(excludePath, 'utf8') : '';
     if (!current.split('\n').includes(entry)) {
       mkdirSync(join(mainRoot, '.git', 'info'), { recursive: true });
@@ -270,6 +312,15 @@ export function removeWorktree(
   let removed = false;
   let branchDeleted = false;
 
+  // Stamp values are DATA: option-like or protected branch names refuse the
+  // whole teardown before any git call (codex r8 P1/P2).
+  if (branch.startsWith('-') || config.branches.protected.includes(branch)) {
+    warnings.push(
+      `cleanup refused: stamped branch ${branch} is ${branch.startsWith('-') ? 'option-like' : 'protected'} — clean up manually if intended`,
+    );
+    return { removed, branchDeleted, warnings };
+  }
+
   let path: string;
   try {
     // Containment base is the WORKTREE DIR, not the repo root: a tampered
@@ -277,7 +328,7 @@ export function removeWorktree(
     // and must refuse — repo-root containment alone would admit it (codex r2
     // P2).
     path = containedPath(mainRoot, worktree);
-    const wtRoot = resolve(mainRoot, config.worktree.dir);
+    const wtRoot = resolve(mainRoot, normalizedWorktreeDir(config));
     if (path !== wtRoot && !path.startsWith(`${wtRoot}${sep}`)) {
       throw new Error(`lease worktree ${worktree} is outside ${config.worktree.dir}/`);
     }
@@ -294,7 +345,7 @@ export function removeWorktree(
     // hold for the RESOLVED path too, not just the lexical one (codex r3 P2).
     try {
       const real = realpathSync(path);
-      const wtRootReal = realpathSync(resolve(mainRoot, config.worktree.dir));
+      const wtRootReal = realpathSync(resolve(mainRoot, normalizedWorktreeDir(config)));
       if (real !== wtRootReal && !real.startsWith(`${wtRootReal}${sep}`)) {
         warnings.push(
           `worktree not removed: ${worktree} resolves outside ${config.worktree.dir}/ — remove manually`,

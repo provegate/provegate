@@ -434,6 +434,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   // base branch must live in another (clean) checkout, or the merge would
   // refuse — or worse, fall back to merging inside the feature worktree —
   // after archive commits already landed (codex r1 P1).
+  let cleanupChdirTarget: string | null = null;
   if (stamps) {
     const baseReady = baseWorktreeReady(config, root);
     if (!baseReady.ok) {
@@ -447,6 +448,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       );
       return 1;
     }
+    cleanupChdirTarget = baseReady.baseDir ?? null;
   }
 
   try {
@@ -482,6 +484,15 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   let cleanupWarnings: string[] = [];
   let cleanupDone = false;
   if (stamps) {
+    // Windows refuses deleting a process's current directory — step out of
+    // the worktree (into the base checkout) before teardown (codex r8 P1).
+    if (cleanupChdirTarget !== null) {
+      try {
+        process.chdir(cleanupChdirTarget);
+      } catch {
+        /* removal will degrade to a warning if the cwd blocks it */
+      }
+    }
     const removal = removeWorktree(config, root, stamps);
     cleanupDone = removal.removed;
     if (removal.removed) {

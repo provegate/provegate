@@ -467,6 +467,48 @@ describe('codex r6 regressions', () => {
   });
 });
 
+describe('codex r8 regressions', () => {
+  it('teardown refuses protected and option-like stamped branches (P1/P2)', async () => {
+    const root = await gitRoot();
+    for (const branch of ['staging', '-m']) {
+      const removal = removeWorktree(cfg, root, {
+        worktree: '.worktrees/prd-001-x',
+        branch,
+      });
+      expect(removal.removed, branch).toBe(false);
+      expect(removal.branchDeleted, branch).toBe(false);
+      expect(removal.warnings.join(' '), branch).toContain('cleanup refused');
+    }
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).not.toContain('staging ');
+  });
+
+  it('provisioning refuses option-like and protected featurePattern expansions (P1/P2)', async () => {
+    const root = await gitRoot();
+    const dashed = { ...cfg, branches: { ...cfg.branches, featurePattern: '-m-{slug}' } };
+    expect(() => createWorktree(dashed, root, { id: 'PRD-001', slug: 'x' })).toThrow(
+      /option-like/,
+    );
+    const prot = { ...cfg, branches: { ...cfg.branches, featurePattern: 'staging' } };
+    expect(() => createWorktree(prot, root, { id: 'PRD-001', slug: 'x' })).toThrow(/protected/);
+  });
+
+  it('a noncanonical worktree.dir spelling still closes cleanly (P2)', async () => {
+    const root = await gitRoot();
+    await run('git', ['-C', root, 'add', '-A']);
+    await run('git', ['-C', root, 'commit', '-m', 'workspace']);
+    const dotted = { ...cfg, worktree: { dir: './.worktrees/' } };
+    const made = createWorktree(dotted, root, { id: 'PRD-001', slug: 'dotted' });
+    expect(made.relPath).toBe('.worktrees/prd-001-dotted');
+    expect(ensureCheckoutClean(dotted, root).ok).toBe(true);
+    const removal = removeWorktree(dotted, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.branchDeleted).toBe(true);
+  });
+});
+
 describe('claimPrd --worktree (FR-2, W2)', () => {
   it('claim + provision: lease carries schema-valid worktree/branch stamps', async () => {
     const root = await gitRoot();

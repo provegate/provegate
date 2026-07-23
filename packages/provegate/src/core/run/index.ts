@@ -53,6 +53,7 @@ export {
 export { withWorkspaceMutex } from './mutex.js';
 export {
   createWorktree,
+  normalizedWorktreeDir,
   removeWorktree,
   worktreeForBranch,
   worktreeNamesFor,

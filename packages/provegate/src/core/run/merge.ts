@@ -3,6 +3,7 @@ import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
+import { normalizedWorktreeDir } from './worktree.js';
 
 /**
  * Local no-ff merge with post-merge verification and auto-revert. Two
@@ -35,7 +36,10 @@ function isCoordinationPath(config: WorkflowConfig, p: string): boolean {
  * the merge, never be silently reset (codex r1 P1). */
 function isUntrackedWorktreeEntry(config: WorkflowConfig, p: string, untracked: boolean): boolean {
   if (!untracked) return false;
-  return p === `${config.worktree.dir}/` || p.startsWith(`${config.worktree.dir}/`);
+  // Compare in the canonical spelling: `./.worktrees` in config vs
+  // `.worktrees/` from `git status` must still match (codex r8 P2).
+  const dir = normalizedWorktreeDir(config);
+  return p === `${dir}/` || p.startsWith(`${dir}/`);
 }
 
 interface DirtyEntry {
