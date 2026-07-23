@@ -164,16 +164,15 @@ export function createPrd(
   // Role-keyed, never position-keyed: states[0] is not necessarily wip.
   const wipState = config.dirs.stateRoles.wip;
 
-  const holder = slugHolder(config, root, slug);
-  if (holder !== null) {
-    throw new Error(`slug "${slug}" is already used by ${holder} — pick a distinct slug`);
-  }
-
-  // The whole allocate-and-write sequence is serialized by a workspace mutex:
-  // scan-based protocols alone cannot durably reserve an id across processes
-  // (a rival that scanned before our write can land the same number after our
-  // re-scan). The re-scan below stays as a belt for mutex-less writers.
+  // The whole allocate-and-write sequence — INCLUDING the slug-uniqueness
+  // scan — is serialized by a workspace mutex: scan-based protocols alone
+  // cannot durably reserve an id (or a slug) across processes. The re-scan
+  // below stays as a belt for mutex-less writers.
   return withWorkspaceMutex(resolve(dirname(containedPath(root, config.dirs.stateFile)), '.gate-new.mutex'), () => {
+    const holder = slugHolder(config, root, slug);
+    if (holder !== null) {
+      throw new Error(`slug "${slug}" is already used by ${holder} — pick a distinct slug`);
+    }
     const MAX_RETRIES = 3;
     let retries = 0;
     for (;;) {

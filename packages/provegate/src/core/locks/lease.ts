@@ -150,11 +150,29 @@ export function validateLock(
 ): string[] {
   const issues: string[] = [];
   for (const field of REQUIRED_FIELDS) {
-    if (data[field] === undefined) issues.push(`missing ${field}`);
+    if (data[field] === undefined) {
+      issues.push(`missing ${field}`);
+    } else if (
+      field !== 'schemaVersion' &&
+      field !== 'touchedFiles' &&
+      (typeof data[field] !== 'string' || (data[field] as string).length === 0)
+    ) {
+      // Presence alone is not shape: a numeric prd or empty agent is as
+      // unknowable as a missing one — malformed ownership must fail closed.
+      issues.push(`${field} must be a non-empty string`);
+    }
+  }
+  const startedAt = data['startedAt'];
+  if (typeof startedAt === 'string' && !Number.isFinite(Date.parse(startedAt))) {
+    issues.push('startedAt is not a valid date-time');
   }
   const touched = data['touchedFiles'];
-  if (!Array.isArray(touched) || touched.length === 0) {
-    issues.push('touchedFiles must be a non-empty array');
+  if (
+    !Array.isArray(touched) ||
+    touched.length === 0 ||
+    !touched.every((t) => typeof t === 'string' && t.length > 0)
+  ) {
+    issues.push('touchedFiles must be a non-empty array of non-empty strings');
   }
   const schemaVersion = data['schemaVersion'];
   if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {

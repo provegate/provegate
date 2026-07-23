@@ -67,6 +67,8 @@ interface ParsedLock {
   expiresAt: string;
   stale: boolean;
   surfaced: SurfacedLock;
+  /** Raw parsed fields, for identity revalidation before a steal. */
+  snapshot: Record<string, unknown>;
 }
 
 interface LockParse {
@@ -104,6 +106,7 @@ function parseLocks(config: WorkflowConfig, root: string, now: Date): LockParse 
       phase: String(d['phase']),
       expiresAt,
       stale: expiry < now.getTime(),
+      snapshot: d,
       surfaced: {
         prd: String(d['prd']),
         phase: String(d['phase']),
@@ -139,7 +142,10 @@ function claimPrdLocked(
   { steal = false, agent, leaseHours = DEFAULT_LEASE_HOURS, now = new Date() }: ClaimOptions = {},
 ): ClaimResult {
   const normalized = id.toUpperCase();
-  const leaseAgent = agent ?? config.owners[0] ?? 'operator';
+  // Empty/whitespace agent is treated as absent — a lease with an empty agent
+  // would violate the lock schema while the command reports success.
+  const trimmedAgent = agent?.trim();
+  const leaseAgent = trimmedAgent !== undefined && trimmedAgent !== '' ? trimmedAgent : (config.owners[0] ?? 'operator');
   const base: Omit<ClaimResult, 'ok' | 'issues'> = {
     id: normalized,
     refreshed: false,
@@ -228,29 +234,39 @@ function claimPrdLocked(
   }
 
   // Clear (or stealing stale blockers): write/refresh the lease. All under
-  // the workspace mutex — but each victim is REVALIDATED from disk right
-  // before the unlink anyway (belt for mutex-less writers): a lease refreshed
-  // since our parse is no longer stale and aborts the steal.
+  // the workspace mutex — with a two-phase steal as belt for mutex-less
+  // writers: EVERY victim is revalidated from disk (full identity, not just
+  // expiry — the same path now holding a DIFFERENT lease is not the lease we
+  // inspected) and nothing is deleted until all victims pass. No partial
+  // steals.
   const stolen: StolenLease[] = [];
   if (steal) {
+    const IDENTITY_FIELDS = ['lockId', 'prd', 'agent', 'startedAt', 'expiresAt'] as const;
     for (const l of staleBlockers) {
-      let expiry = Number.NaN;
+      let mismatch = 'unreadable or vanished';
       try {
         const fresh = JSON.parse(readFileSync(l.file, 'utf8')) as Record<string, unknown>;
-        expiry = Date.parse(String(fresh['expiresAt'] ?? ''));
+        const snapshot = l.snapshot;
+        const identical = IDENTITY_FIELDS.every(
+          (f) => String(fresh[f] ?? '') === String(snapshot[f] ?? ''),
+        );
+        const stillExpired = Date.parse(String(fresh['expiresAt'] ?? '')) < now.getTime();
+        if (identical && stillExpired) mismatch = '';
+        else if (!identical) mismatch = 'replaced by a different lease';
+        else mismatch = 'refreshed (no longer stale)';
       } catch {
-        // vanished or unreadable now -> not ours to reason about
+        /* mismatch already set */
       }
-      if (!(expiry < now.getTime())) {
+      if (mismatch !== '') {
         return {
           ...base,
           globs,
           ok: false,
-          issues: [
-            `steal aborted: lease of ${l.prd} changed on disk since inspection (refreshed or unreadable)`,
-          ],
+          issues: [`steal aborted, nothing deleted: lease of ${l.prd} ${mismatch}`],
         };
       }
+    }
+    for (const l of staleBlockers) {
       unlinkSync(l.file);
       stolen.push(asStolen(l));
     }
@@ -274,11 +290,25 @@ function claimPrdLocked(
     ownedPaths: globs,
   };
   const refreshed = self.length > 0;
-  // wx for a NEW claim (never clobber an unseen rival); refresh overwrites
-  // our own lease deliberately.
-  writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
-    flag: refreshed ? 'w' : 'wx',
-  });
+  // Overwrite mode ('w') ONLY when the canonical destination itself is a
+  // verified self-owned lease: a legacy self lease under a different filename
+  // must not license clobbering whatever sits at the canonical path.
+  const destinationIsSelf = self.some((l) => l.file === leasePath);
+  try {
+    writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
+      flag: destinationIsSelf ? 'w' : 'wx',
+    });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+    return {
+      ...base,
+      globs,
+      ok: false,
+      issues: [
+        `claim aborted: ${leasePath} appeared on disk during the claim (unseen rival) — re-run gate open`,
+      ],
+    };
+  }
   // Self leases under a different filename (hand-written era) are superseded.
   for (const l of self) {
     if (l.file !== leasePath) unlinkSync(l.file);

@@ -51,7 +51,7 @@ describe('validateLock', () => {
       { now: NOW },
     );
     expect(issues).toContain('schemaVersion must be 1 or 2 (got 3)');
-    expect(issues).toContain('touchedFiles must be a non-empty array');
+    expect(issues).toContain('touchedFiles must be a non-empty array of non-empty strings');
     expect(issues).toContain('ownedPaths[0] must be a non-empty string');
     expect(issues).toContain('ownedPaths[1] must be a non-empty string');
   });
