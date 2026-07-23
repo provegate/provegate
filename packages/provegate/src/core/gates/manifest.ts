@@ -246,18 +246,32 @@ function assertCommandsSafe(config: WorkflowConfig, manifest: GatesManifest): vo
   }
 }
 
+/** The raw manifest bytes the LAST loadManifest parsed, per repo root — the
+ * provenance a caller hashes to prove a checkout carries the SAME gate
+ * policy this run used (codex prd-007 r24 P1). */
+const manifestSourceByRoot = new Map<string, string>();
+
+/** The bytes loadManifest parsed for `root`, or null when the repo has no
+ * manifest (defaults in effect). */
+export function manifestSourceFor(root: string): string | null {
+  return manifestSourceByRoot.get(resolve(root)) ?? null;
+}
+
 /** Load the manifest for a repo root. Absent file = pure defaults. */
 export function loadManifest(config: WorkflowConfig, root: string): GatesManifest {
   const file = resolve(root, MANIFEST_FILENAME);
   const defaults = defaultManifest(config);
   if (!existsSync(file)) {
+    manifestSourceByRoot.delete(resolve(root));
     assertCommandsSafe(config, defaults);
     return defaults;
   }
 
   let parsed: unknown;
+  let source: string;
   try {
-    parsed = JSON.parse(readFileSync(file, 'utf8'));
+    source = readFileSync(file, 'utf8');
+    parsed = JSON.parse(source);
   } catch (error) {
     throw new ManifestError(
       `${MANIFEST_FILENAME} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
@@ -267,6 +281,7 @@ export function loadManifest(config: WorkflowConfig, root: string): GatesManifes
   if (issues.length > 0) {
     throw new ManifestError(`${MANIFEST_FILENAME} is invalid`, issues);
   }
+  manifestSourceByRoot.set(resolve(root), source);
   const merged = deepMerge(defaults, parsed);
   assertCommandsSafe(config, merged);
   return merged;

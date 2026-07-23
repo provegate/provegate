@@ -234,6 +234,23 @@ export interface ArtifactSnapshot {
   content?: string;
 }
 
+/** Snapshot entries a checkout at `dir` does NOT carry: blob mismatch, or —
+ * where the caller captured the bytes — text that differs despite an equal
+ * blob (a non-injective clean filter can collapse both, codex r23/r24 P1). */
+export function snapshotsMissingFrom(dir: string, snapshots: ArtifactSnapshot[]): string[] {
+  return snapshots
+    .filter((s) => {
+      if (blobShaOfFile(dir, s.rel) !== s.sha) return true;
+      if (s.content === undefined) return false;
+      try {
+        return readFileSync(join(dir, s.rel), 'utf8') !== s.content;
+      } catch {
+        return true;
+      }
+    })
+    .map((s) => s.rel);
+}
+
 /** Snapshot entries whose parsed bytes do NOT match `ref`. */
 export function snapshotsNotMatchingRef(
   mainRoot: string,
@@ -484,20 +501,7 @@ export function createWorktree(
     // branch must ALSO still point at the pinned base: a successful hook can
     // commit or reset it while leaving those blobs untouched, handing the
     // agent a tree missing base commits (codex r21 P2).
-    const stale = requireOnBase
-      .filter((s) => {
-        if (blobShaOfFile(path, s.rel) !== s.sha) return true;
-        // Content equality where the caller captured the bytes: a lossy
-        // clean filter can collapse different contents to one blob, and the
-        // lease must describe what the agent will actually read (r23 P1).
-        if (s.content === undefined) return false;
-        try {
-          return readFileSync(join(path, s.rel), 'utf8') !== s.content;
-        } catch {
-          return true;
-        }
-      })
-      .map((s) => s.rel);
+    const stale = snapshotsMissingFrom(path, requireOnBase);
     if (!reattach && resolveRef(mainRoot, `refs/heads/${branch}`) !== baseRef) {
       stale.push(`branch ${branch} no longer points at the pinned base`);
     }

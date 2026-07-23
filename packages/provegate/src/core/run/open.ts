@@ -12,7 +12,7 @@ import {
 } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import { CONFIG_FILENAME, configSourceFor, type WorkflowConfig } from '../config/index.js';
-import { MANIFEST_FILENAME } from '../gates/manifest.js';
+import { MANIFEST_FILENAME, manifestSourceFor } from '../gates/manifest.js';
 import {
   candidateConflicts,
   candidateFromPrd,
@@ -37,6 +37,7 @@ import {
   existsOnRef,
   removeWorktree,
   resolveRef,
+  snapshotsMissingFrom,
   snapshotsNotMatchingRef,
   type ArtifactSnapshot,
   worktreeForBranch,
@@ -279,11 +280,12 @@ function claimPrdLocked(
   ];
   for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
-      // The config gets the same provenance binding as the PRD: hash the
-      // bytes resolveConfig actually parsed, so restoring the file after
-      // parsing cannot validate committed content while the claim runs on
-      // an uncommitted layout (codex r22 P1).
-      const parsedSource = control === CONFIG_FILENAME ? configSourceFor(root) : null;
+      // Control files get the same provenance binding as the PRD: hash the
+      // bytes the loader actually parsed, so restoring a file after parsing
+      // cannot validate committed content while the claim runs on an
+      // uncommitted layout or gate policy (codex r22/r24 P1).
+      const parsedSource =
+        control === CONFIG_FILENAME ? configSourceFor(root) : manifestSourceFor(root);
       requiredArtifacts.push({
         rel: control,
         sha:
@@ -463,17 +465,15 @@ function claimPrdLocked(
     // Among several self leases the NEWEST install is the live claim — file
     // order must not resurrect a superseded lease's stale worktree/branch and
     // rewrite the canonical lease to it (codex r23 P1, same rule cleanup uses).
-    const stampSource =
-      self
-        .filter(
-          (l) =>
-            typeof l.snapshot['worktree'] === 'string' && typeof l.snapshot['branch'] === 'string',
-        )
-        .sort(
-          (a, b) =>
-            (Date.parse(String(b.snapshot['startedAt'] ?? '')) || 0) -
-            (Date.parse(String(a.snapshot['startedAt'] ?? '')) || 0),
-        )[0] ?? selfAtDestination;
+    const newestSelf =
+      self.length > 0
+        ? [...self].sort(
+            (a, b) =>
+              (Date.parse(String(b.snapshot['startedAt'] ?? '')) || 0) -
+              (Date.parse(String(a.snapshot['startedAt'] ?? '')) || 0),
+          )[0]
+        : undefined;
+    const stampSource = newestSelf ?? selfAtDestination;
     const priorWt = stampSource?.snapshot['worktree'];
     const priorBranch = stampSource?.snapshot['branch'];
     // `--worktree` on a PRD that ALREADY has a stamped checkout reuses that
@@ -705,10 +705,9 @@ function claimPrdLocked(
         ? [
             // The parsed bytes must be what base carries…
             ...snapshotsNotMatchingRef(mainRoot, baseRefName, requiredArtifacts),
-            // …and what the reused checkout actually holds.
-            ...requiredArtifacts
-              .filter((s) => blobShaOfFile(expected!, s.rel) !== s.sha)
-              .map((s) => s.rel),
+            // …and what the reused checkout actually holds, text included
+            // (blob equality alone is not proof, codex r24 P1).
+            ...snapshotsMissingFrom(expected!, requiredArtifacts),
           ].filter((rel, i, all) => all.indexOf(rel) === i)
         : [];
       if (reusable && reuseStale.length > 0) {

@@ -599,7 +599,7 @@ describe('codex r10 regressions', () => {
     expect(existsSync(join(root, `.worktrees/${id.toLowerCase()}-second-name`))).toBe(false);
   });
 
-  it('a stamped legacy self lease outranks an unstamped destination lease (P2)', async () => {
+  it('stamps come from the NEWEST self lease, stamped or not (P2, superseded by r24)', async () => {
     const root = await gitRoot();
     await run('git', ['-C', root, 'add', '-A']);
     await run('git', ['-C', root, 'commit', '-m', 'workspace']);
@@ -607,32 +607,49 @@ describe('codex r10 regressions', () => {
     await commitArtifacts(root);
     const plain = claimPrd(cfg, root, id);
     expect(plain.ok).toBe(true);
-    // Legacy-era second self lease carrying the only stamps.
     const made = createWorktree(cfg, root, { id, slug: 'legacy' });
-    writeFileSync(
-      join(root, '_state/locks', `${id.toLowerCase()}-legacy-old.json`),
-      `${JSON.stringify({
-        schemaVersion: 2,
-        lockId: `${id.toLowerCase()}-legacy-old`,
-        agent: 'owner',
-        prd: id,
-        phase: 'Phase 4',
-        startedAt: new Date(Date.now() - 3_600_000).toISOString(),
-        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-        touchedFiles: ['src/legacy/**'],
-        ownedPaths: ['src/legacy/**'],
-        worktree: made.relPath,
-        branch: made.branch,
-      })}\n`,
-    );
-    const refreshed = claimPrd(cfg, root, id);
-    expect(refreshed.ok).toBe(true);
-    const lease = JSON.parse(readFileSync(refreshed.leasePath!, 'utf8')) as Record<
+    const writeSideLease = (startedAt: string): void => {
+      writeFileSync(
+        join(root, '_state/locks', `${id.toLowerCase()}-legacy-old.json`),
+        `${JSON.stringify({
+          schemaVersion: 2,
+          lockId: `${id.toLowerCase()}-legacy-old`,
+          agent: 'owner',
+          prd: id,
+          phase: 'Phase 4',
+          startedAt,
+          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          touchedFiles: ['src/legacy/**'],
+          ownedPaths: ['src/legacy/**'],
+          worktree: made.relPath,
+          branch: made.branch,
+        })}\n`,
+      );
+    };
+
+    // OLDER stamped side lease: the newer unstamped canonical lease is the
+    // live claim, so its (absent) stamps win — an ancient worktree must not
+    // drive cleanup (codex r24 P1).
+    writeSideLease(new Date(Date.now() - 3_600_000).toISOString());
+    const ignoring = claimPrd(cfg, root, id);
+    expect(ignoring.ok).toBe(true);
+    const ignored = JSON.parse(readFileSync(ignoring.leasePath!, 'utf8')) as Record<
       string,
       unknown
     >;
-    expect(lease['worktree']).toBe(made.relPath);
-    expect(lease['branch']).toBe(made.branch);
+    expect(ignored['worktree']).toBeUndefined();
+
+    // NEWER stamped side lease: it IS the live claim, so a plain refresh
+    // carries its stamps forward instead of dropping cleanup metadata.
+    writeSideLease(new Date(Date.now() + 60_000).toISOString());
+    const carrying = claimPrd(cfg, root, id);
+    expect(carrying.ok).toBe(true);
+    const carried = JSON.parse(readFileSync(carrying.leasePath!, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(carried['worktree']).toBe(made.relPath);
+    expect(carried['branch']).toBe(made.branch);
   });
 
   it('normalizedWorktreeDir is POSIX-separated and canonical (P2)', async () => {

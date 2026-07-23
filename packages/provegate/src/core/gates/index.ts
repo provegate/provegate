@@ -5,6 +5,7 @@ export {
   ManifestError,
   defaultManifest,
   loadManifest,
+  manifestSourceFor,
   manifestCommands,
   validateManifest,
   type ClassRule,

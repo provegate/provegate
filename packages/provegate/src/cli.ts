@@ -344,26 +344,27 @@ interface WorktreeStamps {
  * files name this PRD; the NEWEST install is the live claim, so filename sort
  * order must not decide which identity cleanup guards (codex r22 P1). */
 function worktreeStamps(config: WorkflowConfig, root: string, id: string): WorktreeStamps | null {
-  let newest: WorktreeStamps | null = null;
-  let newestAt = Number.NEGATIVE_INFINITY;
-  for (const lock of listLockFiles(config, root)) {
-    if (!lock.data || String(lock.data['prd']) !== id) continue;
-    const wt = lock.data['worktree'];
-    const br = lock.data['branch'];
-    if (typeof wt !== 'string' || typeof br !== 'string') continue;
-    const startedAt = String(lock.data['startedAt'] ?? '');
-    const at = Date.parse(startedAt);
-    const rank = Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
-    if (newest !== null && rank <= newestAt) continue;
-    newestAt = rank;
-    newest = {
-      worktree: wt,
-      branch: br,
-      startedAt,
-      expiresAt: String(lock.data['expiresAt'] ?? ''),
-    };
-  }
-  return newest;
+  // Rank ALL of the PRD's leases first, THEN read the winner's stamps: an
+  // older stamped lease must not outrank a newer unstamped one (an external
+  // worktree claim), or its stale stamps would drive the branch guard and
+  // tear down a checkout the live claim never named (codex r24 P1).
+  const live = listLockFiles(config, root)
+    .filter((lock) => lock.data && String(lock.data['prd']) === id)
+    .sort(
+      (a, b) =>
+        (Date.parse(String(b.data!['startedAt'] ?? '')) || 0) -
+        (Date.parse(String(a.data!['startedAt'] ?? '')) || 0),
+    )[0];
+  if (!live?.data) return null;
+  const wt = live.data['worktree'];
+  const br = live.data['branch'];
+  if (typeof wt !== 'string' || typeof br !== 'string') return null;
+  return {
+    worktree: wt,
+    branch: br,
+    startedAt: String(live.data['startedAt'] ?? ''),
+    expiresAt: String(live.data['expiresAt'] ?? ''),
+  };
 }
 
 function runRun(args: string[], { mergeOnly = false } = {}): number {
@@ -508,10 +509,10 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       console.log(`[run] archived ${archived.moved.length} artifact(s)`);
       outcome.results.push(['archive: wip→completed', 'passed']);
     }
-    // The tip the archive produced. A post-commit hook can reset or amend the
-    // branch while leaving it checked out — merging then lands the wrong tip
-    // and orphans the archive commit (codex r23 P1).
-    archivedTip = headSha(root);
+    // The commit the archive itself created — read from `git commit`, not a
+    // later HEAD lookup a post-commit hook may already have rewritten (codex
+    // r23+r24 P1). Nothing archived → nothing to pin.
+    archivedTip = archived.commitSha ?? null;
   } catch (error) {
     console.error(
       stopCard({
@@ -535,7 +536,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       branchNow !== stamps.branch
         ? `the checkout moved to ${branchNow ?? 'a detached HEAD'}; the lease pins ${stamps.branch}`
         : archivedTip !== null && tipNow !== archivedTip
-          ? `${stamps.branch} was rewritten after archiving (${archivedTip.slice(0, 7)} → ${tipNow?.slice(0, 7) ?? '?'}), so the archive commit is no longer on it`
+          ? `${stamps.branch} no longer has the archive commit ${archivedTip.slice(0, 7)} at its tip (now ${tipNow?.slice(0, 7) ?? '?'}) — a hook rewrote it`
           : null;
     if (drift !== null) {
       console.error(

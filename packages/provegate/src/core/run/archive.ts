@@ -14,6 +14,10 @@ import type { StateRecord } from '../state/build.js';
 export interface ArchiveResult {
   moved: string[];
   committed: boolean;
+  /** The commit `git commit` actually created, read from its own output —
+   * NOT a later `rev-parse HEAD`, which a post-commit hook may already have
+   * rewritten (codex prd-007 r24 P1). */
+  commitSha?: string;
 }
 
 function git(root: string, args: string[]): string {
@@ -54,6 +58,24 @@ export function archivePrdArtifacts(
     git(root, ['add', '--', config.dirs.stateFile]);
     paths.push(config.dirs.stateFile);
   }
-  git(root, ['commit', '-m', archiveCommitMessage(record.prd), '--', ...paths]);
-  return { moved, committed: true };
+  // `--no-verify` is NOT used: consumer hooks stay in force. The commit's own
+  // identity comes from `rev-parse` on the ref written by THIS commit, read
+  // before returning so the caller can detect a post-commit rewrite.
+  const out = git(root, [
+    'commit',
+    '-m',
+    archiveCommitMessage(record.prd),
+    '--',
+    ...paths,
+  ]);
+  // `git commit` prints `[branch abbrev] subject`; fall back to HEAD when the
+  // porcelain text is localized or absent.
+  const abbrev = /^\[[^\]\s]+ (?:\(root-commit\) )?([0-9a-f]{7,40})\]/m.exec(out)?.[1];
+  let commitSha: string | undefined;
+  try {
+    commitSha = git(root, ['rev-parse', abbrev ?? 'HEAD']);
+  } catch {
+    commitSha = undefined;
+  }
+  return { moved, committed: true, commitSha };
 }
