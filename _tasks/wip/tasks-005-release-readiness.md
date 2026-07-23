@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-005-release-readiness.md](../../_prds/wip/prd-005-release-readiness.md)
 > **Readiness**: [readiness-005-release-readiness.md](../../_readiness/wip/readiness-005-release-readiness.md)
-> **Status**: Phase 5 Complete — Testing Verified
+> **Status**: Phase 6 Complete — Review Passed
 > **Readiness Score**: 8.7/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-23
@@ -58,7 +58,7 @@
         workflow_dispatch → provenance; explicit "no CI path publishes automatically"
   - [x] 5.2 Add to content-launch self-copy lint set
 - [x] 6.0 Phase 5 — Testing: §11 sweep, evidence in ledger
-- [ ] 7.0 Phase 6 — codex review (brief: whitelist gaps, monorepo bleed, frozen-surface
+- [x] 7.0 Phase 6 — codex review (brief: whitelist gaps, monorepo bleed, frozen-surface
         diff check, license identity)
 - [ ] 8.0 Phase 7 — summary; owner acceptance; close via `gate run PRD-005`
 
@@ -71,6 +71,7 @@
 | FR-3 | `pnpm --filter provegate test test/pack.test.ts`                    | provegate | passed | 6/6 in pack suite      | whitelist + hygiene     |
 | FR-4 | `pnpm --filter provegate test test/pack.test.ts`                    | provegate | passed | 6/6 in pack suite      | version single-sourcing |
 | FR-5 | `test -f RELEASING.md`                                              | repo      | passed | exists, linted         | linted self-copy        |
+| independent-review | `_docs/reviews/review-005-release-readiness.md`               | repo      | passed | codex 2 rounds (1 crit + 2 P2 fixed), verdict pass, 0 critical | |
 
 ## Deferrals & Decisions
 
@@ -92,6 +93,7 @@
 | ---------- | ------- | ------------------------------------------------------------------------ |
 | 2026-07-23 | 2.0–5.0 | License (ProveGate contributors), 0.1.0 via changesets, pack audit, RELEASING.md |
 | 2026-07-23 | 6.0     | §11 sweep green: 337 tests, src+workflows zero-diff vs main, hygiene clean |
+| 2026-07-23 | 7.0     | codex 2 rounds: 1 crit (permissive whitelist) + 2 P2 fixed → pass; 338 tests |
 
 ## Blockers / Open Questions
 
