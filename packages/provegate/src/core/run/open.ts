@@ -31,11 +31,13 @@ import { escapeRegExp } from '../state/markdown.js';
 import { containedPath } from './init.js';
 import { withWorkspaceMutex } from './mutex.js';
 import {
+  blobShaOfFile,
   createWorktree,
   existsOnRef,
-  pathsNotMatchingRef,
   removeWorktree,
   resolveRef,
+  snapshotsNotMatchingRef,
+  type ArtifactSnapshot,
   worktreeForBranch,
   worktreeNamesFor,
   type WorktreeProvision,
@@ -228,6 +230,39 @@ function claimPrdLocked(
   }
   const globs = candidate.ownedPaths ?? [];
 
+  // Preconditions BEFORE any mutation: slug + containment + destination
+  // resolution happen while every victim still sits untouched on disk — an
+  // exception past this point can no longer follow destroyed leases.
+  const { slug, relPath: prdRelPath, dir: prdRoot } = prdFile(config, root, normalized);
+  // Artifacts a provisioned checkout must carry: the PRD itself plus the
+  // CONTROL files that decide what runs there — config drives layout, the
+  // gates manifest decides policy (a missing manifest silently falls back to
+  // built-in defaults, changing the gates the agent runs, codex r16 P1).
+  // Presence is compared against the base too: a control file DELETED in the
+  // working tree but still committed would otherwise drop out of the list,
+  // and the provisioned checkout would silently restore policy the source
+  // checkout no longer has (codex r17 P1).
+  const mainForRefs = mainRepoRoot(root);
+  // ONE pinned revision for every comparison in this claim: presence checks,
+  // the checkout's contents, and branch creation must all name the same base
+  // commit, or a concurrent base advance desynchronizes lease and tree
+  // (codex r19 P1). Null (no git / no base) simply skips worktree work.
+  const baseRefName =
+    resolveRef(mainForRefs, `refs/heads/${config.branches.base}`) ??
+    `refs/heads/${config.branches.base}`;
+  // Snapshot the bytes this claim actually parses: validation compares THESE
+  // against the base, so an edit between parse and check cannot slip through
+  // (codex r20 P1). A control file absent locally but committed on base gets
+  // a null snapshot — a deletion is a mismatch, not an omission (r17 P1).
+  const requiredArtifacts: ArtifactSnapshot[] = [
+    { rel: prdRelPath, sha: blobShaOfFile(prdRoot, prdRelPath) },
+  ];
+  for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
+    if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
+      requiredArtifacts.push({ rel: control, sha: blobShaOfFile(root, control) });
+    }
+  }
+
   const { locks, malformed } = parseLocks(config, root, now);
   raceWindow?.();
   if (malformed.length > 0) {
@@ -293,32 +328,6 @@ function claimPrdLocked(
     };
   }
 
-  // Preconditions BEFORE any mutation: slug + containment + destination
-  // resolution happen while every victim still sits untouched on disk — an
-  // exception past this point can no longer follow destroyed leases.
-  const { slug, relPath: prdRelPath } = prdFile(config, root, normalized);
-  // Artifacts a provisioned checkout must carry: the PRD itself plus the
-  // CONTROL files that decide what runs there — config drives layout, the
-  // gates manifest decides policy (a missing manifest silently falls back to
-  // built-in defaults, changing the gates the agent runs, codex r16 P1).
-  // Presence is compared against the base too: a control file DELETED in the
-  // working tree but still committed would otherwise drop out of the list,
-  // and the provisioned checkout would silently restore policy the source
-  // checkout no longer has (codex r17 P1).
-  const mainForRefs = mainRepoRoot(root);
-  // ONE pinned revision for every comparison in this claim: presence checks,
-  // the checkout's contents, and branch creation must all name the same base
-  // commit, or a concurrent base advance desynchronizes lease and tree
-  // (codex r19 P1). Null (no git / no base) simply skips worktree work.
-  const baseRefName =
-    resolveRef(mainForRefs, `refs/heads/${config.branches.base}`) ??
-    `refs/heads/${config.branches.base}`;
-  const requiredArtifacts = [prdRelPath];
-  for (const control of [CONFIG_FILENAME, MANIFEST_FILENAME]) {
-    if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
-      requiredArtifacts.push(control);
-    }
-  }
   containedPath(mainRepoRoot(root), config.dirs.locksDir);
   ensureLocksDir(locksDir(config, root));
   const leasePath = lockPathFor(config, root, normalized, slug);
@@ -653,9 +662,12 @@ function claimPrdLocked(
       // checkout on base policy (codex r19 P1).
       const reuseStale = reusable
         ? [
-            ...pathsNotMatchingRef(expected!, baseRefName, requiredArtifacts),
-            ...pathsNotMatchingRef(mainRoot, baseRefName, requiredArtifacts),
-            ...pathsNotMatchingRef(resolve(root), baseRefName, requiredArtifacts),
+            // The parsed bytes must be what base carries…
+            ...snapshotsNotMatchingRef(mainRoot, baseRefName, requiredArtifacts),
+            // …and what the reused checkout actually holds.
+            ...requiredArtifacts
+              .filter((s) => blobShaOfFile(expected!, s.rel) !== s.sha)
+              .map((s) => s.rel),
           ].filter((rel, i, all) => all.indexOf(rel) === i)
         : [];
       if (reusable && reuseStale.length > 0) {
@@ -791,26 +803,34 @@ function claimPrdLocked(
   }
 }
 
-/** The PRD's slug and repo-relative path, from its unique filename. */
+/** The PRD's slug, repo-relative path, and the checkout it was found in.
+ * Artifacts may live only on the main checkout while the claim runs from a
+ * linked worktree — the same fallback `candidateFromPrd` uses. */
 function prdFile(
   config: WorkflowConfig,
   root: string,
   id: string,
-): { slug: string; relPath: string } {
+): { slug: string; relPath: string; dir: string } {
   const prdKind = config.dirs.artifacts.prd;
   const num = id.slice(config.idPattern.prefix.length + 1);
   const re = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${escapeRegExp(num)}-(.+)\\.md$`);
-  for (const state of config.dirs.states) {
-    const dir = resolve(root, prdKind.dir, state);
-    let names: string[];
-    try {
-      names = readdirSync(dir);
-    } catch {
-      continue;
-    }
-    for (const name of names) {
-      const m = re.exec(name);
-      if (m) return { slug: m[1]!, relPath: `${prdKind.dir}/${state}/${name}` };
+  const searchRoots = [resolve(root)];
+  const mainRoot = mainRepoRoot(root);
+  if (!searchRoots.includes(mainRoot)) searchRoots.push(mainRoot);
+  for (const searchRoot of searchRoots) {
+    for (const state of config.dirs.states) {
+      let names: string[];
+      try {
+        names = readdirSync(resolve(searchRoot, prdKind.dir, state));
+      } catch {
+        continue;
+      }
+      for (const name of names) {
+        const m = re.exec(name);
+        if (m) {
+          return { slug: m[1]!, relPath: `${prdKind.dir}/${state}/${name}`, dir: searchRoot };
+        }
+      }
     }
   }
   throw new Error(`no PRD file found for ${id} while deriving slug`);

@@ -105,13 +105,24 @@ function deleteBranchSafely(
   // In the scratch context `-d`'s own mergedness and checked-out-branch
   // guards re-evaluate at delete time against a HEAD nobody else can move.
   const scratch = join(mainRoot, normalizedWorktreeDir(config), `.gate-branch-del-${process.pid}`);
+  const baseAtSetup = resolveRef(mainRoot, `refs/heads/${base}`);
+  if (baseAtSetup === null) {
+    return { deleted: false, why: `base '${base}' could not be resolved` };
+  }
   try {
     // --no-checkout: no files, no checkout hooks.
-    git(mainRoot, ['worktree', 'add', '--detach', '--no-checkout', scratch, `refs/heads/${base}`]);
+    git(mainRoot, ['worktree', 'add', '--detach', '--no-checkout', scratch, baseAtSetup]);
   } catch {
     return { deleted: false, why: 'delete refused (no clean context to judge mergedness)' };
   }
   try {
+    // The scratch HEAD is frozen; the LIVE base is not. A reset or
+    // force-move of the base between setup and delete would leave `-d`
+    // judging against an obsolete tip and drop a branch the current base no
+    // longer contains — re-check immediately before deleting (codex r20 P1).
+    if (resolveRef(mainRoot, `refs/heads/${base}`) !== baseAtSetup) {
+      return { deleted: false, why: `'${base}' moved mid-delete — re-run cleanup` };
+    }
     git(scratch, ['branch', '-d', branch]);
     return { deleted: true };
   } catch {
@@ -168,31 +179,46 @@ export function resolveRef(mainRoot: string, ref: string): string | null {
 
 /** Whether `rel` is reachable from `ref`. */
 export function existsOnRef(mainRoot: string, ref: string, rel: string): boolean {
+  return blobShaOnRef(mainRoot, ref, rel) !== null;
+}
+
+/** Blob SHA of `rel` as committed on `ref`, or null when absent. */
+export function blobShaOnRef(mainRoot: string, ref: string, rel: string): string | null {
   try {
-    git(mainRoot, ['cat-file', '-e', `${ref}:${rel}`]);
-    return true;
+    return git(mainRoot, ['rev-parse', `${ref}:${rel}`]);
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function pathsNotMatchingRef(mainRoot: string, ref: string, relPaths: string[]): string[] {
-  const stale: string[] = [];
-  for (const rel of relPaths) {
-    try {
-      git(mainRoot, ['cat-file', '-e', `${ref}:${rel}`]);
-    } catch {
-      stale.push(rel);
-      continue;
-    }
-    try {
-      // Ref vs WORKING TREE for this path; nonzero exit = differs.
-      git(mainRoot, ['diff', '--quiet', ref, '--', rel]);
-    } catch {
-      stale.push(rel);
-    }
+/** Blob SHA of the file's CURRENT bytes on disk, or null when unreadable. */
+export function blobShaOfFile(dir: string, rel: string): string | null {
+  try {
+    return git(dir, ['hash-object', '--', rel]);
+  } catch {
+    return null;
   }
-  return stale;
+}
+
+/** An artifact as the claim actually PARSED it: path plus the blob SHA of the
+ * exact bytes used to build the lease. Validation compares this snapshot —
+ * never a later re-read — so a file edited between parse and check cannot
+ * slip a lease that owns bytes the checkout never receives (codex r20 P1). */
+export interface ArtifactSnapshot {
+  rel: string;
+  /** null when the file was absent at parse time. */
+  sha: string | null;
+}
+
+/** Snapshot entries whose parsed bytes do NOT match `ref`. */
+export function snapshotsNotMatchingRef(
+  mainRoot: string,
+  ref: string,
+  snapshots: ArtifactSnapshot[],
+): string[] {
+  return snapshots
+    .filter((s) => blobShaOnRef(mainRoot, ref, s.rel) !== s.sha)
+    .map((s) => s.rel);
 }
 
 /** The branch currently registered at `path` (realpath-compared), or null. */
@@ -250,9 +276,10 @@ export function createWorktree(
     /** ONLY when prior lease stamps establish ownership of `names.branch` —
      * a bare name match is NOT ownership (a rival's branch must refuse). */
     reattachOwned?: boolean;
-    /** Repo-relative artifacts the provisioned checkout MUST contain; a
-     * branch cut from the base ref cannot see uncommitted files. */
-    requireOnBase?: string[];
+    /** Artifacts, with the bytes the claim parsed, that the provisioned
+     * checkout MUST carry; a branch cut from the base ref cannot see
+     * uncommitted files. */
+    requireOnBase?: ArtifactSnapshot[];
   },
 ): WorktreeProvision {
   const mainRoot = mainRepoRoot(root);
@@ -346,16 +373,12 @@ export function createWorktree(
   // A branch cut from the base ref cannot see UNCOMMITTED artifacts: the
   // quickstart order (`gate new` → `gate open --worktree`) would otherwise
   // hand back a checkout missing the very PRD it claims, and every subsequent
-  // `gate check/run` there would fail (codex r15 P1). BOTH the main checkout
-  // and the CALLER's checkout are compared: a claim launched from a linked
-  // worktree loads its config/PRD from there, so validating only the primary
-  // would admit an edited caller (codex r18/r19 P1). Reattachment is checked
-  // too — its lease is built from the same caller state.
-  const callerRoot = resolve(root);
-  const stale = pathsNotMatchingRef(mainRoot, baseRef, requireOnBase);
-  for (const rel of pathsNotMatchingRef(callerRoot, baseRef, requireOnBase)) {
-    if (!stale.includes(rel)) stale.push(rel);
-  }
+  // `gate check/run` there would fail (codex r15 P1). The comparison is
+  // against the PARSED bytes (snapshot), not a re-read, so an edit landing
+  // between parse and check cannot pass (codex r20 P1) — and that snapshot
+  // came from the caller's own checkout, which covers linked-worktree callers
+  // and reattachment alike (codex r18/r19 P1).
+  const stale = snapshotsNotMatchingRef(mainRoot, baseRef, requireOnBase);
   if (stale.length > 0) {
     throw new Error(
       `these workflow artifacts are missing or uncommitted on '${base}' (${stale.join(', ')}) — commit them first, or claim without --worktree`,
@@ -423,7 +446,10 @@ export function createWorktree(
   // worktree is removed on mismatch; a pre-existing branch is left alone, and
   // debris that survives removal is NAMED, never silently pruned (r18 P2).
   if (requireOnBase.length > 0) {
-    const stale = pathsNotMatchingRef(path, baseRef, requireOnBase);
+    // The checkout's own bytes must equal the parsed snapshot.
+    const stale = requireOnBase
+      .filter((s) => blobShaOfFile(path, s.rel) !== s.sha)
+      .map((s) => s.rel);
     if (stale.length > 0) {
       const debris: string[] = [];
       try {

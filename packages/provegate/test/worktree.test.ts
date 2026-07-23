@@ -939,6 +939,40 @@ describe('codex r15 regressions', () => {
     expect(resolveRef(root, pinned!)).toBe(pinned);
   });
 
+  it('a PRD restored to HEAD after parse cannot slip a lease owning other bytes (r20 P1)', async () => {
+    const root = await gitRoot();
+    const id = prdWithSurface(root, 'snapshotted', ['src/committed/**']);
+    await commitArtifacts(root);
+    const prdPath = join(root, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-snapshotted.md`);
+    const committed = readFileSync(prdPath, 'utf8');
+    // Parse-time bytes declare surface A (uncommitted); the race window then
+    // restores the committed bytes, so a working-tree re-read would match base
+    // while the lease was built from A.
+    writeFileSync(prdPath, committed.replace('src/committed/**', 'src/parsed-only/**'));
+
+    const result = claimPrd(cfg, root, id, {
+      worktree: true,
+      raceWindow: () => writeFileSync(prdPath, committed),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.issues.join(' ')).toContain('missing or uncommitted');
+  });
+
+  it('a base that moves mid-delete blocks the branch deletion (r20 P1)', async () => {
+    const root = await gitRoot();
+    await commitArtifacts(root);
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'moving-base' });
+    await run('git', ['-C', root, 'worktree', 'remove', made.path]);
+    // Base rewinds to a commit that does NOT contain the feature branch tip.
+    const seed = (await run('git', ['-C', root, 'rev-parse', 'HEAD~1'], {})).stdout.trim();
+    await run('git', ['-C', root, 'reset', '--hard', seed]);
+
+    const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
+    expect(removal.branchDeleted).toBe(false);
+    expect(removal.warnings.join(' ')).toContain('not merged into main');
+    expect((await run('git', ['-C', root, 'branch'], {})).stdout).toContain(made.branch);
+  });
+
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {
     const root = await gitRoot();
     const id = prdWithSurface(root, 'plain-uncommitted', ['src/plain-unc/**']);
