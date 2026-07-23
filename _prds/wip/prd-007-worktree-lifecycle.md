@@ -281,9 +281,10 @@ Cross-cutting (all green before Code Complete):
 - DO NOT pass `--force` to `git worktree remove` — dirty trees refuse, and the
   refusal is surfaced, not overridden.
 - DO NOT delete a branch that is not PROVABLY merged into the configured base
-  (`merge-base --is-ancestor`). After that proof, escalating a parked-HEAD `-d`
-  refusal to `-D` is permitted — the proof is `-d`'s own safety condition
-  evaluated against the right ref (codex r6).
+  (`merge-base --is-ancestor`, tip pinned). A parked-HEAD `-d` refusal may
+  escalate only through git's atomic compare-and-delete
+  (`update-ref -d <ref> <proven-tip>`) — a tip advanced after the proof
+  mismatches and survives; never a blind `-D` (codex r6+r7).
 - DO NOT write the lease and the worktree as separate outcomes — provisioning
   failure rolls the lease back under the same mutex hold.
 - DO NOT let the worktree check out the base branch or touch the base checkout's

@@ -78,8 +78,16 @@ function deleteBranchSafely(
 ): { deleted: boolean; why?: string } {
   if (!branchExists(mainRoot, branch)) return { deleted: true };
   const base = config.branches.base;
+  // Pin the tip the ancestry proof is about — the escalation below must
+  // delete EXACTLY this commit or nothing (codex r7 P1).
+  let tip: string;
   try {
-    git(mainRoot, ['merge-base', '--is-ancestor', branch, `refs/heads/${base}`]);
+    tip = git(mainRoot, ['rev-parse', `refs/heads/${branch}`]);
+  } catch {
+    return { deleted: true }; // vanished between the checks
+  }
+  try {
+    git(mainRoot, ['merge-base', '--is-ancestor', tip, `refs/heads/${base}`]);
   } catch {
     return { deleted: false, why: `not merged into ${base}` };
   }
@@ -89,11 +97,19 @@ function deleteBranchSafely(
     git(dir, ['branch', '-d', branch]);
     return { deleted: true };
   } catch {
+    // `-d` refused against a parked HEAD. Escalation must not trust the
+    // now-stale proof: `update-ref -d <ref> <expected>` is git's atomic
+    // compare-and-delete — a branch a rival advanced mid-flight mismatches
+    // and survives. update-ref skips the checked-out guard `-d` has, so
+    // refuse first if any worktree still holds the branch.
+    if (worktreeForBranch(mainRoot, branch) !== null) {
+      return { deleted: false, why: 'checked out in another worktree' };
+    }
     try {
-      git(mainRoot, ['branch', '-D', branch]); // safe: ancestry into base proven above
+      git(mainRoot, ['update-ref', '-d', `refs/heads/${branch}`, tip]);
       return { deleted: true };
     } catch {
-      return { deleted: false, why: 'delete refused (checked out elsewhere?)' };
+      return { deleted: false, why: 'branch advanced mid-delete or delete refused' };
     }
   }
 }
