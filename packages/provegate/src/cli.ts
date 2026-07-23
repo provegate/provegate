@@ -501,7 +501,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     cleanupChdirTarget = baseReady.baseDir ?? null;
   }
 
-  let archivedTip: string | null = null;
+  let archivedTip: string | null;
   try {
     const archived = archivePrdArtifacts(config, root, record);
     if (archived.moved.length > 0) {
