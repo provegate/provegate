@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-015-single-package-support.md](../../_prds/wip/prd-015-single-package-support.md)
 > **Readiness**: [readiness-015-single-package-support.md](../../_readiness/wip/readiness-015-single-package-support.md)
-> **Status**: In Progress — Phase 4 + 5 complete, Phase 6 (audit) pending
+> **Status**: Code Complete — Phase 4/5/6/7 pass (review Critical 0); autonomous-close eligible
 > **Readiness Score**: 8.2/10
 > **Model Tier (Execution)**: medium
 > **Created**: 2026-07-24
@@ -66,18 +66,20 @@
   - [x] 6.1 Every §11 command run; evidence in the ledger.
   - [x] 6.2 Floor: check-types, lint, test, build, gate check, never-push.
 
-- [ ] 7.0 Phase 6 — Final Auditing
-  - [ ] 7.1 Independent adversarial review → `_docs/reviews/review-015-single-package-support.md`.
-        `Verdict: pass` requires `Critical: 0`. Attacks: the fixture is a REAL
-        single-package repo (not a mock); additive-only (monorepo + default config
-        untouched); `packages/provegate` zero-dep + no network; the recipe is
-        actually runnable.
+- [x] 7.0 Phase 6 — Final Auditing
+  - [x] 7.1 Independent adversarial review (codex, cross-model) →
+        `_docs/reviews/review-015-single-package-support.md`. R1 FAIL (Critical 1
+        — the fixture never executed the four floor commands; + 2 High + 1 Medium).
+        R2 FAIL (Critical 1 residual — positive test asserted only the first
+        command; + 1 High invalid JSON comment). R3 **PASS** (Critical 0, High 0,
+        Medium 0) — all four floor-command mutations now fail the positive test.
 
-- [ ] 8.0 Phase 7 — Learning
-  - [ ] 8.1 Confirm the durable artifact (`packages/provegate/QUICKSTART.md`) is in the diff.
-  - [ ] 8.2 Knowledge ingest: gate is repo-layout-agnostic by design (workspace =
-        repo root; `commands` string-config); what the fixture had to set up to
-        prove single-package.
+- [x] 8.0 Phase 7 — Learning
+  - [x] 8.1 Durable artifact (`packages/provegate/QUICKSTART.md`) is in the diff.
+  - [x] 8.2 Knowledge ingest: the floor runs from `gates.manifest.json` phase 4,
+        NOT from `config.commands` (which only feeds `defaultManifest`, and
+        `gate init` scaffolds an EMPTY manifest); a lifecycle fixture must drive
+        `runChain` and assert a failing command STOPS the run, or it proves nothing.
 
 ---
 
@@ -96,7 +98,7 @@
 | build              | `pnpm build`                                                      | root  | passed  | all tasks | |
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-015`              | repo  | passed  | readiness lint ok | |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`        | repo  | passed  | exit 1 | |
-| independent-review | `_docs/reviews/review-015-single-package-support.md`             | repo  | pending |          | Phase 6 |
+| independent-review | `_docs/reviews/review-015-single-package-support.md`             | repo  | passed  | verdict pass, critical 0 | codex 3 rounds |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -126,6 +128,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | ---- | ---- | ----- |
 | 2026-07-24 | 1.0-5.0 | Phase 4 in worktree `.worktrees/prd-015-single-package-support`. Fixture (`single-package.test.ts`, 3 tests) drives a real single-package temp repo through init + a non-ff local merge with NON-pnpm commands; init proven layout-agnostic + additive; wiring accepts both command shapes. FR-5 no-op — no monorepo assumption surfaced. QUICKSTART + docs got matching "Single-package repos" sections. |
 | 2026-07-24 | 6.0 | Phase 5 floor green: check-types, lint, test (+3 fixture), build, gate check ok, never-push exit 1. Phase 6 (independent review) pending. |
+| 2026-07-24 | 7.0 | Phase 6 codex R1 FAIL: the fixture proved nothing — it drove `initWorkspace`/`mergeToLocalBase` but never `runChain`, so the four configured floor commands never executed (all tests passed even at exit 1). Also 2 High (docs recipe left the manifest empty; direct `tsc`/`eslint` refused by the safety allowlist) + 1 Medium (out-of-surface ledger edit). Fixed `10747a8`: fixture drives `buildGateChain`+`runChain` (floor executes; a failure stops phase 4); recipe wires `gates.manifest.json` + uses npm/npx; surface note updated. R2 FAIL: residual Critical (positive test asserted only the FIRST floor command) + High (invalid `//` in a JSON block). Fixed `ad3c959`: assert all four floor commands + phase-4-no-stop; drop the JSON comment. R3 **PASS** — Critical 0, High 0, Medium 0; all four mutations break the positive test. |
+| 2026-07-24 | 8.0 | Phase 7: durable artifact confirmed; learning ingested (floor = manifest phase 4, not config.commands; init writes an empty manifest; a real lifecycle fixture must assert a failing command STOPS the run). Closing via `gate land` (autonomous-close eligible — no operator rows). |
 
 ---
 
