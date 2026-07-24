@@ -5,6 +5,9 @@ alwaysApply: true
 
 # Memory — `_brain`
 
+**Read `AGENT_BOOTSTRAP.md` before any work** — it is the canonical entrypoint (workflow
+contract, critical rules, knowledge map). This rule file is a thin pointer.
+
 Durable, non-derivable knowledge lives in `_brain/` (committed, agent-agnostic).
 
 - Before non-trivial work, read `@_brain/INDEX.md` and open the detail files whose
