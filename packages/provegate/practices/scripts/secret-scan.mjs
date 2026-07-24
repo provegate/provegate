@@ -38,7 +38,10 @@ for (const f of staged) {
   }
   let content;
   try {
-    content = git('show', `:${f}`);
+    // `:./<path>` pathspec form, not `:<path>`: a filename starting with
+    // `<digit>:` would otherwise parse as index-stage syntax (`:0:missing.txt`
+    // reads stage 0 of missing.txt), silently skipping the real staged file.
+    content = git('show', `:./${f}`);
   } catch {
     continue; // unreadable (e.g. deleted between stage and scan) — nothing to scan
   }

@@ -172,14 +172,13 @@ describe('gate init --practices (real temp repos)', () => {
     for (const f of GOLDEN) {
       if (f.endsWith('.gitkeep')) expect(files.get(f), f).toBe('');
     }
-    expect(JSON.parse(files.get('workflow.config.json')!)).toEqual({
-      branches: { base: 'main' },
-      idPattern: { prefix: 'PRD', width: 3 },
-    });
-    expect(JSON.parse(files.get('gates.manifest.json')!)).toEqual({
-      phases: { '4': [] },
-      postMerge: [],
-    });
+    // BYTE-for-byte, not parsed: whitespace/key-order drift is a parity break too.
+    expect(files.get('workflow.config.json')).toBe(
+      '{\n  "branches": {\n    "base": "main"\n  },\n  "idPattern": {\n    "prefix": "PRD",\n    "width": 3\n  }\n}\n',
+    );
+    expect(files.get('gates.manifest.json')).toBe(
+      '{\n  "phases": {\n    "4": []\n  },\n  "postMerge": []\n}\n',
+    );
   });
 
   it('a failing packed check is not masked: broken _brain record turns the bundle red', () => {
@@ -198,6 +197,49 @@ describe('gate init --practices (real temp repos)', () => {
         stdio: 'pipe',
       }),
     ).toThrow();
+  });
+
+  it('installed security scripts hold under adversarial staging (scanner bypass, injection names, guard deletions/renames)', () => {
+    const repo = makeRepo();
+    gateInit(repo, '--practices');
+    const git = (...args: string[]) =>
+      execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: 'pipe' });
+    const runScript = (script: string) =>
+      execFileSync(process.execPath, [join(repo, script)], {
+        cwd: repo,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+
+    // Scanner: a stage-syntax-colliding filename must still be SCANNED — the
+    // secret inside `0:leak.txt` has to be found, not skipped via a swallowed
+    // `git show :0:leak.txt` stage-spec misparse.
+    // Key assembled at runtime so this test file itself never contains a
+    // contiguous key-shaped string (the repo's own pre-commit scanner would
+    // rightly refuse it — proof the scanner works, but not a secret).
+    writeFileSync(join(repo, '0:leak.txt'), `const k = "${'AKIA' + 'IOSFODNN7EXAMPLE'}";\n`);
+    // Scanner: a command-substitution filename must be inert (argv, no shell).
+    writeFileSync(join(repo, '$(touch PWNED).txt'), 'harmless\n');
+    git('add', '-f', '0:leak.txt', '$(touch PWNED).txt');
+    expect(() => runScript('scripts/secret-scan.mjs')).toThrow(/0:leak\.txt/);
+    expect(readdirSync(repo)).not.toContain('PWNED');
+    git('reset');
+
+    // Guard: deleting a source file on a protected branch must be blocked...
+    writeFileSync(join(repo, 'source.js'), 'x\n');
+    git('add', '-f', 'source.js');
+    git('-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'seed', '--no-verify');
+    git('checkout', '-q', '-B', 'main');
+    git('rm', '-q', 'source.js');
+    expect(() => runScript('scripts/base-branch-guard.mjs')).toThrow(/source\.js/);
+    git('reset', '--hard', '-q');
+    // ...and a rename from an allowed path INTO source must be blocked on
+    // both sides (the destination is source-class).
+    writeFileSync(join(repo, '_docs/note.md'), 'doc\n');
+    git('add', '_docs/note.md');
+    git('-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'doc', '--no-verify');
+    git('mv', '_docs/note.md', 'renamed-into-source.js');
+    expect(() => runScript('scripts/base-branch-guard.mjs')).toThrow(/renamed-into-source\.js/);
   });
 
   it('pack content hygiene: no source-project names, no Turkish, no push path in executables', () => {
