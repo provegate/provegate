@@ -1,16 +1,16 @@
-# PRD-012: Web Design Adoption — Landing and Docs on the Shared System
+# PRD-012: React Component Layer — the Design System's `./react` Export
 
 > **Status**: Draft
 >
 > **Created**: 2026-07-23
-> **Updated**: 2026-07-23
+> **Updated**: 2026-07-24
 > **Author**: owner
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `web-design-adoption`
 > **Cycle Phase**: 1 (PRD Generation)
 > **PRD Class**: feature
-> **Class Rationale**: (default class) — new user-facing surface: the public
-> landing page and the themed documentation site.
+> **Class Rationale**: (default class) — new user-facing surface: the nine
+> shared React components every web app renders through.
 > **Autonomous Close**: operator-gated
 > **State Record**: `_state/prds.json`
 
@@ -18,52 +18,36 @@
 
 ## 1. Introduction / Overview
 
-`apps/web` is still the bootstrap placeholder: one centered `<h1>`, a paragraph,
-an install `<pre>`, three links, all inline-styled with hardcoded hexes.
-`apps/docs` runs stock Fumadocs styling. Meanwhile the second design handoff drop
-(2026-07-23) supplied everything the web wave was waiting on: `ui_kits/landing/`
-(full IA, dark-first), `ui_kits/docs/` (Fumadocs-shaped), `ui_kits/brand/`
-(OG card, README header, shields), `guidelines/` (18 rendered token specimens),
-and the nine React components as `.jsx.txt` reference implementations with
-`.d.ts.txt` prop contracts.
+The web wave was one mega-PRD; it is split into three at claim time (owner
+decision 2026-07-24): **this PRD builds the nine React components** into
+`@provegate/design`'s reserved `./react` export; **PRD-013** rebuilds `apps/web`
+(the landing page) on them; **PRD-014** themes `apps/docs` + the OG card. The
+components are the root both consumers share, so they land first.
 
-This PRD lands the web half of the system:
+PRD-010 reserved `packages/design/src/react/` with an empty stub. This PRD fills
+it with the nine components the second handoff drop specified —
+`docs/design/design_handoff_provegate/design-system/components/**` supplies each
+component's `.d.ts.txt` (the prop contract, **preserved exactly**) and `.jsx.txt`
+(a reference implementation to rebuild idiomatically, not copy). The landing
+handoff's README (`docs/design/design_handoff_landing/README.md`) is authoritative
+on the CURRENT component APIs where the two disagree — notably `HandoffCard`.
 
-- the nine components, ported into `@provegate/design`'s reserved `./react`
-  export so landing and docs share one implementation;
-- `apps/web` rebuilt as the designed landing page — the full section
-  composition from the 2026-07-23 landing handoff (`design_handoff_landing/`),
-  dark canonical, real CLI strings as first-class objects;
-- `apps/docs` re-themed by **mapping** `--pg-*` onto Fumadocs' own variables
-  rather than rewriting its layout, plus the brand OG card on the existing OG
-  route.
+Two settled decisions shape the build:
 
-A second, higher-fidelity landing handoff landed 2026-07-23
-(`docs/design/design_handoff_landing/`): final colors, copy and interactions for
-the full ~23-section landing composition (`landing-app.jsx`). It is the
-authoritative landing spec and supersedes the earlier `ui_kits/landing/`
-recreation. Its verdict vocabulary, component APIs and color law already match
-the shipped `packages/design`. Two things it shows do **not** match the shipped
-tool and are corrected here: it presents a four-command CLI (`init/run/push/
-ledger`) over a `gate.toml` config, but the shipped tool has ten commands, no
-`gate.toml`, and no `gate ledger` — the page uses the real surface (see the CLI
-fidelity criterion below). Its motion (hero typing, `gate run` walkthrough, live
-playground) is adopted, reduced-motion-gated (this reverses the static-only rule
-of the initial draft).
+1. **`HandoffCard` takes structured `lines[]`, not the CLI string builder.** The
+   current contract is `{ variant, title, width, lines[] }` where each line is a
+   `string | { blank } | { gate, text } | { arrow, text }`. This supersedes the
+   earlier idea (a web card that calls `@provegate/design/cli`'s `handoffCard`):
+   the landing needs arbitrary card content, so the component renders structured
+   lines. Parity with the terminal is at the **grammar** level — same glyphs
+   (`✓ ✗ ⚠ = → !`), same box-drawing, same verdict colours — not textContent
+   equality. (This dissolves the old cross-package parity test entirely.)
+2. **Tokens only, colour law enforced.** Every component styles through `--pg-*`
+   custom properties — no inline hex, no font stack. Green is earned: `Button` is
+   never green; a `VerdictBadge`/`GateLine`/`EvidenceTable` cell is green only for
+   `passed`. The verdict vocabulary is the closed lowercase set.
 
-Three rules govern the port, all inherited and all non-negotiable:
-
-1. **No external requests.** No font CDN, no analytics, no beacon, no remote
-   asset. "No telemetry" is a product principle; a tracker on provegate.dev would
-   be a self-inflicted wound. Fonts come self-hosted from `@provegate/design`.
-2. **Copy discipline.** The design kits contain placeholder facts — `v1.4.0`,
-   `v1.2.0`, weekly-downloads and a `gate | pass` shield — that are **not true**
-   (the package is at `0.1.0` and unpublished, and no such badge service exists).
-   Nothing fabricated ships. Every claim on the page traces to
-   `docs/design/design-brief-2026-07-23.md` §2/§4 or the whitepaper.
-3. **Rebuild, don't copy.** The kits are HTML/React reference recreations that
-   load a compiled `_ds_bundle.js`. They are read as specification; the apps get
-   idiomatic Next.js components built against the `.d.ts.txt` prop contracts.
+Consumers (landing, docs) are out of scope — they are PRD-013 / PRD-014.
 
 ---
 
@@ -71,23 +55,23 @@ Three rules govern the port, all inherited and all non-negotiable:
 
 ### Primary Goals
 
-- [ ] Landing, docs and terminal read as one system: same green, same verdict
-      vocabulary, same mark, same type.
-- [ ] Both web apps render every color, font and spacing value from
-      `@provegate/design` — no hex, no font stack, no magic pixel authored in an
-      app.
-- [ ] Neither app issues a request to any third-party origin, at build or at
-      runtime.
-- [ ] The Fumadocs theme is a token map, not a fork of its layout.
+- [ ] Nine components exported from `@provegate/design/react`, each matching its
+      `.d.ts.txt` prop contract exactly.
+- [ ] Every component styles through `--pg-*` tokens; no hex, no font stack, no
+      magic pixel is authored in a component.
+- [ ] The verdict-taking components share the terminal's glyph + colour grammar
+      and the closed verdict set — web and CLI read as one system.
+- [ ] The `./cli` entry stays React-free: adding React to `./react` must not make
+      the zero-dependency CLI bundle pull React.
 
 ### Success Metrics
 
-| Metric                                   | Current                     | Target                        | Measurement              |
-| ---------------------------------------- | --------------------------- | ----------------------------- | ------------------------ |
-| Hardcoded hexes in `apps/web` + `apps/docs` | 6+ (inline styles)        | 0                             | `check-static-egress`/lint |
-| Third-party origins in built output      | 0 (none yet) → risk on port | 0                             | `check-static-egress.mjs` |
-| Landing sections from the design IA      | 0 of 23                     | 23 of 23                      | `landing.test.ts`        |
-| Fabricated facts on public surfaces      | 0 → risk from kits          | 0                             | `content-web.test.ts`    |
+| Metric                                | Current            | Target                    | Measurement          |
+| ------------------------------------- | ------------------ | ------------------------- | -------------------- |
+| Components under `./react`            | 0 (stub)           | 9                         | `react/index.ts`     |
+| Prop-contract fidelity                | n/a                | 9 of 9 match `.d.ts.txt`  | `props.test.tsx`     |
+| Hardcoded hexes in `src/react/**`    | n/a                | 0                         | `react.test.tsx`     |
+| React reachable from `./cli`         | 0                  | 0                         | `cli-entry.test.ts` (PRD-010) |
 
 ---
 
@@ -96,194 +80,143 @@ Three rules govern the port, all inherited and all non-negotiable:
 #### User Story 1
 
 ```
-As a skeptical senior engineer landing on provegate.dev,
-I want the problem, the mechanism and the evidence in the product's own visual language,
-so that the page reads as engineered rather than marketed, and I reach a terminal.
+As a web app (landing or docs) importing @provegate/design/react,
+I want the nine components with their documented prop contracts,
+so that I compose pages from one implementation, not per-app copies.
 ```
 
 **Acceptance Criteria:**
 
-- [ ] The full landing composition ships in `landing-app.jsx` order: nav, hero,
-      trust strip, problem, core rule, how (`gate run` walkthrough), playground,
-      phase pipeline, phase detail, operator-gate flow, refusal, evidence
-      ledger, proof + limits, anatomy of a gate, self-attestation vs. evidence,
-      positioning, feature grid, install tabs, command reference, CI
-      integration, FAQ + quickstart, install/CTA, footer.
-- [ ] The limits sit adjacent to the proof, not hidden — that adjacency is the
-      design idea.
-- [ ] Terminal blocks are real CLI strings, selectable text, no fabricated
-      output. Motion (hero typing, the `gate run` walkthrough, the interactive
-      playground) is permitted but **reduced-motion-gated**: with
-      `prefers-reduced-motion: reduce` every animated block renders its finished
-      state immediately — no typing, no stagger, caret blink off.
-- [ ] Every command, config snippet and terminal line reflects the **shipped**
-      CLI surface: the real commands (`gate init/new/open/renew/release/status/
-      queue/check/run/land`, plus `gate push` which refuses). No `gate.toml` and
-      no `gate ledger` appear — the prototype's four-command surface and its
-      `gate.toml` playground are corrected to the real PRD-file + `_state/
-      prds.json` flow, or dropped where they cannot be shown honestly.
-- [ ] Primary CTA is the copyable install block; GitHub is secondary.
+- [ ] `import { Icon, Button, VerdictBadge, Admonition, CodeBlock, GateLine,
+      HandoffCard, EvidenceTable, PhasePipeline } from '@provegate/design/react'`
+      resolves and each renders.
+- [ ] Every prop name and type in the component's `.d.ts.txt` is present; none
+      is renamed or dropped.
+- [ ] No component inlines a colour or font — all styling is `--pg-*`.
 
 #### User Story 2
 
 ```
-As a reader of the docs site,
-I want Fumadocs to look like ProveGate,
-so that moving between docs, landing and my terminal never feels like three products.
+As a developer who trusts the colour law,
+I want the components to obey it,
+so that green never appears except on earned, passed work.
 ```
 
 **Acceptance Criteria:**
 
-- [ ] `--pg-*` tokens are bound onto Fumadocs' own CSS variables; no Fumadocs
-      layout component is forked to achieve theming.
-- [ ] MDX gains the design components (`CodeBlock`, `GateLine`, `HandoffCard`,
-      `EvidenceTable`, `PhasePipeline`, `VerdictBadge`, `Admonition`) through the
-      MDX component map.
-- [ ] The existing OG route renders the brand OG card.
+- [ ] `Button` has no green variant; `VerdictBadge`/`GateLine`/`EvidenceTable`
+      render green only for the `passed` verdict.
+- [ ] The verdict set is the closed lowercase six; a seventh value is a type
+      error (or, at runtime, is not rendered as a known verdict).
+- [ ] Status glyphs are `✓ ✗ ⚠ = → !`, matching the CLI.
 
 #### User Story 3
 
 ```
-As a visitor who cares about the no-telemetry claim,
-I want the site to make zero third-party requests,
-so that the principle is observable, not just asserted.
+As the maintainer of the zero-dependency CLI,
+I want React confined to the ./react entry,
+so that adding components never leaks React into the published CLI bundle.
 ```
 
 **Acceptance Criteria:**
 
-- [ ] A build-output scan finds no external origin in either app.
-- [ ] Fonts are served from our own origin via `@provegate/design`.
-- [ ] No analytics, tag manager, or beacon exists in either app.
+- [ ] React is a peer/dev dependency of `@provegate/design`, imported only under
+      `src/react/`.
+- [ ] PRD-010's `cli-entry.test.ts` (no React reachable from `./cli`) still
+      passes; a new assertion confirms `./cli`'s built output has no React.
 
 ---
 
 ## 4. Functional Requirements
 
-1. **FR-1**: Port the nine components into `packages/design/src/react/` behind the
-   `./react` export reserved by PRD-010 — `Icon`, `Button`, `VerdictBadge`,
-   `Admonition`, `CodeBlock`, `GateLine`, `HandoffCard`, `EvidenceTable`,
-   `PhasePipeline`. Props are the contract: every name and type in the
-   `.d.ts.txt` files is preserved. Styling reads `--pg-*`; no value is inlined.
-   - **Targets:** `packages/design/src/react/index.ts`,
-     `packages/design/src/react/*.tsx`
-2. **FR-2**: `HandoffCard` and `GateLine` render by calling the **shared string
-   builders** authored in `@provegate/design/cli` (PRD-010 FR-11) — the same
-   functions the CLI consumes — and wrapping the resulting lines in themed markup.
-   Because both surfaces call one builder, parity is structural: there is no second
-   implementation to drift, and no cross-package parity test (the M1 build-cycle in
-   the first readiness pass is dissolved by this). A component test asserts the
-   web card's textContent equals the builder's output for a fixture, and that the
-   `handoff` (green rule) / `stopped` (red rule) variants map to the right rule
-   color.
-   - **Targets:** `packages/design/src/react/HandoffCard.tsx`,
-     `packages/design/src/react/GateLine.tsx`,
-     `packages/design/test/react-card.test.ts`
-3. **FR-3**: Rebuild `apps/web` as the designed landing page: the full section
-   composition from User Story 1, `data-theme="dark"` canonical with a working
-   light theme, `@provegate/design/styles.css` imported once at the root, and
-   every hardcoded inline style removed. Interactive/animated blocks (hero
-   terminal, `gate run` walkthrough, playground) are reduced-motion-gated — each
-   checks `prefers-reduced-motion` and renders its finished state when motion is
-   reduced.
-   - **Targets:** `apps/web/app/layout.tsx`, `apps/web/app/page.tsx`,
-     `apps/web/app/sections/*.tsx`, `apps/web/package.json`,
-     `apps/web/test/landing.test.ts`, `apps/web/test/reduced-motion.test.ts`
-4. **FR-4**: Landing copy is written from the approved sources only — the three
-   problem data points, the core rule pull-quote, the seven-phase cut, the five
-   mechanisms, the refusal moment, the proof with its limits, the positioning
-   framing, the principles. The do-not-say list is enforced: no speedup
-   percentage, no `PROVEN`/`VIOLATED`, no fabricated version, badge, download
-   count, testimonial or logo row.
-   - **Targets:** `apps/web/app/sections/*.tsx`
-5. **FR-5**: Theme `apps/docs` by mapping, not forking. First **verify the binding
-   mechanism** against the installed `@fumadocs/base-ui` 16.11.5 on Tailwind v4:
-   determine whether binding `--pg-*` onto Fumadocs' `--color-fd-*` variables in
-   `global.css` themes the site, or whether a Tailwind v4 `@theme` block is
-   required, and record the finding in the FR before wiring. Then bind the
-   variables, wire the shared fonts, set dark as canonical, and register the design
-   components in the MDX map. Fumadocs' own layout components are used as-is;
-   `lucide-react` (a Fumadocs internal dependency) stays.
-   - **Targets:** `apps/docs/app/global.css`, `apps/docs/components/mdx.tsx`,
-     `apps/docs/lib/layout.shared.tsx`, `apps/docs/package.json`
-6. **FR-6**: Render the brand OG card on the existing docs OG route and add
-   matching static OG metadata plus the favicon to `apps/web`, using
-   `assets/logo.svg` and `assets/favicon.svg` from the design package. The OG
-   route's `[...slug]` input is **bounded** before it reaches the image: cap length
-   and restrict to a known charset, falling back to the site title on violation, so
-   unbounded arbitrary text never lands in a rendered image.
-   - **Targets:** `apps/docs/app/og/docs/[...slug]/route.tsx`,
-     `apps/web/app/layout.tsx`, `apps/web/app/icon.svg`
-7. **FR-7**: Write `scripts/check-static-egress.mjs` — a zero-dependency Node
-   script that scans both apps' built output for external origins (`http://`,
-   `https://` in fetched assets, `fonts.googleapis.com`, analytics hosts) and
-   exits non-zero on any hit. Wire it as a repo script so it can be a gate.
-   - **Targets:** `scripts/check-static-egress.mjs`, `package.json`
-8. **FR-8**: Accessibility and responsiveness, split by what a machine can prove.
-   **Machine-checked (this FR's §11 row):** AA contrast over every semantic token
-   pair in both themes, including terminal-colored text on the terminal surface,
-   computed as a pure function over the tokens; and a static check that no status
-   is encoded by color alone (every status carries its glyph). **Operator-verified
-   (recorded as operator rows, not this FR's automated row):** visible focus rings,
-   `prefers-reduced-motion` honored, and no horizontal body scroll at 375px — these
-   need a real browser and are listed under the operator-owned block below.
-   - **Targets:** `apps/web/app/sections/*.tsx`, `apps/docs/app/global.css`,
-     `apps/web/test/contrast.test.ts`
-9. **FR-9**: Content-hygiene test for the public surfaces, mirroring the existing
-   package-content test: banned vocabulary, fabricated-metric patterns, wordmark
-   casing (`ProveGate` in prose, `provegate`/`gate` for package and binary), and
-   the closed verdict set.
-   - **Targets:** `apps/web/test/content-web.test.ts`, `apps/web/package.json`
-10. **FR-10**: Document the web adoption: how the token map works, why the kits
-   were rebuilt rather than copied, which kit facts were rejected as fabricated,
-   and how to add a section without inventing a claim.
-   - **Targets:** `apps/web/README.md`
-11. **FR-11**: CLI-surface fidelity. Every command, config snippet and terminal
-   line on the landing page reflects the **shipped** CLI, verified against the
-   built binary's own help/output — not the `design_handoff_landing/` prototype's
-   simplified surface. Specifically: no `gate.toml`, no `gate ledger`, no
-   four-command reduction; the command reference and CI-integration blocks list
-   real commands; the playground (FR-3) is re-grounded on the real input (an
-   example PRD's gate manifest driving a real `gate run` shape), or degrades to
-   the static `gate run` walkthrough if no honest interactive surface maps
-   cleanly. A test asserts the page contains no `gate.toml`/`gate ledger` token
-   and that every `gate <verb>` shown is a real command.
-   - **Targets:** `apps/web/app/sections/*.tsx`, `apps/web/test/cli-surface.test.ts`
+1. **FR-1**: Add React tooling to `@provegate/design`: `react` (+ `react-dom`
+   types) as a `peerDependency` and devDependency; a jsdom/happy-dom test
+   environment and `@testing-library/react` (or equivalent) as devDependencies;
+   `tsup`/`tsconfig` set up to emit `./react` with JSX. The `./cli` and `./tokens`
+   entries stay React-free.
+   - **Targets:** `packages/design/package.json`, `packages/design/tsup.config.ts`,
+     `packages/design/tsconfig.json`, `packages/design/vitest.config.ts`
+2. **FR-2**: `core/Icon` — the single-stroke geometric icon set (24px grid, 2px
+   stroke, `currentColor`), names `check gate cross pending human machine lock
+   exit0 merge terminal copy arrowRight chevronRight github`; `human` vs `machine`
+   are distinct authorities. Rebuild from `Icon.jsx.txt`, contract from
+   `Icon.d.ts.txt`.
+   - **Targets:** `packages/design/src/react/Icon.tsx`
+3. **FR-3**: `forms/Button` — `primary | secondary | ghost`, sizes `sm|md|lg`;
+   **never green** (primary is neutral, per the colour law). Contract from
+   `Button.d.ts.txt`.
+   - **Targets:** `packages/design/src/react/Button.tsx`
+4. **FR-4**: `feedback/VerdictBadge` + `feedback/Admonition` — VerdictBadge:
+   closed `verdict` set (default `passed`), props `label code solid size`,
+   glyph-first, monospace, green only for `passed`. Admonition: `type`
+   `note|tip|warning|pass|fail|human`, `title`.
+   - **Targets:** `packages/design/src/react/VerdictBadge.tsx`,
+     `packages/design/src/react/Admonition.tsx`
+5. **FR-5**: `cli/CodeBlock` + `cli/GateLine` — CodeBlock: always-dark terminal
+   block, `filename lang prompt copyable`, string children. GateLine: closed
+   `status` set (default `passed`), props `name command code bare`; the glyph
+   carries status.
+   - **Targets:** `packages/design/src/react/CodeBlock.tsx`,
+     `packages/design/src/react/GateLine.tsx`
+6. **FR-6**: `cli/HandoffCard` — the **structured-lines** contract
+   `{ variant('handoff'|'stopped'), title, width=56, lines[] }`, each line
+   `string | {blank} | {gate,text} | {arrow,text}`; copy-exact box-drawing, the
+   `→ READY TO PUSH` moment in human-blue, the green/red rule per variant.
+   - **Targets:** `packages/design/src/react/HandoffCard.tsx`
+7. **FR-7**: `data/EvidenceTable` — `rows[]` of `{check, command, verdict, code,
+   evidence}`; the verdict cell renders a `VerdictBadge`; the exit cell turns red
+   only when `verdict === 'failed'`.
+   - **Targets:** `packages/design/src/react/EvidenceTable.tsx`
+8. **FR-8**: `diagram/PhasePipeline` — `phases[]`, `active`, `showPush`; human
+   gates (1–3) vs machine gates (4–7) are visually distinct; push is always the
+   human boundary. Callers pass explicit `phases` (canonical: PRD · Readiness ·
+   Tasks · Implement · Test · Audit · Learn).
+   - **Targets:** `packages/design/src/react/PhasePipeline.tsx`
+9. **FR-9**: Barrel `react/index.ts` exports all nine; `@provegate/design/react`
+   resolves them with types. The reference `.jsx.txt`/`.d.ts.txt` are the source;
+   the shipped `ds-overrides.jsx` shim is NOT ported (it is a stale-bundle
+   workaround; it only documents the current APIs).
+   - **Targets:** `packages/design/src/react/index.ts`
+10. **FR-10**: Tests — a prop-contract test (each component accepts its
+    `.d.ts.txt` props and renders), a token-only scan (no hex/font-stack in
+    `src/react/**`), the closed-verdict-set + glyph-grammar assertions, the
+    colour-law checks (Button not green; VerdictBadge green only for passed), and
+    a `./cli`-stays-React-free assertion (extends PRD-010's import-graph test).
+    - **Targets:** `packages/design/test/props.test.tsx`,
+      `packages/design/test/react.test.tsx`, `packages/design/test/cli-entry.test.ts`
+11. **FR-11**: Document the layer in the design README: the nine components, the
+    `HandoffCard` lines contract, the colour-law obligations for consumers, and
+    that `./react` is peer-React while `./cli` stays React-free.
+    - **Targets:** `packages/design/README.md`
 
 ---
 
 ## 5. Non-Goals (Out of Scope)
 
-- The CLI. PRD-011 owns every string the terminal prints.
-- The token layer itself. PRD-010 owns `tokens.ts`, the generator, the CSS and the
-  fonts; this PRD consumes them and adds only `src/react/`.
-- The GitHub README header and the shield badges — a small follow-up item; badges
-  must be backed by something real (CI, npm) before they ship, and the package is
-  not published yet.
-- Docs *content* rewrites. Only presentation and the MDX component map change;
-  the `.mdx` prose is untouched (`cli.mdx` is claimed by other PRDs).
-- Gratuitous motion. Animation is scoped to the hero terminal, the `gate run`
-  walkthrough and the interactive playground — all reduced-motion-gated; no
-  decorative or looping animation elsewhere. Evidence strings stay real and
-  selectable; motion never fabricates terminal output.
-- Any analytics, A/B test, cookie banner, newsletter capture, or third-party
-  embed.
+- `apps/web` (the landing page) — **PRD-013**.
+- `apps/docs` theming + the OG card — **PRD-014**.
+- The static-egress scanner, a11y/browser verification, content-hygiene of pages
+  — those gate the *pages*, so they live with PRD-013/014.
+- The landing prototype's fictional CLI surface (`gate.toml`, `gate ledger`, the
+  four-command set) — no component encodes it; components are surface-agnostic.
+- The `ds-overrides.jsx` shim and the `_ds_bundle.js` — never ported.
+- Changing the token layer, the CLI builders, or anything under `src/cli`/
+  `src/tokens` (PRD-010 owns them; this PRD only adds `src/react/`).
 
 ---
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** the built output of both apps, **When** `check-static-egress.mjs`
-  runs, **Then** it reports zero external origins and exits 0.
-- **Given** the landing page in either theme, **When** contrast is measured on
-  body text, terminal text and status colors, **Then** every pair meets AA.
-- **Given** a web `HandoffCard`, **When** its rendered text is compared to the
-  CLI's card builder output, **Then** they are identical.
-- **Given** the docs site, **When** Fumadocs' layout components are inspected,
-  **Then** none is forked — theming is variable binding only.
-- **Given** the landing copy, **When** the content-hygiene test runs, **Then** no
-  banned vocabulary, fabricated metric or miscased wordmark is found.
-- **Given** a 375px viewport, **When** any section is scrolled, **Then** the body
-  never scrolls horizontally.
+- **Given** the built package, **When** a consumer imports any of the nine from
+  `@provegate/design/react`, **Then** it resolves with types and renders.
+- **Given** `src/react/**`, **When** scanned, **Then** no hardcoded hex or font
+  stack appears — all styling is `--pg-*`.
+- **Given** a `VerdictBadge`, **When** rendered for each verdict, **Then** only
+  `passed` is green and the glyph matches the CLI.
+- **Given** the `./cli` built entry, **When** its imports are walked, **Then** no
+  React edge exists (PRD-010's gate still green).
+- **Given** a `HandoffCard` with `lines`, **When** rendered, **Then** the box,
+  glyphs, and the `→ READY TO PUSH` line match the terminal grammar.
 
 ---
 
@@ -291,44 +224,28 @@ so that the principle is observable, not just asserted.
 
 ### Architecture
 
-- **Components live in the design package, not in an app.** Two consumers exist;
-  a per-app copy would drift exactly the way the token layer was designed to
-  prevent. This is the only reason `packages/design/**` appears in this PRD's
-  conflict surface — and it is why this work must land after PRD-010.
-- **Fumadocs theming is binding, not forking.** `--color-fd-*` (and friends) get
-  bound to `--pg-*` in `global.css`. Forking a Fumadocs layout to restyle it makes
-  every upgrade a merge conflict; the handoff calls this out explicitly.
-- **Lucide stays where Fumadocs needs it.** The design system's "no third-party
-  icon pack" rule governs *our* components — which use the `Icon` set — not
-  Fumadocs' internals, which already depend on `lucide-react`. Do not attempt to
-  strip it.
-- **Playground re-grounded on the real surface.** The handoff's live `gate.toml`
-  parser is kept as an interactive, reduced-motion-gated element, but must operate
-  on the tool's actual input — an example PRD's gate manifest driving a real
-  `gate run` shape — not an invented `gate.toml`. If no honest interactive surface
-  maps cleanly, the playground degrades to the static `gate run` walkthrough
-  rather than shipping a fabricated config. See FR-11.
-- **One card builder, no parity problem.** PRD-010 FR-11 puts the card and
-  status-line string builders in `@provegate/design/cli`. Both the CLI (PRD-011)
-  and the web `HandoffCard` (this PRD's FR-2) call that one implementation, so the
-  two surfaces cannot drift and there is no cross-package parity test to schedule.
-  This dissolves the M1 build-cycle from the first readiness pass — the earlier
-  design had `packages/design` testing against `packages/provegate`, which
-  devDepends on it, closing a workspace loop turbo cannot order.
-- **Sequencing.** Depends on PRD-010 (tokens, fonts, assets, the `./react` export
-  path, the shared card builders). Independent of PRD-011 in code, but both consume
-  the same design package — land 010 first, then 011 and 012 may proceed; their
-  conflict surfaces are disjoint except for `packages/design/**`, which only this
-  PRD extends (adding `src/react/`) after 010 ships.
+- **React is confined to `./react`.** `@provegate/design` gains React as a
+  peerDependency (consumers bring it) + a devDependency (build/test). The `./cli`
+  and `./tokens` entries import no React; PRD-010's import-graph test already
+  fails on a React edge from `./cli`, and this PRD adds a built-output check.
+- **`HandoffCard` is a renderer, not a wrapper.** It takes structured `lines[]`
+  and draws the box. It does not call the CLI string builder — the two share a
+  grammar (glyphs, box chars, verdict colours), verified by assertion, not by
+  textContent equality. This is the reconciliation the richer landing handoff
+  forced, and it removes the workspace-cycle risk the first readiness pass flagged
+  outright.
+- **Prop contracts are the API.** The `.d.ts.txt` files are copied into real
+  `.tsx` prop types; the `.jsx.txt` are rebuilt idiomatically. Names/types never
+  drift.
+- **A test env is new for this package.** Component tests need jsdom/happy-dom;
+  add a `vitest.config.ts` with the DOM environment scoped so the existing
+  node-environment tests (tokens/cli/assets) are unaffected.
 
 ### Dependencies
 
-- `@provegate/design` (workspace) in both apps. No new third-party **runtime**
-  dependency, no font service, no analytics SDK, no icon pack.
-- **New dev tooling (stated, not smuggled):** `apps/web` gains `vitest` and a test
-  config to host `landing.test.ts`, `content-web.test.ts` and `contrast.test.ts` —
-  it has no test runner today. These are devDependencies only; they never enter the
-  built site or `check-static-egress`'s scan surface.
+- `react` + `react-dom` (peer + dev), `@types/react(-dom)` (dev), a DOM test env
+  + testing-library (dev). No runtime dependency is added to the CLI's world;
+  `@provegate/design` stays `private`.
 
 ---
 
@@ -336,67 +253,57 @@ so that the principle is observable, not just asserted.
 
 ### In Scope
 
-- [ ] `packages/design/src/react/**` + `packages/design/test/react-card.test.ts`
-- [ ] `apps/web/**` — layout, sections, metadata, README, tests (vitest introduced)
-- [ ] `apps/docs/app/global.css`, `apps/docs/components/mdx.tsx`,
-      `apps/docs/lib/layout.shared.tsx`, the OG route, `apps/docs/package.json`
-- [ ] `scripts/check-static-egress.mjs` + its root script entry
+- [ ] `packages/design/src/react/**` (nine components + barrel)
+- [ ] `packages/design/test/props.test.tsx`, `react.test.tsx`, extend
+      `cli-entry.test.ts`
+- [ ] `packages/design/package.json`, `tsup.config.ts`, `tsconfig.json`,
+      `vitest.config.ts`, `README.md`
 
 ### Out of Scope
 
-- `packages/provegate/**`, `packages/design/src/tokens*`, the generator, the
-  fonts, `apps/docs/content/**`.
+- `apps/**`, `scripts/**`, `src/cli/**`, `src/tokens/**`, the token source.
 
 ---
 
 ## 9. Open Questions
 
-- (none — component home, Fumadocs strategy and badge deferral settled in §5/§7)
+- (none — HandoffCard API, the split, and the fictional-surface handling were
+  settled at claim time 2026-07-24)
 
 ---
 
 ## 10. References
 
-- `docs/design/design_handoff_landing/` — **authoritative** landing spec
-  (2026-07-23): final composition (`landing-app.jsx`, 23 sections), copy,
-  interactions, reduced-motion behavior, and current component APIs
-  (`ds-overrides.jsx` doubles as the API spec). Supersedes the `ui_kits/landing/`
-  recreation below
-- `docs/design/design_handoff_provegate/design-system/ui_kits/landing/` — earlier
-  landing IA and section order (superseded by `design_handoff_landing/`)
-- `docs/design/design_handoff_provegate/design-system/ui_kits/docs/` — docs
-  surface recreation
-- `docs/design/design_handoff_provegate/design-system/ui_kits/brand/` — OG card,
-  README header, shield style
-- `docs/design/design_handoff_provegate/design-system/guidelines/*.card.html` —
-  rendered token specimens (the visual acceptance target)
-- `docs/design/design_handoff_provegate/design-system/components/**` — `.jsx.txt`
-  reference implementations and `.d.ts.txt` prop contracts
-- `docs/design/design-brief-2026-07-23.md` — audience, voice, do-not-say list,
-  landing IA, owner decisions
-- `_prds/wip/prd-010-design-system-package.md` — the token origin
-- `_prds/wip/prd-011-cli-design-adoption.md` — the terminal rendering this must
-  match
+- `docs/design/design_handoff_landing/README.md` — CURRENT component APIs
+  (authoritative where they disagree with the older `.d.ts.txt`)
+- `docs/design/design_handoff_provegate/design-system/components/**` — the nine
+  `.d.ts.txt` prop contracts + `.jsx.txt` reference implementations
+- `packages/design/src/tokens.ts`, `src/tokens/*.css` — the `--pg-*` tokens +
+  colour law (PRD-010)
+- `packages/design/src/cli/*` — the terminal glyph/verdict grammar to match
+- `_prds/completed/prd-010-design-system-package.md` — the package this extends
 
 ---
 
 ## Conflict Surface
 
 - `packages/design/src/react/**`
-- `packages/design/test/react-card.test.ts`
-- `apps/web/**`
-- `apps/docs/app/global.css`
-- `apps/docs/app/og/docs/[...slug]/route.tsx`
-- `apps/docs/components/mdx.tsx`
-- `apps/docs/lib/layout.shared.tsx`
-- `scripts/check-static-egress.mjs`
+- `packages/design/test/props.test.tsx`
+- `packages/design/test/react.test.tsx`
+- `packages/design/test/cli-entry.test.ts`
+- `packages/design/vitest.config.ts`
+- `packages/design/tsup.config.ts`
+- `packages/design/tsconfig.json`
+
+> `packages/design/package.json` and `README.md` are shared append-only-style
+> surfaces edited additively; not leased exclusively.
 
 ---
 
 ## Durable Artifacts
 
-- `apps/web/README.md` — the token map, why the kits were rebuilt not copied,
-  which kit facts were rejected as fabricated, how to add a section
+- `packages/design/README.md` — the React layer: nine components, HandoffCard
+  lines contract, colour-law obligations, peer-React vs React-free `./cli`
 
 ---
 
@@ -406,18 +313,17 @@ Run from repo root after `pnpm build`.
 
 | FR    | Command / Check                                                       | Scope  | Notes                                        |
 | ----- | --------------------------------------------------------------------- | ------ | -------------------------------------------- |
-| FR-1  | `pnpm --filter @provegate/design build`                               | design | react entry builds, props exported           |
-| FR-2  | `pnpm --filter @provegate/design test test/react-card.test.ts`        | design | web card textContent equals shared builder    |
-| FR-3  | `pnpm --filter web test test/landing.test.ts`                          | web    | all 23 sections present, proof adjacent limits |
-| FR-3  | `pnpm --filter web test test/reduced-motion.test.ts`                   | web    | animated blocks render finished state under reduced motion |
-| FR-4  | `pnpm --filter web test test/content-web.test.ts`                     | web    | copy discipline, wordmark casing             |
-| FR-5  | `pnpm --filter docs build`                                            | docs   | themed docs build clean                      |
-| FR-6  | `grep -Eq "slice\(0," apps/docs/app/og/docs/\[...slug\]/route.tsx`     | docs   | OG slug bounded before render                 |
-| FR-7  | `node scripts/check-static-egress.mjs`                                | root   | zero external origins in built output        |
-| FR-8  | `pnpm --filter web test test/contrast.test.ts`                        | web    | AA over token pairs; no color-only status    |
-| FR-9  | `pnpm --filter web test test/content-web.test.ts`                     | web    | banned vocabulary + fabricated-metric scan   |
-| FR-10 | `grep -c "token map" apps/web/README.md`                              | web    | adoption documented                          |
-| FR-11 | `pnpm --filter web test test/cli-surface.test.ts`                     | web    | no gate.toml / gate ledger; only real commands shown |
+| FR-1  | `pnpm --filter @provegate/design build`                               | design | react entry builds with JSX                  |
+| FR-2  | `pnpm --filter @provegate/design test test/props.test.tsx`            | design | Icon renders, names present                  |
+| FR-3  | `pnpm --filter @provegate/design test test/react.test.tsx`            | design | Button has no green variant                  |
+| FR-4  | `pnpm --filter @provegate/design test test/react.test.tsx`            | design | VerdictBadge/Admonition verdict + type sets  |
+| FR-5  | `pnpm --filter @provegate/design test test/props.test.tsx`            | design | CodeBlock + GateLine render, glyph carries   |
+| FR-6  | `pnpm --filter @provegate/design test test/react.test.tsx`            | design | HandoffCard lines[] + box + READY TO PUSH    |
+| FR-7  | `pnpm --filter @provegate/design test test/react.test.tsx`            | design | EvidenceTable exit red only on failed        |
+| FR-8  | `pnpm --filter @provegate/design test test/props.test.tsx`            | design | PhasePipeline explicit phases render         |
+| FR-9  | `pnpm --filter @provegate/design test test/props.test.tsx`            | design | all nine resolve from the barrel             |
+| FR-10 | `pnpm --filter @provegate/design test test/cli-entry.test.ts`         | design | ./cli stays React-free (built output)        |
+| FR-11 | `grep -c "HandoffCard" packages/design/README.md`                     | design | React layer documented                       |
 
 Cross-cutting (all green before Code Complete):
 
@@ -427,55 +333,34 @@ Cross-cutting (all green before Code Complete):
 - `pnpm build` — clean build, all packages and apps
 - `node packages/provegate/dist/cli.js check PRD-012` — this PRD passes its own gate
 - `node packages/provegate/dist/cli.js push; test $? -eq 1` — never-push invariant
-- `grep -ri -l -e emofy -e rayvaz apps/web/app && exit 1 || true` — hygiene
-
-Operator-owned (human/real-browser verification, recorded as `operator` rows —
-`skipped` is not a legal value for these):
-
-- Visible focus rings on every interactive element (keyboard tab-through).
-- `prefers-reduced-motion` honored — motion is suppressed with the OS setting on.
-- No horizontal body scroll at 375px; wide blocks scroll only inside their own
-  container.
-- Visual parity against `guidelines/*.card.html` and `ui_kits/landing/index.html`
-  in both themes, desktop and mobile.
-- Real-browser check that the terminal specimens on the page match what the
-  reader's own `gate` prints.
+- `grep -ri -l -e emofy -e rayvaz packages/design/src && exit 1 || true` — hygiene
 
 ---
 
 ## 12. DO NOT (Anti-Patterns)
 
-- DO NOT import, vendor, or ship `_ds_bundle.js`. It exists to render the
-  reference kits; app components are rebuilt against the `.d.ts.txt` contracts.
-- DO NOT copy the kits' placeholder facts: `v1.4.0`, `v1.2.0`, weekly downloads,
-  a `gate | pass` shield, or any badge without a real source behind it.
-- DO NOT show `gate.toml`, a `gate ledger` command, or a four-command CLI on the
-  page — they are the prototype's simplification, not the shipped surface. Show
-  the real commands and the real PRD-file + `_state/prds.json` flow, or drop the
-  block. Verify against the built binary, not the handoff.
-- DO NOT add a speedup percentage, a defect-reduction claim, `PROVEN`,
-  `VIOLATED`, an invented testimonial, a logo row, or a star count.
-- DO NOT add analytics, a tag manager, a beacon, a cookie banner, a font CDN, a
-  remote image, or any other third-party request.
-- DO NOT hardcode a hex, a font stack, a radius, or a spacing value in an app —
-  reference the token.
-- DO NOT use green for anything but earned, machine-verified pass, or red for
-  anything but real failure. No green buttons, no decorative accents.
-- DO NOT fork a Fumadocs layout component to theme it; bind variables instead.
-- DO NOT strip `lucide-react` from `apps/docs` — Fumadocs' internals need it.
-- DO NOT embed a recorded session or let motion invent terminal output. The hero
-  typing, `gate run` walkthrough and playground are permitted but MUST be
-  reduced-motion-gated (finished state under `prefers-reduced-motion: reduce`) and
-  MUST render only real, selectable CLI strings.
-- DO NOT edit `apps/docs/content/**` — other PRDs own those files.
-- DO NOT touch `packages/provegate/**` or the token layer PRD-010 owns.
+- DO NOT port `ds-overrides.jsx` or `_ds_bundle.js` — the shim is a stale-bundle
+  workaround; the tokens/builders in `packages/design` are the source of truth.
+- DO NOT let React become reachable from the `./cli` entry — the published CLI
+  stays zero-dependency; keep React under `src/react/` only.
+- DO NOT hardcode a hex, a font stack, a radius, or a spacing value in a
+  component — reference the `--pg-*` token.
+- DO NOT give `Button` a green variant, or paint any non-`passed` verdict green.
+  Green is earned.
+- DO NOT rename or drop a prop from a `.d.ts.txt` contract.
+- DO NOT invent a verdict outside `passed · failed · partial · skipped ·
+  operator · blocked`, and never `pass`/`fail`/`PROVEN`/`VIOLATED`.
+- DO NOT make `HandoffCard` call the CLI string builder — it renders structured
+  `lines[]`; parity is at the grammar level.
+- DO NOT touch `src/cli/**`, `src/tokens/**`, the token source, or any `apps/**`
+  — those are PRD-010 (owned) and PRD-013/014 (separate).
 - DO NOT introduce `any`; use `unknown` + narrowing.
 
 ---
 
 ## Changelog
 
-| Date       | Author | Changes       |
-| ---------- | ------ | ------------- |
-| 2026-07-23 | owner  | Initial draft |
-| 2026-07-24 | owner  | Reconcile with the 2026-07-23 landing handoff (`design_handoff_landing/`): scope 11 → 23 sections; reverse the static-only rule to reduced-motion-gated motion + interactive playground; add FR-11 (shipped CLI surface on the page — no `gate.toml`, no `gate ledger`); re-ground the playground on the real surface; add authoritative reference. Readiness + tasks must be re-run (scope and policy changed). |
+| Date       | Author | Changes                                                    |
+| ---------- | ------ | ---------------------------------------------------------- |
+| 2026-07-23 | owner  | Initial draft (whole web wave)                             |
+| 2026-07-24 | owner  | Rescoped to the React component layer; landing → PRD-013, docs+OG → PRD-014; HandoffCard lines[] API; fictional CLI surface dropped |

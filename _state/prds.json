@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T10:15:26.904Z",
+  "generatedAt": "2026-07-24T11:27:19.499Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -420,13 +420,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-012-web-design-adoption.md",
         "readiness": "_readiness/wip/readiness-012-web-design-adoption.md",
-        "tasks": "_tasks/wip/tasks-012-web-design-adoption.md",
+        "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "wip",
+        "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
@@ -436,15 +436,89 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
+        "status": "Unknown",
         "checkedCount": 0,
-        "uncheckedCount": 33,
-        "operatorHandoffCount": 5
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-23"
+      "lastUpdated": "2026-07-24"
+    },
+    {
+      "prd": "PRD-013",
+      "number": 13,
+      "slug": "landing-page",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-013-landing-page.md",
+        "readiness": "_readiness/wip/readiness-013-landing-page.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.2,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-24"
+    },
+    {
+      "prd": "PRD-014",
+      "number": 14,
+      "slug": "docs-theming",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-014-docs-theming.md",
+        "readiness": "_readiness/wip/readiness-014-docs-theming.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 8.3,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "medium"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-24"
     }
   ]
 }
