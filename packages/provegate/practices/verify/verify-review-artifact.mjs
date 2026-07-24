@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// verify:review-artifact — independent-review records are schema-valid (practice 01).
+// verify:review-artifact — independent-review records are schema-valid.
 // Hard rule: Verdict pass REQUIRES Critical: 0. Verdict is strictly pass|fail.
 import { basename, join } from 'node:path';
 import { targetRoot, parseBlockquoteMeta, mdFiles, read, makeReporter } from './lib.mjs';

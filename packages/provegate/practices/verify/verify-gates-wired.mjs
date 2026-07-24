@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// verify:gates-wired — the meta-gate, pattern P3 (wire-or-delete), both directions:
+// verify:gates-wired — the wire-or-delete meta-gate, both directions:
 //  1. every registered verify:* script in package.json is reachable from at least one
 //     executing surface (CI workflows, git hooks, the verify:workflow bundle, or another
 //     package.json script);

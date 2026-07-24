@@ -129,6 +129,10 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   they run only inside the verify-workflow bundle, which the audit doesn't count as a
   surface. Pre-existing on main (identical output both checkouts), not introduced here;
   recorded on the STATUS board as a deferral at close.
+- **Surface decision (recorded per §12):** `packages/provegate/src/core/run/index.ts`
+  gained two barrel-export lines (planPractices, practicesPackDir) — the mechanical
+  consequence of exporting the new init functions through the existing core barrel.
+  Additive-only; not in the declared Conflict Surface; recorded here as the decision.
 - **Surface note:** this PRD's own lifecycle ledgers (`_prds/`, `_readiness/`,
   `_tasks/`) and its review artifact are workflow bookkeeping edited by every
   PRD — not exclusive implementation surface.

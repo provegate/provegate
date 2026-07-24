@@ -257,9 +257,11 @@ describe('gate init --practices (real temp repos)', () => {
         if (/[çğışöüÇĞİŞÖÜ]/.test(text)) bad.push(`${full}: non-English character`);
         // Origin-process terminology that only makes sense in the repo the
         // pack was extracted from ("handoff card" is a generic workflow term
-        // and deliberately NOT matched here).
+        // and deliberately NOT matched here). Includes the internal numbered
+        // practice/pattern taxonomy ("practice 06", "pattern P3") — an
+        // adopter has no catalog to resolve those against.
         if (
-          /\bwave [0-9]\b|handoff template|contributor handoff|the user asked for|originating implementation/i.test(
+          /\bwave [0-9]\b|\bpractice [0-9]{2}\b|\bpattern P[0-9]\b|handoff template|contributor handoff|the user asked for|originating implementation/i.test(
             text,
           )
         )

@@ -1,6 +1,6 @@
 # retros/
 
-Periodic retrospective notes — practice 07 (retro → learning ritual). One dated file per
+Periodic retrospective notes — the retro → learning ritual. One dated file per
 retro: `retro-YYYY-MM-DD.md`. Capture **cross-PRD themes** no single work item owns
 (recurring friction, process drift, tooling gaps).
 

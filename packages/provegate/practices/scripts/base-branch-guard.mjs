@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Base-branch commit guard — practice 02 (protected-branch commit flow).
+// Base-branch commit guard — protected branches are merge-only for source.
 // Policy SSOT: protected branches are merge-only for source. Docs/coordination
 // paths may commit in place. Exemptions: merge commits, ALLOW_BASE_COMMIT=1.
 // This script never pushes and must never gain the ability to.

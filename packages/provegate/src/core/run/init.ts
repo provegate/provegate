@@ -96,7 +96,9 @@ const HOOK_MODE = 0o755;
 
 /** Pack file → repo destination. Explicit table, not a glob walk: every
  * destination is reviewable here, and a stray file added to the pack can
- * never silently install itself. `learnings/` is the one enumerated dir. */
+ * never silently install itself. `learnings/` is the ONLY enumerated dir,
+ * and it is guarded: only `.md` files install, and the fixture pins the
+ * count to the INDEX pointer count. */
 const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
   { src: 'brain/PROTOCOL.md', dest: '_brain/PROTOCOL.md' },
   { src: 'brain/README.md', dest: '_brain/README.md' },
@@ -116,6 +118,27 @@ const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
   { src: 'hooks/commit-msg', dest: '.githooks/commit-msg', mode: HOOK_MODE },
   { src: 'scripts/base-branch-guard.mjs', dest: 'scripts/base-branch-guard.mjs' },
   { src: 'scripts/secret-scan.mjs', dest: 'scripts/secret-scan.mjs' },
+  { src: 'verify/lib.mjs', dest: 'scripts/verify/lib.mjs' },
+  { src: 'verify/verify-brain.mjs', dest: 'scripts/verify/verify-brain.mjs' },
+  { src: 'verify/verify-review-artifact.mjs', dest: 'scripts/verify/verify-review-artifact.mjs' },
+  {
+    src: 'verify/verify-durable-artifacts.mjs',
+    dest: 'scripts/verify/verify-durable-artifacts.mjs',
+  },
+  { src: 'verify/verify-deferred.mjs', dest: 'scripts/verify/verify-deferred.mjs' },
+  {
+    src: 'verify/verify-test-task-coverage.mjs',
+    dest: 'scripts/verify/verify-test-task-coverage.mjs',
+  },
+  { src: 'verify/verify-gates-wired.mjs', dest: 'scripts/verify/verify-gates-wired.mjs' },
+  {
+    src: 'verify/verify-dependency-audit.mjs',
+    dest: 'scripts/verify/verify-dependency-audit.mjs',
+  },
+  { src: 'verify/verify-workflow.mjs', dest: 'scripts/verify/verify-workflow.mjs' },
+  { src: 'verify/gates-wired-exceptions.json', dest: 'scripts/verify/gates-wired-exceptions.json' },
+  { src: 'verify/test-task-allowlist.json', dest: 'scripts/verify/test-task-allowlist.json' },
+  { src: 'verify/audit-allowlist.json', dest: 'scripts/verify/audit-allowlist.json' },
 ];
 
 /** The practices plan: pack content → repo files. Additive-only like the base
@@ -137,13 +160,6 @@ export function planPractices(packDir: string): InitAction[] {
       path: join('_brain/learnings', f),
       kind: 'file',
       content: readPack(join('brain/learnings', f)),
-    });
-  }
-  for (const f of readdirSync(join(packDir, 'verify')).sort()) {
-    actions.push({
-      path: join('scripts/verify', f),
-      kind: 'file',
-      content: readPack(join('verify', f)),
     });
   }
   return actions;

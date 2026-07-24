@@ -1,5 +1,5 @@
 <!--
-Generic independent-review artifact — practice 01.
+Generic independent-review artifact.
 One per gated change. Committed alongside the change (it is a durable artifact).
 The reviewer is NOT the author: a different model/agent session, or a human.
 

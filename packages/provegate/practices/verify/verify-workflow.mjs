@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // verify:workflow — the aggregate local gate bundle (wiring surface #1) with the
-// known-red ledger, pattern P4: an acknowledged red is downgraded to a report; a ledger
+// known-red ledger: an acknowledged red is downgraded to a report; a ledger
 // entry that is stale (check now passes), unknown, or malformed FAILS the run — the
 // pressure valve stays temporary by construction.
 // Canonical check list. dependency-audit is CI-only (registry access), not listed here.

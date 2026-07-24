@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// verify:durable-artifacts — practice 07 / pattern P5 (declared-and-checked).
+// verify:durable-artifacts — the declared-and-checked rule: knowledge lands with code.
 // Lint mode (default): every wip PRD declares a Durable Artifacts section (paths or
 // `- none`). Close mode (--close): every declared real path must appear in the merge
 // diff (merge-base vs HEAD) or the working/staged set.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Pre-commit secret scanner — practice 04 (secrets & env discipline).
+// Pre-commit secret scanner — secrets & env discipline.
 // (1) Name-blocks any staged real .env* file (including rename targets).
 // (2) Content-scans staged text for key/token/private-key patterns.
 // Filenames are attacker-influenced input: they are passed to git via

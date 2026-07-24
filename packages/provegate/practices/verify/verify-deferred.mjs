@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// verify:deferred — STATUS.md deferral policy (practice 06): every row has an owner and
+// verify:deferred — STATUS.md deferral policy: every row has an owner and
 // a due date; overdue fails; a row renews at most once; combined cap 15, warn at 12.
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
