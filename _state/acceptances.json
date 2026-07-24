@@ -80,6 +80,18 @@
       "reason": "ran operator browser QA via Claude-in-Chrome; all four handoff rows pass, one 375px evidence-table clip fixed and re-verified; accepting autonomous close via gate land",
       "date": "2026-07-24",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-014",
+      "owner": "owner",
+      "items": [
+        "8.0 codex cross-model Phase-6 review authorized and completed (R1 pass Critical 0 with 1 High + 1 Medium; both fixed in b442d96; R2 re-verified pass, 0/0/0)",
+        "2.0/4.0 operator visual rows (docs parity + OG card) WAIVED — not run in-browser this session at owner instruction",
+        "operator acceptance of autonomous close (push stays human)"
+      ],
+      "reason": "reviewed the codex two-round review and the fix commit; accepting autonomous close on the green machine gates + the pass review, with the two real-browser operator rows waived without an in-browser pass this session",
+      "date": "2026-07-24",
+      "method": "interactive"
     }
   ]
 }
