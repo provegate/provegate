@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T11:58:06.209Z",
+  "generatedAt": "2026-07-24T11:59:15.062Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -413,20 +413,20 @@
       "prd": "PRD-012",
       "number": 12,
       "slug": "web-design-adoption",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-012-web-design-adoption.md",
-        "readiness": "_readiness/wip/readiness-012-web-design-adoption.md",
-        "tasks": "_tasks/wip/tasks-012-web-design-adoption.md",
+        "prd": "_prds/completed/prd-012-web-design-adoption.md",
+        "readiness": "_readiness/completed/readiness-012-web-design-adoption.md",
+        "tasks": "_tasks/completed/tasks-012-web-design-adoption.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
@@ -436,7 +436,7 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
+        "status": "Ship Verified",
         "checkedCount": 29,
         "uncheckedCount": 6,
         "operatorHandoffCount": 0

@@ -1,6 +1,6 @@
 # PRD-012: React Component Layer — the Design System's `./react` Export
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-23
 > **Updated**: 2026-07-24

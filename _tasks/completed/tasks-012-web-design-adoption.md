@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-012-web-design-adoption.md](../../_prds/wip/prd-012-web-design-adoption.md)
 > **Readiness**: [readiness-012-web-design-adoption.md](../../_readiness/wip/readiness-012-web-design-adoption.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.4/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-24
