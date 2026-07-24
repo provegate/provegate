@@ -158,15 +158,19 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-24 | 7.1 | Phase-6 round 1 → FAIL (Critical 1): egress scanner was a denylist+CSS model; reviewer injected `<script src>`/`<link preconnect>`/`fetch()` to non-denylisted hosts and it reported clean. Rewrote as fetch-shape detector (`6f2c10d`). |
 | 2026-07-24 | 7.1 | Round 2 → FAIL (Critical 1): shape detector still missed `wss://` (URL_RE scheme) and backtick-quoted URLs (JS quote class). Widened scheme to any `[a-z…]:` + added backtick to quote classes (`484f476`). |
 | 2026-07-24 | 7.1 | Round 3 → PASS (Critical 0): all three bypasses fixed; reviewer threw 12 more shapes (`ws://`, `WSS://`, backtick in beacon/importScripts/EventSource/XHR-open, unquoted CSS `url()`), none slipped; string-concat remains the declared blind spot. |
+| 2026-07-24 | 3.1/2.2 | Operator browser QA (Claude-in-Chrome, real Chrome). Focus rings, reduced-motion CSS, desktop light+dark parity all PASS. **Bug found at 375px**: `EvidenceTable` wrapper `.pg-evidence` used `overflow:hidden`, clipping the trailing `Evidence` column (~73px unreachable) — wide block did NOT scroll in-box. Fixed `packages/design/src/react/EvidenceTable.tsx` → `overflow-x:auto; overflow-y:hidden` (matches `pg-handoff`). Re-verified in a 375px same-origin iframe: table scrolls in-box, Evidence column reachable, page still no h-scroll, zero uncontained overflow. Floor re-run green (types/lint/test 481+16, build, egress exit 0). |
 
 ---
 
 ## Blockers / Open Questions
 
-- Machine phases 4–7 complete; Phase 6 PASS (Critical 0). **Merge deferred**: the
-  four Operator Handoff rows (real-browser QA) are unaccepted. Owner deferred the
-  browser QA this session (2026-07-24) — PRD stays **Code Complete**, not Ship
-  Verified. `gate` merge stays blocked until an operator accepts those rows.
+- Machine phases 4–7 complete; Phase 6 PASS (Critical 0). Operator browser QA ran
+  2026-07-24 (Claude-in-Chrome): all four Operator Handoff rows now **passed**, with
+  one bug found and fixed (`EvidenceTable` 375px clip → in-box scroll). One caveat:
+  `prefers-reduced-motion` was verified by live CSSOM (mechanism sound), not by
+  flipping the OS toggle — the browser tools can't emulate the media feature. Owner
+  to confirm reduced-motion visually and accept the rows; `gate` merge stays blocked
+  until those rows are accepted and the design-package fix is committed.
 
 ---
 
@@ -177,7 +181,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category  | Owner    | Required Check                                          | Status  | Notes                        |
 | ---- | --------- | -------- | ------------------------------------------------------ | ------- | ---------------------------- |
-| 3.1  | manual-qa | operator | Visible focus rings on every interactive element        | pending | keyboard tab-through          |
-| 3.1  | manual-qa | operator | prefers-reduced-motion suppresses all motion            | pending | OS setting on                 |
-| 3.1  | manual-qa | operator | No horizontal scroll at 375px                           | pending | wide blocks scroll in-box     |
-| 2.2  | manual-qa | operator | Visual parity vs the landing handoff, both themes       | pending | desktop + mobile              |
+| 3.1  | manual-qa | operator | Visible focus rings on every interactive element        | passed  | box-shadow `--pg-ring` visible on nav Docs/GitHub, hero buttons, footer links (Chrome tab-through) |
+| 3.1  | manual-qa | operator | prefers-reduced-motion suppresses all motion            | passed  | live CSSOM: `reduce` branch hard-sets `.pg-reveal{opacity:1;transform:none}`, durations→0s, transition only under `no-preference`. OS-toggle visual not flippable via tools; mechanism verified |
+| 3.1  | manual-qa | operator | No horizontal scroll at 375px                           | passed  | after fix — see Progress Log. Page never h-scrolls (`overflow-x:hidden`); handoff/terminal + evidence table now scroll in-box |
+| 2.2  | manual-qa | operator | Visual parity vs the landing handoff, both themes       | passed  | desktop light + dark both coherent (hero, phase pipeline, handoff card, gate-run, evidence ledger, command ref); 375px mobile verified after fix |
