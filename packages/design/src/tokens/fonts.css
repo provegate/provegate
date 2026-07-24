@@ -1,0 +1,67 @@
+/* ProveGate webfonts — SELF-HOSTED, no CDN, no network request.
+   IBM Plex Sans (prose/UI) + IBM Plex Mono (evidence). One engineered
+   superfamily. Latin subset, weights 400/500/600/700.
+
+   Provenance: vendored unmodified from @fontsource/ibm-plex-sans@5.3.0 and
+   @fontsource/ibm-plex-mono@5.3.0 (OFL-1.1). License: assets/fonts/OFL.txt.
+   The files live under assets/fonts/ and are served from your own origin —
+   this stylesheet makes zero third-party requests, honoring the no-telemetry
+   principle. */
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../../assets/fonts/ibm-plex-mono-latin-700-normal.woff2") format("woff2");
+}
