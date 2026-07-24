@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-013-landing-page.md](../../_prds/wip/prd-013-landing-page.md)
 > **Readiness**: [readiness-013-landing-page.md](../../_readiness/wip/readiness-013-landing-page.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.2/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-24
