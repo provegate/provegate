@@ -95,12 +95,15 @@
         test (447/447), build (incl. docs), `gate check PRD-009`, never-push
         (exit 1), hygiene — all green.
 
-- [ ] 6.0 Phase 6 — Final Auditing
-  - [ ] 6.1 Independent adversarial review of the diff → verdict artifact at
-        `_docs/reviews/review-009-conflict-structural-hardening.md`. `Verdict: pass`
-        requires `Critical: 0`. Reviewer attacks: soundness (any concrete path
-        that matches both but returns false?), `**`-across-segment handling, the
-        memoization bound.
+- [x] 6.0 Phase 6 — Final Auditing
+  - [x] 6.1 Independent adversarial review (Sonnet 5, cross-model, fresh context)
+        → `_docs/reviews/review-009-conflict-structural-hardening.md`. **Verdict:
+        pass** (Critical 0, High 0, Medium 1). Soundness held: 0 false negatives
+        across ~115k randomized pairs vs brute-force ground truth + boundary
+        matrix; memo + `i+j`-monotone confirmed; shared-exclusion correct. The one
+        Medium (unbounded recursion depth → RangeError on ~6.2k-char globs) was
+        FIXED in-session: `walk` rewritten iterative over an explicit stack + 1M
+        state budget; regression test added. Re-ran gates green (448 tests).
 
 - [ ] 7.0 Phase 7 — Learning
   - [ ] 7.1 Confirm the declared Durable Artifact
@@ -125,7 +128,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-009`                                   | repo      | passed  | exit 0                          |                       |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`                             | repo      | passed  | "No. Push is yours." exit 1     |                       |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz packages/provegate/src && exit 1 \|\| true`           | provegate | passed  | clean                           | no personal names     |
-| independent-review | `_docs/reviews/review-009-conflict-structural-hardening.md`                           | repo      | pending |          | verdict pass, critical = 0      |
+| independent-review | `_docs/reviews/review-009-conflict-structural-hardening.md`                           | repo      | passed  | Sonnet 5, verdict pass, Critical 0, High 0, Medium 1 (fixed) | cross-model, fuzzed ~115k pairs |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -147,6 +150,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   than the PRD's "no false negatives, rare false positives OK" requirement; the
   conservative `true` fallback fires only on an unrecognized token, which
   `globToRegExp` never emits.
+- 6.1 — Phase-6 Medium (unbounded recursion depth) fixed in-session rather than
+  deferred: `walk` is now iterative over an explicit heap stack (no call-stack to
+  overflow) with a 1M-state budget returning conservative may-intersect for
+  pathological glob sizes. In scope (glob.ts); the alternative (length cap in
+  `validateOwnedPaths`) would have reached outside the conflict surface.
 
 ---
 

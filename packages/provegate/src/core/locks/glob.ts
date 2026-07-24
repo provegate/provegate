@@ -98,21 +98,38 @@ function shareChar(a: GlobToken, b: GlobToken): boolean {
   return true;
 }
 
+// Explore ≤ (|a|+1)·(|b|+1) DP states before conceding. Real conflict-surface
+// globs are tens of chars; a pair large enough to reach this is malformed input,
+// and the conservative verdict (may-intersect) is the safe fallback — never a
+// crash, never a silent miss.
+const INTERSECT_STATE_BUDGET = 1_000_000;
+
 export function globsMayIntersect(aGlob: string, bGlob: string): boolean {
   const a = tokenizeGlob(aGlob);
   const b = tokenizeGlob(bGlob);
-  const seen = new Set<number>();
   const stride = b.length + 1;
+  const accept = a.length * stride + b.length;
 
-  const walk = (i: number, j: number): boolean => {
-    if (i === a.length && j === b.length) return true;
-    const key = i * stride + j;
-    if (seen.has(key)) return false;
-    seen.add(key);
+  // Iterative reachability from state (0,0) to the accept state (|a|,|b|) over
+  // the transition edges below — an explicit heap stack, so no glob length can
+  // overflow the call stack (Sonnet 5 Phase-6 finding M1). States are `(i,j)`
+  // encoded as `i*stride+j`; a `visited` set dedupes, and `i+j` strictly
+  // increases along every edge, so the graph is a DAG and the walk terminates.
+  const visited = new Set<number>();
+  const stack: number[] = [0];
+  while (stack.length > 0) {
+    const key = stack.pop()!;
+    if (key === accept) return true;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    if (visited.size > INTERSECT_STATE_BUDGET) return true; // conservative fallback
+
+    const i = Math.floor(key / stride);
+    const j = key % stride;
 
     // Skip a nullable front token (emit nothing, advance past it).
-    if (i < a.length && nullable(a[i]!) && walk(i + 1, j)) return true;
-    if (j < b.length && nullable(b[j]!) && walk(i, j + 1)) return true;
+    if (i < a.length && nullable(a[i]!)) stack.push((i + 1) * stride + j);
+    if (j < b.length && nullable(b[j]!)) stack.push(i * stride + (j + 1));
 
     // Emit one common char, advancing whichever side consumes a char. At least
     // one pointer must advance, so a stall (both star/globstar) is left to the
@@ -122,10 +139,10 @@ export function globsMayIntersect(aGlob: string, bGlob: string): boolean {
       const tb = b[j]!;
       const nextI = consumesOne(ta) ? i + 1 : i;
       const nextJ = consumesOne(tb) ? j + 1 : j;
-      if ((nextI !== i || nextJ !== j) && shareChar(ta, tb) && walk(nextI, nextJ)) return true;
+      if ((nextI !== i || nextJ !== j) && shareChar(ta, tb)) {
+        stack.push(nextI * stride + nextJ);
+      }
     }
-    return false;
-  };
-
-  return walk(0, 0);
+  }
+  return false;
 }

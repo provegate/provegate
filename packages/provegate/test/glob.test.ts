@@ -91,6 +91,16 @@ describe('globsMayIntersect (sound pattern intersection)', () => {
     }
   });
 
+  it('returns a verdict for pathological-length globs instead of overflowing the stack', () => {
+    // A pair long enough to blow a recursive stack (Phase-6 finding M1): the
+    // iterative walk must return, not throw.
+    const longLit = 'a'.repeat(50_000);
+    expect(() => globsMayIntersect(longLit, longLit)).not.toThrow();
+    expect(globsMayIntersect(longLit, longLit)).toBe(true); // identical literals match
+    const longStar = `${'a/'.repeat(20_000)}**`;
+    expect(() => globsMayIntersect(longStar, longStar)).not.toThrow();
+  });
+
   it('cross-checks the verdict against a concrete-path witness where one exists', () => {
     // For each INTERSECT pair we can name a path that matches both — proving
     // the verdict is not a false positive.
