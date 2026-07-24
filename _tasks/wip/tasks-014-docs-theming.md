@@ -81,10 +81,14 @@
         (`b442d96`). R2: independently re-verified — Verdict pass, Critical 0,
         High 0, Medium 0, both RESOLVED.
 
-- [ ] 9.0 Phase 7 — Learning
-  - [ ] 9.1 Confirm the durable artifact (`apps/docs/README.md`) is in the diff.
-  - [ ] 9.2 Knowledge ingest: the Tailwind-v4 fumadocs binding finding; the
-        surface-gap correction (layout.tsx).
+- [x] 9.0 Phase 7 — Learning
+  - [x] 9.1 Durable artifact `apps/docs/README.md` is in the diff (token-map,
+        bind-not-fork, FR-1 finding, lucide-react-stays).
+  - [x] 9.2 Knowledge ingest: the Tailwind-v4 fumadocs binding recipe
+        (`:root` override + `attribute:['class','data-theme']` bridge +
+        `storageKey`), the worktree dev gotcha (no node_modules / build dist
+        in-tree), OG/satori limits (tokens JS export; woff2 unusable), and the
+        surface-gap correction (layout.tsx). Recorded in agent memory.
 
 ---
 
@@ -137,8 +141,16 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-24 | 4.0 | OG `[...slug]` was unbounded (`slice(0,-1)`→`getPage`, `notFound` on odd input). Now length-capped + charset-restricted with a site-title fallback; brand card (mark + wordmark + title, literal colours per satori). |
 | 2026-07-24 | 7.0 | Phase 4+5 done in worktree `.worktrees/prd-014-docs-theming`. Floor green: check-types, lint, test, build, egress (exit 0), gate check ok, never-push exit 1, hygiene clean. Phase 6 (independent review) pending. |
 | 2026-07-24 | 8.0 | Phase 6 codex R1 → pass, Critical 0; found 1 High (OG copied brand hexes + Satori default font) + 1 Medium (persisted legacy `theme=system` wrote `system` to both selectors, defeating dark-canonical). Fixed `b442d96`: OG colours from `@provegate/design/tokens`; `storageKey: pg-docs-theme` so legacy value is ignored (verified first render dark for a legacy visitor). Satori can't consume the woff2-only package, so the OG font stays Satori's default — accepted as an honest engine limitation, documented in the route. R2 → pass, Critical 0, High 0, Medium 0, both RESOLVED. |
+| 2026-07-24 | 9.0 | Phase 7: durable artifact confirmed; learnings ingested to memory. Operator visual rows waived at owner instruction (recorded in acceptances.json); closing via `gate land`. |
 
-- (none)
+---
+
+## Blockers / Open Questions
+
+- Operator visual QA (rows 2.0/4.0) was **waived, not executed in-browser** this
+  session at owner instruction. The owner accepted autonomous close on the
+  machine gates + the cross-model Phase-6 review via `_state/acceptances.json`.
+  A real-browser parity/OG pass remains a good follow-up.
 
 ---
 
@@ -149,5 +161,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category  | Owner    | Required Check                                        | Status  | Notes                |
 | ---- | --------- | -------- | ---------------------------------------------------- | ------- | -------------------- |
-| 2.0  | manual-qa | operator | Visual parity of themed docs vs handoff, both themes | pending | desktop + mobile     |
-| 4.0  | manual-qa | operator | OG card renders correctly for a real docs slug       | pending | share-preview render |
+| 2.0  | manual-qa | operator | Visual parity of themed docs vs handoff, both themes | waived  | not run in-browser this session; owner accepted close on machine gates + review (acceptances.json) |
+| 4.0  | manual-qa | operator | OG card renders correctly for a real docs slug       | waived  | not run in-browser this session; owner accepted (acceptances.json) |
