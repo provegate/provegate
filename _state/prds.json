@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T19:35:47.009Z",
+  "generatedAt": "2026-07-24T19:41:39.963Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -567,26 +567,26 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-016-practices-pack.md",
-        "readiness": "",
-        "tasks": "",
+        "readiness": "_readiness/wip/readiness-016-practices-pack.md",
+        "tasks": "_tasks/wip/tasks-016-practices-pack.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
-        "tasks": "missing",
+        "readiness": "wip",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.15,
+        "verdict": "PASS",
+        "modelTierExecution": "medium",
+        "modelTierAudit": "medium"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
+        "uncheckedCount": 26,
         "operatorHandoffCount": 0
       },
       "summary": {
