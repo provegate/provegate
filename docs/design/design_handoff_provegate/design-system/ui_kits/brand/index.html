@@ -1,0 +1,77 @@
+<!-- dsCard (reference copy) group="Brand" viewport="1200x630" name="OG / social card" -->
+<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<title>ProveGate — brand surfaces</title>
+<style>
+  html,body{margin:0;background:var(--pg-bg-subtle);font-family:var(--pg-font-sans)}
+  .sheet{display:flex;flex-direction:column;gap:0;align-items:center;padding:0}
+  .label{align-self:flex-start;font-family:var(--pg-font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--pg-text-subtle);margin:26px 0 10px 4%}
+  .mono{font-family:var(--pg-font-mono)}
+  /* ---- OG card 1200x630 ---- */
+  .og{width:1200px;height:630px;background:#14130d;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:0 88px;box-sizing:border-box}
+  .og .grid{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:48px 48px}
+  .og .lock{display:flex;align-items:center;gap:16px;position:relative}
+  .og .wm{font-size:40px;font-weight:700;letter-spacing:-0.025em;color:#f3f1eb}
+  .og .wm .g{color:#4fd08a}
+  .og h1{position:relative;font-size:66px;font-weight:700;letter-spacing:-0.03em;line-height:1.03;color:#f3f1eb;margin:30px 0 0;max-width:960px}
+  .og h1 .m{font-family:var(--pg-font-mono);font-weight:500;font-size:0.8em;color:#8f8a7b}
+  .og .sub{position:relative;margin-top:22px;font-family:var(--pg-font-mono);font-size:20px;color:#8f8a7b}
+  .og .tag{position:absolute;bottom:52px;left:88px;font-family:var(--pg-font-mono);font-size:18px;color:#4fd08a}
+  .og .chip{position:absolute;bottom:48px;right:88px;font-family:var(--pg-font-mono);font-size:15px;color:#e7e4db;border:1px solid #2e2b25;border-radius:6px;padding:8px 14px;background:#00000030}
+  .og .chip .ok{color:#4fd08a}
+  /* ---- README header 1280x340 ---- */
+  .rh{width:1280px;height:340px;background:#14130d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;box-sizing:border-box}
+  .rh .lock{display:flex;align-items:center;gap:14px}
+  .rh .wm{font-size:46px;font-weight:700;letter-spacing:-0.025em;color:#f3f1eb}
+  .rh .wm .g{color:#4fd08a}
+  .rh .sub{font-family:var(--pg-font-mono);font-size:18px;color:#8f8a7b}
+  .rh .row{display:flex;gap:8px;margin-top:4px}
+  /* ---- badges ---- */
+  .badges{width:1200px;background:var(--pg-surface);border:1px solid var(--pg-border);border-radius:10px;padding:26px 30px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .bdg{display:inline-flex;height:22px;border-radius:4px;overflow:hidden;font-family:var(--pg-font-mono);font-size:12px;line-height:22px}
+  .bdg .k{background:#3a3730;color:#fff;padding:0 9px}
+  .bdg .v{padding:0 9px;color:#fff}
+</style></head>
+<body>
+<div class="sheet">
+
+  <div class="label">OG / social card — 1200×630</div>
+  <div class="og">
+    <div class="grid"></div>
+    <div class="lock">
+      <svg width="52" height="52" viewBox="0 0 32 32" fill="none"><path d="M7 5 L7 27" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round"/><path d="M25 5 L25 27" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round"/><path d="M11 15.5 L14.5 19.5 L21.5 11" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="wm">Prove<span class="g">Gate</span></span>
+    </div>
+    <h1>An agent's <span class="m">done</span><br>is not evidence.</h1>
+    <div class="sub">work passes only when a command exits 0.</div>
+    <div class="tag">prove it, then propagate.</div>
+    <div class="chip">✓ gate run <span class="ok">— pass · exit 0</span></div>
+  </div>
+
+  <div class="label">GitHub README header — 1280×340</div>
+  <div class="rh">
+    <div class="lock">
+      <svg width="58" height="58" viewBox="0 0 32 32" fill="none"><path d="M7 5 L7 27" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round"/><path d="M25 5 L25 27" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round"/><path d="M11 15.5 L14.5 19.5 L21.5 11" stroke="#4fd08a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="wm">Prove<span class="g">Gate</span></span>
+    </div>
+    <div class="sub">prove + gate — prove it, then let it propagate</div>
+    <div class="row">
+      <span class="bdg"><span class="k">npm</span><span class="v" style="background:#1fa45e">v1.4.0</span></span>
+      <span class="bdg"><span class="k">gates</span><span class="v" style="background:#1fa45e">pass</span></span>
+      <span class="bdg"><span class="k">license</span><span class="v" style="background:#2f6fe0">MIT</span></span>
+    </div>
+  </div>
+
+  <div class="label">npm / shield badge style</div>
+  <div class="badges">
+    <span class="bdg"><span class="k">npm</span><span class="v" style="background:#1fa45e">v1.4.0</span></span>
+    <span class="bdg"><span class="k">gate</span><span class="v" style="background:#1fa45e">pass · exit 0</span></span>
+    <span class="bdg"><span class="k">gate</span><span class="v" style="background:#c13328">fail · exit 1</span></span>
+    <span class="bdg"><span class="k">phase</span><span class="v" style="background:#c98a17">pending</span></span>
+    <span class="bdg"><span class="k">review</span><span class="v" style="background:#2258c0">human</span></span>
+    <span class="bdg"><span class="k">license</span><span class="v" style="background:#3a3730">MIT</span></span>
+    <span class="bdg"><span class="k">downloads</span><span class="v" style="background:#3a3730">weekly</span></span>
+  </div>
+  <div style="height:30px"></div>
+
+</div>
+</body></html>

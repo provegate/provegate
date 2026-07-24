@@ -307,6 +307,37 @@ and terminal read as one system.
   sheet (install, command surface, `gate run`, handoff + stopped cards, status
   table, `--dry-run` plan, refusals, `--help`, colour/NO_COLOR matrix). These
   strings are what `packages/cli` should print.
+- `design-system/_ds_bundle.js` — compiled components, for the reference kits.
+- `design-system/ui_kits/` — landing, docs, brand (OG card + README header +
+  shields) HTML/React reference recreations.
+- `design-system/guidelines/` — foundation specimen cards.
+- `design-system/templates/` — live Design Component source of the CLI specimens.
+
+## Web surfaces (included — for the web wave)
+
+The web surfaces are now in the bundle too, mirrored under `design-system/`
+so their relative `../styles.css` / `../../_ds_bundle.js` links resolve as-is
+(a copy of the compiled `_ds_bundle.js` is included for the React kits):
+
+- `design-system/ui_kits/landing/` — the marketing landing page (full IA,
+  dark-first): `index.html` + `Landing.jsx.txt` (Babel loads the `.txt` via its
+  `src`, so the mock still renders; the `.txt` keeps it out of the compiler).
+- `design-system/ui_kits/docs/` — the Fumadocs-style docs site.
+- `design-system/ui_kits/brand/` — brand surfaces: **the OG/social card, the
+  GitHub README header, and the npm/shield badges.**
+- `design-system/guidelines/*.card.html` — the foundation specimen cards
+  (colour, type, spacing, brand incl. the CLI surface).
+- `design-system/templates/cli/` + `cli-demo/` — the live Design Component
+  source of the CLI specimens (need `support.js` + `ds-base.js`, both included).
+
+These are **reference recreations authored in HTML/React** — rebuild them in the
+apps' real stack (Next.js/Fumadocs), not copied verbatim. Compiler markers in
+these copies (`@dsCard`, `@startingPoint`, `@template`) were neutralized so the
+files are inert references, not live design-system entries.
+
+The CLI wave still only needs `design-system/tokens/`, the brand rules, and
+`reference/`. The web surfaces above are for the later `apps/web` + `apps/docs`
+wave.
 
 ## Implementation checklist
 

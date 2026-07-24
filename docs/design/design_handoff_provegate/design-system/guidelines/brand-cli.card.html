@@ -1,0 +1,75 @@
+<!-- dsCard (reference copy) group="Brand" viewport="1180x920" name="The CLI Surface" subtitle="Output is designed: glyph grammar, colour-as-signal, box-drawing" -->
+<!doctype html><html data-theme="dark"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--pg-font-sans);background:var(--pg-term-bg);color:var(--pg-term-fg);padding:44px 48px}
+h1{margin:0 0 18px;font-size:44px;font-weight:700;letter-spacing:-0.02em;line-height:1.02;color:var(--pg-warm-50)}
+.lede{margin:0 0 40px;max-width:60ch;font-size:19px;line-height:1.55;color:var(--pg-warm-400)}
+.eyebrow{font-family:var(--pg-font-mono);font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--pg-warm-500);margin:0 0 12px}
+.win{border:1px solid var(--pg-term-border);border-radius:12px;overflow:hidden;background:#0f0e09}
+.bar{display:flex;align-items:center;gap:14px;padding:13px 18px}
+.dots{display:flex;gap:8px}.d{width:11px;height:11px;border-radius:50%;background:#413d33}
+.title{font-family:var(--pg-font-mono);font-size:13px;color:var(--pg-warm-500)}
+.body{border-top:1px solid var(--pg-term-border);padding:20px 24px;font-family:var(--pg-font-mono);font-size:14.5px;line-height:1.95}
+.body .ln{white-space:pre}
+.g{color:var(--pg-term-green)}.r{color:var(--pg-term-red)}.a{color:var(--pg-term-amber)}.h{color:var(--pg-term-human)}.p{color:var(--pg-term-plan)}.s{color:var(--pg-term-stale)}.dim{color:var(--pg-term-dim)}.fg{color:var(--pg-term-fg)}.gut{color:var(--pg-term-border)}
+.legend{display:flex;flex-wrap:wrap;gap:10px 26px;margin:20px 2px 46px;font-family:var(--pg-font-mono);font-size:14px;color:var(--pg-warm-400)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+</style></head>
+<body>
+<h1>The CLI is the primary brand surface.</h1>
+<p class="lede">Most people meet ProveGate as lines of terminal output. So output is designed, not incidental: a fixed grammar of glyphs, colour-as-signal, and box-drawing for the moments that matter — the handoff, and the refusal to push. The glyph carries status, so nothing is lost under NO_COLOR.</p>
+
+<p class="eyebrow">Status line grammar</p>
+<div class="win">
+  <div class="bar"><div class="dots"><span class="d"></span><span class="d"></span><span class="d"></span></div><span class="title">gate run — status lines</span></div>
+  <div class="body">
+    <div class="ln"><span class="g">✓</span> phase 4 <span class="dim">·</span> implementation <span class="dim">·</span> <span class="dim">tsc + lint + build</span> <span class="dim">·</span> exit <span class="g">0</span> <span class="dim">·</span> <span class="g">passed</span></div>
+    <div class="ln"><span class="r">✗</span> phase 5 <span class="dim">·</span> testing <span class="dim">·</span> <span class="dim">pytest</span> <span class="dim">·</span> exit <span class="r">1</span> <span class="dim">·</span> <span class="r">failed</span></div>
+    <div class="ln"><span class="a">⚠</span> phase 5 <span class="dim">·</span> contract <span class="dim">·</span> <span class="dim">1 of 3</span> <span class="dim">·</span> <span class="a">partial</span></div>
+    <div class="ln"><span class="h">→</span> phase 6 <span class="dim">·</span> staging smoke <span class="dim">·</span> <span class="h">operator</span></div>
+    <div class="ln"><span class="s">!</span> phase 5 <span class="dim">·</span> perf budget <span class="dim">·</span> <span class="s">blocked</span> <span class="dim">· dependency broken</span></div>
+    <div class="ln"><span class="dim">= phase 4 · lint · listed but not run is never passed</span></div>
+  </div>
+</div>
+
+<div class="legend"><span><span class="g">✓</span> passed / exit 0</span><span><span class="r">✗</span> failed / exit ≠ 0</span><span><span class="a">⚠</span> partial</span><span><span class="dim">= skipped</span></span><span><span class="h">→</span> operator · handoff</span><span><span class="s">!</span> blocked · overlap</span></div>
+
+<div class="cols">
+  <div>
+    <p class="eyebrow">The handoff — box-drawing</p>
+    <div class="win">
+      <div class="bar"><div class="dots"><span class="d"></span><span class="d"></span><span class="d"></span></div><span class="title">autonomous → human handoff</span></div>
+      <div class="body" style="font-size:13px;line-height:1.7">
+        <div class="ln"><span class="g">┌─ HANDOFF CARD ───────────────────────────</span></div>
+        <div class="ln"><span class="gut">│</span> PRD-001 (fix-login-timeout)</div>
+        <div class="ln"><span class="gut">│</span> merged: → LOCAL main (no-ff)</div>
+        <div class="ln"><span class="gut">│</span> gates:</div>
+        <div class="ln"><span class="gut">│</span>   <span class="g">✓</span> phase 4: typecheck + lint + build</div>
+        <div class="ln"><span class="gut">│</span>   <span class="g">✓</span> phase 5: §11 verification commands</div>
+        <div class="ln"><span class="gut">│</span>   <span class="g">✓</span> phase 6: review (verdict pass, Critical 0)</div>
+        <div class="ln"><span class="gut">│</span>   <span class="g">✓</span> phase 7: durable artifacts in diff</div>
+        <div class="ln"><span class="gut">│</span> operator rows: 0</div>
+        <div class="ln"><span class="gut">│</span> <span class="h">→ READY TO PUSH — the runner never pushes</span></div>
+        <div class="ln"><span class="g">└───────────────────────────────────────────</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="eyebrow">The refusal moment</p>
+    <div class="win">
+      <div class="bar"><div class="dots"><span class="d"></span><span class="d"></span><span class="d"></span></div><span class="title">gate push</span></div>
+      <div class="body">
+        <div class="ln"><span class="dim">$</span> <span class="fg">gate push</span></div>
+        <div class="ln"><span class="dim">checking push authority…</span></div>
+        <div class="ln"><span class="g">✓</span> evidence green <span class="dim">·</span> all machine gates <span class="g">passed</span></div>
+        <div class="ln"><span class="h">→</span> push authority <span class="dim">·</span> <span class="h">human</span></div>
+        <div style="height:1.4em"></div>
+        <div class="ln"><span class="h">No. Push is yours.</span></div>
+        <div style="height:1.4em"></div>
+        <div class="ln"><span class="dim">the runner contains no code path</span></div>
+        <div class="ln"><span class="dim">that pushes to a remote.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

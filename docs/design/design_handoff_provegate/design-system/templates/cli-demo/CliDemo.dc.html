@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- template name="CLI — animated demo" description="Motion study of a ProveGate session (exploration; canonical output is the static CLI template)" -->
+<helmet>
+<script src="./ds-base.js"></script>
+<style>
+@keyframes pg-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
+.pg-caret{display:inline-block;width:9px;height:1.05em;transform:translateY(2px);background:#e7e4db;animation:pg-caret 1s step-end infinite;margin-left:1px}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#14130d;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#e7e4db;padding:56px 40px 80px">
+  <div style="max-width:960px;margin:0 auto">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:#8f8a7b;margin-bottom:14px">ProveGate · the CLI surface</div>
+    <h1 style="margin:0 0 16px;font-size:46px;font-weight:700;letter-spacing:-.02em;line-height:1.03;color:#f4f2ec">Most people meet ProveGate<br>as lines of terminal output.</h1>
+    <p style="margin:0 0 40px;max-width:60ch;font-size:18px;line-height:1.6;color:#a8a396">So the output is designed, not incidental — a fixed grammar of glyphs, colour-as-signal, and box-drawing for the moments that matter: the handoff, and the refusal to push.</p>
+
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b">Full session · install → init → run → push</div>
+      <div style="flex:1;height:1px;background:#2e2b25"></div>
+      <button onClick="{{ replay }}" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#6fa8f5;background:none;border:1px solid #2e2b25;border-radius:6px;padding:6px 12px;cursor:pointer" style-hover="border-color:#6fa8f5">↺ replay</button>
+    </div>
+
+    <div style="border:1px solid #2e2b25;border-radius:12px;overflow:hidden;background:#0f0e09;box-shadow:0 24px 60px -20px rgba(0,0,0,.6)">
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid #2e2b25">
+        <div style="display:flex;gap:8px"><span style="width:11px;height:11px;border-radius:50%;background:#413d33"></span><span style="width:11px;height:11px;border-radius:50%;background:#413d33"></span><span style="width:11px;height:11px;border-radius:50%;background:#413d33"></span></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#8f8a7b">provegate — zsh — 96×34</span>
+      </div>
+      <div style="padding:22px 26px;min-height:520px;font-family:'IBM Plex Mono',monospace;font-size:14.5px">{{ terminal }}</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;margin:64px 0 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8f8a7b">Command gallery</div>
+      <div style="flex:1;height:1px;background:#2e2b25"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">{{ gallery }}</div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:44px;padding-top:24px;border-top:1px solid #2e2b25;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#a8a396">
+      <span style="color:#4fd08a">✓ passed · exit 0</span>
+      <span style="color:#f4776b">✗ failed · exit ≠ 0</span>
+      <span style="color:#e8b44a">⚠ partial</span>
+      <span style="color:#6fa8f5">→ handoff · human</span>
+      <span style="color:#8f8a7b">= skipped · dim, never green</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1040,&quot;height&quot;:1400},&quot;noColor&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Terminal&quot;},&quot;speed&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;slow&quot;,&quot;normal&quot;,&quot;fast&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;'slow'|'normal'|'fast'&quot;,&quot;section&quot;:&quot;Terminal&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable'|'compact'&quot;,&quot;section&quot;:&quot;Terminal&quot;}}">
+class Component extends DCLogic {
+  state = { lines: [], typing: null, spin: null, done: false };
+
+  componentDidMount(){ this.start(); }
+  componentWillUnmount(){ this.clearTimers(); }
+
+  clearTimers(){ (this._t||[]).forEach(clearTimeout); (this._i||[]).forEach(clearInterval); this._t=[]; this._i=[]; }
+  timer(ms,fn){ const id=setTimeout(fn,ms); (this._t=this._t||[]).push(id); }
+  factor(){ return ({slow:1.7, normal:1, fast:0.45})[this.props.speed||'normal']; }
+
+  start(){
+    this.clearTimers();
+    this.setState({ lines:[], typing:null, spin:null, done:false });
+    this.timer(400*this.factor(), ()=>this.run(0));
+  }
+
+  // ---- session script ----
+  script(){
+    const S=(c,txt)=>({c,txt});
+    return [
+      {t:'cmd', text:'npm i -g provegate'},
+      {t:'out', pause:80, segs:[S('dim','added 1 package · '),S('fg','provegate@1.2.0')]},
+      {t:'gap'},
+      {t:'cmd', text:'gate init'},
+      {t:'out', segs:[S('dim','[init] '),S('human','→'),S('fg',' bind repo · '),S('human','human'),S('dim'," — confirm this repo? "),S('fg','y')]},
+      {t:'out', segs:[S('dim','[init] '),S('green','✓'),S('fg',' repo bound · '),S('dim','.provegate/ledger.jsonl created')]},
+      {t:'out', pause:120, segs:[S('dim','[init] '),S('green','✓'),S('fg',' 7 phases discovered · '),S('dim','phases.toml')]},
+      {t:'gap'},
+      {t:'cmd', text:'gate run'},
+      {t:'spin', label:'phase 4 · implementation', dur:800, resolve:[S('green','✓'),S('fg',' phase 4 · implementation · '),S('dim','tsc + lint + build · exit 0'),S('dim',' · '),S('green','passed')]},
+      {t:'spin', label:'phase 5 · testing', dur:900, resolve:[S('red','✗'),S('fg',' phase 5 · testing · '),S('dim','pytest · exit 1'),S('dim',' · '),S('red','failed')]},
+      {t:'out', segs:[S('dim','   └ '),S('red','2 failed'),S('dim',' · docs/prd_spec.py::test_acceptance_criteria')]},
+      {t:'out', pause:140, segs:[S('red','✗'),S('fg',' STOPPED at phase 5 · '),S('dim','worktree left intact · nothing propagates')]},
+      {t:'gap'},
+      {t:'cmd', text:'gate run --from-phase=5'},
+      {t:'spin', label:'phase 5 · testing', dur:700, resolve:[S('green','✓'),S('fg',' phase 5 · testing · '),S('dim','pytest · exit 0'),S('dim',' · '),S('green','passed')]},
+      {t:'spin', label:'phase 6 · final auditing', dur:850, resolve:[S('green','✓'),S('fg',' phase 6 · auditing · '),S('dim','cross-family · Critical 0'),S('dim',' · '),S('green','passed')]},
+      {t:'spin', label:'phase 7 · learning', dur:600, resolve:[S('green','✓'),S('fg',' phase 7 · learning · '),S('dim','durable artifacts in diff'),S('dim',' · '),S('green','passed')]},
+      {t:'spin', label:'merge', dur:650, resolve:[S('human','→'),S('fg',' merge · '),S('dim','LOCAL main (no-ff) · post-merge build green'),S('dim',' · '),S('green','passed')]},
+      {t:'gap'},
+      {t:'cmd', text:'gate push'},
+      {t:'out', segs:[S('dim','checking push authority…')]},
+      {t:'out', pause:120, segs:[S('green','✓'),S('fg',' evidence green · all machine gates '),S('green','passed')]},
+      {t:'out', segs:[S('human','→'),S('fg',' push authority · '),S('human','human')]},
+      {t:'gap'},
+      {t:'out', segs:[S('fg','   '),S('human','No. Push is yours.')]},
+      {t:'gap'},
+      {t:'out', segs:[S('dim','the runner contains no code path that pushes to a remote.')]},
+      {t:'out', segs:[S('dim','run '),S('fg','git push'),S('dim'," when you're ready.")]},
+    ];
+  }
+
+  run(i){
+    const script=this.script();
+    if(i>=script.length){ this.setState({done:true, typing:null, spin:null}); return; }
+    const step=script[i], k=this.factor(), next=()=>this.run(i+1);
+    if(step.t==='cmd') this.typeCmd(step.text, k, next);
+    else if(step.t==='gap'){ this.push(null); this.timer(60*k,next); }
+    else if(step.t==='out'){ this.push(step.segs); this.timer((step.pause||90)*k, next); }
+    else if(step.t==='spin') this.spinStep(step, k, next);
+  }
+
+  typeCmd(text, k, next){
+    let n=0;
+    const tick=()=>{
+      n++;
+      this.setState({ typing: text.slice(0,n) });
+      if(n<text.length) this.timer(26*k, tick);
+      else this.timer(260*k, ()=>{ this.commitCmd(text); this.timer(120*k, next); });
+    };
+    this.timer(120*k, tick);
+  }
+  commitCmd(text){
+    this.setState(s=>({ typing:null, lines:[...s.lines, {cmd:text}] }));
+  }
+  push(segs){ this.setState(s=>({ lines:[...s.lines, {segs}] })); }
+
+  spinStep(step, k, next){
+    const frames=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+    let f=0;
+    this.setState({ spin:{label:step.label, frame:frames[0]} });
+    const id=setInterval(()=>{ f=(f+1)%frames.length; this.setState({spin:{label:step.label, frame:frames[f]}}); }, 80);
+    (this._i=this._i||[]).push(id);
+    this.timer(step.dur*k, ()=>{ clearInterval(id); this.setState({spin:null}); this.push(step.resolve); this.timer(120*k, next); });
+  }
+
+  // ---- rendering ----
+  color(c){
+    const no=this.props.noColor;
+    const map={ green:'#4fd08a', red:'#f4776b', amber:'#e8b44a', human:'#6fa8f5', plan:'#63b6c2', stale:'#b39a52', fg:'#e7e4db', dim:'#8f8a7b' };
+    if(no) return (c==='dim')?'#8f8a7b':'#e7e4db';
+    return map[c]||'#e7e4db';
+  }
+  lh(){ return this.props.density==='compact'?1.55:2; }
+
+  seg(s,i){ return React.createElement('span',{key:i,style:{color:this.color(s.c)}}, s.txt); }
+  prompt(){ return React.createElement('span',{style:{color:this.color('dim')}}, '$ '); }
+
+  renderTerminal(){
+    const R=React.createElement, lh=this.lh(), rows=[];
+    this.state.lines.forEach((ln,idx)=>{
+      const base={key:idx, style:{whiteSpace:'pre', lineHeight:lh, minHeight:'0.4em'}};
+      if(ln==null||(!ln.cmd&&!ln.segs)){ rows.push(R('div',base,'\u00a0')); }
+      else if(ln.cmd){ rows.push(R('div',base,[this.prompt(),R('span',{key:'c',style:{color:this.color('fg')}},ln.cmd)])); }
+      else rows.push(R('div',base, ln.segs.map((s,i)=>this.seg(s,i)))); 
+    });
+    if(this.state.typing!=null){
+      rows.push(R('div',{key:'typing',style:{whiteSpace:'pre',lineHeight:lh}},[this.prompt(),R('span',{key:'t',style:{color:this.color('fg')}},this.state.typing),R('span',{key:'car',className:'pg-caret'})]));
+    } else if(this.state.spin){
+      rows.push(R('div',{key:'spin',style:{whiteSpace:'pre',lineHeight:lh,color:this.color('dim')}},[R('span',{key:'s',style:{color:this.color('amber')}},this.state.spin.frame+' '),this.state.spin.label+' …']));
+    } else if(this.state.done){
+      rows.push(R('div',{key:'end',style:{whiteSpace:'pre',lineHeight:lh}},[this.prompt(),R('span',{key:'car',className:'pg-caret'})]));
+    }
+    return R('div',{},rows);
+  }
+
+  renderGallery(){
+    const R=React.createElement;
+    const cards=[
+      {cmd:'gate init', desc:'scaffold the workflow tree', body:[['dim','[init] '],['green','✓'],['fg',' repo bound · '],['dim','7 phases'],['\n'],['dim','.provegate/ledger.jsonl created']]},
+      {cmd:'gate run', desc:'gated phases 4-7 + local merge', body:[['green','✓'],['fg',' phase 4 · implementation · '],['green','passed'],['\n'],['red','✗'],['fg',' phase 5 · testing · '],['red','failed']]},
+      {cmd:'gate status', desc:'rebuild state from artifacts', body:[['dim','PRD-001  '],['fg','wip        '],['dim','PASS · 9.1  '],['fg','4/7'],['\n'],['dim','PRD-002  '],['fg','in-review  '],['dim','PASS · 8.4  '],['fg','7/7']]},
+      {cmd:'gate open', desc:'claim a PRD or refuse on overlap', body:[['dim','[open] '],['red','REFUSED'],['fg',' — surface overlaps'],['\n'],['stale','!'],['dim',' PRD-002 owns src/auth/**']]},
+      {cmd:'gate check', desc:'lint a PRD for readiness', body:[['green','✓'],['fg',' readiness · '],['green','PASS'],['dim',' · 9.1 (advisory)'],['\n'],['dim','hard caps satisfied']]},
+      {cmd:'gate push', desc:'refuses — push is always yours', body:[['green','✓'],['fg',' evidence green'],['\n'],['human','→'],['fg',' push · '],['human','human'],['\n'],['human','No. Push is yours.']]},
+    ];
+    return cards.map((c,ci)=>R('div',{key:ci,style:{border:'1px solid #2e2b25',borderRadius:10,background:'#0f0e09',overflow:'hidden'}},[
+      R('div',{key:'h',style:{padding:'12px 16px',borderBottom:'1px solid #2e2b25',display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}},[
+        R('span',{key:'c',style:{fontFamily:"'IBM Plex Mono',monospace",fontSize:13.5,color:'#e7e4db',fontWeight:500}},c.cmd),
+        R('span',{key:'d',style:{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:12.5,color:'#8f8a7b'}},c.desc)
+      ]),
+      R('div',{key:'b',style:{padding:'14px 16px',fontFamily:"'IBM Plex Mono',monospace",fontSize:13,lineHeight:1.85,whiteSpace:'pre-wrap'}},
+        c.body.map((seg,si)=> seg[0]==='\n'?R('br',{key:si}):R('span',{key:si,style:{color:this.color(seg[0])}},seg[1])))
+    ]));
+  }
+
+  renderVals(){
+    return {
+      terminal: this.renderTerminal(),
+      gallery: this.renderGallery(),
+      replay: ()=>this.start(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+const { useState } = React;
+const { Icon, Button, CodeBlock, HandoffCard, GateLine, PhasePipeline, EvidenceTable, VerdictBadge } = window.DesignSystem_65dbcc;
+
+const MONO = "var(--pg-font-mono)";
+const eyebrow = { fontFamily: MONO, fontSize: "0.8rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--pg-text-subtle)", marginBottom: 12 };
+const h2 = { fontSize: "2rem", fontWeight: 600, letterSpacing: "-0.02em", margin: 0, color: "var(--pg-text)", textWrap: "balance" };
+const wrap = { maxWidth: "var(--pg-container)", margin: "0 auto", padding: "0 28px" };
+
+const Mark = ({ size = 30 }) => (
+  <span style={{ color: "var(--pg-accent)", display: "inline-flex" }}>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M7 5 L7 27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+      <path d="M25 5 L25 27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+      <path d="M11 15.5 L14.5 19.5 L21.5 11" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </span>
+);
+const Wordmark = () => (
+  <span style={{ fontWeight: 700, fontSize: "1.2rem", letterSpacing: "-0.025em", color: "var(--pg-text)" }}>
+    Prove<span style={{ color: "var(--pg-accent)" }}>Gate</span>
+  </span>
+);
+
+function Nav({ theme, onToggle }) {
+  const link = { color: "var(--pg-text-muted)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 };
+  return (
+    <header style={{ position: "sticky", top: 0, zIndex: 10, background: "color-mix(in srgb, var(--pg-bg) 85%, transparent)", backdropFilter: "blur(8px)", borderBottom: "1px solid var(--pg-border)" }}>
+      <div style={{ ...wrap, padding: "14px 28px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}><Mark size={26} /><Wordmark /></div>
+        <nav style={{ display: "flex", gap: 22, marginLeft: 28 }}>
+          <a href="#problem" style={link}>Problem</a><a href="#method" style={link}>Method</a><a href="#proof" style={link}>Proof</a><a href="#faq" style={link}>FAQ</a>
+        </nav>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onToggle} title="Toggle theme" style={{ background: "transparent", border: "1px solid var(--pg-border-strong)", borderRadius: "var(--pg-radius-md)", width: 36, height: 36, cursor: "pointer", color: "var(--pg-text-muted)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name={theme === "dark" ? "exit0" : "terminal"} size={17} />
+          </button>
+          <Button variant="secondary" size="sm" leftIcon={<Icon name="github" size={15} />}>GitHub</Button>
+          <Button variant="primary" size="sm">Get started</Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section style={{ ...wrap, padding: "72px 28px 48px", display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 48, alignItems: "center" }}>
+      <div>
+        <div style={eyebrow}>// gated autonomy · machine-checkable</div>
+        <h1 style={{ fontSize: "3.4rem", fontWeight: 700, lineHeight: 1.04, letterSpacing: "-0.03em", margin: 0, color: "var(--pg-text)" }}>
+          Your agent's <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: "0.8em" }}>done</span> is not evidence. Gate it on exit codes.
+        </h1>
+        <p style={{ fontSize: "1.18rem", lineHeight: 1.55, color: "var(--pg-text-muted)", maxWidth: 520, marginTop: 20 }}>
+          ProveGate lets coding agents work autonomously without anyone trusting what the agent says about its own work. A phase advances only when a command exits <span style={{ fontFamily: MONO, color: "var(--pg-accent-text)" }}>0</span> — or an independent reviewer's verdict says <span style={{ fontFamily: MONO, color: "var(--pg-accent-text)" }}>pass</span>.
+        </p>
+        <div style={{ marginTop: 26, maxWidth: 400 }}>
+          <CodeBlock lang="bash" prompt>{"npm i -g provegate\ngate init"}</CodeBlock>
+        </div>
+        <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+          <Button variant="primary" size="lg">Read the spec</Button>
+          <Button variant="ghost" size="lg" leftIcon={<Icon name="github" size={17} />}>GitHub</Button>
+        </div>
+        <div style={{ marginTop: 22, fontFamily: MONO, fontSize: "0.78rem", color: "var(--pg-text-subtle)" }}>
+          MIT · zero deps · local-only · no telemetry · Node ≥ 22
+        </div>
+      </div>
+      <div>
+        <HandoffCard
+          title="HANDOFF CARD"
+          lines={[
+            "PRD-001 (fix-login-timeout)",
+            "merged: → LOCAL main (no-ff)",
+            "gates:",
+            { gate: "passed", text: "phase 4: typecheck + lint + build" },
+            { gate: "passed", text: "phase 5: §11 verification commands" },
+            { gate: "passed", text: "phase 6: review (Critical 0)" },
+            { gate: "passed", text: "phase 7: durable artifacts in diff" },
+            "operator rows: 0",
+            { arrow: true, text: "READY TO PUSH — the runner never pushes" },
+          ]} />
+      </div>
+    </section>
+  );
+}
+
+function Problem() {
+  const card = { background: "var(--pg-surface)", border: "1px solid var(--pg-border)", borderRadius: "var(--pg-radius-lg)", padding: "26px 24px" };
+  const fig = { fontFamily: MONO, fontSize: "2.4rem", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, color: "var(--pg-text)" };
+  const body = { fontSize: "0.98rem", lineHeight: 1.55, color: "var(--pg-text-muted)", marginTop: 12 };
+  const src = { fontFamily: MONO, fontSize: "0.72rem", color: "var(--pg-text-subtle)", marginTop: 14 };
+  return (
+    <section id="problem" style={{ ...wrap, padding: "56px 28px" }}>
+      <div style={eyebrow}>// the problem</div>
+      <h2 style={h2}>Strong generators. Unreliable narrators.</h2>
+      <p style={{ fontSize: "1.1rem", color: "var(--pg-text-muted)", maxWidth: 640, margin: "14px 0 32px", lineHeight: 1.5 }}>
+        Neither the agent's claim, nor a panel of agents' consensus, nor a human's felt sense of progress can serve as a gate. Only executed evidence can.
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+        <div style={card}>
+          <div style={{ ...fig, color: "var(--pg-fail-text)" }}>22.58%</div>
+          <div style={body}>of validated failure episodes are <strong style={{ color: "var(--pg-text)" }}>inaccurate self-reporting</strong> — the agent claiming a test or deploy passed when it did not. Its share grows as models improve.</div>
+          <div style={src}>20,574-session field study</div>
+        </div>
+        <div style={card}>
+          <div style={fig}>80+ <span style={{ fontSize: "1rem", color: "var(--pg-text-subtle)" }}>agents</span></div>
+          <div style={body}>unanimously endorsed an OpenSSL padding-oracle vulnerability that <strong style={{ color: "var(--pg-text)" }}>does not exist</strong> — ten of them dedicated reviewers. One executed test killed it.</div>
+          <div style={src}>security review campaign</div>
+        </div>
+        <div style={card}>
+          <div style={fig}>19% <span style={{ fontSize: "1rem", color: "var(--pg-text-subtle)" }}>slower</span></div>
+          <div style={body}>Experienced devs forecast a 24% speedup and felt a 20% speedup — and were measurably <strong style={{ color: "var(--pg-text)" }}>slower</strong>. Felt progress is not evidence either.</div>
+          <div style={src}>METR RCT · 16 devs · 246 tasks</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CoreRule() {
+  return (
+    <section style={{ background: "var(--pg-bg-subtle)", borderTop: "1px solid var(--pg-border)", borderBottom: "1px solid var(--pg-border)", padding: "80px 0" }}>
+      <div style={{ maxWidth: "var(--pg-container-prose)", margin: "0 auto", padding: "0 28px" }}>
+        <div style={eyebrow}>// the core rule</div>
+        <p style={{ fontSize: "2.1rem", fontWeight: 600, lineHeight: 1.28, letterSpacing: "-0.02em", color: "var(--pg-text)", margin: 0, textWrap: "pretty" }}>
+          A phase boundary is a gate only when a machine can check it: a command's exit code, or an independent reviewer's structured verdict. <span style={{ color: "var(--pg-text-subtle)" }}>The implementing agent's own assessment is never a gate.</span>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Method() {
+  return (
+    <section id="method" style={{ ...wrap, padding: "72px 28px 40px" }}>
+      <div style={eyebrow}>// seven phases, one autonomy cut</div>
+      <h2 style={h2}>Humans own intent and release. The machine owns the verified middle.</h2>
+      <p style={{ fontSize: "1.05rem", color: "var(--pg-text-muted)", maxWidth: 620, margin: "14px 0 32px", lineHeight: 1.5 }}>
+        If any gate fails the runner stops and hands back, worktree intact. The absolute invariant: the runner contains no code path that pushes to a remote.
+      </p>
+      <PhasePipeline active={5} />
+    </section>
+  );
+}
+
+function Mechanisms() {
+  const items = [
+    { n: "01", t: "The PRD is an executable contract", d: "Per-FR target paths, per-FR verification commands, a DO-NOT list, a Conflict Surface, and a PRD class that right-sizes the pipeline — not prose.", art: <div style={{ fontFamily: MONO, fontSize: "0.8rem", color: "var(--pg-text-muted)" }}><span style={{ color: "var(--pg-text-subtle)" }}>Verify:</span> pnpm test:contract auth-callback</div> },
+    { n: "02", t: "Readiness: verdict + hard caps", d: "The decimal score had zero predictive power inside the passing band (r = −0.03). So: verdict is PASS/ITERATE, decimals are advisory, and hard caps replace deductions.", art: <div style={{ display: "flex", gap: 8 }}><VerdictBadge verdict="passed" label="PASS" size="sm" /><span style={{ fontFamily: MONO, fontSize: "0.78rem", color: "var(--pg-text-subtle)", alignSelf: "center" }}>9.1 · advisory</span></div> },
+    { n: "03", t: "Testing: run, don't list", d: "A command that was listed but not executed is never passed. The ledger vocabulary is deliberately narrow, and the escape hatches are honest ones.", art: <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><VerdictBadge verdict="passed" size="sm" /><VerdictBadge verdict="failed" size="sm" /><VerdictBadge verdict="operator" size="sm" /><VerdictBadge verdict="blocked" size="sm" /></div> },
+    { n: "04", t: "Auditing: an adversary who didn't write the code", d: "Phase 6 is blocking, independent, and by default a different model family. Verdict: pass mechanically requires Critical: 0; an absent reviewer never counts as a pass.", art: <GateLine bare status="passed" name="review (cross-family)" command="Critical 0" /> },
+    { n: "05", t: "Parallel agents: declared ownership", d: "Claiming an item writes a lease. A path-conflict gate refuses when two active leases' globs overlap — at claim time, not merge time.", art: <div style={{ fontFamily: MONO, fontSize: "0.8rem", color: "var(--pg-stale-text)" }}>! overlap · src/auth/** refused</div> },
+  ];
+  const card = { background: "var(--pg-surface)", border: "1px solid var(--pg-border)", borderRadius: "var(--pg-radius-lg)", padding: "24px", display: "flex", flexDirection: "column", gap: 12 };
+  return (
+    <section style={{ ...wrap, padding: "40px 28px 72px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
+        {items.map((m) => (
+          <div key={m.n} style={{ ...card, gridColumn: m.n === "05" ? "1 / -1" : "auto" }}>
+            <div style={{ fontFamily: MONO, fontSize: "0.8rem", color: "var(--pg-accent-text)" }}>{m.n}</div>
+            <div style={{ fontSize: "1.25rem", fontWeight: 600, letterSpacing: "-0.01em", color: "var(--pg-text)" }}>{m.t}</div>
+            <div style={{ fontSize: "0.96rem", lineHeight: 1.55, color: "var(--pg-text-muted)", maxWidth: 640 }}>{m.d}</div>
+            <div style={{ marginTop: 4, paddingTop: 14, borderTop: "1px solid var(--pg-border)" }}>{m.art}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Refusal() {
+  return (
+    <section style={{ maxWidth: "var(--pg-container-prose)", margin: "0 auto 72px", padding: "0 28px" }}>
+      <div style={{ background: "var(--pg-term-bg)", border: "1px solid var(--pg-term-border)", borderRadius: "var(--pg-radius-lg)", padding: "40px 32px", textAlign: "center", fontFamily: MONO }}>
+        <div style={{ color: "var(--pg-term-dim)", fontSize: "0.85rem" }}>$ gate push</div>
+        <div style={{ margin: "16px 0 10px", color: "var(--pg-term-human)", fontSize: "1.9rem", fontWeight: 500 }}>No. Push is yours.</div>
+        <div style={{ color: "var(--pg-term-dim)", fontSize: "0.9rem", lineHeight: 1.6 }}>The runner contains no code path that pushes to a remote. That decision stays with a human.</div>
+      </div>
+    </section>
+  );
+}
+
+function Proof() {
+  const col = { background: "var(--pg-surface)", border: "1px solid var(--pg-border)", borderRadius: "var(--pg-radius-lg)", padding: "28px 26px" };
+  const li = { fontSize: "0.98rem", lineHeight: 1.5, color: "var(--pg-text-muted)", paddingLeft: 20, position: "relative", marginBottom: 14 };
+  const bullet = { position: "absolute", left: 0, fontFamily: MONO };
+  return (
+    <section id="proof" style={{ ...wrap, padding: "56px 28px" }}>
+      <div style={eyebrow}>// proof, and its honest limits</div>
+      <h2 style={h2}>Showing the limits next to the proof is the point.</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 32 }}>
+        <div style={col}>
+          <div style={{ fontFamily: MONO, fontSize: "0.8rem", color: "var(--pg-accent-text)", marginBottom: 18 }}>evidence</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-pass-text)" }}>✓</span>~390 production PRDs shipped through the workflow on a multi-tenant SaaS TypeScript monorepo, including multi-wave parallel execution.</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-pass-text)" }}>✓</span>Scored era: <strong style={{ color: "var(--pg-text)" }}>0</strong> critical post-ship findings. Unscored era: 2. The 143-findings × 83-scores study forced the redesign.</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-pass-text)" }}>✓</span>This repo runs its own method — including the round where the reviewer caught the maintainers weakening its own doctrine. <span style={{ fontFamily: MONO, fontSize: "0.85em" }}>gate run</span> landed the commits that built <span style={{ fontFamily: MONO, fontSize: "0.85em" }}>gate run</span>.</div>
+        </div>
+        <div style={col}>
+          <div style={{ fontFamily: MONO, fontSize: "0.8rem", color: "var(--pg-text-subtle)", marginBottom: 18 }}>limits we state out loud</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-text-subtle)" }}>·</span>The evidence is observational and single-project. No RCT, no speedup claim.</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-text-subtle)" }}>·</span>Gates cost effort to author, and process overhead is real — below some task size the honest answer is don't use the workflow.</div>
+          <div style={li}><span style={{ ...bullet, color: "var(--pg-text-subtle)" }}>·</span>Verification is only as good as the commands written. And the landscape moves.</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 28 }}>
+        <EvidenceTable caption="run a1b9f3c · 2026-07-22 14:02 UTC" rows={[
+          { check: "phase 5: unit", command: "pnpm test", verdict: "passed", code: 0, evidence: "312 passed · 4.1s" },
+          { check: "phase 4: typecheck", command: "tsc --noEmit", verdict: "passed", code: 0, evidence: "0 errors" },
+          { check: "phase 5: e2e", command: "playwright test", verdict: "failed", code: 1, evidence: "1 failed · logs/e2e.txt" },
+          { check: "staging smoke", command: "needs staging", verdict: "operator", evidence: "awaiting @lead" },
+        ]} />
+        <p style={{ fontFamily: MONO, fontSize: "0.85rem", color: "var(--pg-text-subtle)", marginTop: 16, textAlign: "center" }}>
+          one executed test killed what 80+ agents' reasoning could not.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Positioning() {
+  return (
+    <section style={{ background: "var(--pg-bg-subtle)", borderTop: "1px solid var(--pg-border)", borderBottom: "1px solid var(--pg-border)", padding: "64px 0" }}>
+      <div style={{ maxWidth: "var(--pg-container-prose)", margin: "0 auto", padding: "0 28px" }}>
+        <div style={eyebrow}>// where it sits</div>
+        <p style={{ fontSize: "1.5rem", fontWeight: 600, lineHeight: 1.35, letterSpacing: "-0.01em", color: "var(--pg-text)", margin: 0, textWrap: "pretty" }}>
+          Spec-driven development gates what you <em style={{ fontStyle: "normal", color: "var(--pg-text-subtle)" }}>intend</em> to build. ProveGate gates what you actually <span style={{ color: "var(--pg-accent-text)" }}>shipped</span> — complementary, downstream of the spec.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function Faq() {
+  const items = [
+    ["Is it open source?", "Yes — MIT. Files committed to your repo; nothing hosted."],
+    ["Does it phone home?", "No telemetry, no network calls, no accounts. It runs local-only."],
+    ["Which agent does it need?", "Agent-agnostic. It gates on evidence, not on a specific model or client."],
+    ["What does it require?", "Node ≥ 22 and zero runtime dependencies. Any ANSI is hand-rolled in-package."],
+  ];
+  return (
+    <section id="faq" style={{ ...wrap, padding: "64px 28px" }}>
+      <div style={eyebrow}>// principles</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 20 }}>
+        {items.map(([q, a]) => (
+          <div key={q}>
+            <div style={{ fontSize: "1.05rem", fontWeight: 600, color: "var(--pg-text)", marginBottom: 6 }}>{q}</div>
+            <div style={{ fontSize: "0.98rem", lineHeight: 1.5, color: "var(--pg-text-muted)" }}>{a}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer style={{ borderTop: "1px solid var(--pg-border)" }}>
+      <div style={{ ...wrap, padding: "28px", display: "flex", alignItems: "center", gap: 12, color: "var(--pg-text-subtle)", fontSize: "0.85rem" }}>
+        <Mark size={20} /><span style={{ fontFamily: MONO }}>provegate</span>
+        <span style={{ marginLeft: "auto", fontFamily: MONO }}>prove it, then let it propagate.</span>
+      </div>
+    </footer>
+  );
+}
+
+function Landing() {
+  const [theme, setTheme] = useState("dark");
+  React.useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
+  return (
+    <div style={{ background: "var(--pg-bg)", minHeight: "100vh", fontFamily: "var(--pg-font-sans)" }}>
+      <Nav theme={theme} onToggle={() => setTheme(t => t === "light" ? "dark" : "light")} />
+      <Hero />
+      <Problem />
+      <CoreRule />
+      <Method />
+      <Mechanisms />
+      <Refusal />
+      <Proof />
+      <Positioning />
+      <Faq />
+      <Footer />
+    </div>
+  );
+}
+window.Landing = Landing;

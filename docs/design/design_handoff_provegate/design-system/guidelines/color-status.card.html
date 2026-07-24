@@ -1,0 +1,11 @@
+<!-- dsCard (reference copy) group="Colors" viewport="700x150" name="Status Set" subtitle="pass · fail · pending · human" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{margin:0;font-family:var(--pg-font-sans);background:var(--pg-surface);color:var(--pg-text);padding:20px 22px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.cell{border:1px solid var(--pg-border);border-radius:var(--pg-radius-md);overflow:hidden}.chip{height:44px}.meta{padding:7px 9px;font-family:var(--pg-font-mono);font-size:10px;color:var(--pg-text-subtle)}.meta b{display:block;color:var(--pg-text);font-size:12px;margin-bottom:2px}</style></head>
+<body>
+<div class="grid">
+<div class="cell"><div class="chip" style="background:var(--pg-pass)"></div><div class="meta"><b style="color:var(--pg-pass-text)">pass</b>--pg-pass · exit 0</div></div>
+<div class="cell"><div class="chip" style="background:var(--pg-fail)"></div><div class="meta"><b style="color:var(--pg-fail-text)">fail</b>--pg-fail · exit ≠0</div></div>
+<div class="cell"><div class="chip" style="background:var(--pg-pending)"></div><div class="meta"><b style="color:var(--pg-pending-text)">pending</b>--pg-pending</div></div>
+<div class="cell"><div class="chip" style="background:var(--pg-human)"></div><div class="meta"><b style="color:var(--pg-human-text)">human</b>--pg-human</div></div>
+</div>
+</body></html>
