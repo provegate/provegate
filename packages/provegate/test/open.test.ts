@@ -160,6 +160,34 @@ describe('claimPrd (FR-2, W3)', () => {
     expect(result.refreshed).toBe(true);
   });
 
+  // FR-2 (PRD-008): `gate renew` and `gate open --hours=N` both map onto
+  // claimPrd's leaseHours. Renew IS the refresh path (covered above); these pin
+  // the --hours mapping and its validation, which the CLI surfaces as exit 1.
+  it('leaseHours maps to a longer expiry (renew / --hours)', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'renewable', ['src/renew/**']);
+    const now = new Date('2026-07-24T10:00:00Z');
+    const short = claimPrd(cfg, root, id, { now, leaseHours: 1 });
+    const shortExp = Date.parse(
+      (JSON.parse(readFileSync(short.leasePath!, 'utf8')) as Record<string, string>)['expiresAt']!,
+    );
+    const long = claimPrd(cfg, root, id, { now, leaseHours: 6 });
+    const longExp = Date.parse(
+      (JSON.parse(readFileSync(long.leasePath!, 'utf8')) as Record<string, string>)['expiresAt']!,
+    );
+    expect(longExp - shortExp).toBe(5 * 3600 * 1000); // 6h vs 1h from the same now
+  });
+
+  it('rejects non-positive / non-finite leaseHours (CLI maps the throw to exit 1)', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'bad-hours', ['src/bad/**']);
+    for (const bad of [0, -3, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => claimPrd(cfg, root, id, { leaseHours: bad }), String(bad)).toThrow(
+        /positive, finite/,
+      );
+    }
+  });
+
   it('malformed leases fail CLOSED: corrupt JSON or bad shape blocks every claim', () => {
     const root = tempRoot();
     const id = prdWithSurface(root, 'careful', ['src/careful/**']);

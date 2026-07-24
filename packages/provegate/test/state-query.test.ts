@@ -4,6 +4,7 @@ import { UNKNOWN_STATUS } from '../src/core/state/status.js';
 import type { StateRecord } from '../src/core/state/build.js';
 import {
   buildQueue,
+  formatLeaseRemaining,
   getActiveRecords,
   getReadyRecords,
   isImplemented,
@@ -179,8 +180,33 @@ describe('buildQueue', () => {
     expect(queue.blocked.map((r) => r.prd)).toEqual(['PRD-002']);
     expect(queue.inReview.map((r) => r.prd)).toEqual(['PRD-003']);
     expect(queue.inFlight).toEqual([
-      { prd: 'PRD-009', agent: 'a1', phase: 'Phase 4', worktree: null, stale: true },
+      {
+        prd: 'PRD-009',
+        agent: 'a1',
+        phase: 'Phase 4',
+        worktree: null,
+        stale: true,
+        expiresInSeconds: -3600, // expired 1h ago
+      },
     ]);
+  });
+
+  it('carries expiresInSeconds additively; unparseable expiry → null, not stale', () => {
+    const records = [record({ number: 1, status: 'Approved' })];
+    const now = Date.parse('2026-07-22T12:00:00.000Z');
+    const queue = buildQueue(
+      cfg,
+      '/nonexistent-root',
+      records,
+      [
+        { prd: 'PRD-100', agent: 'a', phase: 'Phase 4', worktree: null, expiresAt: '2026-07-22T14:00:00.000Z' },
+        { prd: 'PRD-101', agent: 'a', phase: 'Phase 4', worktree: null, expiresAt: 'not-a-date' },
+      ],
+      { now },
+    );
+    const byId = Object.fromEntries(queue.inFlight.map((r) => [r.prd, r]));
+    expect(byId['PRD-100']).toMatchObject({ stale: false, expiresInSeconds: 7200 }); // +2h
+    expect(byId['PRD-101']).toMatchObject({ stale: false, expiresInSeconds: null }); // unparseable
   });
 
   it('a locked record is neither ready nor blocked', () => {
@@ -197,6 +223,15 @@ describe('buildQueue', () => {
     expect(queue.ready).toEqual([]);
     expect(queue.blocked).toEqual([]);
     expect(queue.inFlight[0]!.stale).toBe(false);
+  });
+});
+
+describe('formatLeaseRemaining (queue countdown badge)', () => {
+  it('formats future, past (STALE), sub-hour, and unparseable leases', () => {
+    expect(formatLeaseRemaining(3 * 3600 + 12 * 60, false)).toBe('3h 12m left');
+    expect(formatLeaseRemaining(-(1 * 3600 + 4 * 60), true)).toBe('STALE 1h 4m');
+    expect(formatLeaseRemaining(45 * 60, false)).toBe('45m left');
+    expect(formatLeaseRemaining(null, false)).toBe('?');
   });
 });
 

@@ -119,6 +119,18 @@ export function formatCompactRecord(record: StateRecord): CompactRecord {
   };
 }
 
+/** Human badge for a lease's remaining time: `3h 12m left`, `STALE 1h 4m` (how
+ * long past TTL), or `?` when `expiresAt` was unparseable (`expiresInSeconds`
+ * null). Pure formatter over the `inFlight` row's `expiresInSeconds`/`stale`. */
+export function formatLeaseRemaining(expiresInSeconds: number | null, stale: boolean): string {
+  if (expiresInSeconds === null) return '?';
+  const abs = Math.abs(expiresInSeconds);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const dur = h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return stale ? `STALE ${dur}` : `${dur} left`;
+}
+
 export interface QueueLockInfo {
   prd: string;
   agent: string;
@@ -137,7 +149,13 @@ export interface Queue {
   generatedAt: string | null;
   ready: (CompactRecord & { resume: boolean })[];
   readyOverlaps: QueueOverlapWarning[];
-  inFlight: (Omit<QueueLockInfo, 'expiresAt'> & { stale: boolean })[];
+  inFlight: (Omit<QueueLockInfo, 'expiresAt'> & {
+    stale: boolean;
+    /** Seconds until the lease expires (negative = past TTL); `null` when
+     * `expiresAt` is unparseable. Additive field — `--json` consumers that
+     * ignore it are unaffected. */
+    expiresInSeconds: number | null;
+  })[];
   blocked: CompactRecord[];
   inReview: CompactRecord[];
 }
@@ -186,13 +204,18 @@ export function buildQueue(
     resume: isResumable(record),
   }));
 
-  const inFlight = [...lockById.values()].map((lock) => ({
-    prd: lock.prd,
-    agent: lock.agent,
-    phase: lock.phase,
-    worktree: lock.worktree,
-    stale: Date.parse(lock.expiresAt) < now,
-  }));
+  const inFlight = [...lockById.values()].map((lock) => {
+    const expiry = Date.parse(lock.expiresAt);
+    const parsed = Number.isNaN(expiry);
+    return {
+      prd: lock.prd,
+      agent: lock.agent,
+      phase: lock.phase,
+      worktree: lock.worktree,
+      stale: !parsed && expiry < now,
+      expiresInSeconds: parsed ? null : Math.round((expiry - now) / 1000),
+    };
+  });
 
   const blocked = active
     .filter(

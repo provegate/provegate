@@ -40,6 +40,12 @@ npx gate open PRD-001
 
 Overlap with another active claim refuses here — at claim time, not merge time.
 
+A lease lasts 12h. Running long? `npx gate renew PRD-001 --hours=6` extends it —
+renew before it goes stale, so a rival's `--steal` never gets the chance. Done
+early, or abandoning the work? `npx gate release PRD-001` drops the lease cleanly
+(no hand-editing `_state/locks/`); releasing someone else's lease needs `--force`
+and names them.
+
 Running agents in parallel? Add `--worktree` and the claim also provisions an
 isolated checkout — one atomic step. Commit the PRD and the control files first:
 the checkout is cut from your base branch, so anything uncommitted (or edited

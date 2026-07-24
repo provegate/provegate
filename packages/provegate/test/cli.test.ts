@@ -35,8 +35,16 @@ describe('cli skeleton', () => {
     const result = await cli('--help');
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('ProveGate');
-    for (const name of ['init', 'new', 'check', 'open', 'run', 'land', 'queue', 'status']) {
+    for (const name of ['init', 'new', 'check', 'open', 'renew', 'release', 'run', 'land', 'queue', 'status']) {
       expect(result.stdout).toContain(name);
+    }
+  });
+
+  it('renew + release ask for usage (exit 1) when the PRD id is missing', async () => {
+    for (const command of ['renew', 'release']) {
+      const result = await cli(command);
+      expect(result.code, command).toBe(1);
+      expect(result.stderr, command).toContain(`usage: gate ${command}`);
     }
   });
 
