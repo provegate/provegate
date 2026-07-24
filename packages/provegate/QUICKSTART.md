@@ -114,36 +114,29 @@ philosophy:
 `gate` is **repo-layout-agnostic** — no monorepo required. "Workspace" throughout
 means your git repo root, and `gate init` scaffolds only the workflow tree
 (`_prds/`, `_tasks/`, …); it never creates `apps/`/`packages/` or a
-`pnpm-workspace.yaml`. Point the `commands` in `workflow.config.json` at your own
-repo's checks — that is the only place repo shape or toolchain differs:
+`pnpm-workspace.yaml`. The one thing to configure is which gate commands run —
+and nothing in it assumes pnpm or turbo.
+
+`gate init` writes an **empty** `gates.manifest.json` (it starts honest — no gates
+until you wire your own). Add your commands there: `phases."4"` is the floor the
+gated run executes, `postMerge` runs after the local merge.
 
 ```json
+// gates.manifest.json
 {
-  "commands": {
-    "checkTypes": "npm run check-types",
-    "lint": "npm run lint",
-    "test": "npm run test",
-    "build": "npm run build"
-  }
+  "phases": {
+    "4": ["npm run check-types", "npm run lint", "npm run test", "npm run build"]
+  },
+  "postMerge": ["npm run check-types", "npm run build"]
 }
 ```
 
-The commands are plain strings, so any toolchain works — no pnpm or turbo assumed.
-A direct (non-pnpm) toolchain is just as valid:
-
-```json
-{
-  "commands": {
-    "checkTypes": "tsc --noEmit",
-    "lint": "eslint .",
-    "test": "vitest run",
-    "build": "tsc -b"
-  }
-}
-```
-
-`gate check --wiring` confirms these resolve (script commands to a `package.json`
-script; direct execs are accepted as-is).
+The commands are plain strings, so any **allowlisted** invocation works —
+`npm`, `npx`, `yarn`, `bun`, `node`, `tsx`, `vitest`; no pnpm/turbo assumed. A
+direct toolchain via `npx` is fine — `npx tsc --noEmit`, `npx eslint .`,
+`npx vitest run`. (Bare `tsc`/`eslint` are not allowlisted by default; use `npx …`
+or add the prefix to `commands.allowedPrefixes` in `workflow.config.json`.) Run
+`gate check --wiring` to confirm every gate is wired or honestly excepted.
 
 ## Where to go next
 

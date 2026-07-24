@@ -108,6 +108,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   additively; (Q2) no repo-shape auto-detect — config-explicit, one recipe;
   (Q3) recipe shows the tool-agnostic `commands` block + one non-pnpm example,
   full Bun/Deno matrix deferred to PRD-017.
+- **Surface note (Phase-6 Medium):** this PRD's own lifecycle ledgers
+  (`_prds/`, `_readiness/`, `_tasks/`) and its `_docs/reviews/` review are workflow
+  bookkeeping, edited by every PRD — not exclusive implementation surface. The PRD
+  Conflict Surface note was updated to say so explicitly, so these edits are not an
+  undeclared out-of-surface exception.
 - **FR-5 is evidence-scoped:** the audit found no hardcoded monorepo assumption
   (init scaffolds workflow-tree only; `commands` is string-config; wiring handles
   both shapes; "workspace" = repo root), so FR-5 is expected to be a no-op — but
