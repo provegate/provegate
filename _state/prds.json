@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T15:22:54.166Z",
+  "generatedAt": "2026-07-24T15:42:22.385Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -514,6 +514,43 @@
         "checkedCount": 22,
         "uncheckedCount": 0,
         "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-24"
+    },
+    {
+      "prd": "PRD-015",
+      "number": 15,
+      "slug": "single-package-support",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "eligible",
+      "artifacts": {
+        "prd": "_prds/wip/prd-015-single-package-support.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
