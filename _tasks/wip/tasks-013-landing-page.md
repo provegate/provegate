@@ -102,7 +102,7 @@
 | FR-4               | `pnpm --filter web test test/content-web.test.ts`     | web   | passed  | real ten-command ref | |
 | FR-5               | `pnpm --filter web test test/content-web.test.ts`     | web   | passed  | copy discipline, casing | |
 | FR-6               | `pnpm --filter web test test/a11y.test.ts`            | web   | passed  | reduced-motion gating; focus; no h-scroll | |
-| FR-7               | `node scripts/check-static-egress.mjs`                | root  | passed  | clean — no third-party fetch | fonts self-hosted |
+| FR-7               | `node scripts/check-static-egress.mjs`                | root  | passed  | clean — no third-party fetch SHAPE | fetch-shape model (Phase-6 fix) |
 | FR-8               | `pnpm --filter web test test/content-web.test.ts`     | web   | passed  | banned/fabricated/fictional scan | |
 | FR-9               | `pnpm --filter web test test/landing.test.ts`         | web   | passed  | section order; proof adjacent to limits | |
 | FR-10              | `grep -c "token map" apps/web/README.md`             | web   | passed  | 1 | |
@@ -132,6 +132,13 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `landing.test.tsx`; `content-web.test.ts` keeps the pure source scans (banned
   vocab, hex, casing) — the `speedup` in the approved METR quote is not a claim.
 - `apps/web` gained vitest + a DOM env (devDependencies only; never in the build).
+- 4.1 (Phase-6 Critical fix) — the egress scanner was rewritten from a
+  denylist+CSS model to a FETCH-SHAPE detector. The review proved the old model
+  missed a `<script src>` / `<link preconnect>` / JS `fetch()` to a non-denylisted
+  host. It now flags an external-origin URL in any fetch context (script/link/media
+  src|href, CSS url()/@import, JS fetch/beacon/WebSocket/EventSource/XHR-open and
+  .src=/.href=), ignoring framework doc-URL strings (never in a fetch shape).
+  Re-validated against both reviewer injections.
 
 ---
 
