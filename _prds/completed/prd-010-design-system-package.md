@@ -1,6 +1,6 @@
 # PRD-010: Design System Package — One Token Source for Terminal and Web
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-23
 > **Updated**: 2026-07-23

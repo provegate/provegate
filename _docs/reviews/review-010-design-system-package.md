@@ -14,13 +14,19 @@
 **Round 1** reviewed `git diff cdb498e..0bc1725` (feature tip
 `0bc17253695ac89a9d9e7ed16d3940807e59c819`) in full and found one Critical, one High, one Low —
 see Findings 1–3 below, each closed by fix commit `0c50b95c1eda73c7e430aa206f02f82c952f0d7d`.
-**Round 2** (this pass) re-reviewed exactly that fix commit: read the diff to
-`test/cli-entry.test.ts`, `src/tokens.ts`, `scripts/emit.ts`, `src/cli/theme.ts`,
-`test/tokens.test.ts`, and `assets/fonts/OFL.txt`; re-ran my original exploits against the
-fixed code; and adversarially probed further for anything the fixes might have missed, per
-instruction. All three findings are confirmed fixed. One new, much narrower, non-blocking
-observation turned up during the deeper probing — Finding 4, Low, disclosed for completeness
-but not blocking `pass`.
+**Round 2** re-reviewed exactly that fix commit: read the diff to `test/cli-entry.test.ts`,
+`src/tokens.ts`, `scripts/emit.ts`, `src/cli/theme.ts`, `test/tokens.test.ts`, and
+`assets/fonts/OFL.txt`; re-ran my original exploits against the fixed code; and adversarially
+probed further for anything the fixes might have missed, per instruction. All three findings
+are confirmed fixed. One new, narrower observation turned up during the deeper probing (a
+backtick-quoted dynamic import the regex still missed) — logged as Finding 4 and disclosed to
+the team lead.
+
+**Round 3** (this pass) re-verified again after the team lead landed a further patch (the
+specifier regex's quote class now includes the backtick). Re-ran the Finding 4 repro directly:
+the source-walk test alone (no build required) now correctly flags a backtick-quoted
+`import(\`../styles.css\`)`. Finding 4 is now also fixed — all four findings are closed, none
+open.
 
 **What was already clean in round 1 (unchanged, not re-verified in round 2 beyond re-running the
 full suites):** every ramp hex, tint, and terminal-slot hex in `src/tokens.ts` is a byte-exact
@@ -104,7 +110,7 @@ present.
 | 3   | LOW      | `OFL.txt` carried only the IBM Plex Sans copyright preamble, omitting Mono's. | **fixed** — both copyright lines now present. |
 | 4   | LOW      | **New, narrower, non-blocking observation found during round-2 adversarial probing (not present in the original report).** The `./cli` gate's two layers are not *individually* airtight against every combination: (a) the source-walk regex still doesn't match a backtick-quoted dynamic import (`` import(`../styles.css`) ``); (b) the empirical `dist/cli` test silently no-ops when `dist/` doesn't exist yet (`if (!existsSync(distCli)) return;`). Chaining both — a backtick-quoted CSS import, tested via the narrow `pnpm --filter @provegate/design test test/cli-entry.test.ts` (exactly the command in the PRD's own FR-9 verification row) on a checkout where `@provegate/design` has never been built — reports 3/3 green despite the CSS being reachable. This does **not** reopen Finding 1: my original, concretely-reported exploit (a standard single/double-quoted dynamic import) is now caught by the source-walk test **alone**, unconditionally, regardless of build state — confirmed by testing it with `dist/` deleted. The new gap needs both an unusual quoting choice and a build-skipping invocation order that the project's own "Cross-cutting: `pnpm build` clean" gate requirement would not permit in a real, complete PRD gate run (and the root `pnpm test` goes through `turbo run test`, whose `test: { dependsOn: ["build"] }` edge always builds first). Flagged for transparency, not blocking. | **fixed** — the source-walk quote class now includes the backtick (``['"`]``), so the source walk alone (no `dist/` needed) catches a backtick-quoted CSS import; re-verified by the implementing session: the Finding-4 compound scenario (backtick import + deleted `dist/`) now fails the source-walk test. |
 
-No CRITICAL or HIGH findings remain. `pass` stands.
+No CRITICAL or HIGH findings remain, and Finding 4 is also now closed. `pass` stands.
 
 ## Post-fix verification
 
@@ -131,6 +137,25 @@ Commands actually run in this round-2 re-verification pass:
 - **Finding 3**: visual/textual check of `assets/fonts/OFL.txt` head — both copyright lines
   present.
 
+**Round 3 re-verification (this pass), after the backtick-regex patch landed:**
+
+- Standalone regex check (temporary script, deleted after): copied the current
+  `specifiersOf` regex verbatim and fed it every quoting variant tried across all three
+  rounds (static `from`, dynamic single/double/backtick-quoted, with extra whitespace) —
+  every one now yields the `../styles.css` specifier.
+- Live re-exploit: re-inserted the exact backtick probe
+  (`` import(`../styles.css`) ``) into `src/cli/status-line.ts` and ran `pnpm test
+  test/cli-entry.test.ts` — the source-walk assertion (`CSS reachable from ./cli`) now fails
+  by itself, with no build required, naming `../styles.css (in .../status-line.ts)`. Reverted.
+- Re-ran the color-law repro (`verdictStyles.skipped.slot = 'green'` → `TS2540`) and the
+  7th-verdict repro (→ `TS2322`) once more against the current tree — unchanged, both correct.
+- Re-checked `assets/fonts/OFL.txt` head — both copyright lines still present.
+- Full baselines re-confirmed on the current tree: `pnpm --filter @provegate/design build`
+  clean, `pnpm --filter @provegate/design test` 26/26, `pnpm --filter provegate test` 461/461,
+  root `pnpm check-types`/`pnpm lint`/`pnpm build` all clean (4/4 workspace projects).
+
 `git status` at the end of this review shows only this review artifact as changed — every
-temporary probe file, edit, and `dist/` deletion from this round was reverted or rebuilt back
-to the committed state before finishing.
+temporary probe file, edit, and `dist/` deletion introduced across all three rounds was
+reverted or rebuilt back to a clean state before finishing. (PRD-010 landed on `main` during
+this round via `gate run`, carrying the Finding-4 fix at commit `96433d6`; this review's base
+SHA and repro commands above still refer to the pre-land feature-branch SHAs for traceability.)
