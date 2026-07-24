@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-015-single-package-support.md](../../_prds/wip/prd-015-single-package-support.md)
 > **Readiness**: [readiness-015-single-package-support.md](../../_readiness/wip/readiness-015-single-package-support.md)
-> **Status**: Code Complete — Phase 4/5/6/7 pass (review Critical 0); autonomous-close eligible
+> **Status**: Ship Verified
 > **Readiness Score**: 8.2/10
 > **Model Tier (Execution)**: medium
 > **Created**: 2026-07-24

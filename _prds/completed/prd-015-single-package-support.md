@@ -1,6 +1,6 @@
 # PRD-015: Single-Package (Non-Monorepo) Support
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-24
 > **Updated**: 2026-07-24
