@@ -103,12 +103,14 @@ export function emitTheme(): string {
   l.push('export const VERDICTS = [' + VERDICTS.map((v) => `'${v}'`).join(', ') + '] as const;');
   l.push('export type Verdict = (typeof VERDICTS)[number];');
   l.push('');
-  l.push('export const glyph: Record<Verdict, string> = {');
+  l.push('// `as const satisfies` keeps each value a readonly literal (a consumer');
+  l.push('// cannot repaint a verdict) while still checking the shape.');
+  l.push('export const glyph = {');
   for (const v of VERDICTS) l.push(`  ${v}: '${verdictStyles[v].glyph}',`);
-  l.push('};');
+  l.push('} as const satisfies Record<Verdict, string>;');
   l.push('');
-  l.push('export const verdictSlot: Record<Verdict, TermSlot> = {');
+  l.push('export const verdictSlot = {');
   for (const v of VERDICTS) l.push(`  ${v}: '${verdictStyles[v].slot}',`);
-  l.push('};');
+  l.push('} as const satisfies Record<Verdict, TermSlot>;');
   return l.join('\n') + '\n';
 }

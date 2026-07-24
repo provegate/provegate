@@ -67,6 +67,20 @@ describe('the colour law is a closed, typed set (FR-7)', () => {
   it('a not-earned verdict (skipped) is dim, never green', () => {
     expect(verdictStyles.skipped.slot).toBe('dim');
   });
+
+  it('the colour law is enforced at the type level: a slot is a readonly literal', () => {
+    // If `verdictStyles` were declared with an explicit `: Record<…>` annotation,
+    // its slots would widen to `TerminalSlotName` and repainting would type-check.
+    // With `as const satisfies`, each slot's TYPE is its literal, so:
+    type SkippedSlot = typeof verdictStyles.skipped.slot;
+    const ok: SkippedSlot = 'dim';
+    // @ts-expect-error — 'green' is not assignable to the literal 'dim' (a
+    // verdict cannot be repainted). If this line stopped erroring, the guarantee
+    // would be broken and check-types would flag this unused expect-error.
+    const repaint: SkippedSlot = 'green';
+    expect(ok).toBe('dim');
+    void repaint;
+  });
 });
 
 // WCAG relative luminance + contrast ratio, pure functions over the tokens.

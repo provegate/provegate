@@ -207,14 +207,19 @@ export interface VerdictStyle {
   slot: TerminalSlotName;
 }
 
-export const verdictStyles: Record<Verdict, VerdictStyle> = {
+// `as const satisfies` — NOT an explicit `: Record<…>` annotation, which would
+// widen the properties back to mutable and let `verdictStyles.skipped.slot =
+// 'green'` type-check (defeating half the colour law). `as const` keeps every
+// slot a readonly literal; `satisfies` still checks the shape. So repainting a
+// verdict's colour is a compile error, as the law claims.
+export const verdictStyles = {
   passed: { glyph: '✓', slot: 'green' },
   failed: { glyph: '✗', slot: 'red' },
   partial: { glyph: '⚠', slot: 'amber' },
   skipped: { glyph: '=', slot: 'dim' },
   operator: { glyph: '→', slot: 'human' },
   blocked: { glyph: '!', slot: 'stale' },
-} as const;
+} as const satisfies Record<Verdict, VerdictStyle>;
 
 /** Extra non-verdict glyphs the CLI grammar uses. */
 export const glyphs = {

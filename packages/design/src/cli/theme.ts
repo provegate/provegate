@@ -60,20 +60,22 @@ export function paint(slot: TermSlot, text: string, tier: ColorTier = colorTier(
 export const VERDICTS = ['passed', 'failed', 'partial', 'skipped', 'operator', 'blocked'] as const;
 export type Verdict = (typeof VERDICTS)[number];
 
-export const glyph: Record<Verdict, string> = {
+// `as const satisfies` keeps each value a readonly literal (a consumer
+// cannot repaint a verdict) while still checking the shape.
+export const glyph = {
   passed: '✓',
   failed: '✗',
   partial: '⚠',
   skipped: '=',
   operator: '→',
   blocked: '!',
-};
+} as const satisfies Record<Verdict, string>;
 
-export const verdictSlot: Record<Verdict, TermSlot> = {
+export const verdictSlot = {
   passed: 'green',
   failed: 'red',
   partial: 'amber',
   skipped: 'dim',
   operator: 'human',
   blocked: 'stale',
-};
+} as const satisfies Record<Verdict, TermSlot>;

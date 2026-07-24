@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -14,7 +14,11 @@ const CLI_ENTRY = resolve(__dirname, '../src/cli/index.ts');
 function specifiersOf(file: string): string[] {
   const src = readFileSync(file, 'utf8');
   const specs: string[] = [];
-  const re = /(?:from|import)\s*['"]([^'"]+)['"]/g;
+  // Match static `from '...'`, bare `import '...'`, AND dynamic `import('...')`
+  // — the `\(?` catches the paren of a dynamic import, whose specifier a
+  // `from|import` regex alone would miss (a dynamic import of CSS still ships it,
+  // proven exploitable in review).
+  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g;
   for (const m of src.matchAll(re)) specs.push(m[1]!);
   return specs;
 }
@@ -31,12 +35,22 @@ function resolveRelative(fromFile: string, spec: string): string {
 describe('the ./cli entry import graph is pure', () => {
   it('imports no CSS, no React, no third-party module (transitively)', () => {
     const visited = new Set<string>();
+    const css: string[] = [];
+    const react: string[] = [];
     const external: string[] = [];
     const walk = (file: string): void => {
       if (visited.has(file)) return;
       visited.add(file);
       for (const spec of specifiersOf(file)) {
-        if (spec.startsWith('.')) {
+        // Classify by the SPECIFIER first — a `.css` or `react` import is a
+        // violation whether it is written relative (`../styles.css`) or bare.
+        // (A relative CSS import must be FLAGGED, not recursed into — the bug an
+        // earlier version had, which let a dynamic import of styles.css slip.)
+        if (/\.css$/i.test(spec)) {
+          css.push(`${spec} (in ${file})`);
+        } else if (/(^|\/)react($|\/)/i.test(spec)) {
+          react.push(`${spec} (in ${file})`);
+        } else if (spec.startsWith('.')) {
           walk(resolveRelative(file, spec));
         } else if (!spec.startsWith('node:')) {
           external.push(`${spec} (in ${file})`);
@@ -45,12 +59,27 @@ describe('the ./cli entry import graph is pure', () => {
     };
     walk(CLI_ENTRY);
 
-    const css = external.filter((e) => /\.css/.test(e));
-    const react = external.filter((e) => /react/i.test(e));
     expect(css, 'CSS reachable from ./cli').toEqual([]);
     expect(react, 'React reachable from ./cli').toEqual([]);
-    // Any remaining non-relative, non-node specifier is a third-party edge.
     expect(external, 'third-party reachable from ./cli').toEqual([]);
+  });
+});
+
+describe('the built ./cli output carries no web asset (empirical, defeat-proof)', () => {
+  // The source walk above is static analysis and can be fooled; this is the
+  // ground truth. If ANY web import (static, dynamic, re-export, whatever)
+  // becomes reachable from cli/index.ts, tsup emits it into dist/cli — most
+  // visibly a .css bundle. Assert dist/cli holds only JS + type declarations.
+  // Runs whenever a build exists (the gate runs `pnpm build` before tests).
+  it('dist/cli contains no .css (nor any non-JS asset)', () => {
+    const distCli = resolve(__dirname, '../dist/cli');
+    if (!existsSync(distCli)) {
+      // No build present (standalone `vitest` with no prior build). The source
+      // walk still guards; the gated run always builds first, so this fires there.
+      return;
+    }
+    const stray = readdirSync(distCli).filter((f) => !/\.(js|d\.ts|js\.map)$/.test(f));
+    expect(stray, `unexpected assets in dist/cli: ${stray.join(', ')}`).toEqual([]);
   });
 });
 
