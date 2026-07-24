@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-014-docs-theming.md](../../_prds/wip/prd-014-docs-theming.md)
 > **Readiness**: [readiness-014-docs-theming.md](../../_readiness/wip/readiness-014-docs-theming.md)
-> **Status**: Code Complete — Phase 4/5/6 pass (review Critical 0); operator QA + close pending
+> **Status**: Ship Verified
 > **Readiness Score**: 8.3/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-24

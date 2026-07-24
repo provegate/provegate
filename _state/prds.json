@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T14:44:59.968Z",
+  "generatedAt": "2026-07-24T15:22:54.166Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -487,20 +487,20 @@
       "prd": "PRD-014",
       "number": 14,
       "slug": "docs-theming",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-014-docs-theming.md",
-        "readiness": "_readiness/wip/readiness-014-docs-theming.md",
-        "tasks": "_tasks/wip/tasks-014-docs-theming.md",
+        "prd": "_prds/completed/prd-014-docs-theming.md",
+        "readiness": "_readiness/completed/readiness-014-docs-theming.md",
+        "tasks": "_tasks/completed/tasks-014-docs-theming.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
@@ -510,9 +510,9 @@
         "modelTierAudit": "medium"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 0,
-        "uncheckedCount": 22,
+        "status": "Ship Verified",
+        "checkedCount": 22,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 2
       },
       "summary": {

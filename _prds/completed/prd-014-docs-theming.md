@@ -1,6 +1,6 @@
 # PRD-014: Docs Theming + OG — apps/docs on the Shared System
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-24
 > **Updated**: 2026-07-24
