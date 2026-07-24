@@ -1,4 +1,5 @@
-import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { CONFIG_FILENAME } from '../config/index.js';
@@ -14,6 +15,8 @@ export interface InitAction {
   path: string;
   kind: 'dir' | 'file';
   content?: string;
+  /** File mode for the `wx` write (git hooks need the exec bit). */
+  mode?: number;
 }
 
 export interface InitReport {
@@ -59,6 +62,83 @@ export function planInit(config: WorkflowConfig): InitAction[] {
     kind: 'file',
     content: `${JSON.stringify({ phases: { '4': [] }, postMerge: [] }, null, 2)}\n`,
   });
+  return actions;
+}
+
+/** Shipped practices-pack root. Same package-root walk as the PRD template
+ * resolver: dist/ is flat while src/ is nested, so walk up until the pack's
+ * marker file appears. */
+export function practicesPackDir(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (;;) {
+    const candidate = resolve(dir, 'practices/NEXT_STEPS.md');
+    try {
+      readFileSync(candidate);
+      return resolve(dir, 'practices');
+    } catch {
+      const parent = dirname(dir);
+      if (parent === dir) {
+        throw new Error('shipped practices/ pack not found — package layout broken');
+      }
+      dir = parent;
+    }
+  }
+}
+
+const HOOK_MODE = 0o755;
+
+/** Pack file → repo destination. Explicit table, not a glob walk: every
+ * destination is reviewable here, and a stray file added to the pack can
+ * never silently install itself. `learnings/` is the one enumerated dir. */
+const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
+  { src: 'brain/PROTOCOL.md', dest: '_brain/PROTOCOL.md' },
+  { src: 'brain/README.md', dest: '_brain/README.md' },
+  { src: 'brain/INDEX.md', dest: '_brain/INDEX.md' },
+  { src: 'brain/_templates/learning.md', dest: '_brain/_templates/learning.md' },
+  { src: 'brain/_templates/adr.md', dest: '_brain/_templates/adr.md' },
+  // npm strips .gitignore files from packed tarballs, so the pack ships it
+  // under a plain name and init writes the real dotfile.
+  { src: 'brain/private-gitignore', dest: '_brain/private/.gitignore' },
+  { src: 'templates/AGENT_BOOTSTRAP.template.md', dest: 'AGENT_BOOTSTRAP.md' },
+  { src: 'templates/STATUS.template.md', dest: 'STATUS.md' },
+  { src: 'templates/commitlint.config.template.mjs', dest: 'commitlint.config.mjs' },
+  { src: 'templates/review-artifact.template.md', dest: '_docs/review-artifact.template.md' },
+  { src: 'templates/retros-README.md', dest: '_docs/retros/README.md' },
+  { src: 'templates/known-red-verifies.json', dest: '_state/known-red-verifies.json' },
+  { src: 'hooks/pre-commit', dest: '.githooks/pre-commit', mode: HOOK_MODE },
+  { src: 'hooks/commit-msg', dest: '.githooks/commit-msg', mode: HOOK_MODE },
+  { src: 'scripts/base-branch-guard.mjs', dest: 'scripts/base-branch-guard.mjs' },
+  { src: 'scripts/secret-scan.mjs', dest: 'scripts/secret-scan.mjs' },
+];
+
+/** The practices plan: pack content → repo files. Additive-only like the base
+ * plan; agent-entrypoint files (CLAUDE.md, AGENTS.md, cursor rules) are
+ * deliberately ABSENT — shims stay in the pack and are pasted by the adopter
+ * (NEXT_STEPS.md), so an existing entrypoint is never touched or shadowed. */
+export function planPractices(packDir: string): InitAction[] {
+  const actions: InitAction[] = [
+    { path: '_brain/adr', kind: 'dir' },
+    { path: '_brain/learnings', kind: 'dir' },
+  ];
+  const readPack = (rel: string) => readFileSync(join(packDir, rel), 'utf8');
+  for (const { src, dest, mode } of PACK_MAP) {
+    actions.push({ path: dest, kind: 'file', content: readPack(src), ...(mode ? { mode } : {}) });
+  }
+  for (const f of readdirSync(join(packDir, 'brain', 'learnings')).sort()) {
+    if (!f.endsWith('.md')) continue;
+    actions.push({
+      path: join('_brain/learnings', f),
+      kind: 'file',
+      content: readPack(join('brain/learnings', f)),
+    });
+  }
+  for (const f of readdirSync(join(packDir, 'verify')).sort()) {
+    actions.push({
+      path: join('scripts/verify', f),
+      kind: 'file',
+      content: readPack(join('verify', f)),
+    });
+  }
   return actions;
 }
 
@@ -113,13 +193,13 @@ export function containedPath(root: string, rel: string): string {
 export function initWorkspace(
   config: WorkflowConfig,
   root: string,
-  { dryRun = false }: { dryRun?: boolean } = {},
+  { dryRun = false, extra = [] }: { dryRun?: boolean; extra?: InitAction[] } = {},
 ): InitReport {
   const report: InitReport = { created: [], skipped: [] };
   const rootAbs = resolve(root);
   // Validate the WHOLE plan before writing anything: a config with one bad
   // path must not leave a partial scaffold behind.
-  const planned = planInit(config).map((action) => ({
+  const planned = [...planInit(config), ...extra].map((action) => ({
     ...action,
     full: containedPath(rootAbs, action.path),
   }));
@@ -148,7 +228,10 @@ export function initWorkspace(
     } else {
       try {
         mkdirSync(dirname(full), { recursive: true });
-        writeFileSync(full, action.content ?? '', { flag: 'wx' });
+        writeFileSync(full, action.content ?? '', {
+          flag: 'wx',
+          ...(action.mode !== undefined ? { mode: action.mode } : {}),
+        });
         report.created.push(action.path);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;

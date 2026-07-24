@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "comment": "Known-red ledger: checks allowed to fail FOR NOW, each with a reason and date. verify-workflow fails on stale (check passes again), unknown, or malformed entries — the valve stays temporary by construction.",
+  "entries": []
+}

@@ -9,7 +9,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { ConfigError, DEFAULT_CONFIG, loadConfig, type WorkflowConfig } from './core/config/index.js';
 import {
   buildQueue,
@@ -40,6 +40,8 @@ import {
   claimPrd,
   createPrd,
   initWorkspace,
+  planPractices,
+  practicesPackDir,
   mergePreconditions,
   mergeToLocalBase,
   claimMutexPath,
@@ -100,7 +102,7 @@ function usage(): string {
     '  gate <command> [options]   (also available as: provegate)',
     '',
     'COMMANDS',
-    '  init     scaffold the workflow tree + starter configs (--dry-run)',
+    '  init     scaffold the workflow tree + starter configs (--dry-run) (--practices: install the practices pack)',
     '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
     '  open     claim a PRD: lease its conflict surface or refuse on overlap ([--steal] [--worktree] [--hours=N])',
     '  renew    extend your lease (idempotent refresh) (gate renew PRD-XXX [--hours=N])',
@@ -135,6 +137,7 @@ function collectLocks(root: string, config: WorkflowConfig): QueueLockInfo[] {
 
 function runInit(args: string[]): number {
   const dryRun = args.includes('--dry-run');
+  const practices = args.includes('--practices');
   // Init must work before any config exists: root at the nearest .git walking
   // up from cwd, else cwd itself.
   let root = process.cwd();
@@ -157,13 +160,20 @@ function runInit(args: string[]): number {
     }
   })();
 
-  const report = initWorkspace(config, root, { dryRun });
+  const extra = practices ? planPractices(practicesPackDir()) : [];
+  const report = initWorkspace(config, root, { dryRun, extra });
   console.log(`[init] ${dryRun ? 'DRY-RUN ' : ''}root: ${root}`);
   for (const path of report.created) console.log(`  + ${path}`);
   for (const path of report.skipped) console.log(`  = ${path} (exists, skipped)`);
   console.log(
     `[init] ${report.created.length} created, ${report.skipped.length} skipped — nothing is ever overwritten`,
   );
+  if (practices) {
+    // The pack creates files only. Hook wiring, package.json scripts, and shim
+    // pastes are deliberate manual steps — print them, never perform them.
+    console.log('');
+    console.log(readFileSync(join(practicesPackDir(), 'NEXT_STEPS.md'), 'utf8'));
+  }
   console.log('[init] next: see QUICKSTART.md (npm home: provegate/QUICKSTART.md)');
   return 0;
 }

@@ -21,6 +21,7 @@
   },
   "files": [
     "dist",
+    "practices",
     "prompts",
     "templates",
     "schemas",

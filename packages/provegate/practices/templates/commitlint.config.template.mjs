@@ -1,0 +1,44 @@
+// Commitlint config installed by `gate init --practices` (written only when absent).
+// Runs from the commit-msg hook. Install the deps yourself (see NEXT_STEPS.md):
+//   npm i -D @commitlint/cli @commitlint/config-conventional
+
+/**
+ * SCOPES — replace with your own app / package / tooling names. Validated as a
+ * WARNING only (level 1): an unknown scope is almost always a not-yet-listed scope
+ * or a typo — surface it, don't block. Add new areas here.
+ */
+const SCOPES = [
+  // apps / packages — replace with yours
+  'core',
+  'cli',
+  'docs',
+  // workflow artifacts
+  'brain',
+  'adr',
+  'prd',
+  'readiness',
+  'review',
+  'state',
+  'tasks',
+  'workflow',
+  // meta / tooling
+  'ci',
+  'deps',
+  'release',
+  'repo',
+  'scripts',
+];
+
+export default {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    // scope is encouraged, never blocking
+    'scope-empty': [1, 'never'],
+    // scope validated against SCOPES but only as a warning (level 1)
+    'scope-enum': [1, 'always', SCOPES],
+    // generous header cap so long-but-useful subjects aren't rejected
+    'header-max-length': [2, 'always', 200],
+    // disabled: don't reject bodies with pasted URLs / logs for line length
+    'body-max-line-length': [0, 'always', Infinity],
+  },
+};
