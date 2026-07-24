@@ -1,0 +1,2 @@
+# Keeps the work-in-progress PRD directory tracked when the queue is empty.
+# `gate new`/`gate open` land PRDs here; `gate run` archives them to ../completed/.

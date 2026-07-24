@@ -1,0 +1,2 @@
+# Keeps the work-in-progress readiness directory tracked when the queue is empty.
+# Readiness assessments live here until their PRD is archived to ../completed/.

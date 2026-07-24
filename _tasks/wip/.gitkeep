@@ -1,0 +1,2 @@
+# Keeps the work-in-progress task-ledger directory tracked when the queue is empty.
+# Task ledgers live here until their PRD is archived to ../completed/.
