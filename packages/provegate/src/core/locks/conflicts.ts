@@ -4,7 +4,7 @@ import { relative, resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 import { declaredGlobs, escapeRegExp } from '../state/markdown.js';
-import { globToRegExp } from './glob.js';
+import { globToRegExp, globsMayIntersect } from './glob.js';
 
 /**
  * Path-conflict detection: fail when two ACTIVE execution-phase locks declare
@@ -54,20 +54,30 @@ function materialize(config: WorkflowConfig, globs: string[], files: string[]): 
   return out;
 }
 
-function normalizeGlob(glob: string): string {
-  return glob.replace(/\/\*\*$/, '').replace(/\/$/, '');
-}
-
-/** Structural overlap for globs that materialize to zero files yet (new
- * dirs): identical or prefix-nested normalized globs. The residual
- * sibling-glob case is a documented false-negative. */
-export function structuralOverlap(aGlobs: string[], bGlobs: string[]): string[] {
+/** Structural overlap for globs that materialize to zero files yet (new dirs):
+ * two surfaces collide when their patterns can match a common future path.
+ * Decided by `globsMayIntersect` — sound over the supported grammar, so
+ * sibling wildcards (`src/api/*.ts` ~ `src/api/users.ts`) are caught, not just
+ * identical or prefix-nested globs. The bias is conservative by design: an
+ * uncertain pair refuses (recoverable by editing a surface) rather than
+ * silently double-claiming (silent corruption at merge).
+ *
+ * `shared` (append-only manifests) are excluded from BOTH sides first — the
+ * structural analog of `materialize`'s post-materialization subtraction: a glob
+ * that is exactly a union-merged manifest declares no exclusive surface, so it
+ * can never structurally conflict (mirrors the tracked-file path, which already
+ * drops these before comparing). */
+export function structuralOverlap(
+  aGlobs: string[],
+  bGlobs: string[],
+  shared: ReadonlySet<string> = new Set(),
+): string[] {
   const out: string[] = [];
   for (const ag of aGlobs) {
+    if (shared.has(ag)) continue;
     for (const bg of bGlobs) {
-      const a = normalizeGlob(ag);
-      const b = normalizeGlob(bg);
-      if (a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)) out.push(`${ag} ~ ${bg}`);
+      if (shared.has(bg)) continue;
+      if (globsMayIntersect(ag, bg)) out.push(`${ag} ~ ${bg}`);
     }
   }
   return out;
@@ -96,7 +106,9 @@ export function findConflicts(
       if (a.lock.prd === b.lock.prd) continue;
       const shared = [...a.mat].filter((file) => b.mat.has(file));
       const structural =
-        a.mat.size === 0 || b.mat.size === 0 ? structuralOverlap(a.globs, b.globs) : [];
+        a.mat.size === 0 || b.mat.size === 0
+          ? structuralOverlap(a.globs, b.globs, new Set(config.sharedAppendOnly))
+          : [];
       if (shared.length > 0 || structural.length > 0) {
         conflicts.push({
           a: a.lock.prd,

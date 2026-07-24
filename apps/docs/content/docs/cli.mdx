@@ -89,6 +89,17 @@ the takeover prints the victim's PRD, agent, and expiry; a *valid* foreign lease
 stealable. A PRD with no conflict surface is refused: a claim over nothing protects
 nothing.
 
+Overlap is decided against the files two surfaces actually share; when a surface
+covers a directory that does not exist yet (zero tracked files), the check falls
+back to the **patterns**. That structural check is sound over the supported glob
+grammar (`**`, `*`, `?`, literals): sibling wildcards that can match a common
+future path — `src/api/*.ts` against `src/api/users.ts`, or `src/*/handlers/**`
+against `src/auth/handlers/**` — collide at claim time, not merge time, even on a
+greenfield tree. The bias is deliberately conservative: an uncertain pair refuses
+(recoverable by narrowing a surface) rather than risk a silent double-claim.
+Genuinely disjoint surfaces (`src/a/**` against `src/b/**`) stay claimable in
+parallel, and shared append-only manifests never count as a conflict.
+
 `--worktree` extends the atomic claim to the checkout: after the lease installs, a
 feature branch (from `branches.featurePattern`) and a linked worktree under the
 configured `worktree.dir` are provisioned, and the lease is stamped with both.

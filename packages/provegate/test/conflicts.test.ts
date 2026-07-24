@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -51,8 +51,9 @@ describe('findConflicts', () => {
     const files = ['package.json', 'src/a.ts'];
     const a: SurfacedLock = { prd: 'PRD-001', phase: 'Phase 4', ownedPaths: ['**'] };
     const b: SurfacedLock = { prd: 'PRD-002', phase: 'Phase 4', ownedPaths: ['package.json'] };
-    // Broad ** materializes src/a.ts only; b materializes nothing → structural check
-    // on globs: '**' vs 'package.json' do not prefix-nest → no conflict.
+    // Broad ** materializes src/a.ts only; b materializes nothing → structural
+    // check runs. package.json is shared append-only, so it is dropped from the
+    // structural comparison too (b then declares no surface) → no conflict.
     expect(findConflicts(cfg, [a, b], files)).toEqual([]);
   });
 
@@ -90,13 +91,48 @@ describe('findConflicts', () => {
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]!.shared).toEqual(['newdir/** ~ newdir/sub/**']);
   });
+
+  it('catches a sibling wildcard pair over a greenfield dir (zero tracked files)', () => {
+    const a: SurfacedLock = { prd: 'PRD-001', phase: 'Phase 4', ownedPaths: ['greenfield/api/*.ts'] };
+    const b: SurfacedLock = { prd: 'PRD-002', phase: 'Phase 4', ownedPaths: ['greenfield/api/users.ts'] };
+    const conflicts = findConflicts(cfg, [a, b], FILES);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]!.shared).toEqual(['greenfield/api/*.ts ~ greenfield/api/users.ts']);
+  });
+
+  it('leaves disjoint greenfield surfaces claimable in parallel', () => {
+    const a: SurfacedLock = { prd: 'PRD-001', phase: 'Phase 4', ownedPaths: ['greenfield/a/**'] };
+    const b: SurfacedLock = { prd: 'PRD-002', phase: 'Phase 4', ownedPaths: ['greenfield/b/**'] };
+    expect(findConflicts(cfg, [a, b], FILES)).toHaveLength(0);
+  });
 });
 
 describe('structuralOverlap', () => {
-  it('detects identical and prefix-nested globs; siblings are the documented false-negative', () => {
+  it('detects identical and prefix-nested globs', () => {
     expect(structuralOverlap(['a/**'], ['a/**'])).toHaveLength(1);
     expect(structuralOverlap(['a/**'], ['a/b/**'])).toHaveLength(1);
+  });
+
+  it('detects sibling wildcards (the closed false-negative), reporting `a ~ b`', () => {
+    expect(structuralOverlap(['src/api/*.ts'], ['src/api/users.ts'])).toEqual([
+      'src/api/*.ts ~ src/api/users.ts',
+    ]);
+    expect(structuralOverlap(['src/*/handlers/**'], ['src/auth/handlers/**'])).toEqual([
+      'src/*/handlers/** ~ src/auth/handlers/**',
+    ]);
+  });
+
+  it('keeps genuinely disjoint sibling directories claimable in parallel', () => {
     expect(structuralOverlap(['a/x/**'], ['a/y/**'])).toEqual([]);
+    expect(structuralOverlap(['src/a/**'], ['src/b/**'])).toEqual([]);
+  });
+
+  // FR-4 doc truth: the "documented false-negative" comment stops being true and
+  // is deleted. Asserted as a test (portable, deterministic exit) rather than a
+  // `grep` whose absence exit code differs between BSD and GNU grep.
+  it('no longer carries the documented-false-negative comment (FR-4)', () => {
+    const src = readFileSync(resolve(__dirname, '../src/core/locks/conflicts.ts'), 'utf8');
+    expect(src).not.toContain('documented false-negative');
   });
 });
 
