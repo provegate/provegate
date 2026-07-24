@@ -47,6 +47,7 @@ export {
   claimMutexPath,
   claimPrd,
   DEFAULT_LEASE_HOURS,
+  type BlockerLease,
   type ClaimOptions,
   type ClaimResult,
   type StolenLease,

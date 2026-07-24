@@ -69,6 +69,21 @@ describe('pack audit (FR-3)', () => {
     }
   });
 
+  it('the published package declares ZERO runtime dependencies (FR-1/W4)', () => {
+    // @provegate/design is a devDependency, bundled by tsup — it must never
+    // appear as a runtime dependency, or the zero-dependency promise breaks.
+    const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>;
+    };
+    expect(pkg.dependencies ?? {}).toEqual({});
+  });
+
+  it('the design package is INLINED into the CLI bundle, not required at runtime', () => {
+    const cli = readFileSync(join(pkgDir, 'dist/cli.js'), 'utf8');
+    expect(cli).not.toMatch(/from\s*['"]@provegate\/design/);
+    expect(cli).not.toMatch(/require\(\s*['"]@provegate\/design/);
+  });
+
   it('package LICENSE is byte-identical to the root LICENSE (anti-drift, W1)', () => {
     const pkg = readFileSync(join(pkgDir, 'LICENSE'), 'utf8');
     const root = readFileSync(join(repoRoot, 'LICENSE'), 'utf8');

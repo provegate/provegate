@@ -80,6 +80,17 @@ export interface StolenLease {
   file: string;
 }
 
+/** A foreign lease blocking the claim, with the holder detail the CLI names in a
+ * refusal (so a human need not read lock files by hand — PRD-011 User Story 2). */
+export interface BlockerLease {
+  prd: string;
+  agent: string;
+  phase: string;
+  expiresAt: string;
+  /** True when past its TTL (a `--steal` candidate). */
+  stale: boolean;
+}
+
 export interface ClaimResult {
   ok: boolean;
   id: string;
@@ -89,6 +100,9 @@ export interface ClaimResult {
   conflicts: PathConflict[];
   /** Foreign stale leases blocking the claim (steal candidates). */
   staleBlockers: StolenLease[];
+  /** All foreign leases blocking this claim (valid or stale), with holder detail
+   * — additive; existing consumers that ignore it are unaffected. */
+  blockers: BlockerLease[];
   stolen: StolenLease[];
   /** Set when `--worktree` provisioned (or reused) a checkout. */
   worktree?: WorktreeProvision;
@@ -209,6 +223,7 @@ function claimPrdLocked(
     globs: [],
     conflicts: [],
     staleBlockers: [],
+    blockers: [],
     stolen: [],
   };
 
@@ -354,6 +369,13 @@ function claimPrdLocked(
     expiredAt: l.expiresAt,
     file: l.file,
   });
+  const asBlocker = (l: ParsedLock): BlockerLease => ({
+    prd: l.prd,
+    agent: l.agent,
+    phase: l.phase,
+    expiresAt: l.expiresAt,
+    stale: l.stale,
+  });
 
   if (validBlockers.length > 0) {
     return {
@@ -361,6 +383,7 @@ function claimPrdLocked(
       globs,
       conflicts,
       staleBlockers: staleBlockers.map(asStolen),
+      blockers: blockers.map(asBlocker),
       ok: false,
       issues: conflicts.map(
         (c) =>
@@ -374,6 +397,7 @@ function claimPrdLocked(
       globs,
       conflicts,
       staleBlockers: staleBlockers.map(asStolen),
+      blockers: blockers.map(asBlocker),
       ok: false,
       issues: [
         ...conflicts.map(

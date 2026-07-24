@@ -31,11 +31,25 @@ This PRD lands the web half of the system:
 
 - the nine components, ported into `@provegate/design`'s reserved `./react`
   export so landing and docs share one implementation;
-- `apps/web` rebuilt as the designed landing page — eleven sections, dark
-  canonical, real CLI strings as first-class objects;
+- `apps/web` rebuilt as the designed landing page — the full section
+  composition from the 2026-07-23 landing handoff (`design_handoff_landing/`),
+  dark canonical, real CLI strings as first-class objects;
 - `apps/docs` re-themed by **mapping** `--pg-*` onto Fumadocs' own variables
   rather than rewriting its layout, plus the brand OG card on the existing OG
   route.
+
+A second, higher-fidelity landing handoff landed 2026-07-23
+(`docs/design/design_handoff_landing/`): final colors, copy and interactions for
+the full ~23-section landing composition (`landing-app.jsx`). It is the
+authoritative landing spec and supersedes the earlier `ui_kits/landing/`
+recreation. Its verdict vocabulary, component APIs and color law already match
+the shipped `packages/design`. Two things it shows do **not** match the shipped
+tool and are corrected here: it presents a four-command CLI (`init/run/push/
+ledger`) over a `gate.toml` config, but the shipped tool has ten commands, no
+`gate.toml`, and no `gate ledger` — the page uses the real surface (see the CLI
+fidelity criterion below). Its motion (hero typing, `gate run` walkthrough, live
+playground) is adopted, reduced-motion-gated (this reverses the static-only rule
+of the initial draft).
 
 Three rules govern the port, all inherited and all non-negotiable:
 
@@ -72,7 +86,7 @@ Three rules govern the port, all inherited and all non-negotiable:
 | ---------------------------------------- | --------------------------- | ----------------------------- | ------------------------ |
 | Hardcoded hexes in `apps/web` + `apps/docs` | 6+ (inline styles)        | 0                             | `check-static-egress`/lint |
 | Third-party origins in built output      | 0 (none yet) → risk on port | 0                             | `check-static-egress.mjs` |
-| Landing sections from the design IA      | 0 of 11                     | 11 of 11                      | `landing.test.ts`        |
+| Landing sections from the design IA      | 0 of 23                     | 23 of 23                      | `landing.test.ts`        |
 | Fabricated facts on public surfaces      | 0 → risk from kits          | 0                             | `content-web.test.ts`    |
 
 ---
@@ -89,13 +103,25 @@ so that the page reads as engineered rather than marketed, and I reach a termina
 
 **Acceptance Criteria:**
 
-- [ ] The eleven sections ship in order: nav, hero, problem, core rule, method
-      (phase pipeline), mechanisms, refusal, proof + limits, positioning, FAQ,
-      footer.
+- [ ] The full landing composition ships in `landing-app.jsx` order: nav, hero,
+      trust strip, problem, core rule, how (`gate run` walkthrough), playground,
+      phase pipeline, phase detail, operator-gate flow, refusal, evidence
+      ledger, proof + limits, anatomy of a gate, self-attestation vs. evidence,
+      positioning, feature grid, install tabs, command reference, CI
+      integration, FAQ + quickstart, install/CTA, footer.
 - [ ] The limits sit adjacent to the proof, not hidden — that adjacency is the
       design idea.
-- [ ] Terminal blocks are real CLI strings, selectable text, no animation, no
-      fabricated output.
+- [ ] Terminal blocks are real CLI strings, selectable text, no fabricated
+      output. Motion (hero typing, the `gate run` walkthrough, the interactive
+      playground) is permitted but **reduced-motion-gated**: with
+      `prefers-reduced-motion: reduce` every animated block renders its finished
+      state immediately — no typing, no stagger, caret blink off.
+- [ ] Every command, config snippet and terminal line reflects the **shipped**
+      CLI surface: the real commands (`gate init/new/open/renew/release/status/
+      queue/check/run/land`, plus `gate push` which refuses). No `gate.toml` and
+      no `gate ledger` appear — the prototype's four-command surface and its
+      `gate.toml` playground are corrected to the real PRD-file + `_state/
+      prds.json` flow, or dropped where they cannot be shown honestly.
 - [ ] Primary CTA is the copyable install block; GitHub is secondary.
 
 #### User Story 2
@@ -152,13 +178,16 @@ so that the principle is observable, not just asserted.
    - **Targets:** `packages/design/src/react/HandoffCard.tsx`,
      `packages/design/src/react/GateLine.tsx`,
      `packages/design/test/react-card.test.ts`
-3. **FR-3**: Rebuild `apps/web` as the designed landing page: the eleven sections
-   from User Story 1, `data-theme="dark"` canonical with a working light theme,
-   `@provegate/design/styles.css` imported once at the root, and every hardcoded
-   inline style removed.
+3. **FR-3**: Rebuild `apps/web` as the designed landing page: the full section
+   composition from User Story 1, `data-theme="dark"` canonical with a working
+   light theme, `@provegate/design/styles.css` imported once at the root, and
+   every hardcoded inline style removed. Interactive/animated blocks (hero
+   terminal, `gate run` walkthrough, playground) are reduced-motion-gated — each
+   checks `prefers-reduced-motion` and renders its finished state when motion is
+   reduced.
    - **Targets:** `apps/web/app/layout.tsx`, `apps/web/app/page.tsx`,
      `apps/web/app/sections/*.tsx`, `apps/web/package.json`,
-     `apps/web/test/landing.test.ts`
+     `apps/web/test/landing.test.ts`, `apps/web/test/reduced-motion.test.ts`
 4. **FR-4**: Landing copy is written from the approved sources only — the three
    problem data points, the core rule pull-quote, the seven-phase cut, the five
    mechanisms, the refusal moment, the proof with its limits, the positioning
@@ -208,6 +237,17 @@ so that the principle is observable, not just asserted.
    were rebuilt rather than copied, which kit facts were rejected as fabricated,
    and how to add a section without inventing a claim.
    - **Targets:** `apps/web/README.md`
+11. **FR-11**: CLI-surface fidelity. Every command, config snippet and terminal
+   line on the landing page reflects the **shipped** CLI, verified against the
+   built binary's own help/output — not the `design_handoff_landing/` prototype's
+   simplified surface. Specifically: no `gate.toml`, no `gate ledger`, no
+   four-command reduction; the command reference and CI-integration blocks list
+   real commands; the playground (FR-3) is re-grounded on the real input (an
+   example PRD's gate manifest driving a real `gate run` shape), or degrades to
+   the static `gate run` walkthrough if no honest interactive surface maps
+   cleanly. A test asserts the page contains no `gate.toml`/`gate ledger` token
+   and that every `gate <verb>` shown is a real command.
+   - **Targets:** `apps/web/app/sections/*.tsx`, `apps/web/test/cli-surface.test.ts`
 
 ---
 
@@ -221,8 +261,10 @@ so that the principle is observable, not just asserted.
   not published yet.
 - Docs *content* rewrites. Only presentation and the MDX component map change;
   the `.mdx` prose is untouched (`cli.mdx` is claimed by other PRDs).
-- The animated `templates/cli-demo/` motion study — exploration only; the
-  canonical CLI surface is static.
+- Gratuitous motion. Animation is scoped to the hero terminal, the `gate run`
+  walkthrough and the interactive playground — all reduced-motion-gated; no
+  decorative or looping animation elsewhere. Evidence strings stay real and
+  selectable; motion never fabricates terminal output.
 - Any analytics, A/B test, cookie banner, newsletter capture, or third-party
   embed.
 
@@ -260,6 +302,12 @@ so that the principle is observable, not just asserted.
   icon pack" rule governs *our* components — which use the `Icon` set — not
   Fumadocs' internals, which already depend on `lucide-react`. Do not attempt to
   strip it.
+- **Playground re-grounded on the real surface.** The handoff's live `gate.toml`
+  parser is kept as an interactive, reduced-motion-gated element, but must operate
+  on the tool's actual input — an example PRD's gate manifest driving a real
+  `gate run` shape — not an invented `gate.toml`. If no honest interactive surface
+  maps cleanly, the playground degrades to the static `gate run` walkthrough
+  rather than shipping a fabricated config. See FR-11.
 - **One card builder, no parity problem.** PRD-010 FR-11 puts the card and
   status-line string builders in `@provegate/design/cli`. Both the CLI (PRD-011)
   and the web `HandoffCard` (this PRD's FR-2) call that one implementation, so the
@@ -309,8 +357,13 @@ so that the principle is observable, not just asserted.
 
 ## 10. References
 
-- `docs/design/design_handoff_provegate/design-system/ui_kits/landing/` — landing
-  IA and section order
+- `docs/design/design_handoff_landing/` — **authoritative** landing spec
+  (2026-07-23): final composition (`landing-app.jsx`, 23 sections), copy,
+  interactions, reduced-motion behavior, and current component APIs
+  (`ds-overrides.jsx` doubles as the API spec). Supersedes the `ui_kits/landing/`
+  recreation below
+- `docs/design/design_handoff_provegate/design-system/ui_kits/landing/` — earlier
+  landing IA and section order (superseded by `design_handoff_landing/`)
 - `docs/design/design_handoff_provegate/design-system/ui_kits/docs/` — docs
   surface recreation
 - `docs/design/design_handoff_provegate/design-system/ui_kits/brand/` — OG card,
@@ -355,7 +408,8 @@ Run from repo root after `pnpm build`.
 | ----- | --------------------------------------------------------------------- | ------ | -------------------------------------------- |
 | FR-1  | `pnpm --filter @provegate/design build`                               | design | react entry builds, props exported           |
 | FR-2  | `pnpm --filter @provegate/design test test/react-card.test.ts`        | design | web card textContent equals shared builder    |
-| FR-3  | `pnpm --filter web test test/landing.test.ts`                          | web    | eleven sections present, proof adjacent limits |
+| FR-3  | `pnpm --filter web test test/landing.test.ts`                          | web    | all 23 sections present, proof adjacent limits |
+| FR-3  | `pnpm --filter web test test/reduced-motion.test.ts`                   | web    | animated blocks render finished state under reduced motion |
 | FR-4  | `pnpm --filter web test test/content-web.test.ts`                     | web    | copy discipline, wordmark casing             |
 | FR-5  | `pnpm --filter docs build`                                            | docs   | themed docs build clean                      |
 | FR-6  | `grep -Eq "slice\(0," apps/docs/app/og/docs/\[...slug\]/route.tsx`     | docs   | OG slug bounded before render                 |
@@ -363,6 +417,7 @@ Run from repo root after `pnpm build`.
 | FR-8  | `pnpm --filter web test test/contrast.test.ts`                        | web    | AA over token pairs; no color-only status    |
 | FR-9  | `pnpm --filter web test test/content-web.test.ts`                     | web    | banned vocabulary + fabricated-metric scan   |
 | FR-10 | `grep -c "token map" apps/web/README.md`                              | web    | adoption documented                          |
+| FR-11 | `pnpm --filter web test test/cli-surface.test.ts`                     | web    | no gate.toml / gate ledger; only real commands shown |
 
 Cross-cutting (all green before Code Complete):
 
@@ -394,6 +449,10 @@ Operator-owned (human/real-browser verification, recorded as `operator` rows —
   reference kits; app components are rebuilt against the `.d.ts.txt` contracts.
 - DO NOT copy the kits' placeholder facts: `v1.4.0`, `v1.2.0`, weekly downloads,
   a `gate | pass` shield, or any badge without a real source behind it.
+- DO NOT show `gate.toml`, a `gate ledger` command, or a four-command CLI on the
+  page — they are the prototype's simplification, not the shipped surface. Show
+  the real commands and the real PRD-file + `_state/prds.json` flow, or drop the
+  block. Verify against the built binary, not the handoff.
 - DO NOT add a speedup percentage, a defect-reduction claim, `PROVEN`,
   `VIOLATED`, an invented testimonial, a logo row, or a star count.
 - DO NOT add analytics, a tag manager, a beacon, a cookie banner, a font CDN, a
@@ -404,8 +463,10 @@ Operator-owned (human/real-browser verification, recorded as `operator` rows —
   anything but real failure. No green buttons, no decorative accents.
 - DO NOT fork a Fumadocs layout component to theme it; bind variables instead.
 - DO NOT strip `lucide-react` from `apps/docs` — Fumadocs' internals need it.
-- DO NOT animate terminal output, add a typewriter effect, or embed a recorded
-  session; the canonical CLI surface is static, selectable text.
+- DO NOT embed a recorded session or let motion invent terminal output. The hero
+  typing, `gate run` walkthrough and playground are permitted but MUST be
+  reduced-motion-gated (finished state under `prefers-reduced-motion: reduce`) and
+  MUST render only real, selectable CLI strings.
 - DO NOT edit `apps/docs/content/**` — other PRDs own those files.
 - DO NOT touch `packages/provegate/**` or the token layer PRD-010 owns.
 - DO NOT introduce `any`; use `unknown` + narrowing.
@@ -417,3 +478,4 @@ Operator-owned (human/real-browser verification, recorded as `operator` rows —
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
 | 2026-07-23 | owner  | Initial draft |
+| 2026-07-24 | owner  | Reconcile with the 2026-07-23 landing handoff (`design_handoff_landing/`): scope 11 → 23 sections; reverse the static-only rule to reduced-motion-gated motion + interactive playground; add FR-11 (shipped CLI surface on the page — no `gate.toml`, no `gate ledger`); re-ground the playground on the real surface; add authoritative reference. Readiness + tasks must be re-run (scope and policy changed). |

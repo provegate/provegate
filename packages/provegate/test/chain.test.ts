@@ -150,6 +150,26 @@ describe('runChain', () => {
     expect(outcome.stopped?.phase).toBe('6 Final Auditing');
   });
 
+  it('fires the onResult reporter per gate, in order, matching the results (FR-3)', () => {
+    const root = tempRoot();
+    const reported: [string, string, boolean][] = [];
+    const outcome = runChain({
+      config: cfg,
+      root,
+      id: 'PRD-002',
+      chain: chainFor(root, PRD_WITH_11),
+      fromPhase: null,
+      onResult: (phase, label, ok) => reported.push([phase, label, ok]),
+    });
+    // One report per result row, same order, same pass/fail — the CLI renders a
+    // live status line from each (core stays silent).
+    expect(reported.map(([p, l]) => `${p}: ${l}`)).toEqual(outcome.results.map((r) => r[0]));
+    expect(reported.map(([, , ok]) => ok)).toEqual(
+      outcome.results.map((r) => r[1] === 'passed'),
+    );
+    expect(reported.some(([, , ok]) => ok)).toBe(true);
+  });
+
   it('stops with "PRD gap" when §11 has no runnable rows', () => {
     const root = tempRoot();
     const outcome = runChain({
