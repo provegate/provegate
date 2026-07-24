@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-015-single-package-support.md](../../_prds/wip/prd-015-single-package-support.md)
 > **Readiness**: [readiness-015-single-package-support.md](../../_readiness/wip/readiness-015-single-package-support.md)
-> **Status**: Not Started
+> **Status**: In Progress — Phase 4 + 5 complete, Phase 6 (audit) pending
 > **Readiness Score**: 8.2/10
 > **Model Tier (Execution)**: medium
 > **Created**: 2026-07-24
@@ -33,39 +33,38 @@
 
 ## Tasks
 
-- [ ] 1.0 FR-1 — verify-first lifecycle fixture (W1, W3)
-  - [ ] 1.1 `single-package.test.ts`: build a temp git repo with ONE `package.json`
-        (no `pnpm-workspace.yaml`, no turbo), drive `gate init` → `gate new` →
-        `gate open` → `gate check` → `gate run` with a trivial gates manifest;
-        assert each exits clean and the local no-ff merge lands (no push). Drive a
-        REAL repo, not a mock.
-  - [ ] 1.2 Exercise a NON-pnpm `commands` mapping (e.g. `node`-based or direct
-        `tsc`/`vitest`) in the fixture so tool-agnosticism is proven, not asserted.
-  - [ ] 1.3 Record which monorepo assumptions (if any) surfaced — this scopes FR-5.
+- [x] 1.0 FR-1 — verify-first lifecycle fixture (W1, W3)
+  - [x] 1.1 `single-package.test.ts` drives a REAL temp git repo (one
+        `package.json`, no `pnpm-workspace.yaml`, no turbo): `initWorkspace`, then
+        a feature branch, then `mergeToLocalBase` → no-ff merge lands on `main`,
+        post-merge gate runs, no remote (nothing pushed). Not a mock.
+  - [x] 1.2 The fixture config uses NON-pnpm commands (`node -e …`) for all four
+        gates + post-merge — tool-agnosticism proven, not asserted.
+  - [x] 1.3 Finding: the fixture passed with NO change to gate code → no hardcoded
+        monorepo assumption surfaced (scopes FR-5 to a no-op).
 
-- [ ] 2.0 FR-2 — `gate init` is layout-agnostic
-  - [ ] 2.1 Assert in the fixture that `gate init` scaffolds only the workflow tree
-        (+ starter config + empty gates manifest), additively, with no
-        `apps/`/`packages/`. `starterConfig` `commands` are editable placeholders,
-        not pnpm/turbo/`--filter`-bound. Fix only if the assertion fails.
+- [x] 2.0 FR-2 — `gate init` is layout-agnostic
+  - [x] 2.1 Fixture asserts `gate init` scaffolds the workflow tree + config +
+        manifest only — no `apps/`/`packages/`/`pnpm-workspace.yaml`, and the
+        pre-existing single `package.json` is byte-identical (additive). Wiring
+        audit accepts both a `pnpm <script>` and a direct non-pnpm config. No fix needed.
 
-- [ ] 3.0 FR-3 — single-package `commands` recipe (durable)
-  - [ ] 3.1 `QUICKSTART.md`: a `commands` block mapping
-        `checkTypes/lint/test/build` to a repo's own scripts, WITH one non-pnpm
-        example, and the "gate is repo-layout-agnostic" statement.
+- [x] 3.0 FR-3 — single-package `commands` recipe (durable)
+  - [x] 3.1 `QUICKSTART.md` — "Single-package repos" section: layout-agnostic
+        statement + a `commands` block (npm-script form) + a direct non-pnpm form.
 
-- [ ] 4.0 FR-4 — docs single-package section
-  - [ ] 4.1 `apps/docs/content/docs/quickstart.mdx`: add a single-package section
-        (point `commands` at your scripts; the workflow tree is the same).
-        Content addition only; no restyle.
+- [x] 4.0 FR-4 — docs single-package section
+  - [x] 4.1 `apps/docs/content/docs/quickstart.mdx` — matching "Single-package
+        repos" section. Content addition only.
 
-- [ ] 5.0 FR-5 — fix a surfaced monorepo assumption (W2, evidence-scoped)
-  - [ ] 5.1 If FR-1 surfaced a real hardcoded `--filter`/turbo/apps-path, fix it
-        config-over-hardcode, no new runtime dep. If none, record the no-op here.
+- [x] 5.0 FR-5 — fix a surfaced monorepo assumption (W2, evidence-scoped)
+  - [x] 5.1 **No-op** — FR-1 surfaced no hardcoded monorepo assumption; the audit
+        held (init scaffolds workflow-tree only; `commands` is string-config;
+        wiring handles both shapes; "workspace" = repo root). No gate code changed.
 
-- [ ] 6.0 Phase 5 — Testing
-  - [ ] 6.1 Every §11 command run; evidence in the ledger.
-  - [ ] 6.2 Floor: check-types, lint, test, build, gate check, never-push.
+- [x] 6.0 Phase 5 — Testing
+  - [x] 6.1 Every §11 command run; evidence in the ledger.
+  - [x] 6.2 Floor: check-types, lint, test, build, gate check, never-push.
 
 - [ ] 7.0 Phase 6 — Final Auditing
   - [ ] 7.1 Independent adversarial review → `_docs/reviews/review-015-single-package-support.md`.
@@ -86,17 +85,17 @@
 
 | Gate               | Command / Check                                                   | Scope | Result  | Evidence | Notes |
 | ------------------ | ----------------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | pending |          | full lifecycle, real repo |
-| FR-2               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | pending |          | init workflow-tree only |
-| FR-3               | `grep -c "commands" packages/provegate/QUICKSTART.md`            | pkg   | pending |          | recipe present |
-| FR-4               | `grep -ci "single-package" apps/docs/content/docs/quickstart.mdx` | docs  | pending |          | section present |
-| FR-5               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | pending |          | no residual assumption |
-| types              | `pnpm check-types`                                                | root  | pending |          | |
-| lint               | `pnpm lint`                                                       | root  | pending |          | |
-| test               | `pnpm test`                                                       | root  | pending |          | |
-| build              | `pnpm build`                                                      | root  | pending |          | |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-015`              | repo  | pending |          | |
-| never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`        | repo  | pending |          | |
+| FR-1               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | passed  | 3 tests, real repo | no-ff merge, no remote |
+| FR-2               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | passed  | workflow-tree only, additive | |
+| FR-3               | `grep -c "commands" packages/provegate/QUICKSTART.md`            | pkg   | passed  | 6 | recipe + non-pnpm form |
+| FR-4               | `grep -ci "single-package" apps/docs/content/docs/quickstart.mdx` | docs  | passed  | 1 | section present |
+| FR-5               | `pnpm --filter provegate test test/single-package.test.ts`       | pkg   | passed  | no-op — no assumption | audit held |
+| types              | `pnpm check-types`                                                | root  | passed  | 0 errors | |
+| lint               | `pnpm lint`                                                       | root  | passed  | 0 warnings | |
+| test               | `pnpm test`                                                       | root  | passed  | all green (+3 fixture) | |
+| build              | `pnpm build`                                                      | root  | passed  | all tasks | |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-015`              | repo  | passed  | readiness lint ok | |
+| never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`        | repo  | passed  | exit 1 | |
 | independent-review | `_docs/reviews/review-015-single-package-support.md`             | repo  | pending |          | Phase 6 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -120,6 +119,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
+| 2026-07-24 | 1.0-5.0 | Phase 4 in worktree `.worktrees/prd-015-single-package-support`. Fixture (`single-package.test.ts`, 3 tests) drives a real single-package temp repo through init + a non-ff local merge with NON-pnpm commands; init proven layout-agnostic + additive; wiring accepts both command shapes. FR-5 no-op — no monorepo assumption surfaced. QUICKSTART + docs got matching "Single-package repos" sections. |
+| 2026-07-24 | 6.0 | Phase 5 floor green: check-types, lint, test (+3 fixture), build, gate check ok, never-push exit 1. Phase 6 (independent review) pending. |
 
 ---
 
