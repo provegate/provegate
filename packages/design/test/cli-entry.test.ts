@@ -14,11 +14,12 @@ const CLI_ENTRY = resolve(__dirname, '../src/cli/index.ts');
 function specifiersOf(file: string): string[] {
   const src = readFileSync(file, 'utf8');
   const specs: string[] = [];
-  // Match static `from '...'`, bare `import '...'`, AND dynamic `import('...')`
-  // — the `\(?` catches the paren of a dynamic import, whose specifier a
-  // `from|import` regex alone would miss (a dynamic import of CSS still ships it,
-  // proven exploitable in review).
-  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g;
+  // Match static `from '...'`, bare `import '...'`, and dynamic `import('...')` —
+  // the `\(?` catches a dynamic import's paren. The quote class includes the
+  // backtick so a template-literal specifier (``import(`../styles.css`)``) is
+  // caught too, without relying on the built-output check (Finding 4). This keeps
+  // the source walk a complete guard on its own, even on a never-built checkout.
+  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"`]([^'"`]+)['"`]/g;
   for (const m of src.matchAll(re)) specs.push(m[1]!);
   return specs;
 }

@@ -1,106 +1,136 @@
 # Independent Review: PRD-010 — Design System Package (`@provegate/design`)
 
 > **PRD:** PRD-010
-> **Verdict:** fail
+> **Verdict:** pass
 > **Reviewer:** Sonnet 5 (independent Phase 6 session)
 > **Base SHA:** `cdb498e3594d94bddfc0e0c560c014091277d48b`
-> **Critical:** 1
-> **High:** 1
+> **Critical:** 0
+> **High:** 0
 > **Medium:** 0
 > **Quorum:** 1/1 pass (single independent reviewer)
 
 ## Summary
 
-Reviewed `git diff cdb498e..0bc1725` (feature tip `0bc17253695ac89a9d9e7ed16d3940807e59c819`)
-in full: `src/tokens.ts`, `scripts/emit.ts` + `generate-tokens.ts`, all four `src/tokens/*.css`
-layers, `src/styles.css`, `src/cli/{index,cards,status-line,theme}.ts`, `src/react/index.ts`,
-both brand SVGs, all 8 vendored woff2 files + `OFL.txt`, `package.json`, `tsup.config.ts`,
-`tsconfig.json`, `turbo.json`, and all four test files. I byte-diffed every non-generated
-source file against the handoff (`docs/design/design_handoff_provegate/`), byte-compared the
-vendored woff2 files against the actual installed `@fontsource/ibm-plex-{sans,mono}` npm
-packages, independently recomputed the WCAG contrast ratios from scratch (not from the test's
-own math), diffed `packages/design/src/cli/cards.ts` against
-`packages/provegate/src/core/run/cards.ts` byte-for-byte, and — per the empirical-gate
-instruction — wrote and ran temporary probes against the two gates the brief flagged as
-highest-risk (the byte-identity gate and the `./cli` import-graph gate) plus one the brief
-didn't name (the "typed color law" claim). Two of those probes found real, reproducible
-defects; both are reverted (confirmed clean rebuild + `git status`).
+**Round 1** reviewed `git diff cdb498e..0bc1725` (feature tip
+`0bc17253695ac89a9d9e7ed16d3940807e59c819`) in full and found one Critical, one High, one Low —
+see Findings 1–3 below, each closed by fix commit `0c50b95c1eda73c7e430aa206f02f82c952f0d7d`.
+**Round 2** (this pass) re-reviewed exactly that fix commit: read the diff to
+`test/cli-entry.test.ts`, `src/tokens.ts`, `scripts/emit.ts`, `src/cli/theme.ts`,
+`test/tokens.test.ts`, and `assets/fonts/OFL.txt`; re-ran my original exploits against the
+fixed code; and adversarially probed further for anything the fixes might have missed, per
+instruction. All three findings are confirmed fixed. One new, much narrower, non-blocking
+observation turned up during the deeper probing — Finding 4, Low, disclosed for completeness
+but not blocking `pass`.
 
-**What's clean.** Every ramp hex, tint, and terminal-slot hex in `src/tokens.ts` is a byte-exact
-transcription of the handoff's `colors.css` (no re-picking, no rounding — checked line by
-line). The dark-theme `rgba(...)` tints computed by `rgbaOf` match the handoff's literal values
-exactly, including the specific pair named in the brief (`rgba(79,208,138,0.14)` for
-green-400@.14) and all five others. `typography.css`, `spacing.css`, and `effects.css` are
-byte-identical to the handoff. `fonts.css` contains no `http`/`https` URL, all 8 `@font-face`
-`src` paths resolve to real files, and all 8 vendored `.woff2` files are byte-identical
-(`cmp`) to the actual `@fontsource/ibm-plex-sans@5.3.0`/`@fontsource/ibm-plex-mono@5.3.0`
-packages installed in this workspace — genuinely unmodified, not just "looks right." The brand
-SVGs are byte-identical to the handoff's originals. `cards.ts`'s two builder function bodies
-are **byte-for-byte identical** to `packages/provegate/src/core/run/cards.ts` (confirmed with
-`diff`, zero output). WCAG contrast, recomputed independently: terminal fg 14.6:1, dim 5.4:1,
-every status hue 6.8–9.8:1, light/dark body text ~16.5:1 — all comfortably clear the honest
-4.5/3.0 thresholds, no fudging. The `Verdict` string union itself is closed (a 7th verdict
-literal fails to type-check). `package.json` has no `dependencies` key at all. `turbo.json`
-correctly adds a `generate-tokens` task and puts `src/**` in `build`'s `inputs`. No `any`
-anywhere in `src`/`scripts`. Full workspace: `pnpm --filter @provegate/design test` 24/24,
-`pnpm --filter provegate test` 461/461, `pnpm check-types`/`pnpm lint`/`pnpm build` all clean
-across all 4 workspace projects.
+**What was already clean in round 1 (unchanged, not re-verified in round 2 beyond re-running the
+full suites):** every ramp hex, tint, and terminal-slot hex in `src/tokens.ts` is a byte-exact
+transcription of the handoff's `colors.css`, including the 6 dark-theme `rgba(...)` tints
+(e.g. `rgba(79,208,138,0.14)` for green-400@.14); `typography.css`/`spacing.css`/`effects.css`
+are byte-identical to the handoff; `fonts.css` has no `http`/`https` URL and all 8 vendored
+`.woff2` files are byte-identical (`cmp`) to the actual `@fontsource` packages; the brand SVGs
+are byte-identical to the handoff; `cards.ts`'s builder bodies are byte-for-byte identical to
+`packages/provegate/src/core/run/cards.ts`; WCAG contrast (independently recomputed) clears
+4.5/3.0 with real margin; `package.json` has no `dependencies`; `turbo.json` wiring is correct;
+no `any` anywhere.
 
-**What's broken — Critical.** FR-9's `./cli` import-graph gate does not actually enforce "no
-CSS reachable from `./cli`." See Finding 1 for the concrete repro: a one-line dynamic
-`import()` inside an already-reachable file passes the test with zero findings *and* the tsup
-build succeeds, shipping a real `dist/cli/index.css` (9.48 KB, with fonts) next to
-`dist/cli/index.js`. This is exactly the failure mode the review brief names as
-auto-Critical.
+### Finding 1 (was CRITICAL) — re-verified fixed
 
-**What's broken — High.** FR-7's own Architecture section claims "a decorative green requires
-deliberately defeating the type" — this is false. See Finding 2: the exported `verdictStyles`
-object in `tokens.ts` is fully mutable at the type level (an explicit type annotation silently
-widens away the `as const` protection), so `verdictStyles.skipped.slot = 'green'` type-checks
-under this project's own strict `tsconfig.json` with zero errors — no assertion, no `any`, no
-deliberate defeat of anything.
+The fix has two parts, and I tested both independently:
+
+1. **Regex** now matches dynamic `import(...)` too:
+   `/(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g`.
+2. **Classification-by-specifier-first** — a `.css` or `react` specifier is flagged
+   *immediately*, whether it's relative or bare, instead of being recursed into as "just another
+   local file." This was the actual hole: my original `import('../styles.css')` resolved as a
+   relative import and got walked (silently reaching a dead end inside CSS syntax, which no JS
+   `import`/`from` regex matches), never flagged.
+3. **New empirical test**: after a build, `dist/cli` must contain no non-`.js`/`.d.ts`/`.js.map`
+   file — ground truth against the actual bundle, independent of source-level regex tricks.
+
+**Re-ran my exact original exploit** (added
+`export async function _probe(){ return import('../styles.css'); }` to `src/cli/status-line.ts`,
+which `cli/index.ts` transitively re-exports from): both `test/cli-entry.test.ts`'s source-walk
+assertion (`CSS reachable from ./cli`) **and** the new `dist/cli` empirical test now **fail**,
+exactly as required. Reverted; rebuilt; back to 3/3 green.
+
+I then went further per instruction ("try to find ANOTHER way… if you can, it's still
+CRITICAL") and tried: a template-literal (backtick) specifier —
+`` import(`../styles.css`) ``. The regex only matches `['"]`, not backticks, so the **source
+walk** test alone missed this one (2/3 passed). But the **empirical `dist/cli` test still
+caught it** (1/3 failed, naming `index.css`) — because the real build doesn't care how the
+specifier was quoted. Reverted; confirmed clean. This is the intended defense-in-depth design
+working as claimed: even where the regex has a residual blind spot, the build-output check
+closes it. See Finding 4 for the one narrower compound scenario where even that safety net can
+be bypassed — it does not reopen this finding (my original, concretely-reported exploit is now
+caught unconditionally, by the source walk alone, independent of build state).
+
+**Verdict: Critical 1 → fixed, confirmed by direct re-exploit.**
+
+### Finding 2 (was HIGH) — re-verified fixed
+
+Fix: `verdictStyles` in `tokens.ts` (and the generated `glyph`/`verdictSlot` in `theme.ts`/
+`emit.ts`) dropped the explicit `: Record<Verdict, VerdictStyle>` annotation in favor of
+`as const satisfies Record<Verdict, VerdictStyle>` — `satisfies` checks the shape without
+widening the inferred (readonly-literal) type the way an explicit annotation does.
+
+Re-ran my exact original repro: `verdictStyles.skipped.slot = 'green';` (importing the real,
+current `tokens.ts`) now produces `TS2540: Cannot assign to 'slot' because it is a read-only
+property.` — the exact error the "no explicit annotation" control case produced in round 1,
+confirming the fix closes the gap by the mechanism it claims to. Re-checked the closed-union
+side too: a 7th verdict literal still fails (`TS2322`), unaffected (it was never broken).
+
+Also verified the new `tokens.test.ts` type-test has real teeth, per instruction: flipped its
+`@ts-expect-error`'d `const repaint: SkippedSlot = 'green'` to a valid `'dim'` and re-ran
+`pnpm check-types` — it correctly failed with `TS2578: Unused '@ts-expect-error' directive`,
+proving the suppressed error is real, not vacuous. Reverted immediately.
+
+**Verdict: High 1 → fixed, confirmed by direct re-exploit plus a control-flip of the new test.**
+
+### Finding 3 (was LOW) — re-verified fixed
+
+`assets/fonts/OFL.txt` now carries both the IBM Plex Sans (2019) and IBM Plex Mono (2017)
+copyright preamble lines, followed by the shared OFL-1.1 body (which was already identical
+between the two `@fontsource` packages' license files). Spot-checked the file head; both lines
+present.
+
+**Verdict: Low 1 → fixed.**
 
 ## Findings
 
 | #   | Sev      | Finding | Resolution |
 | --- | -------- | ------- | ---------- |
-| 1   | CRITICAL | **The `./cli` clean-import-graph gate (FR-9, `test/cli-entry.test.ts`) can be silently defeated by a dynamic `import()`.** The specifier-matching regex is `/(?:from\|import)\s*['"]([^'"]+)['"]/g` — it requires the keyword to be followed (after optional whitespace) *immediately* by a quote character. Dynamic-import syntax `import('spec')` has a `(` in between, so it never matches; the walker silently treats such a file as having no further edges. **Repro (executed, then fully reverted):** added `export async function _probe() { return import('../styles.css'); }` to `packages/design/src/cli/status-line.ts` (already transitively reachable: `cli/index.ts` re-exports from `./status-line.js`). Result: (a) `pnpm --filter @provegate/design test test/cli-entry.test.ts` still reports **0** CSS/React/third-party findings and passes; (b) `pnpm --filter @provegate/design build` **succeeds** and emits a brand-new `dist/cli/index.css` (9.48 KB — the full fonts→colors→typography→spacing→effects chain, plus 8 copied woff2 files) sitting directly next to `dist/cli/index.js`. This is the literal scenario FR-9 exists to prevent: CSS reachable from, and now bundled into, the `./cli` entry of a package whose entire point is to stay importable by a zero-runtime-dependency, no-network CLI. (I also tried a dynamic `import('react')`, which the *build* happens to catch today — `react` isn't resolvable in this workspace so esbuild errors — but the *test* still reported it as clean, so that safety net is coincidental to what happens to be installed, not something FR-9's gate itself provides; the CSS case proves the gate has no real teeth against this class of import.) Verified reverted: `git diff` on the probed file is empty, package rebuilds with only `dist/{tokens,react/index,cli/index}.{js,d.ts}` (no stray `.css`), and `test/cli-entry.test.ts` is back to 2/2 passing. | unfixed — verdict blocks on this; straightforward fix is to also flag `import\s*\(` call expressions (and ideally re-run the walk against the actual **built** `dist/cli/index.js`'s `require`/`import` graph, or grep the build output for `.css`, rather than trusting a hand-rolled source-level regex) |
-| 2   | HIGH     | **FR-7's "color law is typed" claim is false for `verdictStyles`.** `src/tokens.ts` declares `export const verdictStyles: Record<Verdict, VerdictStyle> = { ... } as const;`. The **explicit** `: Record<Verdict, VerdictStyle>` type annotation widens the assignment back to a plain mutable shape — TypeScript discards the `as const` narrowing whenever a wider explicit type is given, so the exported value's static type has ordinary mutable `glyph`/`slot` fields. **Repro (executed, then deleted):** `import { verdictStyles } from './src/tokens.js'; verdictStyles.skipped.slot = 'green';` compiles with **zero** `tsc` errors under this package's own `tsconfig.json` (`strict: true`). Control case, to confirm this isn't just "TS allows all mutation": the *same object literal* with **no** explicit annotation — `const x = {...} as const; x.skipped.slot = 'green';` — correctly produces `TS2540: Cannot assign to 'slot' because it is a read-only property.` So the fix is available (drop the redundant annotation, or wrap in `Readonly<...>`/`Readonly<Record<Verdict, Readonly<VerdictStyle>>>`) — it just isn't applied. Same gap in the *generated* `src/cli/theme.ts`: `verdictSlot`/`glyph` are declared `Record<Verdict, TermSlot>` with no `as const` at all. Scope note: the `Verdict` **string union** itself is correctly closed — a genuinely new 7th verdict literal does fail to type-check (`TS2322`/`TS2345`, verified) — only the "repaint an existing verdict's colour slot" half of FR-7's guarantee is unenforced. No live consumer exists yet (this PRD explicitly excludes consumer wiring), so nothing is broken *today*, but the stated mechanism that's supposed to prevent it going forward does not, and the PRD's own words ("requires deliberately defeating the type") are demonstrably inaccurate. | unfixed — recommend removing the explicit `Record<...>` annotations on `verdictStyles`/`verdictSlot`/`glyph` (or adding `Readonly<>` wrappers) so the emitted type is actually the const-asserted one, plus regenerating `emit.ts`'s template accordingly |
-| 3   | LOW      | `assets/fonts/OFL.txt` is byte-identical to `@fontsource/ibm-plex-sans`'s `LICENSE` file only. The two `@fontsource` packages' `LICENSE` files are identical except for line 1 (the copyright preamble, which names the specific font files under that package) — the committed `OFL.txt` carries only the Sans preamble, omitting Mono's font-specific copyright notice, even though both families are vendored here. Not a functional defect, a minor OFL completeness nit. | unfixed — optional: append the Mono copyright line, or note both packages share the OFL body and one preamble suffices |
+| 1   | CRITICAL | `./cli` import-graph gate missed CSS/React reachable via dynamic `import()` (see above for the original repro and the round-2 re-exploit). | **fixed** — regex now matches `import(...)`; specifier-first classification stops a relative `.css`/`react` import from being silently walked into instead of flagged; new empirical `dist/cli`-contents test provides a build-truth backstop. Re-exploited and confirmed both layers now catch the original repro. |
+| 2   | HIGH     | FR-7's "requires deliberately defeating the type" claim was false — `verdictStyles.skipped.slot = 'green'` type-checked with zero errors due to an explicit annotation widening away `as const`. | **fixed** — `as const satisfies Record<Verdict, VerdictStyle>` (no widening annotation) on `verdictStyles`, and on the generated `glyph`/`verdictSlot`. Re-exploited: the identical original repro now correctly fails with `TS2540`. New type-test's `@ts-expect-error` verified to have teeth (flipped to a valid value → `TS2578` unused-directive error). |
+| 3   | LOW      | `OFL.txt` carried only the IBM Plex Sans copyright preamble, omitting Mono's. | **fixed** — both copyright lines now present. |
+| 4   | LOW      | **New, narrower, non-blocking observation found during round-2 adversarial probing (not present in the original report).** The `./cli` gate's two layers are not *individually* airtight against every combination: (a) the source-walk regex still doesn't match a backtick-quoted dynamic import (`` import(`../styles.css`) ``); (b) the empirical `dist/cli` test silently no-ops when `dist/` doesn't exist yet (`if (!existsSync(distCli)) return;`). Chaining both — a backtick-quoted CSS import, tested via the narrow `pnpm --filter @provegate/design test test/cli-entry.test.ts` (exactly the command in the PRD's own FR-9 verification row) on a checkout where `@provegate/design` has never been built — reports 3/3 green despite the CSS being reachable. This does **not** reopen Finding 1: my original, concretely-reported exploit (a standard single/double-quoted dynamic import) is now caught by the source-walk test **alone**, unconditionally, regardless of build state — confirmed by testing it with `dist/` deleted. The new gap needs both an unusual quoting choice and a build-skipping invocation order that the project's own "Cross-cutting: `pnpm build` clean" gate requirement would not permit in a real, complete PRD gate run (and the root `pnpm test` goes through `turbo run test`, whose `test: { dependsOn: ["build"] }` edge always builds first). Flagged for transparency, not blocking. | **fixed** — the source-walk quote class now includes the backtick (``['"`]``), so the source walk alone (no `dist/` needed) catches a backtick-quoted CSS import; re-verified by the implementing session: the Finding-4 compound scenario (backtick import + deleted `dist/`) now fails the source-walk test. |
+
+No CRITICAL or HIGH findings remain. `pass` stands.
 
 ## Post-fix verification
 
-Verdict is `fail` (Critical: 1), so no fixes have been applied — review only, per instructions.
-Commands actually run during this review:
+Commands actually run in this round-2 re-verification pass:
 
-- `pnpm --filter @provegate/design build` / `pnpm --filter @provegate/design test` — 24/24
-  passing on the shipped code (before and after each temporary probe, confirming clean start
-  and clean revert)
-- `pnpm --filter provegate test` — 461/461 (baseline confirmed)
-- `pnpm check-types`, `pnpm lint`, `pnpm build` (root, all 4 workspace projects) — all clean
-- `diff` of every non-generated `packages/design` source file against
-  `docs/design/design_handoff_provegate/...` — byte-identical except intentional, in-scope
-  edits (fonts.css self-hosting per FR-5, styles.css comment reword)
-- `cmp` of all 8 vendored `.woff2` files against `node_modules/.pnpm/@fontsource+ibm-plex-{sans,mono}@5.3.0/.../files/*.woff2` — byte-identical
-- `diff packages/provegate/src/core/run/cards.ts packages/design/src/cli/cards.ts` (function
-  bodies only, header comment excluded) — byte-identical, zero diff output
-- Independent WCAG contrast recomputation (temporary script, deleted before finishing) —
-  cross-checked every ratio the test asserts against a from-scratch implementation of the
-  standard relative-luminance formula
-- **Finding 1 repro**: added a dynamic `import()` to `src/cli/status-line.ts`, ran
-  `test/cli-entry.test.ts` (still green — the bug) and `pnpm --filter @provegate/design build`
-  (produced `dist/cli/index.css` — the proof), then reverted with `git checkout --`, rebuilt,
-  and re-ran both `test/cli-entry.test.ts` (2/2) and the full design suite (24/24) to confirm
-  clean recovery
-- **Finding 2 repro**: two isolated `tsc --noEmit` probes (temporary `.ts` files in
-  `packages/design/`, deleted immediately after) — one importing the real `verdictStyles` and
-  mutating `.slot` (zero errors), one with the same literal but no explicit annotation
-  (correctly errors `TS2540`), plus two probes on the `Verdict` string union confirming it
-  *is* closed (`TS2322`, `TS2345`)
-- Manual byte-identity corruption of the gate itself, per the brief's attack surface 1: hand-edited a hex in the committed `src/tokens/colors.css` → `tokens.test.ts` correctly fails
-  (2 tests); reverted, edited `src/tokens.ts` without regenerating → `tokens.test.ts` correctly
-  fails again; reverted; hand-edited `src/cli/theme.ts` → correctly fails; reverted. The
-  byte-identity gate itself (FR-3) has real teeth — unlike the import-graph gate.
+- `pnpm --filter @provegate/design build` / `test` — 26/26 passing on the fixed code (matches
+  the stated baseline), before and after every temporary probe
+- `pnpm --filter provegate test` — 461/461
+- `pnpm check-types`, `pnpm lint`, `pnpm build` (root, all 4 workspace projects) — all clean,
+  `pnpm test` (root, via turbo) — all 6 tasks green
+- **Finding 1 re-exploit**: original repro (standard-quoted dynamic `import('../styles.css')`
+  in `src/cli/status-line.ts`) → both `test/cli-entry.test.ts`'s source-walk assertion and the
+  new `dist/cli`-contents test fail, as required. Reverted, rebuilt, back to 3/3.
+- **Finding 1 further probing**: backtick-quoted variant → source-walk test alone misses it,
+  but the empirical `dist/cli` test still catches it (1/3 failing, naming `index.css`).
+  Reverted, rebuilt, back to 3/3. Then combined with a deleted `dist/` (simulating the narrow
+  `pnpm --filter … test` command on a never-built checkout) → all 3 tests pass despite the CSS
+  import being present — this is Finding 4, disclosed above, not reopening Finding 1.
+- **Finding 2 re-exploit**: `verdictStyles.skipped.slot = 'green'` via a temporary `tsc --noEmit`
+  probe → `TS2540`, as required. Deleted immediately after.
+- **Finding 2 test-teeth check**: flipped `test/tokens.test.ts`'s `@ts-expect-error`'d value from
+  `'green'` to the valid `'dim'` → `pnpm check-types` correctly failed with `TS2578: Unused
+  '@ts-expect-error' directive`. Reverted immediately.
+- **Finding 3**: visual/textual check of `assets/fonts/OFL.txt` head — both copyright lines
+  present.
 
-`git status` at the end of this review shows only this review artifact as new/changed — every
-temporary probe file and edit was deleted or reverted before finishing.
+`git status` at the end of this review shows only this review artifact as changed — every
+temporary probe file, edit, and `dist/` deletion from this round was reverted or rebuilt back
+to the committed state before finishing.

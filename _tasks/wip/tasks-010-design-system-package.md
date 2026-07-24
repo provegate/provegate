@@ -158,12 +158,15 @@
         `pnpm test`, `pnpm build`, `gate check PRD-010`, the never-push invariant,
         the hygiene grep.
 
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review (different model family) of the diff;
-        save the verdict artifact from `templates/review-template.md` to
-        `_docs/reviews/review-010-design-system-package.md`. `Verdict: pass`
-        requires `Critical: 0`. Reviewer attacks: generator determinism, the
-        import-graph test's honesty, font provenance.
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review (Sonnet 5, cross-model, fresh context)
+        → `_docs/reviews/review-010-design-system-package.md`. Round 1: **FAIL**
+        (Critical 1, High 1, Low 1) — the reviewer defeated the ./cli import-graph
+        gate with a dynamic `import()` and proved a build emitting `dist/cli/index.css`,
+        and showed `verdictStyles`'s annotation widened away `as const`. Both fixed
+        + a Low (OFL). Round 2 re-verify: **PASS** (0/0/0), fixes confirmed by
+        re-exploit. A round-2 Finding 4 (Low, backtick dynamic import + no-dist
+        compound) fixed too (backtick added to the source-walk quote class).
 
 - [ ] 10.0 Phase 7 — Learning
   - [ ] 10.1 Confirm the declared Durable Artifact (`packages/design/README.md`)
@@ -194,7 +197,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-010`           | repo   | passed | exit 0 | PRD passes its own gate      |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`     | repo   | passed | exit 1 | refusal exit 1               |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz packages/design/src && exit 1 \|\| true` | design | passed | clean | no personal names |
-| independent-review | `_docs/reviews/review-010-design-system-package.md`           | repo   | pending |          | verdict pass, critical = 0   |
+| independent-review | `_docs/reviews/review-010-design-system-package.md`           | repo   | passed  | Sonnet 5: FAIL→PASS after fixes, 0/0/0 | 2 rounds; import-graph + type fixes |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -221,6 +224,15 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - FR-8 scope: `turbo.json` gained a `generate-tokens` task; nothing consumes
   `@provegate/design` yet (PRD-011/012 do), so "builds before dependents" is
   latent — verified the package builds under the workspace `pnpm build`.
+- 9.1 — Phase-6 caught two real defects (round 1 FAIL): the ./cli import-graph
+  gate was defeatable by a dynamic `import()` (regex missed `import(` AND a
+  relative `.css` was recursed-into, not flagged) — the build actually emitted
+  `dist/cli/index.css`; and `verdictStyles`'s explicit `: Record<…>` annotation
+  widened away `as const`, so a verdict could be repainted. Fixes: classify the
+  specifier before relative/external + catch dynamic (and backtick) imports + an
+  empirical `dist/cli` no-.css check; `as const satisfies` + a `@ts-expect-error`
+  type test. Round-2 re-verify PASS; round-2 Finding 4 (backtick + no-dist
+  compound) also closed by the backtick quote-class fix.
 
 ---
 
