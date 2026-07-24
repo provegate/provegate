@@ -35,4 +35,5 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-24 — practices handoff wave 2 imported (verify:* library, known-red ledger, CI hygiene job)
 - 2026-07-24 — practices handoff wave 1 imported (`_brain`, governance + coordination practices)
