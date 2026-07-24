@@ -82,6 +82,16 @@ describe('the built ./cli output carries no web asset (empirical, defeat-proof)'
     const stray = readdirSync(distCli).filter((f) => !/\.(js|d\.ts|js\.map)$/.test(f));
     expect(stray, `unexpected assets in dist/cli: ${stray.join(', ')}`).toEqual([]);
   });
+
+  it('dist/cli/index.js does not import React (PRD-012 W2)', () => {
+    const distCli = resolve(__dirname, '../dist/cli/index.js');
+    if (!existsSync(distCli)) return;
+    const js = readFileSync(distCli, 'utf8');
+    // Adding React to ./react must never pull it into the CLI bundle.
+    expect(js).not.toMatch(/from\s*['"]react(-dom)?['"]/);
+    expect(js).not.toMatch(/require\(\s*['"]react(-dom)?['"]/);
+    expect(js).not.toContain('react/jsx-runtime');
+  });
 });
 
 describe('the package declares zero runtime dependencies', () => {

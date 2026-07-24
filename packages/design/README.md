@@ -73,6 +73,30 @@ fully-specified theme derived from the same tokens. Web consumers set
 `<html data-theme="dark">`; a small inline script can mirror
 `prefers-color-scheme` onto that attribute.
 
+## The React layer (`./react`)
+
+`@provegate/design/react` ships the nine shared components the web apps render —
+`Icon`, `Button`, `VerdictBadge`, `Admonition`, `CodeBlock`, `GateLine`,
+`HandoffCard`, `EvidenceTable`, `PhasePipeline` — one implementation both the
+landing and the docs consume. Every component styles through `--pg-*` tokens: no
+component authors a raw hex or a font stack (a test enforces it).
+
+- **Colour law holds in React too.** `Button` has no green variant (primary is
+  neutral `--pg-text`); a `VerdictBadge`/`GateLine`/`EvidenceTable` cell is green
+  only for `passed`; `skipped` is muted. The verdict vocabulary is the closed
+  lowercase six, each with its fixed glyph (`✓ ✗ ⚠ = → !`) matching the terminal.
+- **`HandoffCard` takes structured `lines`, not the CLI builder.** Its API is
+  `{ variant, title, width, lines[] }` where a line is
+  `string | {blank} | {gate,text} | {arrow,text}`. This lets a page compose
+  arbitrary card content; parity with the terminal is at the grammar level (same
+  glyphs, box chars, verdict colours) — not textContent equality. It does NOT
+  call `@provegate/design/cli`'s string builder.
+- **React is a PEER dependency.** Consumers (the apps) bring React;
+  `@provegate/design` does not bundle it. The `./cli` and `./tokens` entries
+  import no React, so the zero-dependency provegate CLI can still bundle `./cli` —
+  the import-graph test plus a built-output check (`dist/cli` has no React)
+  enforce it.
+
 ## Generated files — do not edit
 
 `src/tokens/colors.css` and `src/cli/theme.ts` carry a generated-file banner and
