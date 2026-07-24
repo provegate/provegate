@@ -186,17 +186,16 @@ so that gate runs my checks without assuming pnpm or turbo.
 
 ## 9. Open Questions
 
-> Owner decisions (roadmap §4). Each has a proposal; resolve or explicitly defer
-> before Phase 2 PASS.
+- (none) — the three owner decisions were resolved 2026-07-24 (roadmap §4);
+  recorded here and reflected in §4/§7:
 
-- [ ] **Q1 (roadmap §4.4):** Confirm v1 officially supports single-package repos.
-      *Proposal: yes — this PRD delivers it additively.*
-- [ ] **Q2:** Should `gate init` auto-detect monorepo vs single-package and tailor
-      the starter `commands`? *Proposal: no auto-detect in v1 — ship one
-      documented recipe; keep `starterConfig` commands as editable defaults.*
-- [ ] **Q3 (relates to §4.3):** Show npm/yarn/bun examples in the recipe, or pnpm
-      + "swap for your tool"? *Proposal: show the tool-agnostic `commands` block
-      with one non-pnpm example; defer the full Bun/Deno matrix to PRD-017.*
+1. **Q1 (roadmap §4.4):** v1 officially supports single-package repos — delivered
+   additively; monorepo support untouched.
+2. **Q2:** no auto-detect in v1 — `gate init` ships one documented recipe and
+   keeps `starterConfig` commands as editable defaults; repo shape is
+   config-explicit, never branched-on.
+3. **Q3 (relates to §4.3):** the recipe shows the tool-agnostic `commands` block
+   with one non-pnpm example; the full Bun/Deno matrix is deferred to PRD-017.
 
 ---
 
