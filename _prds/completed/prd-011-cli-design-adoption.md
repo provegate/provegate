@@ -1,6 +1,6 @@
 # PRD-011: CLI Design Adoption — Output as a Designed Surface
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-23
 > **Updated**: 2026-07-23

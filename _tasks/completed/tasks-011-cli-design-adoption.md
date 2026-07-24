@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-011-cli-design-adoption.md](../../_prds/wip/prd-011-cli-design-adoption.md)
 > **Readiness**: [readiness-011-cli-design-adoption.md](../../_readiness/wip/readiness-011-cli-design-adoption.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.3/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-23
