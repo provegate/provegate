@@ -20,6 +20,7 @@ _state/prd-metrics.jsonl
 *.log
 .DS_Store
 
-# env
+# env — all real env files; examples stay committed
 .env
-.env.local
+.env.*
+!.env.example
