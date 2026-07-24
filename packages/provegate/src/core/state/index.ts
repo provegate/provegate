@@ -41,6 +41,7 @@ export {
   formatCompactRecord,
   readyOverlaps,
   buildQueue,
+  formatLeaseRemaining,
   type CompactRecord,
   type Queue,
   type QueueLockInfo,

@@ -15,6 +15,7 @@ import {
   buildQueue,
   buildState,
   formatId,
+  formatLeaseRemaining,
   statusPanelMetrics,
   writeState,
   type StateRecord,
@@ -45,6 +46,7 @@ import {
   claimMutexPath,
   parseFromPhase,
   planChain,
+  releaseLease,
   removeWorktree,
   runChain,
   stopCard,
@@ -64,7 +66,9 @@ function usage(): string {
     'Commands:',
     '  init     scaffold the workflow tree + starter configs (--dry-run)',
     '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
-    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal] [--worktree])',
+    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal] [--worktree] [--hours=N])',
+    '  renew    extend your lease (idempotent refresh) (gate renew PRD-XXX [--hours=N])',
+    '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
@@ -152,18 +156,27 @@ function runNew(args: string[]): number {
   }
 }
 
+/** `--hours=N` → a number for `leaseHours`; undefined when the flag is absent.
+ * Non-numeric or non-positive values become NaN/≤0 and are rejected downstream
+ * by `claimPrd`'s positive-finite guard (mapped to exit 1 by the caller). */
+function parseHoursOpt(args: string[]): number | undefined {
+  const raw = args.find((a) => a.startsWith('--hours='))?.slice('--hours='.length);
+  return raw === undefined ? undefined : Number(raw);
+}
+
 function runOpen(args: string[]): number {
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
-    console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--agent=identity]');
+    console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--hours=N] [--agent=identity]');
     return 1;
   }
   const steal = args.includes('--steal');
   const worktree = args.includes('--worktree');
   const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
+  const leaseHours = parseHoursOpt(args);
   const { root, config } = loadConfig();
   try {
-    const result = claimPrd(config, root, id, { steal, agent, worktree });
+    const result = claimPrd(config, root, id, { steal, agent, worktree, leaseHours });
     if (!result.ok) {
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
       for (const issue of result.issues) console.error(`  ✗ ${issue}`);
@@ -187,6 +200,70 @@ function runOpen(args: string[]): number {
     return 0;
   } catch (error) {
     console.error(`[open] ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+function runRenew(args: string[]): number {
+  const id = args.find((a) => !a.startsWith('--'));
+  if (!id) {
+    console.error('usage: gate renew <PRD-XXX> [--hours=N] [--agent=identity]');
+    return 1;
+  }
+  const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
+  const leaseHours = parseHoursOpt(args);
+  const { root, config } = loadConfig();
+  try {
+    // Renew IS claimPrd's idempotent refresh path — the surface is re-parsed and
+    // re-checked against active leases, so a surface edited since the claim is
+    // re-validated, not grandfathered. No new engine code.
+    const result = claimPrd(config, root, id, { agent, leaseHours });
+    if (!result.ok) {
+      console.error(`[renew] REFUSED — ${result.id} not renewed:`);
+      for (const issue of result.issues) console.error(`  ✗ ${issue}`);
+      return 1;
+    }
+    console.log(
+      `[renew] ${result.refreshed ? 'renewed' : 'claimed (no prior lease)'} ${result.id} — ${result.globs.length} surface glob(s)`,
+    );
+    console.log(`[renew] lease: ${result.leasePath}`);
+    for (const warning of result.issues) console.error(`[renew] WARNING: ${warning}`);
+    return 0;
+  } catch (error) {
+    console.error(`[renew] ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+function runRelease(args: string[]): number {
+  const id = args.find((a) => !a.startsWith('--'));
+  if (!id) {
+    console.error('usage: gate release <PRD-XXX> [--force] [--agent=identity]');
+    return 1;
+  }
+  const force = args.includes('--force');
+  const agent = args.find((a) => a.startsWith('--agent='))?.slice('--agent='.length);
+  const { root, config } = loadConfig();
+  try {
+    const result = releaseLease(config, root, id, { force, agent });
+    if (!result.ok) {
+      console.error(`[release] REFUSED — ${result.id} not released:`);
+      for (const issue of result.issues) console.error(`  ✗ ${issue}`);
+      return 1;
+    }
+    if (result.released.length === 0) {
+      // Idempotent: nothing to release is success (exit 0).
+      for (const note of result.issues) console.log(`[release] ${note}`);
+      return 0;
+    }
+    for (const lease of result.released) {
+      const who = lease.foreign ? ` (FORCED — agent ${lease.agent}, expired ${lease.expiresAt})` : '';
+      console.log(`[release] released ${lease.prd}${who}`);
+    }
+    for (const note of result.issues) console.error(`[release] ${note}`);
+    return 0;
+  } catch (error) {
+    console.error(`[release] ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 }
@@ -246,7 +323,7 @@ function runQueue(json: boolean): number {
     'IN-FLIGHT',
     queue.inFlight,
     (r) =>
-      `${r.prd}  agent=${r.agent} ${r.phase}${r.stale ? ' [STALE]' : ''}${r.worktree ? ` ${r.worktree}` : ''}`,
+      `${r.prd}  agent=${r.agent} ${r.phase}  ${formatLeaseRemaining(r.expiresInSeconds, r.stale)}${r.worktree ? ` ${r.worktree}` : ''}`,
   );
   push(
     'BLOCKED',
@@ -729,6 +806,8 @@ export function main(argv: string[]): number {
     if (command === 'init') return runInit(rest);
     if (command === 'new') return runNew(rest);
     if (command === 'open') return runOpen(rest);
+    if (command === 'renew') return runRenew(rest);
+    if (command === 'release') return runRelease(rest);
     if (command === 'status') return runStatus();
     if (command === 'queue') return runQueue(rest.includes('--json'));
     if (command === 'check') return runCheck(rest);

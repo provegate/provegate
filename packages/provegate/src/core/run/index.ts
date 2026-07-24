@@ -53,6 +53,12 @@ export {
 } from './open.js';
 export { withWorkspaceMutex } from './mutex.js';
 export {
+  releaseLease,
+  type ReleaseOptions,
+  type ReleaseResult,
+  type ReleasedLease,
+} from './release.js';
+export {
   createWorktree,
   normalizedWorktreeDir,
   blobShaOfBuffer,
