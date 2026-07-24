@@ -67,6 +67,19 @@
       "reason": "authorized the review loop and instructed continue through every round; reviewed the r31 confirmation and the review artifact, then instructed close",
       "date": "2026-07-23",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-013",
+      "owner": "owner",
+      "items": [
+        "3.1 focus rings verified on nav/hero/footer interactive elements (Claude-in-Chrome tab-through)",
+        "3.1 prefers-reduced-motion verified via live CSSOM (reduce branch renders finished state; OS-toggle visual deferred)",
+        "3.1 no horizontal scroll at 375px — evidence-table clip found and fixed (overflow-x:auto), re-verified in-box scroll",
+        "2.2 visual parity both themes accepted (desktop light+dark, 375px mobile)"
+      ],
+      "reason": "ran operator browser QA via Claude-in-Chrome; all four handoff rows pass, one 375px evidence-table clip fixed and re-verified; accepting autonomous close via gate land",
+      "date": "2026-07-24",
+      "method": "interactive"
     }
   ]
 }

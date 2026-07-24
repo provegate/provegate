@@ -52,7 +52,10 @@ export function EvidenceTable({
       style={{
         border: '1px solid var(--pg-border)',
         borderRadius: 'var(--pg-radius-md)',
-        overflow: 'hidden',
+        // Clip rounded corners, but let a wide table scroll in-box on narrow
+        // viewports instead of clipping the trailing column (375px mobile).
+        overflowX: 'auto',
+        overflowY: 'hidden',
         background: 'var(--pg-surface)',
         ...style,
       }}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T11:59:15.062Z",
+  "generatedAt": "2026-07-24T13:31:24.239Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -457,13 +457,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-013-landing-page.md",
         "readiness": "_readiness/wip/readiness-013-landing-page.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-013-landing-page.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -473,10 +473,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
-        "checkedCount": 0,
+        "status": "Code Complete",
+        "checkedCount": 25,
         "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "operatorHandoffCount": 4
       },
       "summary": {
         "shipReadiness": "Unknown"

@@ -1,0 +1,63 @@
+/* apps/web page-local styles — tokens come from @provegate/design; nothing here
+   hardcodes a colour, font, or third-party URL. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--pg-bg);
+  color: var(--pg-text);
+  font-family: var(--pg-font-sans);
+  line-height: var(--pg-leading-normal);
+  -webkit-font-smoothing: antialiased;
+  /* wide terminal blocks scroll in their own container; the body never does */
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--pg-link);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--pg-link-hover);
+}
+
+/* Focus is a visible human-authority ring (a11y). */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--pg-ring);
+  border-radius: var(--pg-radius-sm);
+}
+
+/* Reveal-on-scroll: opacity + a small lift, motion-gated. Under reduced motion
+   (or before hydration adds .pg-reveal), content is fully visible. */
+.pg-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.pg-reveal.pg-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pg-reveal {
+    transition:
+      opacity 0.5s var(--pg-ease),
+      transform 0.5s var(--pg-ease);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-reveal,
+  .pg-reveal.pg-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
