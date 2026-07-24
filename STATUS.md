@@ -11,8 +11,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent | Work item | Phase | Started |
 |-------|-----------|-------|---------|
-
-<!-- row shape: | claude-code | PRD-016 | 4 | 2026-07-24 | -->
+| claude-code | PRD-016 | 7 (awaiting operator acceptance) | 2026-07-24 |
 
 ## Current state
 
@@ -32,6 +31,8 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Topic | Item | Owner | Due (YYYY-MM-DD) | Renewals | Note |
 |-------|------|-------|------------------|----------|------|
+| wire wave-2 verify scripts into `gate check --wiring` surfaces | repo tooling | owner | 2026-08-07 | 0 | five verify:* scripts run only via the bundle; the CLI audit doesn't count it — wire in CI/manifest or add justified wiringExceptions |
+| upstream pack security fixes into this repo's own guard/scanner copies | repo tooling | owner | 2026-08-07 | 0 | scripts/secret-scan.mjs + base-branch-guard.mjs carry the pre-R1 bugs (execSync filename, no D-filter, `:path` stage collision); pack copies fixed in PRD-016 |
 
 ## Recent activity
 
