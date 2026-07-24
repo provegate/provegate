@@ -2,6 +2,53 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+/* ProveGate docs theme — a TOKEN MAP, not a fork.
+   FR-1 finding: @fumadocs/base-ui 16.x defines --color-fd-* in
+   css/lib/default-colors.css as runtime CSS custom properties (light in a
+   Tailwind-v4 `@theme {}`, dark in a plain `.dark {}` selector). They are
+   ordinary custom properties, so redefining them AFTER the Fumadocs imports
+   wins the cascade — no `@theme` block of ours and no forked layout component.
+   Every Fumadocs component is used as-is; it just reads these overridden vars.
+
+   The --pg-* tokens (PRD-010) carry their own light/dark values via
+   [data-theme], which next-themes sets alongside Fumadocs' `.dark` class (see
+   app/layout.tsx), so a single binding block themes both modes.
+
+   Colour law: green is earned (passed work only). Fumadocs `--color-fd-primary`
+   is the interactive/link colour and `--color-fd-accent` is a hover surface —
+   neither is the brand's green accent, so they bind to the neutral link/surface
+   tokens, keeping green out of the chrome. Semantic callout colours
+   (success/error/…) are left at Fumadocs' defaults. */
+:root {
+  --color-fd-background: var(--pg-bg);
+  --color-fd-foreground: var(--pg-text);
+  --color-fd-muted: var(--pg-bg-subtle);
+  --color-fd-muted-foreground: var(--pg-text-subtle);
+  --color-fd-popover: var(--pg-surface-raised);
+  --color-fd-popover-foreground: var(--pg-text);
+  --color-fd-card: var(--pg-surface);
+  --color-fd-card-foreground: var(--pg-text);
+  --color-fd-border: var(--pg-border);
+  --color-fd-primary: var(--pg-link);
+  --color-fd-primary-foreground: var(--pg-text-inverted);
+  --color-fd-secondary: var(--pg-surface);
+  --color-fd-secondary-foreground: var(--pg-text);
+  --color-fd-accent: var(--pg-bg-subtle);
+  --color-fd-accent-foreground: var(--pg-text);
+  --color-fd-ring: var(--pg-focus-ring);
+}
+
+/* Shared superfamily: prose in IBM Plex Sans, code in IBM Plex Mono. */
+body {
+  font-family: var(--pg-font-sans);
+}
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--pg-font-mono);
+}
+
 html {
   scrollbar-gutter: stable;
 }

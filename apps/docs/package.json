@@ -13,6 +13,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@provegate/design": "workspace:*",
     "cnfast": "^0.0.8",
     "fumadocs-core": "16.11.5",
     "fumadocs-mdx": "15.2.0",

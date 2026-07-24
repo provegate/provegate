@@ -1,43 +1,64 @@
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+# ProveGate docs (`apps/docs`)
 
-Run development server:
+The documentation site — Next.js + [Fumadocs](https://fumadocs.dev) (`@fumadocs/base-ui`),
+themed to ProveGate on the shared design system (`@provegate/design`, PRD-010/012).
 
 ```bash
-npm run dev
-# or
-pnpm dev
-# or
-yarn dev
+pnpm --filter docs dev   # http://localhost:3001
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+## Theming is a token map, not a fork
 
-## Explore
+The ProveGate look comes from **binding** Fumadocs' own CSS variables onto the
+`--pg-*` tokens — never from forking a Fumadocs layout component. Forking a
+layout to restyle it turns every Fumadocs upgrade into a merge conflict; binding
+variables keeps upgrades clean. Every Fumadocs component is used as-is and simply
+reads the overridden variables.
 
-In the project, you can see:
+- `app/global.css` — after the Fumadocs imports, `:root` rebinds
+  `--color-fd-*` → `--pg-*`. The `--pg-*` tokens carry their own light/dark
+  values via `[data-theme]`, so one block themes both modes.
+- `app/layout.tsx` — imports `@provegate/design/styles.css` (self-hosted IBM
+  Plex + tokens) and sets `RootProvider` dark-canonical. `next-themes` is
+  configured to write the theme to **both** Fumadocs' `.dark` class and our
+  `[data-theme]` attribute, which is what lets the single binding block work.
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+### Colour law in the chrome
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+Green is earned (passed work only). Fumadocs' `--color-fd-primary` is the
+interactive/link colour and `--color-fd-accent` is a hover surface — neither is
+the brand's green accent — so they bind to the neutral link/surface tokens,
+keeping green out of the navigation and links. Semantic callout colours are left
+at Fumadocs' defaults.
 
-### Fumadocs MDX
+### FR-1 binding finding (verify-first)
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+`@fumadocs/base-ui` 16.x defines `--color-fd-*` in `css/lib/default-colors.css`:
+light values in a Tailwind-v4 `@theme {}` block, dark values in a plain `.dark {}`
+selector (a class toggle), and semantics in `@theme static`. These are ordinary
+runtime CSS custom properties, so **a later `:root` override wins the cascade** —
+no `@theme` block of our own is required, and no layout component is forked.
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+## MDX component map
 
-## Learn More
+`components/mdx.tsx` registers the shared design components so docs authors can
+use them directly in MDX: `CodeBlock`, `GateLine`, `HandoffCard`,
+`EvidenceTable`, `PhasePipeline`, `VerdictBadge`, `Admonition`. All are
+presentational (no client hooks), so they render in Fumadocs' server MDX
+pipeline as-is.
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
+## OG card
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+`app/og/docs/[...slug]/route.tsx` renders the brand card (wordmark + page
+title). The `[...slug]` input is **bounded** (length cap + charset) with a
+site-title fallback, so arbitrary/oversized text never reaches the rendered
+image. The card inlines literal brand colours because satori (next/og) cannot
+read CSS custom properties.
+
+## No third-party requests
+
+Self-hosted fonts, no CDN, no analytics. `scripts/check-static-egress.mjs`
+scans `apps/docs/.next` for any external origin.
+
+`lucide-react` **stays**: the "no third-party icon pack" rule governs *our* `Icon`
+component, not Fumadocs' internals, which depend on it.
