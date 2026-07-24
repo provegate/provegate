@@ -159,14 +159,20 @@ describe('single-package support (PRD-015)', () => {
       fromPhase: null,
     });
 
-    // Phase 4 ran the configured non-pnpm floor and each passed — the commands
-    // are load-bearing, not decorative. (The chain later stops at the review
-    // gate, which is expected: no review artifact in this fixture.)
-    const passedPhase4 = outcome.results.filter(
-      ([label, res]) => label.startsWith('4 Implementation:') && res === 'passed',
-    );
-    expect(passedPhase4.length).toBeGreaterThan(0);
-    expect(outcome.results).toContainEqual(['4 Implementation: node -e "process.exit(0)"', 'passed']);
+    // ALL FOUR configured non-pnpm floor commands ran and passed — each is
+    // load-bearing, not decorative. Asserting every one (not just the first)
+    // means flipping ANY of them to a failure breaks this test.
+    for (const cmd of [
+      'node -e "process.exit(0)"', // checkTypes
+      'node --eval "process.exit(0)"', // lint
+      'node -e "0"', // build
+      'node -e "void 0"', // test
+    ]) {
+      expect(outcome.results).toContainEqual([`4 Implementation: ${cmd}`, 'passed']);
+    }
+    // Phase 4 did NOT stop — a later floor failure would halt here (the chain
+    // then stops at the review gate, which is expected: no review artifact).
+    expect(outcome.stopped?.phase).not.toBe('4 Implementation');
   });
 
   it('FR-1/W3 (negative): a FAILING non-pnpm floor command stops the run at phase 4', () => {

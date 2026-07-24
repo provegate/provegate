@@ -118,11 +118,10 @@ means your git repo root, and `gate init` scaffolds only the workflow tree
 and nothing in it assumes pnpm or turbo.
 
 `gate init` writes an **empty** `gates.manifest.json` (it starts honest — no gates
-until you wire your own). Add your commands there: `phases."4"` is the floor the
-gated run executes, `postMerge` runs after the local merge.
+until you wire your own). Add your commands to that file: `phases."4"` is the floor
+the gated run executes, `postMerge` runs after the local merge.
 
 ```json
-// gates.manifest.json
 {
   "phases": {
     "4": ["npm run check-types", "npm run lint", "npm run test", "npm run build"]
