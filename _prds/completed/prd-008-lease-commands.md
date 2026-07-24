@@ -1,8 +1,8 @@
 # PRD-008: Lease Commands — `gate release` + `gate renew` + Queue Countdown
 
-> **Status**: Draft
+> **Status**: Ship Verified
 > **Created**: 2026-07-23
-> **Updated**: 2026-07-23
+> **Updated**: 2026-07-24
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `lease-commands`

@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-008-lease-commands.md](../../_prds/wip/prd-008-lease-commands.md)
 > **Readiness**: [readiness-008-lease-commands.md](../../_readiness/wip/readiness-008-lease-commands.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.7/10
 > **Model Tier (Execution)**: medium
 > **Created**: 2026-07-24
