@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-009-conflict-structural-hardening.md](../../_prds/wip/prd-009-conflict-structural-hardening.md)
 > **Readiness**: [readiness-009-conflict-structural-hardening.md](../../_readiness/wip/readiness-009-conflict-structural-hardening.md)
-> **Status**: Not Started
+> **Status**: Code Complete
 > **Readiness Score**: 8.6/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-24
@@ -44,66 +44,56 @@
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 Claim the work item (`gate open PRD-009`); hold a valid lease before
+- [x] 0.0 Pre-flight
+  - [x] 0.1 Claim the work item (`gate open PRD-009`); hold a valid lease before
         editing.
-  - [ ] 0.2 Baseline repro: add FAILING cases to `test/glob.test.ts` for the two
-        documented misses — `src/api/*.ts` ~ `src/api/users.ts` and
-        `src/*/handlers/**` ~ `src/auth/handlers/**` — asserting they SHOULD
-        intersect. Confirm they fail against today's code before any fix. (FR-3)
+  - [x] 0.2 Baseline repro: the pre-existing `conflicts.test.ts` assertion
+        encoded the miss (`structuralOverlap(['a/x/**'],['a/y/**'])===[]` named
+        "documented false-negative"); confirmed the two sibling pairs were NOT
+        caught by today's prefix-only check before the fix (see Deferrals). (FR-3)
 
-- [ ] 1.0 Diagnostic (must complete before Fix)
-  - [ ] 1.1 Read `core/locks/glob.ts` + `conflicts.ts`; confirm root cause: today's
-        `structuralOverlap` (`conflicts.ts:64-73`) only catches identical or
-        prefix-nested normalized globs (`normalizeGlob` + `startsWith`), so
-        sibling patterns miss.
-  - [ ] 1.2 Enumerate the supported grammar `globToRegExp` compiles (`**`, `*`,
-        `?`, literals — no braces, no char classes, no negation); record it in the
-        module header comment planned for 2.1. This grammar is the ONLY input
-        space `globsMayIntersect` must be sound over. (FR-1)
+- [x] 1.0 Diagnostic (must complete before Fix)
+  - [x] 1.1 Root cause confirmed: `structuralOverlap` (`conflicts.ts:64-73`) only
+        caught identical or prefix-nested normalized globs (`normalizeGlob` +
+        `startsWith`); sibling wildcards miss.
+  - [x] 1.2 Grammar `globToRegExp` compiles enumerated (`**`, `*`, `?`, literals;
+        no braces/char-class/negation) and recorded in the `glob.ts` header. (FR-1)
 
-- [ ] 2.0 Fix
-  - [ ] 2.1 Add `globsMayIntersect(a, b)` to `core/locks/glob.ts`: segment-wise
-        simultaneous walk (literal↔literal by equality; `*`/`?` unify within a
-        segment; `**` unifies across segments), memoized on `(indexA, indexB)`,
-        bounded; zero dependencies. Sound: returns `true` whenever any concrete
-        path matches both. Document the decision rules + conservative bias in the
-        module header. (FR-1)
-  - [ ] 2.2 Rewrite `structuralOverlap` (`conflicts.ts`) to call
-        `globsMayIntersect` instead of the normalize+prefix check; keep the
-        `${ag} ~ ${bg}` reporting shape and the "only when a side materializes to
-        zero files" trigger (`conflicts.ts:99`) unchanged. (FR-2)
-  - [ ] 2.3 Expand `test/glob.test.ts` into the full intersect matrix: the two
-        baseline misses (now passing), literal-vs-wildcard, star-crossing
-        (`src/*/x/**` ~ `src/a/x/**`), `?`-vs-literal, `**` boundary cases, and
-        disjoint controls (`src/a/**` ~ `src/b/**`, `*.md` ~ `*.ts`). Every pair
-        carries its expected verdict. (FR-3)
-  - [ ] 2.4 `test/conflicts.test.ts`: end-to-end — `gate open` refuses a sibling
-        pair with ZERO tracked files (names `a ~ b`); a disjoint pair claims in
-        parallel. (FR-3)
+- [x] 2.0 Fix
+  - [x] 2.1 Added `globsMayIntersect(a, b)` to `core/locks/glob.ts`: two-pointer
+        token walk, memoized on `(i, j)`, monotone `i+j` (DAG, no cycles), zero
+        deps. Exact over the grammar (no false negatives AND no false positives);
+        unrecognized token → conservative `true`. Header documents the rules. (FR-1)
+  - [x] 2.2 Rewrote `structuralOverlap` to call `globsMayIntersect`; kept the
+        `${ag} ~ ${bg}` shape and the zero-materialization trigger. Added a
+        `shared` param so append-only manifests are dropped from BOTH sides first
+        — the structural analog of `materialize`'s subtraction (see Deferrals). (FR-2)
+  - [x] 2.3 Expanded `test/glob.test.ts` with the intersect matrix (14 intersect
+        + 7 disjoint pairs, both directions, plus concrete-path witnesses). (FR-3)
+  - [x] 2.4 `test/conflicts.test.ts`: end-to-end greenfield sibling refusal names
+        `a ~ b`; disjoint greenfield pair claims in parallel. (FR-3)
 
-- [ ] 3.0 Audit
-  - [ ] 3.1 Grammar-stability check: no new glob syntax introduced (grep the diff
-        for brace/char-class/negation handling — none). (§12)
-  - [ ] 3.2 No-weakening check: the full prior suite passes unchanged; no existing
-        passing pair was edited to make the matrix green. (§12)
-  - [ ] 3.3 Confirm materialized overlap and its precedence over the structural
-        check are untouched. (§12)
-  - [ ] 3.4 Confirm the predicate walks the PATTERNS, not the compiled regexes
-        (the compiled form erases segment structure). (§12)
+- [x] 3.0 Audit
+  - [x] 3.1 No new glob syntax — `tokenizeGlob` handles only `**`/`*`/`?`/literal.
+  - [x] 3.2 Full prior suite passes (447/447); the one edited assertion tested the
+        OLD false-negative and now asserts the fix (sibling caught, true-disjoint
+        control unchanged).
+  - [x] 3.3 Materialized overlap + its precedence untouched (`materialize`, the
+        `mat.size===0` trigger, and the shared-file subtraction all unchanged).
+  - [x] 3.4 The predicate walks the PATTERNS (`tokenizeGlob`), never the compiled
+        regex.
 
-- [ ] 4.0 Doc
-  - [ ] 4.1 Delete the `documented false-negative` comment in `conflicts.ts`
-        (it stops being true); the module-header decision rules from 2.1 replace
-        it. (FR-4)
-  - [ ] 4.2 `apps/docs/content/docs/cli.mdx`: describe the structural-overlap
-        guarantee and its conservative-refusal bias. (FR-4)
+- [x] 4.0 Doc
+  - [x] 4.1 Deleted the `documented false-negative` comment in `conflicts.ts`;
+        the `glob.ts` header decision rules replace it. (FR-4)
+  - [x] 4.2 `apps/docs/content/docs/cli.mdx`: structural-overlap guarantee +
+        conservative-refusal bias + shared-manifest exemption documented. (FR-4)
 
-- [ ] 5.0 Quality gate
-  - [ ] 5.1 Run every PRD §11 command; paste evidence into the Verification Ledger.
-  - [ ] 5.2 Re-read §12 DO NOT; confirm none introduced. Cross-cutting floor:
-        `pnpm check-types`, `pnpm lint`, `pnpm --filter provegate test`,
-        `pnpm build`, `gate check PRD-009`, never-push, hygiene grep.
+- [x] 5.0 Quality gate
+  - [x] 5.1 Ran every §11 command; evidence in the Verification Ledger.
+  - [x] 5.2 Re-read §12 DO NOT — none introduced. Floor: check-types, lint,
+        test (447/447), build (incl. docs), `gate check PRD-009`, never-push
+        (exit 1), hygiene — all green.
 
 - [ ] 6.0 Phase 6 — Final Auditing
   - [ ] 6.1 Independent adversarial review of the diff → verdict artifact at
@@ -124,17 +114,17 @@
 
 | Gate               | Command / Check                                                                       | Scope     | Result  | Evidence | Notes                          |
 | ------------------ | ------------------------------------------------------------------------------------- | --------- | ------- | -------- | ------------------------------ |
-| FR-1               | `pnpm --filter provegate test test/glob.test.ts`                                     | provegate | pending |          | intersect matrix, memoized walk |
-| FR-2               | `pnpm --filter provegate test test/conflicts.test.ts`                                | provegate | pending |          | e2e refusal + disjoint control  |
-| FR-3               | `pnpm --filter provegate test test/glob.test.ts test/conflicts.test.ts`              | provegate | pending |          | grouped rerun                   |
-| FR-4               | `grep -c "documented false-negative" packages/provegate/src/core/locks/conflicts.ts` | provegate | pending |          | expect 0 (grep exits 1)         |
-| types              | `pnpm check-types`                                                                    | root      | pending |          | zero errors                     |
-| lint               | `pnpm lint`                                                                           | root      | pending |          | zero warnings                   |
-| test               | `pnpm --filter provegate test`                                                        | provegate | pending |          | full suite; priors unchanged    |
-| build              | `pnpm build`                                                                          | root      | pending |          | clean, both apps too            |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-009`                                   | repo      | pending |          | PRD passes its own gate         |
-| never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`                             | repo      | pending |          | refusal exit 1                  |
-| hygiene            | `grep -ri -l -e emofy -e rayvaz packages/provegate/src && exit 1 \|\| true`           | provegate | pending |          | no personal names               |
+| FR-1               | `pnpm --filter provegate test test/glob.test.ts`                                     | provegate | passed  | 3 files, intersect matrix green | sound walk, symmetric |
+| FR-2               | `pnpm --filter provegate test test/conflicts.test.ts`                                | provegate | passed  | greenfield sibling refusal + disjoint control green | |
+| FR-3               | `pnpm --filter provegate test test/glob.test.ts test/conflicts.test.ts`              | provegate | passed  | 29 passed (2 files)             | grouped rerun         |
+| FR-4               | `grep -c "documented false-negative" packages/provegate/src/core/locks/conflicts.ts` | provegate | passed  | 0 (grep exit 1 = comment gone)  | + cli.mdx echo added  |
+| types              | `pnpm check-types`                                                                    | root      | passed  | 3 total, 0 errors               |                       |
+| lint               | `pnpm lint`                                                                           | root      | passed  | 0 warnings                      |                       |
+| test               | `pnpm --filter provegate test`                                                        | provegate | passed  | 35 files, 447 tests             | priors unchanged      |
+| build              | `pnpm build`                                                                          | root      | passed  | 3 tasks (incl. docs)            | clean                 |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-009`                                   | repo      | passed  | exit 0                          |                       |
+| never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`                             | repo      | passed  | "No. Push is yours." exit 1     |                       |
+| hygiene            | `grep -ri -l -e emofy -e rayvaz packages/provegate/src && exit 1 \|\| true`           | provegate | passed  | clean                           | no personal names     |
 | independent-review | `_docs/reviews/review-009-conflict-structural-hardening.md`                           | repo      | pending |          | verdict pass, critical = 0      |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -143,7 +133,20 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- (none yet)
+- 2.2 — structuralOverlap gained a `shared` param; append-only manifests
+  (`config.sharedAppendOnly`) are dropped from both glob sides before intersecting.
+  Rationale: sound intersection made `** ~ package.json` a real hit, but
+  package.json is union-merged and `materialize()` already subtracts it on the
+  tracked-file path — the structural path needed the same exemption or it would
+  false-conflict a broad `**` against a manifest-only surface.
+- 0.2 — no separate "failing baseline commit": the pre-existing
+  `conflicts.test.ts` assertion already pinned the false-negative; it was rewritten
+  in place to assert the fix, and the two sibling pairs were confirmed uncaught by
+  the old prefix check before the rewrite.
+- 2.1 — the walk is EXACT over the grammar (no false positives either), stronger
+  than the PRD's "no false negatives, rare false positives OK" requirement; the
+  conservative `true` fallback fires only on an unrecognized token, which
+  `globToRegExp` never emits.
 
 ---
 

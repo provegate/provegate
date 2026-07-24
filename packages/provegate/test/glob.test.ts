@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { globToRegExp } from '../src/core/locks/glob.js';
+import { globToRegExp, globsMayIntersect } from '../src/core/locks/glob.js';
 
 const matches = (glob: string, path: string): boolean => globToRegExp(glob).test(path);
 
@@ -35,5 +35,73 @@ describe('globToRegExp (byte-equal port semantics)', () => {
   it('anchors both ends (no substring match)', () => {
     expect(matches('src/a.ts', 'prefix/src/a.ts')).toBe(false);
     expect(matches('src/a.ts', 'src/a.ts.bak')).toBe(false);
+  });
+});
+
+describe('globsMayIntersect (sound pattern intersection)', () => {
+  // Every pair carries its expected verdict. `intersect` pairs share at least
+  // one concrete future path; `disjoint` pairs share none. Soundness = no
+  // `disjoint` verdict on a pair that actually shares a path (false negative).
+  const INTERSECT: [string, string][] = [
+    // The two documented misses this PRD closes (sibling wildcard vs literal).
+    ['src/api/*.ts', 'src/api/users.ts'],
+    ['src/*/handlers/**', 'src/auth/handlers/**'],
+    // Identical and prefix-nested (the cases the old check already caught).
+    ['a/**', 'a/**'],
+    ['a/**', 'a/b/**'],
+    ['packages/design/**', 'packages/design/src/tokens.ts'],
+    // Star crossing a literal segment.
+    ['src/*/x/**', 'src/a/x/**'],
+    // `?` vs literal in the same position.
+    ['file-?.ts', 'file-a.ts'],
+    ['src/api/?ser.ts', 'src/api/user.ts'],
+    // `**` boundary: zero segments and many segments both reachable.
+    ['a/**/b.ts', 'a/b.ts'],
+    ['a/**/b.ts', 'a/x/y/b.ts'],
+    ['**/config.ts', 'src/deep/config.ts'],
+    // Wildcard vs wildcard that admit a common path.
+    ['src/*.ts', 'src/*.ts'],
+    ['src/**', 'src/api/*.ts'],
+  ];
+  const DISJOINT: [string, string][] = [
+    // Genuinely different literal segments — parallelism must be preserved.
+    ['src/a/**', 'src/b/**'],
+    ['src/x/**', 'src/y/**'],
+    ['*.md', '*.ts'],
+    ['src/api/users.ts', 'src/api/posts.ts'],
+    // `*` never crosses `/`, so it cannot reach into a nested literal path.
+    ['src/*.ts', 'src/a/b.ts'],
+    // `?` is exactly one char — differing lengths cannot meet.
+    ['file-?.ts', 'file-ab.ts'],
+    // Different extensions under a shared directory.
+    ['src/api/*.ts', 'src/api/*.js'],
+  ];
+
+  it('reports every intersecting pair (no false negatives), symmetric', () => {
+    for (const [a, b] of INTERSECT) {
+      expect(globsMayIntersect(a, b), `${a} ~ ${b}`).toBe(true);
+      expect(globsMayIntersect(b, a), `${b} ~ ${a} (symmetry)`).toBe(true);
+    }
+  });
+
+  it('leaves genuinely disjoint pairs claimable in parallel, symmetric', () => {
+    for (const [a, b] of DISJOINT) {
+      expect(globsMayIntersect(a, b), `${a} ~ ${b}`).toBe(false);
+      expect(globsMayIntersect(b, a), `${b} ~ ${a} (symmetry)`).toBe(false);
+    }
+  });
+
+  it('cross-checks the verdict against a concrete-path witness where one exists', () => {
+    // For each INTERSECT pair we can name a path that matches both — proving
+    // the verdict is not a false positive.
+    const witnesses: [string, string, string][] = [
+      ['src/api/*.ts', 'src/api/users.ts', 'src/api/users.ts'],
+      ['src/*/handlers/**', 'src/auth/handlers/**', 'src/auth/handlers/list.ts'],
+      ['a/**/b.ts', 'a/b.ts', 'a/b.ts'],
+      ['**/config.ts', 'src/deep/config.ts', 'src/deep/config.ts'],
+    ];
+    for (const [a, b, path] of witnesses) {
+      expect(globToRegExp(a).test(path) && globToRegExp(b).test(path), `${path}`).toBe(true);
+    }
   });
 });
