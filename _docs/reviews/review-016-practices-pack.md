@@ -2,14 +2,14 @@
 
 > **PRD:** PRD-016
 > **Verdict:** pass
-> **Reviewer:** Codex (OpenAI Codex CLI, independent Phase 6 sessions, reasoning high)
-> **Tool/Model:** codex exec, read-only sandbox — different model family from the author (Claude)
+> **Reviewer:** Codex (OpenAI Codex CLI, 4 rounds) + two independent Claude Sonnet sessions
+> **Tool/Model:** codex exec (read-only sandbox, cross-model) + Sonnet subagents (fresh context, no authoring state)
 > **Base SHA:** `c987008`
-> **Diff range:** c987008..e003a1b
+> **Diff range:** c987008..1cbdb6a
 > **Critical:** 0
 > **High:** 0
 > **Medium:** 0
-> **Quorum:** 1/1 pass (single cross-model reviewer over three rounds)
+> **Quorum:** 3 independent reviewers converged on pass (codex R3/R4; sonnet-A pass w/ 4 medium — closed; sonnet-B fail w/ 1 critical — closed, closure verified by codex R4)
 
 ## Summary
 
@@ -32,8 +32,18 @@ form; byte-literal goldens; an adversarial-staging fixture running the INSTALLED
 scripts, mutation-checked).
 
 **R3 — PASS (0/0/0):** each prior finding verified CLOSED with evidence; full-branch
-sweep found no new critical. (Codex could not re-run vitest in its read-only sandbox;
-the author-side suite is green: 9/9 fixture, full repo floor.)
+sweep found no new critical.
+
+**Sonnet rounds (parallel independent sessions, verdicts delivered after codex R3):**
+sonnet-A: pass with 4 medium — two already closed by R1; the remaining two (unrecorded
+out-of-surface index.ts barrel export; PACK_MAP safety comment contradicted by the
+readdirSync verify/ install) fixed in `1cbdb6a`. sonnet-B: FAIL with 1 critical —
+the internal numbered taxonomy ("practice NN" / "pattern PN") leaked into ~10 packed
+comments, a W1 class both codex rounds missed; fixed in `1cbdb6a` (self-contained
+descriptions; hygiene test now bans the class; verify/ install moved into the explicit
+PACK_MAP). **Codex R4 delta confirmation: pass** — greps clean, 12/12 verify files
+explicit, no new findings. (Reviewers' sandboxes could not run vitest; the author-side
+suite is green: fixture 9/9, full repo floor.)
 
 ## Verdict rationale
 
