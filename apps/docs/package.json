@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
     "check-types": "fumadocs-mdx && next typegen && tsc --noEmit",
