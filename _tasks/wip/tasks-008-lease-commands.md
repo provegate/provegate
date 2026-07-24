@@ -116,11 +116,17 @@
         `pnpm --filter provegate test`, `pnpm build`, `gate check PRD-008`,
         never-push, hygiene grep.
 
-- [ ] 8.0 Phase 6 — Final Auditing
-  - [ ] 8.1 Independent adversarial review → verdict artifact at
-        `_docs/reviews/review-008-lease-commands.md`. `Verdict: pass` requires
-        `Critical: 0`. Reviewer attacks: the release-race window (identity-check vs
-        unlink ordering), `--json` additive-only claim, malformed fail-closed.
+- [x] 8.0 Phase 6 — Final Auditing
+  - [x] 8.1 Independent adversarial review (Sonnet 5, cross-model, fresh context)
+        → `_docs/reviews/review-008-lease-commands.md`. **Verdict: pass**
+        (Critical 0, High 0, Medium 0). Empirically verified all attack surfaces
+        incl. extended race tests (rival replace + delete mid-release both abort),
+        filename over-match (`PRD-1` ≠ `prd-100`), mixed-ownership refusal, and
+        additive `--json`. Three Low/cosmetic: #2 (misleading `parsed` var) FIXED
+        (renamed `unparseable`); #1 (release skips id-format check) WAIVED —
+        intentional, release must serve fileless leases; #3 (no live-CLI
+        success-path test) WAIVED — logic fully unit-tested + live-verified, a
+        spawn test would be flaky; follow-up recorded.
 
 - [ ] 9.0 Phase 7 — Learning
   - [ ] 9.1 Confirm the declared Durable Artifacts (`cli.mdx`, `QUICKSTART.md`) are
@@ -146,7 +152,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-008`                     | repo      | passed  | exit 0                          | |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`               | repo      | passed  | exit 1                          | |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz packages/provegate/src && exit 1 \|\| true` | provegate | passed  | clean                           | |
-| independent-review | `_docs/reviews/review-008-lease-commands.md`                            | repo      | pending |          | verdict pass, critical = 0      |
+| independent-review | `_docs/reviews/review-008-lease-commands.md`                            | repo      | passed  | Sonnet 5, verdict pass, 0/0/0; 3 Low (1 fixed, 2 waived) | cross-model; extended race tests |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -166,6 +172,13 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - 1.1 — malformed leases FOR the id are detected by filename prefix
   (`${id}-`), not content, so an unreadable lease is still attributed to the id and
   fails closed (its `prd` field can't be read).
+- 8.1 — Phase-6 Low #2 fixed (query.ts `parsed` → `unparseable`, pure rename).
+  Low #1 waived: `gate release` deliberately skips `candidateFromPrd` id-validation
+  because it must serve leases whose PRD file is gone (archived/renamed) — the
+  lingering-lease case release exists to clean; a garbage id → "nothing to release"
+  is correct. Low #3 waived: release/renew logic fully unit-tested + live-verified;
+  a spawn-based CLI success test would mutate real `_state/locks/` (flaky). Both
+  are follow-ups, not blockers (verdict pass, Critical 0).
 
 ---
 

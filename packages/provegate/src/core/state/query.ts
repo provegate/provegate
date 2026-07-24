@@ -206,14 +206,14 @@ export function buildQueue(
 
   const inFlight = [...lockById.values()].map((lock) => {
     const expiry = Date.parse(lock.expiresAt);
-    const parsed = Number.isNaN(expiry);
+    const unparseable = Number.isNaN(expiry);
     return {
       prd: lock.prd,
       agent: lock.agent,
       phase: lock.phase,
       worktree: lock.worktree,
-      stale: !parsed && expiry < now,
-      expiresInSeconds: parsed ? null : Math.round((expiry - now) / 1000),
+      stale: !unparseable && expiry < now,
+      expiresInSeconds: unparseable ? null : Math.round((expiry - now) / 1000),
     };
   });
 

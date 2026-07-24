@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T07:59:51.902Z",
+  "generatedAt": "2026-07-24T08:13:54.869Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -289,8 +289,8 @@
       },
       "task": {
         "status": "Code Complete",
-        "checkedCount": 28,
-        "uncheckedCount": 5,
+        "checkedCount": 30,
+        "uncheckedCount": 3,
         "operatorHandoffCount": 0
       },
       "summary": {
