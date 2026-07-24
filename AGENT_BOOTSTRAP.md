@@ -44,6 +44,32 @@ Non-negotiables:
 7. Don't violate an ADR (`_brain/adr/`) without a superseding ADR.
 8. Verify with: `pnpm check-types && pnpm lint && pnpm test && pnpm build`.
 
+## Universal stop-and-ask checkpoints
+
+An autonomous agent must STOP and ask the human before any of:
+
+- **Destructive git** — force-push, `reset --hard`, branch deletion.
+- **Deploy / publish** — any deploy, release, npm publish, or CI-triggering command
+  (only the human-triggered release workflow publishes).
+- **Bypassing hooks** — `--no-verify` or otherwise skipping pre-commit/commit-msg gates.
+- **Lowering security posture** — weakening encryption, privacy, auth, or a permission check.
+- **New dependency** — adding any dependency not named in the spec (and `packages/provegate`
+  takes zero runtime dependencies, ever).
+- **Out-of-scope files** — touching files outside the spec's documented scope / Conflict Surface.
+- **Secrets / env** — modifying secrets or `.env.*` beyond what the spec specifies.
+- **Operator acceptance** — an agent never writes `_state/acceptances.json`; recording a
+  waiver is a deliberate human action by an allowlisted owner (the merge gate validates it).
+- **Method content** — anything in `packages/provegate` prompts/templates/schemas not
+  traceable to the source snapshot.
+- **Unspecified design question** — a design decision the spec doesn't answer.
+
+Plus, always STOP if the current branch is a protected base (`main`) and the change is
+source-class, or the status board already names this work-item under another agent.
+
+On a blocker, surface the error verbatim — never paper over it with an `any` cast, an
+`eslint-disable`, or a `|| true`. Push to remote is never an agent action: the runner has
+no push code path (enforced by omission), and `gate push` refuses by design.
+
 ## Knowledge map
 
 ```
