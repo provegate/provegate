@@ -17,9 +17,9 @@
  *           XMLHttpRequest.open() and .src=/.href= assignments to a URL literal,
  *           plus any embedded HTML fetch-shape (RSC payloads inline HTML)
  *
- * "External origin" = an absolute `https?://<host>` whose host is not our own,
- * or a protocol-relative `//<host>`. Our own origin and plain `<a href>`
- * navigation are NOT fetches and are allowed.
+ * "External origin" = an absolute `<scheme>://<host>` (any scheme — http(s),
+ * ws(s), …) whose host is not our own, or a protocol-relative `//<host>`. Our own
+ * origin and plain `<a href>` navigation are NOT fetches and are allowed.
  *
  * Blind spot (stated): a URL assembled at RUNTIME from fragments cannot be seen.
  */
@@ -31,13 +31,13 @@ const OWN_HOSTS = new Set(['provegate.dev', 'www.provegate.dev', 'localhost']);
 
 /** True if `url` (an absolute or protocol-relative URL) is off our origin. */
 function isExternal(url) {
-  const m = /^(?:https?:)?\/\/([a-z0-9.-]+)/i.exec(url);
+  const m = /^(?:[a-z][a-z0-9+.-]*:)?\/\/([a-z0-9.-]+)/i.exec(url);
   if (!m) return false;
   return !OWN_HOSTS.has(m[1].toLowerCase());
 }
 
-/** A URL literal (http(s):// or //host) that is external. */
-const URL_RE = String.raw`((?:https?:)?\/\/[a-z0-9.-]+[^\s"'\`)]*)`;
+/** A URL literal (`<scheme>://host`, e.g. https/wss, or protocol-relative `//host`). */
+const URL_RE = String.raw`((?:[a-z][a-z0-9+.-]*:)?\/\/[a-z0-9.-]+[^\s"'\`)]*)`;
 
 function scanHtml(text) {
   const hits = [];
@@ -66,10 +66,10 @@ function scanCss(text) {
 
 function scanJs(text) {
   const hits = [];
-  const api = String.raw`(?:fetch|sendBeacon|importScripts|EventSource|WebSocket|open)\s*\(\s*(?:["'][A-Z]+["']\s*,\s*)?["']`;
+  const api = String.raw`(?:fetch|sendBeacon|importScripts|EventSource|WebSocket|open)\s*\(\s*(?:["'\`][A-Z]+["'\`]\s*,\s*)?["'\`]`;
   const patterns = [
     new RegExp(`${api}${URL_RE}`, 'gi'),
-    new RegExp(`\\.(?:src|href)\\s*=\\s*["']${URL_RE}`, 'gi'),
+    new RegExp(`\\.(?:src|href)\\s*=\\s*["'\\\`]${URL_RE}`, 'gi'),
   ];
   for (const re of patterns) {
     for (const m of text.matchAll(re)) if (isExternal(m[1])) hits.push(m[1]);
