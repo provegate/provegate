@@ -115,7 +115,11 @@ so that the principle holds across the whole property.
    `global.css`, wire the shared self-hosted fonts (`@provegate/design/styles.css`
    or its font layer), set dark canonical. Fumadocs' own layout components are
    used as-is; no fork.
-   - **Targets:** `apps/docs/app/global.css`, `apps/docs/lib/layout.shared.tsx`
+   - **Targets:** `apps/docs/app/global.css`, `apps/docs/lib/layout.shared.tsx`,
+     `apps/docs/app/layout.tsx` (font wiring + `RootProvider` dark-canonical;
+     added to the surface 2026-07-24 — the draft missed it, but self-hosted IBM
+     Plex over the stock `next/font/google` Inter and the next-themes default
+     both live here)
 3. **FR-3**: Register the design components in the MDX component map so docs
    authors get `CodeBlock`, `GateLine`, `HandoffCard`, `EvidenceTable`,
    `PhasePipeline`, `VerdictBadge`, `Admonition`.
@@ -181,9 +185,9 @@ so that the principle holds across the whole property.
 
 ### In Scope
 
-- [ ] `apps/docs/app/global.css`, `apps/docs/lib/layout.shared.tsx`,
-      `apps/docs/components/mdx.tsx`, the OG route, `apps/docs/README.md`,
-      `apps/docs/package.json`
+- [ ] `apps/docs/app/global.css`, `apps/docs/app/layout.tsx`,
+      `apps/docs/lib/layout.shared.tsx`, `apps/docs/components/mdx.tsx`, the OG
+      route, `apps/docs/README.md`, `apps/docs/package.json`
 - [ ] `scripts/check-static-egress.mjs` (shared with PRD-013)
 
 ### Out of Scope
@@ -213,6 +217,7 @@ so that the principle holds across the whole property.
 ## Conflict Surface
 
 - `apps/docs/app/global.css`
+- `apps/docs/app/layout.tsx`
 - `apps/docs/app/og/docs/[...slug]/route.tsx`
 - `apps/docs/components/mdx.tsx`
 - `apps/docs/lib/layout.shared.tsx`
