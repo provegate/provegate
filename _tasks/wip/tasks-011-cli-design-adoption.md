@@ -142,8 +142,8 @@
         `pnpm --filter provegate test`, `pnpm build`, `gate check PRD-011`, the
         never-push invariant, the stray-escape grep.
 
-- [ ] 8.0 Phase 6 — Final Auditing
-  - [ ] 8.1 Independent adversarial review of the diff → verdict artifact at
+- [x] 8.0 Phase 6 — Final Auditing
+  - [x] 8.1 Independent adversarial review of the diff → verdict artifact at
         `_docs/reviews/review-011-cli-design-adoption.md`. `Verdict: pass` requires
         `Critical: 0`. Reviewer attacks: the published manifest (zero deps), the
         no-color identity claim, the additive-only `ClaimResult` change.
@@ -176,7 +176,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-011`                   | repo      | passed | exit 0 | PRD passes its own gate      |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`             | repo      | passed | exit 1 | refusal exit 1               |
 | no-stray-escape    | `grep -rn "\\x1b\[" packages/provegate/src --include=*.ts \| grep -v core/ui/theme.ts` | provegate | passed | clean — escapes only via design paint | escapes only in theme.ts     |
-| independent-review | `_docs/reviews/review-011-cli-design-adoption.md`                    | repo      | pending |          | verdict pass, critical = 0   |
+| independent-review | `_docs/reviews/review-011-cli-design-adoption.md`                    | repo      | passed  | Sonnet 5: FAIL→PASS after fixes (2 High closed), 0/0/0 | 2 rounds |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

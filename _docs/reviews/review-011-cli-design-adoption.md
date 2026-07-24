@@ -1,19 +1,26 @@
 # Independent Review: PRD-011 — CLI Design Adoption
 
 > **PRD:** PRD-011
-> **Verdict:** fail
+> **Verdict:** pass
 > **Reviewer:** Sonnet 5 (independent Phase 6 session)
 > **Base SHA:** `b417972429601a6ed22358159e11fc5876f94d25`
 > **Critical:** 0
-> **High:** 2
-> **Medium:** 1
+> **High:** 0
+> **Medium:** 0
 > **Quorum:** 1/1 pass (single independent reviewer)
 
 ## Summary
 
-Reviewed the feature commit `d4a76bb` (the unrelated `445762b` PRD-012 draft edit on
-the branch tip is out of scope, per instruction) against `main` tip `b417972`. Read every
-changed file in full, cross-referenced the PRD's own cited specimen
+**Round 1** reviewed the feature commit `d4a76bb` (the unrelated `445762b` PRD-012 draft edit
+on the branch tip was out of scope) against `main` tip `b417972`, found 0 Critical / 2 High /
+1 Medium, and marked it `fail` — not because any of the three explicitly-named auto-critical
+categories were violated (they weren't), but because two Functional Requirements with their own
+named acceptance criteria were substantially unbuilt, plus one explicit DO-NOT boundary was
+crossed. **Round 2** (this pass) re-reviewed fix commit `d2af65b`, re-ran the exact repros from
+round 1 against the fixed code, and re-verified the clean areas. All three findings are
+confirmed fixed by direct re-exploit, not just re-reading the diff.
+
+Read every changed file in both rounds in full, cross-referenced the PRD's own cited specimen
 (`docs/design/design_handoff_provegate/reference/cli-static-specimens.dc.html`), and built +
 ran the actual CLI to empirically verify every attack surface in the brief rather than trusting
 the shipped tests' framing.
@@ -45,33 +52,73 @@ the shipped tests' framing.
   actual readiness verdict present), `queue`, `run --dry-run`, the `gate open` overlap refusal,
   and `push`. All five are byte-identical once stripped. No escape leak anywhere.
 
-**What is broken:** two Functional Requirements with their own named acceptance criteria and
-verification-table rows are substantially unimplemented, and one explicit DO-NOT boundary was
-crossed. None of these are "the runtime breaks" bugs — every command still runs, refuses
-correctly, and exits with the right code — but the PRD's own stated deliverables, checked
-against material it explicitly cites, are not what shipped. See Findings 1–3.
+**Round 1 findings, all re-verified fixed in round 2:**
+
+### Finding 1 (was HIGH, FR-6) — re-verified fixed
+
+Fix: a new additive `BlockerLease { prd, agent, phase, expiresAt, stale }` and a `blockers:
+BlockerLease[]` field on `ClaimResult` (`open.ts`), populated in both refusal branches (valid-
+and stale-blocker), exported through `core/run/index.ts`. `cli.ts`'s refusal now prints
+`    lease held by <agent> · <phase> · <ttl>` per blocker, with the TTL rendered via the
+existing `formatLeaseRemaining` (stale ones painted stale-amber), and the resolve hint now only
+mentions `--steal` when a blocker is actually stale (a genuine improvement over the round-1
+text, which advertised `--steal` unconditionally even when no blocker could ever be stolen).
+
+**Re-ran my exact original repro**: built a two-PRD workspace, claimed `PRD-001` over
+`src/auth/**` as `agent-2`, then ran `gate open PRD-002` over an overlapping path. Actual
+output now: `[open] REFUSED — PRD-002 not claimed:` / `  ✗ surface overlap with PRD-001: ...`
+/ `    lease held by agent-2 · Phase 2b · 12h 0m left` / `  → resolve: narrow PRD-002's Conflict
+Surface`. The agent, phase, and remaining TTL are present — the exact three fields User Story 2
+required and the original repro showed missing. `existing.conflicts`/`.issues` are untouched
+(additive-only, confirmed by reading the diff); `open.test.ts` gained a direct engine-level
+assertion (`result.blockers` shape + a non-expired `expiresAt`).
+
+### Finding 2 (was HIGH, FR-8) — re-verified fixed, with one flagged judgment call
+
+Fix: `usage()` rebuilt with a wordmark + tagline and a right-aligned version
+(`ProveGate · prove it, then let it propagate.` ... `v0.1.0`), bare-uppercase `USAGE` /
+`COMMANDS` / `OPTIONS` section headers, and the closing tagline retained.
+
+**Re-ran `node dist/cli.js --help` directly** — confirmed the wordmark+version line, all three
+uppercase headers, and the closing line are present, matching the specimen's structure. Also
+confirmed the output carries **zero** ANSI escapes under any condition (`usage()` never calls
+`paint()` at all now), so FR-9's NO_COLOR/strip-identity guarantee holds trivially for `--help`
+— nothing to strip, always identical.
+
+**Deliberate, disclosed deviation**: command names are not painted green, where the specimen
+mock shows them in green. The team's stated reasoning — PRD-010's own color law ("GREEN IS
+EARNED... no decorative green, no green headings") would be violated by coloring a command name
+in a listing, since a name being *available* is not "work that passed a machine check" — is
+correct and is explicitly written into PRD-011's own DO-NOT list ("DO NOT color anything green
+that did not pass a machine check or an operator verdict. No decorative green..."). I agree the
+written law overrides the mock here; this is not a defect. Minor, non-blocking notes found
+during re-verification (not raised as findings, since they're cosmetic and don't affect any
+tested acceptance criterion): the `new`/`open` help lines dropped mention of the still-fully-
+functional `--template=` flag and the `gate open PRD-XXX` example prefix; `push`'s line lost its
+parentheses relative to the specimen's `(refused — push is yours)`. None of these affect
+correctness or any acceptance criterion.
+
+### Finding 3 (was MEDIUM) — re-verified fixed
+
+`apps/docs/content/docs/cli.mdx` is reverted; `git diff main -- apps/docs/content/docs/cli.mdx`
+is empty. The now-stale `gate status` example in that file (still showing the pre-adoption
+one-line-per-record format) is intentionally left as-is, honoring the PRD's own DO-NOT — the
+team recorded the drift as a follow-up in the task ledger's Deferrals for whoever next owns that
+file's conflict surface.
 
 ## Findings
 
-| #   | Sev    | Finding | Resolution |
-| --- | ------ | ------- | ---------- |
-| 1   | HIGH   | **FR-6 / User Story 2's acceptance criteria are not met: the `gate open` overlap refusal never names the lease holder's agent, phase, or remaining TTL.** The team's framing ("I did NOT add a new `ClaimResult` field — the refusal renders from the existing `conflicts: PathConflict[]`") undersells the effect: `PathConflict` is `{a, b, shared}` — it carries which two PRDs conflict and on which shared paths, nothing about who holds the blocking lease, their phase, or its TTL. For the common case (a *valid*, non-stale foreign lease blocking a claim), `ClaimResult.staleBlockers` is empty too (it's only populated on the stale-blocker branch) — so the CLI has **no reachable field** carrying agent/phase/TTL for this case. **Repro (executed):** built the CLI, claimed `PRD-001` over `src/auth/**`, then attempted `gate open PRD-002` over an overlapping path. Actual output: `[open] REFUSED — PRD-002 not claimed:\n  ✗ surface overlap with PRD-001: <shared paths>\n  → resolve: narrow PRD-002's Conflict Surface, or --steal if a blocking lease is stale`. Compare to the PRD's own cited specimen (`cli-static-specimens.dc.html:97-102`): `[open] REFUSED — conflict surface overlaps an active lease` / `! PRD-002 (add-oauth) owns  src/auth/**` / `    PRD-004 (sso)       wants src/auth/oauth/callback.ts` / `lease held by agent-2 · phase 4 · ttl 38m` / `→ resolve: ...`. The shipped output has no owns/wants breakdown and, critically, **no lease-holder/phase/TTL line at all** — the exact information User Story 2 says a claimant needs "to narrow my Conflict Surface without reading lock files by hand." | unfixed — needs either the additive `ClaimResult` field the PRD's own M1 proposed (agent/phase/expiresAt on the blocking lease, non-breaking per FR-6's own "additive only" rule), or equivalent data threaded through some other additive path; the current "no new field" simplification silently drops a whole acceptance criterion |
-| 2   | HIGH   | **FR-8's `--help` rebuild is largely unimplemented.** The diff to `usage()` adds exactly two lines (a blank line + the closing tagline). Everything else FR-8 names is missing, checked against the PRD's own cited specimen (`cli-static-specimens.dc.html:107-127`): (a) no wordmark+version line — the specimen shows `provegate · prove it, then let it propagate              v1.2.0` (version right-aligned on the header); the shipped text is `ProveGate — prove it, then let it propagate.` with no version anywhere in `--help` output (version only via the separate `--version` flag); (b) no `USAGE`/`COMMANDS` bare-uppercase section headers — shipped text still uses the pre-existing `Usage: gate <command> [options]   (also available as: provegate)` and `Commands:`/`Options:` (title-case, colon-suffixed, plus an `Options:` section the specimen doesn't have); (c) the specimen colors each command name green (`<span style="color:#4fd08a">init</span>`, etc.) — the shipped `Commands:` list has zero coloring on any command name (verified: `usage()` is a static string array, never passed through `paint()`). Verified with `node dist/cli.js --help` directly. FR-8's own verification-table row is literally `node packages/provegate/dist/cli.js --help` / "help matches the specimen" — it does not. | unfixed — FR-8 needs the wordmark+version line, `USAGE`/`COMMANDS` headers, and colored command names actually built, not just the closing tagline appended to the pre-existing help text |
-| 3   | MEDIUM | **`apps/docs/content/docs/cli.mdx` was edited despite the PRD's own explicit DO-NOT and Out-of-Scope listing it by name**, and despite it not appearing in the PRD's declared Conflict Surface (which lists `cli-output.mdx`, not `cli.mdx`). PRD text: "DO NOT touch `packages/design/**` or `apps/docs/content/docs/cli.mdx` — other PRDs own them" (§12) and "Out of Scope: ... `apps/docs/content/docs/cli.mdx`" (§8). The diff (`git diff b417972..d4a76bb -- apps/docs/content/docs/cli.mdx`) shows the `gate status` example block rewritten from the old one-line-per-record format to the new aligned table. The change itself is factually correct and arguably necessary (the old example is now stale), but it crosses a boundary the PRD itself drew — this file is explicitly claimed by PRD-008/009's conflict surfaces, and editing it outside a declared surface is exactly the kind of undeclared cross-boundary edit this project's conflict-surface discipline exists to prevent. | unfixed — either fold this doc fix into a properly-scoped follow-up that declares `cli.mdx` in its Conflict Surface, or get explicit owner sign-off that this specific line-item edit is an accepted exception |
+| #   | Sev  | Finding | Resolution |
+| --- | ---- | ------- | ---------- |
+| 1   | HIGH | `gate open` overlap refusal never named the lease holder's agent, phase, or TTL (FR-6 / User Story 2). | **fixed** — additive `ClaimResult.blockers: BlockerLease[]`; re-exploited the exact original repro, holder detail now present in the refusal. |
+| 2   | HIGH | `--help` rebuild (FR-8) was largely unimplemented — missing wordmark+version, `USAGE`/`COMMANDS` headers. | **fixed** — wordmark+right-aligned version and uppercase section headers now present, verified directly; command-name coloring deliberately and correctly omitted per the color law (see above). |
+| 3   | MEDIUM | `cli.mdx` edited despite the PRD's own DO-NOT/Out-of-Scope naming it, and outside the declared Conflict Surface. | **fixed** — edit reverted; `git diff main -- cli.mdx` empty; the doc drift recorded as a follow-up instead. |
 
-No CRITICAL findings — the three explicitly-named auto-fail categories (runtime dependency
-leak, card text drift, NO_COLOR escape leak) were tested hardest and found clean, with evidence
-stronger than what the shipped test suite alone establishes. The two HIGH findings are not
-crashes or safety violations — every affected command still runs and exits correctly — but they
-represent two full Functional Requirements (each with its own named acceptance criteria and
-verification-table row) that were not substantially built, verified directly against material
-the PRD itself cites as the target. I'm marking this `fail` on that basis: a "pass" here would
-sign off on FR-6's User Story 2 and FR-8 as delivered when a live run of the actual CLI shows
-they mostly are not.
+No CRITICAL, HIGH, or MEDIUM findings remain. `pass` stands.
 
 ## Post-fix verification
 
-No fixes were applied — review only, per instructions. Commands actually run:
+**Round 1** (no fixes existed yet — review only):
 
 - `pnpm --filter provegate build` — clean
 - `pnpm --filter provegate test` — 479/479 (brief cited 478; off by one, not investigated —
@@ -100,8 +147,26 @@ No fixes were applied — review only, per instructions. Commands actually run:
   the same command under `NO_COLOR=1` — identical in all five cases. This closes the coverage
   gap the brief flagged in `no-color.test.ts` (piped-stdout tests can never exercise a real
   colored path) without finding a defect.
-- Temporary test workspaces (`mkdtemp` dirs) and bootstrap scripts were removed; `_state/prds.json`
-  picked up a stray `generatedAt` timestamp bump from running `gate status`/`check` in the repo
-  root during testing and was reverted with `git checkout --`.
+
+**Round 2** (re-verification of fix commit `d2af65b`):
+
+- `pnpm --filter provegate build` — clean
+- `pnpm --filter provegate test` — 481/481 (matches the stated post-fix baseline)
+- `pnpm --filter @provegate/design test` — 26/26
+- `pnpm check-types`, `pnpm lint`, `pnpm build` (root, all 4 workspace projects) — all clean
+- `grep -c "@provegate/design" dist/cli.js dist/index.js` — 0 in both, re-confirmed on the fresh
+  build; `dependencies` still absent from `package.json`
+- **Finding 1 re-exploit**: re-ran the identical original repro (two-PRD overlap, `PRD-001`
+  claimed by `agent-2` over `src/auth/**`, `gate open PRD-002` over an overlapping path) —
+  refusal now reads `lease held by agent-2 · Phase 2b · 12h 0m left`, confirming the agent,
+  phase, and TTL are present.
+- **Finding 2 re-exploit**: re-ran `node dist/cli.js --help` — wordmark + right-aligned
+  `v0.1.0`, `USAGE`/`COMMANDS`/`OPTIONS` headers, and the closing tagline all present; confirmed
+  zero ANSI escapes in the output (`usage()` never calls `paint()`).
+- **Finding 3 re-verification**: `git diff main -- apps/docs/content/docs/cli.mdx` — empty.
+- Temporary test workspaces (`mkdtemp` dirs) and bootstrap scripts from both rounds were
+  removed; `_state/prds.json` picked up a stray `generatedAt` timestamp bump from running
+  `gate status`/`check` in the repo root during testing (both rounds) and was reverted with
+  `git checkout --` each time.
 
 `git status` at the end of this review shows only this review artifact as new/changed.
