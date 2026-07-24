@@ -25,6 +25,9 @@
 - [operator acceptance no self-accept](learnings/operator-acceptance-no-self-accept.md) — an agent must never self-accept operator rows; TTY/--yes + owner allowlist
 - [cleanup after verified merge](learnings/cleanup-after-verified-merge.md) — learning lands before merge; teardown only after the merge is verified
 
+## Project gotchas
+- [turbo cache masks out-of-input reads](learnings/turbo-cache-masks-out-of-input-reads.md) — a test reading paths outside its turbo inputs replays stale green from cache
+
 ## Conventions
 - [memory index vs detail](learnings/memory-index-vs-detail.md) — INDEX = always-loaded one-liners; detail in files; never store what code already records
 - [gate wire-or-delete](learnings/gate-wire-or-delete.md) — meta-gate: every registered check wired to an executing surface, every on-disk check registered
