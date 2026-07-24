@@ -10,13 +10,12 @@ The package installs two equivalent binaries: `provegate` and `gate`.
 ### `gate status`
 
 Rebuilds workflow state from the artifact tree (`_prds`/`_readiness`/`_tasks`/`_docs` by
-default), writes the snapshot (default `_state/prds.json`), and prints an aligned
-table — one line per work item — plus panel metrics:
+default), writes the snapshot (default `_state/prds.json`), and prints one line per work item
+plus panel metrics:
 
 ```
 $ gate status
-ID       STATE        READINESS   TASKS  SLUG
-PRD-001  In Progress  PASS · 8.7  12/45  config-state-locks
+PRD-001  In Progress  readiness=PASS/8.7  tasks=12/45  config-state-locks
 Implemented: 0
 Latest implemented: —
 wrote /repo/_state/prds.json

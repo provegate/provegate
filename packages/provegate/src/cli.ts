@@ -85,15 +85,24 @@ const handoffCard = (o: Parameters<typeof buildHandoffCard>[0]): string =>
 const pkg = require('../package.json') as { version: string };
 
 function usage(): string {
+  // FR-8 — the help screen. Wordmark + tagline with the version right-aligned,
+  // bare-uppercase section headers, aligned commands. The wordmark is CamelCase
+  // `ProveGate` (brand rule: CamelCase in prose; the binary stays lowercase in
+  // command examples). No decorative colour: the colour law reserves green for
+  // earned pass, so command names are NOT painted.
+  const version = `v${pkg.version}`;
+  const brand = 'ProveGate · prove it, then let it propagate.';
+  const gap = Math.max(2, 66 - brand.length - version.length);
   return [
-    'ProveGate — prove it, then let it propagate.',
+    `${brand}${' '.repeat(gap)}${version}`,
     '',
-    'Usage: gate <command> [options]   (also available as: provegate)',
+    'USAGE',
+    '  gate <command> [options]   (also available as: provegate)',
     '',
-    'Commands:',
+    'COMMANDS',
     '  init     scaffold the workflow tree + starter configs (--dry-run)',
-    '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
-    '  open     claim a PRD: lease its conflict surface or refuse on overlap (gate open PRD-XXX [--steal] [--worktree] [--hours=N])',
+    '  new      create the next PRD from the shipped template (gate new <slug> [--class=X])',
+    '  open     claim a PRD: lease its conflict surface or refuse on overlap ([--steal] [--worktree] [--hours=N])',
     '  renew    extend your lease (idempotent refresh) (gate renew PRD-XXX [--hours=N])',
     '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
     '  status   rebuild workflow state from artifacts and show it',
@@ -101,9 +110,9 @@ function usage(): string {
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
     '  land     merge step only (alias for run --from-phase=merge)',
-    '  push     (refuses — push is always yours)',
+    '  push     refuses — push is always yours',
     '',
-    'Options:',
+    'OPTIONS',
     '  -h, --help     show this help',
     '  -v, --version  print version',
     '',
@@ -207,14 +216,24 @@ function runOpen(args: string[]): number {
   try {
     const result = claimPrd(config, root, id, { steal, agent, worktree, leaseHours });
     if (!result.ok) {
-      // FR-6 — the refusal reads as a decision: each conflict marked `✗`, then a
-      // human-blue `→ resolve` hint. Byte-identical text under NO_COLOR.
+      // FR-6 — the refusal reads as a decision: each conflict marked `✗`, the
+      // lease holder named (agent · phase · remaining TTL, so no one reads lock
+      // files by hand — User Story 2), then a human-blue `→ resolve` hint.
+      // Byte-identical text under NO_COLOR.
       const tier = colorTier();
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
       for (const issue of result.issues) console.error(`  ${paint('red', '✗', tier)} ${issue}`);
-      if (result.conflicts.length > 0) {
+      for (const b of result.blockers) {
+        const expiry = Date.parse(b.expiresAt);
+        const seconds = Number.isNaN(expiry) ? null : Math.round((expiry - Date.now()) / 1000);
+        const ttl = formatLeaseRemaining(seconds, b.stale);
+        const badge = b.stale ? paint('stale', ttl, tier) : ttl;
+        console.error(`    lease held by ${b.agent} · ${b.phase} · ${badge}`);
+      }
+      if (result.blockers.length > 0) {
+        const stale = result.blockers.some((b) => b.stale);
         console.error(
-          `  ${paint('human', '→', tier)} resolve: narrow ${result.id}'s Conflict Surface, or --steal if a blocking lease is stale`,
+          `  ${paint('human', '→', tier)} resolve: narrow ${result.id}'s Conflict Surface${stale ? ', or --steal the stale lease' : ''}`,
         );
       }
       return 1;

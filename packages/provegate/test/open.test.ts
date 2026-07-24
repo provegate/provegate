@@ -113,6 +113,24 @@ describe('claimPrd (FR-2, W3)', () => {
     }
   });
 
+  it('a valid-blocker refusal carries holder detail (agent/phase/ttl) for the CLI (PRD-011 FR-6)', () => {
+    const root = tempRoot();
+    const id = prdWithSurface(root, 'challenger2', ['src/auth/**']);
+    foreignLease(root, 'prd-097-holder.json', 'PRD-097', ['src/auth/login.ts']);
+    const result = claimPrd(cfg, root, id);
+    expect(result.ok).toBe(false);
+    // The additive `blockers` field names the holder so the CLI can render
+    // `lease held by <agent> · <phase> · <ttl>` without reading lock files.
+    expect(result.blockers).toHaveLength(1);
+    expect(result.blockers[0]).toMatchObject({
+      prd: 'PRD-097',
+      agent: 'rival-agent',
+      phase: 'Phase 4',
+      stale: false,
+    });
+    expect(Date.parse(result.blockers[0]!.expiresAt)).toBeGreaterThan(Date.now());
+  });
+
   it('foreign STALE overlap → refuse + advertise --steal; --steal replaces and names victim (W3)', () => {
     const root = tempRoot();
     const id = prdWithSurface(root, 'reaper', ['src/auth/**']);

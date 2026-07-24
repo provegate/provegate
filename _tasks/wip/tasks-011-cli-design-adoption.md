@@ -188,13 +188,25 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `@provegate/design/cli`, so FR-2 became "consume" not "implement" —
   `ui/theme.ts` re-exports them; the single choke point is the design package's
   `colorTier`. Same guarantee, less code.
-- FR-6 / M1: the additive `ClaimResult` field was NOT needed — the existing
-  `conflicts: PathConflict[]` already carries structured overlap data, so the
-  refusal renders from it in `cli.ts` without an engine change. `open.ts` and
-  `src/index.ts` were left untouched (declared, not edited).
-- Out-of-surface edits (no other PRD active): `chain.test.ts` (FR-3 reporter
-  test), `apps/docs/content/docs/meta.json` (nav), `apps/docs/content/docs/cli.mdx`
-  (W3 — the one stale `gate status` example updated to the aligned format).
+- FR-6 / M1 (corrected after Phase-6 round 1): the M1 additive field WAS needed —
+  Phase 6 (High) showed the refusal never named the holder, so User Story 2 was
+  unmet. Added `BlockerLease { prd, agent, phase, expiresAt, stale }` and a
+  `blockers` field to `ClaimResult` (additive; existing `issues`/`conflicts`
+  untouched), populated in both refusal returns, exported via `core/run/index.ts`.
+  `cli.ts` now renders `lease held by <agent> · <phase> · <ttl>`. `open.ts` +
+  `run/index.ts` were edited (in the declared surface after all).
+- FR-8 (corrected after Phase-6 round 1): the first pass only added the closing
+  line — Phase 6 (High) flagged the help as essentially unimplemented. Rebuilt
+  `usage()` to the specimen structure: wordmark + right-aligned version,
+  bare-uppercase `USAGE`/`COMMANDS`/`OPTIONS` headers, aligned commands, closing
+  line. Command names are NOT painted green — the specimen shows green names but
+  the colour law reserves green for earned pass, so decorative green is refused
+  (law wins over mock).
+- Out-of-surface edits: `chain.test.ts` (FR-3 reporter test),
+  `apps/docs/content/docs/meta.json` (nav for the new page). The earlier
+  `cli.mdx` edit (Phase-6 Medium) was REVERTED to respect this PRD's own DO-NOT
+  ("do not touch cli.mdx — 008/009 own it"); the W3 status-example drift is
+  recorded here as a follow-up for the next docs pass rather than fixed in-place.
 - FR-4: cards.ts re-exports the design builders; colour is applied at print time
   in `cli.ts` (colorCard). Card TEXT is byte-identical — paint under NO_COLOR/
   non-TTY returns text unchanged; the 478-test suite (non-TTY) proves it.

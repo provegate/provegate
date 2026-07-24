@@ -40,6 +40,16 @@ describe('cli skeleton', () => {
     }
   });
 
+  it('the help screen carries the wordmark, version, and bare-uppercase headers (FR-8)', async () => {
+    const result = await cli('--help');
+    expect(result.stdout).toContain('ProveGate · prove it, then let it propagate.');
+    expect(result.stdout).toMatch(/v\d+\.\d+\.\d+/); // version, right of the wordmark
+    expect(result.stdout).toContain('\nUSAGE\n');
+    expect(result.stdout).toContain('\nCOMMANDS\n');
+    expect(result.stdout).toContain('\nOPTIONS\n');
+    expect(result.stdout).toContain('humans own intent and release · the machine owns the verified middle');
+  });
+
   it('renew + release ask for usage (exit 1) when the PRD id is missing', async () => {
     for (const command of ['renew', 'release']) {
       const result = await cli(command);
