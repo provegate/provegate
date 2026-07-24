@@ -3,7 +3,7 @@
 // Lint mode (default): every wip PRD declares a Durable Artifacts section (paths or
 // `- none`). Close mode (--close): every declared real path must appear in the merge
 // diff (merge-base vs HEAD) or the working/staged set.
-// Placeholder rule (matches the handoff template): a backticked path containing { } or *
+// Placeholder rule (the Durable Artifacts declaration contract): a path containing { } or *
 // is an unfilled placeholder and is ignored; `- none` skips the line.
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';

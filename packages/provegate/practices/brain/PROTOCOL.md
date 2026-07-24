@@ -15,7 +15,7 @@ phase that discovers a non-obvious trap, decision, or constraint writes it here 
 next agent — of any brand — inherits it.
 
 A common failure mode this design rejects: memory kept in a per-user, agent-specific home
-directory — not committed, not tool-neutral. That does not survive contributor handoff or
+directory — not committed, not tool-neutral. That does not survive contributor turnover or
 a different agent. `_brain` is in-repo and tool-neutral by design.
 
 ---
@@ -153,8 +153,8 @@ Because no agent-neutral harness auto-injects memory, recall is explicit:
 
 ## 7. Capture protocol (Learning → memory)
 
-This is the pipeline the user asked for — the workflow's Learning phase output becoming
-durable memory. Make it an explicit step of the workflow's final phase so it is never
+This is the pipeline that turns the workflow's Learning phase output into durable
+memory. Make it an explicit step of the workflow's final phase so it is never
 skipped:
 
 1. **Trigger.** At phase/PRD close, ask: _did we hit something not derivable from the
@@ -196,7 +196,7 @@ line in each, all substance stays in `_brain`:
 - `AGENTS.md` → Codex, and the shared cross-agent contract
 - `.cursor/rules/brain.mdc` → Cursor
 
-Ready-to-paste snippets are in `agent-shims/`. Rule: shims are **thin** — a pointer and
+Ready-to-paste snippets ship with the pack (`practices/shims/` in the installed package). Rule: shims are **thin** — a pointer and
 the recall/verify reminder, nothing more. Never duplicate learning content into a shim;
 it will drift.
 
@@ -250,7 +250,7 @@ violation).
 - [ ] `INDEX.md` present, grouped, pointing at every seeded record — no orphans.
 - [ ] `_templates/learning.md` + `_templates/adr.md` present and match §4 / §11.
 - [ ] This document present as `_brain/PROTOCOL.md` — the canonical protocol.
-- [ ] Seed learnings from `seed-learnings/` imported into `_brain/learnings/`, each
+- [ ] Seed learnings present in `_brain/learnings/` (installed from the pack), each
       `scope: workflow`, `provenance: workflow-seed`, verified to describe a tool-agnostic
       invariant (no source-project leak).
 - [ ] Agent shims wired into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/brain.mdc` (create

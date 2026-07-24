@@ -1,4 +1,11 @@
-import { mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
@@ -232,6 +239,11 @@ export function initWorkspace(
           flag: 'wx',
           ...(action.mode !== undefined ? { mode: action.mode } : {}),
         });
+        // writeFileSync's mode is masked by the process umask — a umask
+        // carrying exec bits would strip them from a hook. chmod to the
+        // exact declared mode right after the successful create (EEXIST
+        // skips never reach here, so an adopter's own file is never touched).
+        if (action.mode !== undefined) chmodSync(full, action.mode);
         report.created.push(action.path);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;

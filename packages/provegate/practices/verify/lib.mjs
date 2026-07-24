@@ -1,4 +1,4 @@
-// Shared helpers for the verify:* library — wave 2.
+// Shared helpers for the verify:* check library.
 // One module for every parser that two checks read (shared-module rule: two gates
 // reading the same format must import one parser so they cannot drift).
 import { readFileSync, readdirSync, existsSync } from 'node:fs';

@@ -2,9 +2,13 @@
 // Pre-commit secret scanner — practice 04 (secrets & env discipline).
 // (1) Name-blocks any staged real .env* file (including rename targets).
 // (2) Content-scans staged text for key/token/private-key patterns.
-import { execSync } from 'node:child_process';
+// Filenames are attacker-influenced input: they are passed to git via
+// execFileSync argv (never a shell string) and enumerated NUL-delimited,
+// so a filename like `$(cmd)` or one with spaces/newlines cannot inject.
+import { execFileSync } from 'node:child_process';
 
-const sh = (cmd) => execSync(cmd, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+const git = (...args) =>
+  execFileSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
 const ENV_EXAMPLE = /^\.env\.(example|template|sample)$/;
 const ENV_REAL = /^\.env(\..+)?$/;
@@ -20,9 +24,8 @@ const CONTENT_PATTERNS = [
   ],
 ];
 
-const staged = sh('git diff --cached --name-only --diff-filter=ACMR')
-  .trim()
-  .split('\n')
+const staged = git('diff', '--cached', '--name-only', '-z', '--diff-filter=ACMR')
+  .split('\0')
   .filter(Boolean);
 
 const problems = [];
@@ -35,7 +38,7 @@ for (const f of staged) {
   }
   let content;
   try {
-    content = sh(`git show :"${f}"`);
+    content = git('show', `:${f}`);
   } catch {
     continue; // unreadable (e.g. deleted between stage and scan) — nothing to scan
   }

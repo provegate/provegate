@@ -19,5 +19,5 @@ adds it to the gate.
 markdown table row has multiple cells and only one is the command.
 **How to apply:** Scope command extraction to the designated Command column (e.g. the 2nd
 cell), not the whole row. Until then, never put a backticked runnable command in the
-Notes/Scope column of an FR row. The originating implementation left this hazard
-unguarded — fix it in the parser.
+Notes/Scope column of an FR row. A naive parser leaves this hazard unguarded —
+fix it in the parser.

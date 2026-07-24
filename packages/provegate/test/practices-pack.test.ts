@@ -144,15 +144,42 @@ describe('gate init --practices (real temp repos)', () => {
     expect(out).toContain('STATUS.md (exists, skipped)');
   });
 
-  it('bare `gate init` stays byte-identical: no practices file appears without the flag', () => {
+  it('bare `gate init` stays byte-identical: exact golden file set, pre-feature contents', () => {
+    // Fixed golden manifest of the PRE-practices bare init. Any file the flagless
+    // path gains or loses — practices leak, dropped scaffold — breaks this list.
+    const GOLDEN = [
+      '_docs/completed/.gitkeep',
+      '_docs/deferred/.gitkeep',
+      '_docs/reviews/.gitkeep',
+      '_docs/wip/.gitkeep',
+      '_prds/completed/.gitkeep',
+      '_prds/deferred/.gitkeep',
+      '_prds/wip/.gitkeep',
+      '_readiness/completed/.gitkeep',
+      '_readiness/deferred/.gitkeep',
+      '_readiness/wip/.gitkeep',
+      '_state/locks/.gitkeep',
+      '_tasks/completed/.gitkeep',
+      '_tasks/deferred/.gitkeep',
+      '_tasks/wip/.gitkeep',
+      'gates.manifest.json',
+      'workflow.config.json',
+    ];
     const repo = makeRepo();
     gateInit(repo);
     const files = fingerprint(repo);
-    expect(files.has('AGENT_BOOTSTRAP.md')).toBe(false);
-    expect([...files.keys()].some((f) => f.startsWith('_brain/'))).toBe(false);
-    expect([...files.keys()].some((f) => f.startsWith('scripts/'))).toBe(false);
-    expect(files.has('workflow.config.json')).toBe(true);
-    expect(files.has('gates.manifest.json')).toBe(true);
+    expect([...files.keys()].sort()).toEqual(GOLDEN);
+    for (const f of GOLDEN) {
+      if (f.endsWith('.gitkeep')) expect(files.get(f), f).toBe('');
+    }
+    expect(JSON.parse(files.get('workflow.config.json')!)).toEqual({
+      branches: { base: 'main' },
+      idPattern: { prefix: 'PRD', width: 3 },
+    });
+    expect(JSON.parse(files.get('gates.manifest.json')!)).toEqual({
+      phases: { '4': [] },
+      postMerge: [],
+    });
   });
 
   it('a failing packed check is not masked: broken _brain record turns the bundle red', () => {
@@ -186,6 +213,15 @@ describe('gate init --practices (real temp repos)', () => {
         const text = readFileSync(full, 'utf8');
         if (/emofy|rayvaz/i.test(text)) bad.push(`${full}: source-project name`);
         if (/[çğışöüÇĞİŞÖÜ]/.test(text)) bad.push(`${full}: non-English character`);
+        // Origin-process terminology that only makes sense in the repo the
+        // pack was extracted from ("handoff card" is a generic workflow term
+        // and deliberately NOT matched here).
+        if (
+          /\bwave [0-9]\b|handoff template|contributor handoff|the user asked for|originating implementation/i.test(
+            text,
+          )
+        )
+          bad.push(`${full}: origin-process terminology`);
         const executable = /\.(mjs|sh)$/.test(entry.name) || full.includes('/hooks/');
         if (executable && /\bgit\s+push\b/.test(text)) bad.push(`${full}: push path`);
       }
@@ -194,9 +230,20 @@ describe('gate init --practices (real temp repos)', () => {
     expect(bad).toEqual([]);
   });
 
-  it('hook exec bit survives an unwritable-adopter umask edge: mode is set at write time', () => {
-    // Regression guard for the mode plumbing: write path must pass mode through
-    // wx (not chmod-after-write, which a crash could skip).
+  it('hook exec bit survives a hostile umask: chmod pins the exact mode after create', () => {
+    // writeFileSync's mode is masked by the process umask, so init chmods to the
+    // declared mode right after a successful create. Prove it under a umask that
+    // strips group/other exec bits (owner bits stay so directories remain
+    // traversable); without the chmod the hook would land 0o744, not 0o755.
+    const hostile = makeRepo();
+    const prevMask = process.umask(0o011);
+    try {
+      gateInit(hostile, '--practices');
+    } finally {
+      process.umask(prevMask);
+    }
+    expect(statSync(join(hostile, '.githooks/pre-commit')).mode & 0o111).toBe(0o111);
+
     const repo = makeRepo();
     gateInit(repo, '--practices');
     const mode = statSync(join(repo, '.githooks/pre-commit')).mode & 0o777;
