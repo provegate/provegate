@@ -35,5 +35,6 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-24 — practices handoff complete: waves 3–4 imported (lifecycle docs + tiers, stop-and-ask, orchestration spec as docs-only), 7 high dep advisories fixed, handoff scaffolding deleted
 - 2026-07-24 — practices handoff wave 2 imported (verify:* library, known-red ledger, CI hygiene job)
 - 2026-07-24 — practices handoff wave 1 imported (`_brain`, governance + coordination practices)
