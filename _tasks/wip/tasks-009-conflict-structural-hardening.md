@@ -120,7 +120,7 @@
 | FR-1               | `pnpm --filter provegate test test/glob.test.ts`                                     | provegate | passed  | 3 files, intersect matrix green | sound walk, symmetric |
 | FR-2               | `pnpm --filter provegate test test/conflicts.test.ts`                                | provegate | passed  | greenfield sibling refusal + disjoint control green | |
 | FR-3               | `pnpm --filter provegate test test/glob.test.ts test/conflicts.test.ts`              | provegate | passed  | 29 passed (2 files)             | grouped rerun         |
-| FR-4               | `grep -c "documented false-negative" packages/provegate/src/core/locks/conflicts.ts` | provegate | passed  | 0 (grep exit 1 = comment gone)  | + cli.mdx echo added  |
+| FR-4               | `grep -L "documented false-negative" packages/provegate/src/core/locks/conflicts.ts` | provegate | passed  | prints conflicts.ts, exit 0 (comment gone) | + cli.mdx echo added |
 | types              | `pnpm check-types`                                                                    | root      | passed  | 3 total, 0 errors               |                       |
 | lint               | `pnpm lint`                                                                           | root      | passed  | 0 warnings                      |                       |
 | test               | `pnpm --filter provegate test`                                                        | provegate | passed  | 35 files, 447 tests             | priors unchanged      |
@@ -155,6 +155,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   overflow) with a 1M-state budget returning conservative may-intersect for
   pathological glob sizes. In scope (glob.ts); the alternative (length cap in
   `validateOwnedPaths`) would have reached outside the conflict surface.
+- 5.1 — §11 FR-4 command corrected from `grep -c "..."` (0 matches → exit 1, which
+  the runner's `execSync` reads as FAILED) to `grep -L "..." conflicts.ts` (comment
+  gone → prints the file, exit 0). A Phase-5 "run don't list" surfacing: the
+  inverted-exit command could never pass the runner though `gate check` (safety
+  lint only) accepted it. Intent unchanged: assert the false-negative comment is
+  gone.
 
 ---
 
@@ -174,6 +180,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Operator Handoff
 
+> None — every gate is machine-checkable (pure engine + test change). The empty
+> row below keeps the operator-row count at 0 so the merge gate needs no
+> acceptance; the PRD header's `operator-gated` is conservative default, not a
+> real handoff.
+
 | Task | Category | Owner | Required Check | Status | Notes |
 | ---- | -------- | ----- | -------------- | ------ | ----- |
-| —    | —        | —     | none — every gate is machine-checkable | — | pure engine + test change; Autonomous Close candidate at close |
+|      |          |       |                |        |       |
