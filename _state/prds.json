@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-24T15:42:22.385Z",
+  "generatedAt": "2026-07-24T16:39:37.652Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -530,26 +530,26 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-015-single-package-support.md",
-        "readiness": "",
-        "tasks": "",
+        "readiness": "_readiness/wip/readiness-015-single-package-support.md",
+        "tasks": "_tasks/wip/tasks-015-single-package-support.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
-        "tasks": "missing",
+        "readiness": "wip",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
-        "modelTierExecution": null,
+        "score": 8.2,
+        "verdict": "PASS",
+        "modelTierExecution": "medium",
         "modelTierAudit": null
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
+        "uncheckedCount": 20,
         "operatorHandoffCount": 0
       },
       "summary": {
