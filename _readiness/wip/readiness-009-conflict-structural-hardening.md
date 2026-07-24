@@ -98,7 +98,23 @@ N/A (no payload), lint passed.
 
 ---
 
+## Code-Reality Amendment (2026-07-24)
+
+Pre-Phase-3 verification against the current source: PRD-009 is **accurate, no
+drift**. `structuralOverlap` + the normalize+prefix logic (`conflicts.ts:64-73`),
+the `documented false-negative` comment (`conflicts.ts:63`), `globToRegExp`
+(`glob.ts:5`), and the `findConflicts`/`candidateConflicts` call sites all match
+the PRD; the structural check still fires only when a side materializes to zero
+files (`conflicts.ts:99`). The reference line was corrected from `:59` to `:63/:64`.
+
+One verdict correction: the original line below claimed "no surface overlap with
+PRD-008." That is wrong — both PRDs touch `apps/docs/content/docs/cli.mdx` (not a
+`sharedAppendOnly` path), so the path-conflict gate serializes them on that doc.
+The code surfaces (`locks/**`) remain fully disjoint from every other PRD.
+
 ## Verdict
 
-**PASS** — proceed to Phase 3 task generation on the owner's Go. No surface
-overlap with PRD-007/008 — claimable in parallel with either.
+**PASS** — proceed to Phase 3 task generation on the owner's Go. Code surfaces are
+disjoint from PRD-007/008/010–012; the only shared path is
+`apps/docs/content/docs/cli.mdx` with PRD-008, so claim the two sequentially (or
+narrow the doc surface), not simultaneously.

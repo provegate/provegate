@@ -109,13 +109,24 @@ so that my claim does not silently go stale under a rival's --steal.
    `leaseHours` from `--hours` (default `DEFAULT_LEASE_HOURS`); no new engine
    code. `gate open` also learns `--hours` for symmetry.
    - **Targets:** `packages/provegate/src/cli.ts`, `packages/provegate/src/core/run/open.ts`
-3. **FR-3 — queue countdown**: `collectLocks` carries `expiresAt` through (already
-   does) and the queue renderer formats remaining time; `--json` gains
-   `expiresInSeconds`. Rendering handles unparseable dates as `?` (never throws).
-   - **Targets:** `packages/provegate/src/cli.ts`
-4. **FR-4 — exports + usage**: `releaseLease` exported from the package index;
-   usage text gains `release` and `renew` rows; both bins.
-   - **Targets:** `packages/provegate/src/index.ts`, `packages/provegate/src/cli.ts`
+3. **FR-3 — queue countdown**: `collectLocks` (cli.ts) already carries `expiresAt`
+   into `buildQueue`, but `buildQueue` currently drops it — the `inFlight` row type
+   is `Omit<QueueLockInfo, 'expiresAt'> & { stale }` and only `stale` survives
+   (`core/state/query.ts:140,189-195`). So this FR edits `query.ts` to retain the
+   remaining time on the `inFlight` row (add `expiresInSeconds`, computed at build
+   from `expiresAt`), the cli.ts queue renderer formats it (`3h 12m left` /
+   `STALE 1h 4m`), and `--json` surfaces the same field — additive only.
+   Unparseable dates render `?` and never throw. `test/state-query.test.ts` gains
+   the additive-field assertion.
+   - **Targets:** `packages/provegate/src/core/state/query.ts`,
+     `packages/provegate/src/cli.ts`,
+     `packages/provegate/test/state-query.test.ts`
+4. **FR-4 — exports + usage**: `releaseLease` re-exported through the run barrel
+   `core/run/index.ts` (which `core/index.ts` → `src/index.ts` already fan out, so
+   `src/index.ts` itself is not edited); usage text gains `release` and `renew`
+   rows; both bins.
+   - **Targets:** `packages/provegate/src/core/run/index.ts`,
+     `packages/provegate/src/cli.ts`
 5. **FR-5 — Tests**: `test/release.test.ts` — own/foreign/force matrix, idempotent
    no-lease path, malformed fail-closed, mutex serialization (release racing a
    claim), victim reporting; CLI-level renew + countdown assertions appended to
@@ -174,7 +185,9 @@ so that my claim does not silently go stale under a rival's --steal.
 
 ### API Changes
 
-- New export: `releaseLease`. `ClaimOptions` unchanged (renew reuses it).
+- New export: `releaseLease` (via `core/run/index.ts`). `ClaimOptions` unchanged
+  (renew reuses it). `Queue.inFlight` gains an additive `expiresInSeconds` field;
+  no field is removed or renamed, so existing `--json` consumers are unaffected.
 
 ---
 
@@ -183,7 +196,9 @@ so that my claim does not silently go stale under a rival's --steal.
 ### In Scope
 
 - `src/core/run/release.ts` (new), `cli.ts`, `open.ts` (`--hours` plumb only),
-  `index.ts`, `test/release.test.ts`, `test/cli.test.ts` additions, two docs.
+  `core/run/index.ts` (export), `core/state/query.ts` (inFlight expiry),
+  `test/release.test.ts`, `test/cli.test.ts`, `test/state-query.test.ts`
+  additions, two docs.
 
 ### Out of Scope
 
@@ -209,10 +224,12 @@ so that my claim does not silently go stale under a rival's --steal.
 
 - `packages/provegate/src/core/run/release.ts`
 - `packages/provegate/src/core/run/open.ts`
+- `packages/provegate/src/core/run/index.ts`
+- `packages/provegate/src/core/state/query.ts`
 - `packages/provegate/src/cli.ts`
-- `packages/provegate/src/index.ts`
 - `packages/provegate/test/release.test.ts`
 - `packages/provegate/test/cli.test.ts`
+- `packages/provegate/test/state-query.test.ts`
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/cli.mdx`
 
@@ -233,7 +250,7 @@ Run from repo root after `pnpm build`.
 | ---- | -------------------------------------------------------------------- | --------- | -------------------------------------- |
 | FR-1 | `pnpm --filter provegate test test/release.test.ts`                  | provegate | own/foreign/force matrix, fail-closed  |
 | FR-2 | `pnpm --filter provegate test test/open.test.ts`                     | provegate | renew delegation, --hours validation   |
-| FR-3 | `pnpm --filter provegate test test/cli.test.ts`                      | provegate | countdown render, additive JSON        |
+| FR-3 | `pnpm --filter provegate test test/state-query.test.ts test/cli.test.ts` | provegate | expiry retained + countdown + additive JSON |
 | FR-4 | `grep -c -e "  release " -e "  renew " packages/provegate/src/cli.ts` | provegate | usage advertises both                |
 | FR-5 | `pnpm --filter provegate test`                                       | provegate | full suite, prior PRD suites unchanged |
 | FR-6 | `grep -c "gate renew" packages/provegate/QUICKSTART.md`              | provegate | guidance documented                    |

@@ -186,8 +186,8 @@ so that "collide at claim, not at merge" holds for greenfield work too.
 
 ## 10. References
 
-- `packages/provegate/src/core/locks/conflicts.ts:59` — the documented
-  false-negative this PRD deletes
+- `packages/provegate/src/core/locks/conflicts.ts:63` — the documented
+  false-negative comment this PRD deletes (`structuralOverlap` at :64)
 - `packages/provegate/src/core/locks/glob.ts` — supported grammar
   (`globToRegExp`)
 - `_prds/completed/prd-001-config-state-locks.md` — glob engine origin

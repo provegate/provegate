@@ -7,7 +7,7 @@
 | PRD                    | `_prds/wip/prd-008-lease-commands.md`         |
 | Score                  | 8.7/10                                        |
 | Verdict                | PASS                                          |
-| Iteration              | 1                                             |
+| Iteration              | 2                                             |
 | Model Tier (Execution) | medium                                        |
 | Model Tier (Audit)     | high                                          |
 | Scored by              | Claude (Fable 5) — same session as PRD author |
@@ -94,7 +94,33 @@ contract N/A (JSON additive-only asserted by test), lint passed.
 
 ---
 
+## Code-Reality Amendment (iteration 2, 2026-07-24)
+
+A pre-Phase-3 verification of the PRD against the current source found one spec
+defect and one targeting error — neither a PRD-007 drift; both predate the draft:
+
+- **A1 (blocking, fixed) — FR-3 needed `core/state/query.ts`.** `collectLocks`
+  does carry `expiresAt` into `buildQueue`, but `buildQueue` drops it:
+  `Queue.inFlight` is `Omit<QueueLockInfo,'expiresAt'> & { stale }`
+  (`query.ts:140,189-195`, unchanged since PRD-001). The countdown and the
+  `--json expiresInSeconds` field are therefore impossible in `cli.ts` alone. FR-3
+  now edits `query.ts` (retain `expiresInSeconds` on the inFlight row) and adds
+  `query.ts` + `test/state-query.test.ts` to the Conflict Surface and scope.
+- **A2 (minor, fixed) — FR-4 export target.** `releaseLease` is re-exported
+  through `core/run/index.ts` (which fans out to `core/index.ts` → `src/index.ts`);
+  the bare `src/index.ts` barrel is not edited. FR-4 and the Conflict Surface now
+  name `core/run/index.ts`.
+
+Everything else verified accurate: `listLockFiles` (lease.ts:89), the
+`.gate-open.mutex` + `withWorkspaceMutex`, `claimPrd`/`leaseHours`/
+`DEFAULT_LEASE_HOURS`, the `leaseAgent` resolution, `--hours` not yet on
+`gate open` (FR-2 correct), and `stale` already computed + `[STALE]` printed. The
+fixes are additive and stay inside the same thin-composition scope; score is
+unchanged at **8.7 PASS**.
+
 ## Verdict
 
-**PASS** — proceed to Phase 3 task generation on the owner's Go. Implement AFTER
-PRD-007 lands (shared `open.ts`/`cli.ts` surface; 008 rebases cheaply).
+**PASS (iteration 2)** — proceed to Phase 3 task generation on the owner's Go.
+Implement AFTER PRD-007 lands (shared `open.ts`/`cli.ts` surface; 008 rebases
+cheaply), and BEFORE PRD-011 (both claim `open.ts`/`cli.ts`/`cli.test.ts`; the
+path-conflict gate serializes them).

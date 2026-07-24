@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-23T18:48:47.499Z",
+  "generatedAt": "2026-07-24T05:05:27.044Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -272,13 +272,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-008-lease-commands.md",
         "readiness": "_readiness/wip/readiness-008-lease-commands.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-008-lease-commands.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -288,15 +288,15 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 33,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-23"
+      "lastUpdated": "2026-07-24"
     },
     {
       "prd": "PRD-009",
@@ -309,13 +309,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-009-conflict-structural-hardening.md",
         "readiness": "_readiness/wip/readiness-009-conflict-structural-hardening.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-009-conflict-structural-hardening.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -325,15 +325,15 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 27,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-23"
+      "lastUpdated": "2026-07-24"
     },
     {
       "prd": "PRD-010",
