@@ -9,7 +9,7 @@
 > **Critical:** 0
 > **High:** 0
 > **Medium:** 0
-> **Quorum:** 3 independent reviewers converged on pass (codex R3/R4; sonnet-A pass w/ 4 medium — closed; sonnet-B fail w/ 1 critical — closed, closure verified by codex R4)
+> **Quorum:** 3/3 pass (codex R3/R4; sonnet-A pass, 4 medium closed; sonnet-B initial fail w/ 1 critical, own closure re-verification pass 0/0/0)
 
 ## Summary
 
@@ -42,8 +42,11 @@ the internal numbered taxonomy ("practice NN" / "pattern PN") leaked into ~10 pa
 comments, a W1 class both codex rounds missed; fixed in `1cbdb6a` (self-contained
 descriptions; hygiene test now bans the class; verify/ install moved into the explicit
 PACK_MAP). **Codex R4 delta confirmation: pass** — greps clean, 12/12 verify files
-explicit, no new findings. (Reviewers' sandboxes could not run vitest; the author-side
-suite is green: fixture 9/9, full repo floor.)
+explicit, no new findings. **sonnet-B closure re-verification: pass 0/0/0** — verified
+each closure directly (greps, hygiene-test regex, PACK_MAP read, ledger record),
+independently rebuilt dist, re-ran the fixture (9/9) and the full floor (495 tests
+green), and re-drove a fresh `gate init --practices` + green `verify-workflow` in a
+new temp repo outside the worktree.
 
 ## Verdict rationale
 
