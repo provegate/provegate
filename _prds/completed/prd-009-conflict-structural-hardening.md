@@ -1,8 +1,8 @@
 # PRD-009: Conflict Detection Hardening — Close the Sibling-Glob False-Negative
 
-> **Status**: Draft
+> **Status**: Ship Verified
 > **Created**: 2026-07-23
-> **Updated**: 2026-07-23
+> **Updated**: 2026-07-24
 > **Author**: rayvaz
 > **Audience**: Implementing Agent (Claude Code / Cursor / Codex)
 > **Slug**: `conflict-structural-hardening`
