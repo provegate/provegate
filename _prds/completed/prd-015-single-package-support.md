@@ -218,7 +218,10 @@ so that gate runs my checks without assuming pnpm or turbo.
 - `apps/docs/content/docs/quickstart.mdx`
 
 > `package.json`/lockfiles and agent-entry docs are shared append-only surfaces,
-> excluded from overlap by `workflow.config.json` `sharedAppendOnly`.
+> excluded from overlap by `workflow.config.json` `sharedAppendOnly`. The workflow
+> control artifacts this PRD's own lifecycle writes — its `_prds/`, `_readiness/`,
+> `_tasks/` ledgers and its `_docs/reviews/` review — are bookkeeping, not claimed
+> implementation surface, and are likewise not exclusive here.
 
 ---
 

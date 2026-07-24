@@ -109,6 +109,34 @@ philosophy:
 → READY TO PUSH — run `git push` yourself (the runner never pushes)
 ```
 
+## Single-package repos
+
+`gate` is **repo-layout-agnostic** — no monorepo required. "Workspace" throughout
+means your git repo root, and `gate init` scaffolds only the workflow tree
+(`_prds/`, `_tasks/`, …); it never creates `apps/`/`packages/` or a
+`pnpm-workspace.yaml`. The one thing to configure is which gate commands run —
+and nothing in it assumes pnpm or turbo.
+
+`gate init` writes an **empty** `gates.manifest.json` (it starts honest — no gates
+until you wire your own). Add your commands to that file: `phases."4"` is the floor
+the gated run executes, `postMerge` runs after the local merge.
+
+```json
+{
+  "phases": {
+    "4": ["npm run check-types", "npm run lint", "npm run test", "npm run build"]
+  },
+  "postMerge": ["npm run check-types", "npm run build"]
+}
+```
+
+The commands are plain strings, so any **allowlisted** invocation works —
+`npm`, `npx`, `yarn`, `bun`, `node`, `tsx`, `vitest`; no pnpm/turbo assumed. A
+direct toolchain via `npx` is fine — `npx tsc --noEmit`, `npx eslint .`,
+`npx vitest run`. (Bare `tsc`/`eslint` are not allowlisted by default; use `npx …`
+or add the prefix to `commands.allowedPrefixes` in `workflow.config.json`.) Run
+`gate check --wiring` to confirm every gate is wired or honestly excepted.
+
 ## Where to go next
 
 - `METHOD.md` — the method spec (classes, gates, locks, deferral governance)
