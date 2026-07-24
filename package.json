@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "changeset": "changeset",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "check-egress": "node scripts/check-static-egress.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
