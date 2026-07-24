@@ -251,9 +251,9 @@ against the merge diff). Never leave empty — write `none` explicitly. Narrow s
 only **this PRD's** durable knowledge.
 
 - Review artifact: `_docs/reviews/review-016-practices-pack.md`
-- Learning: `_brain/learnings/{slug}.md` — capture protocol at Phase 7; placeholder
-  until the learning (if any) is known; replace with `- none` if nothing non-derivable
-  surfaces
+- Learning: none — resolved at Phase 7: every insight this PRD surfaced (pathspec
+  stage-syntax collision, umask-masked modes, byte-parity goldens) is encoded in code
+  comments and regression tests, i.e. derivable from the repo
 
 ---
 
