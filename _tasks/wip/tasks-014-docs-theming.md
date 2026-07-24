@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-014-docs-theming.md](../../_prds/wip/prd-014-docs-theming.md)
 > **Readiness**: [readiness-014-docs-theming.md](../../_readiness/wip/readiness-014-docs-theming.md)
-> **Status**: In Progress — Phase 4 + 5 complete, Phase 6 (audit) pending
+> **Status**: Code Complete — Phase 4/5/6 pass (review Critical 0); operator QA + close pending
 > **Readiness Score**: 8.3/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-24
@@ -74,10 +74,12 @@
   - [x] 7.1 Every §11 command run; evidence in the ledger.
   - [x] 7.2 Floor: check-types, lint, test, build, gate check, never-push, hygiene.
 
-- [ ] 8.0 Phase 6 — Final Auditing
-  - [ ] 8.1 Independent adversarial review → `_docs/reviews/review-014-docs-theming.md`.
-        Attacks: any forked Fumadocs layout, third-party origin in the build,
-        token-only (no hex), unbounded OG slug, the real-surface reconciliation.
+- [x] 8.0 Phase 6 — Final Auditing
+  - [x] 8.1 Independent adversarial review (codex, cross-model) →
+        `_docs/reviews/review-014-docs-theming.md`. R1: pass, Critical 0, but 1
+        High (OG token/font) + 1 Medium (legacy `system` theme). Both fixed
+        (`b442d96`). R2: independently re-verified — Verdict pass, Critical 0,
+        High 0, Medium 0, both RESOLVED.
 
 - [ ] 9.0 Phase 7 — Learning
   - [ ] 9.1 Confirm the durable artifact (`apps/docs/README.md`) is in the diff.
@@ -103,7 +105,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-014`            | repo  | passed  | readiness lint ok | |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`      | repo  | passed  | exit 1 | |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz apps/docs/app apps/docs/components && exit 1 \|\| true` | docs | passed | clean | |
-| independent-review | `_docs/reviews/review-014-docs-theming.md`                     | repo  | pending |          | Phase 6 |
+| independent-review | `_docs/reviews/review-014-docs-theming.md`                     | repo  | passed  | verdict pass, critical 0 | codex R1→R2; High+Medium fixed & re-verified |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -134,6 +136,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-24 | 2.0 | Surface gap: `app/layout.tsx` (Inter + dark-canonical) was outside the 5-file lease. Owner approved adding it; PRD surface + lease updated. Bound `--color-fd-*`→`--pg-*`; next-themes writes `class`+`data-theme` so one block themes both; green kept out of chrome. |
 | 2026-07-24 | 4.0 | OG `[...slug]` was unbounded (`slice(0,-1)`→`getPage`, `notFound` on odd input). Now length-capped + charset-restricted with a site-title fallback; brand card (mark + wordmark + title, literal colours per satori). |
 | 2026-07-24 | 7.0 | Phase 4+5 done in worktree `.worktrees/prd-014-docs-theming`. Floor green: check-types, lint, test, build, egress (exit 0), gate check ok, never-push exit 1, hygiene clean. Phase 6 (independent review) pending. |
+| 2026-07-24 | 8.0 | Phase 6 codex R1 → pass, Critical 0; found 1 High (OG copied brand hexes + Satori default font) + 1 Medium (persisted legacy `theme=system` wrote `system` to both selectors, defeating dark-canonical). Fixed `b442d96`: OG colours from `@provegate/design/tokens`; `storageKey: pg-docs-theme` so legacy value is ignored (verified first render dark for a legacy visitor). Satori can't consume the woff2-only package, so the OG font stays Satori's default — accepted as an honest engine limitation, documented in the route. R2 → pass, Critical 0, High 0, Medium 0, both RESOLVED. |
 
 - (none)
 
