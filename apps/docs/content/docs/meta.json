@@ -5,6 +5,7 @@
     "method",
     "case-study",
     "whitepaper",
-    "cli"
+    "cli",
+    "cli-output"
   ]
 }

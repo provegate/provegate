@@ -152,9 +152,18 @@ export function runChain(options: {
   id: string;
   chain: ChainGate[];
   fromPhase: FromPhase;
+  /** Optional per-gate reporter, fired as each gate resolves — the CLI supplies
+   * it to print a live status line (FR-3). Core stays silent by default; the
+   * runner never prints (substrate split). */
+  onResult?: (phase: string, label: string, ok: boolean) => void;
 }): ChainOutcome {
-  const { config, root, id, chain, fromPhase } = options;
+  const { config, root, id, chain, fromPhase, onResult } = options;
   const results: GateResultRow[] = [];
+
+  const record = (phase: string, label: string, ok: boolean): void => {
+    results.push([`${phase}: ${label}`, ok ? 'passed' : 'FAILED']);
+    onResult?.(phase, label, ok);
+  };
 
   const stop = (phase: string, why: string): ChainOutcome => {
     appendMetric(config, root, { prd: id, phase, gate: 'handoff', result: 'stopped', why });
@@ -167,7 +176,7 @@ export function runChain(options: {
     if (gate.fn) {
       const started = Date.now();
       const r = gate.fn();
-      results.push([`${gate.phase}: ${gate.label}`, r.ok ? 'passed' : 'FAILED']);
+      record(gate.phase, gate.label ?? 'gate', r.ok);
       appendMetric(config, root, {
         prd: id,
         phase: gate.phase,
@@ -200,7 +209,7 @@ export function runChain(options: {
           stdio: 'inherit',
           env: { ...process.env, [RUN_ACTIVE_ENV]: '1' },
         });
-        results.push([`${gate.phase}: ${cmd}`, 'passed']);
+        record(gate.phase, cmd, true);
         appendMetric(config, root, {
           prd: id,
           phase: gate.phase,
@@ -209,7 +218,7 @@ export function runChain(options: {
           durationMs: Date.now() - started,
         });
       } catch {
-        results.push([`${gate.phase}: ${cmd}`, 'FAILED']);
+        record(gate.phase, cmd, false);
         appendMetric(config, root, {
           prd: id,
           phase: gate.phase,

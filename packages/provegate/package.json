@@ -57,6 +57,7 @@
     "provenance": true
   },
   "devDependencies": {
+    "@provegate/design": "workspace:*",
     "@types/node": "^22.20.1",
     "eslint": "^9.39.5",
     "tsup": "^8.5.1",

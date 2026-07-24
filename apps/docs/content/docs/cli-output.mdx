@@ -1,0 +1,61 @@
+---
+title: CLI Output
+description: The terminal grammar — glyphs, colour as signal, and the closed verdict vocabulary.
+---
+
+Most people meet ProveGate as terminal output, so the output is designed. It is a
+fixed grammar: a glyph carries status, colour is a redundant signal, and
+box-drawing is reserved for the two moments that matter. Nothing here needs a
+colour terminal — the glyph is the source of truth.
+
+## The glyph grammar
+
+Every gate result is one of a closed set, each with a fixed glyph and colour:
+
+| Glyph | Verdict    | Colour        | Meaning                                    |
+| ----- | ---------- | ------------- | ------------------------------------------ |
+| `✓`   | `passed`   | green         | passed a machine check / exit 0            |
+| `✗`   | `failed`   | red           | non-zero exit or a fail verdict            |
+| `⚠`   | `partial`  | amber         | some, not all — an advisory, not a failure |
+| `=`   | `skipped`  | dim           | listed but not run — **never green**       |
+| `→`   | `operator` | human-blue    | needs a human / staging; the handoff       |
+| `!`   | `blocked`  | stale-amber   | dependency broken, or an overlap           |
+
+The verdict vocabulary is **closed**: `passed · failed · partial · skipped ·
+operator · blocked`. Those six words, and no others — never `PROVEN`, never
+`VIOLATED`, never an emoji. `operator` (needs a human/staging) and `blocked`
+(dependency broken) are the two honest escape hatches; neither is a silent pass.
+
+## Colour is a signal, never decoration
+
+- **Green is earned.** Only work that passed a machine check or an operator
+  verdict is green — never a heading, a prompt, or an accent. A step that was
+  listed but not run is dim, not green.
+- **Red is real failure.** A non-zero exit or a `failed` verdict, nothing else.
+- **Human-blue** marks the moments a person decides — the operator handoff and
+  the refusal to push.
+
+## NO_COLOR and non-TTY
+
+Colour is decided once, and it is redundant by design. When `NO_COLOR` is set (to
+any non-empty value) or stdout is not a TTY (a pipe, a CI log), every escape
+sequence is dropped and the output is byte-identical to its coloured form with
+the colours stripped. Terminals without truecolor get a 16-colour floor rather
+than raw escapes. You never lose information by turning colour off — the glyph
+already told you.
+
+Machine consumers should prefer `gate queue --json`; the human table is never the
+only way to get the data.
+
+## Box-drawing appears exactly twice
+
+The `┌─┐│└┘` box is reserved for the two moments worth framing, never general
+output:
+
+- **The handoff card** — machine work complete, control returns to you, ending
+  with `→ READY TO PUSH — run \`git push\` yourself (the runner never pushes)`.
+- **The stop card** — a gate failed; the worktree is left intact and the failing
+  row is marked `✗`.
+
+Everything else — status lines, the queue, the `--dry-run` plan, refusals — is
+plain lines under the same glyph grammar.

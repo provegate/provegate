@@ -40,7 +40,6 @@ import {
   claimPrd,
   createPrd,
   initWorkspace,
-  handoffCard,
   mergePreconditions,
   mergeToLocalBase,
   claimMutexPath,
@@ -49,12 +48,40 @@ import {
   releaseLease,
   removeWorktree,
   runChain,
-  stopCard,
+  stopCard as buildStopCard,
   withWorkspaceMutex,
   type FromPhase,
 } from './core/run/index.js';
+import { handoffCard as buildHandoffCard } from './core/run/index.js';
+import { colorTier, paint, verdictSlot, statusLine } from './core/ui/theme.js';
 
 const require = createRequire(import.meta.url);
+
+/** Apply colour to a card at print time (FR-4). Additive only: under NO_COLOR /
+ * non-TTY the tier is `none` and every card is returned byte-identical — the
+ * builder text never changes. Glyphs carry status; the rule and the push line
+ * get the slot colour. */
+function colorCard(card: string, kind: 'stop' | 'handoff'): string {
+  const tier = colorTier();
+  if (tier === 'none') return card;
+  const ruleSlot = kind === 'handoff' ? 'green' : 'red';
+  return card
+    .split('\n')
+    .map((line) => {
+      if (line.startsWith('┌') || line.startsWith('└')) return paint(ruleSlot, line, tier);
+      if (line.includes('READY TO PUSH')) return paint('human', line, tier);
+      return line
+        .replace('✓', paint('green', '✓', tier))
+        .replace('✗', paint('red', '✗', tier))
+        .replace('⚠', paint('amber', '⚠', tier));
+    })
+    .join('\n');
+}
+
+const stopCard = (o: Parameters<typeof buildStopCard>[0]): string =>
+  colorCard(buildStopCard(o), 'stop');
+const handoffCard = (o: Parameters<typeof buildHandoffCard>[0]): string =>
+  colorCard(buildHandoffCard(o), 'handoff');
 const pkg = require('../package.json') as { version: string };
 
 function usage(): string {
@@ -79,6 +106,8 @@ function usage(): string {
     'Options:',
     '  -h, --help     show this help',
     '  -v, --version  print version',
+    '',
+    'humans own intent and release · the machine owns the verified middle',
   ].join('\n');
 }
 
@@ -178,8 +207,16 @@ function runOpen(args: string[]): number {
   try {
     const result = claimPrd(config, root, id, { steal, agent, worktree, leaseHours });
     if (!result.ok) {
+      // FR-6 — the refusal reads as a decision: each conflict marked `✗`, then a
+      // human-blue `→ resolve` hint. Byte-identical text under NO_COLOR.
+      const tier = colorTier();
       console.error(`[open] REFUSED — ${result.id} not claimed:`);
-      for (const issue of result.issues) console.error(`  ✗ ${issue}`);
+      for (const issue of result.issues) console.error(`  ${paint('red', '✗', tier)} ${issue}`);
+      if (result.conflicts.length > 0) {
+        console.error(
+          `  ${paint('human', '→', tier)} resolve: narrow ${result.id}'s Conflict Surface, or --steal if a blocking lease is stale`,
+        );
+      }
       return 1;
     }
     for (const victim of result.stolen) {
@@ -268,20 +305,51 @@ function runRelease(args: string[]): number {
   }
 }
 
+/** Colour a readiness verdict token inside an already-padded cell — the paint
+ * escapes add no visible width, so alignment (computed on plain text) holds. */
+function paintReadiness(cell: string, tier: ReturnType<typeof colorTier>): string {
+  if (tier === 'none') return cell;
+  return cell
+    .replace('PASS', paint('green', 'PASS', tier))
+    .replace('ITERATE', paint('amber', 'ITERATE', tier))
+    .replace('REJECT', paint('red', 'REJECT', tier));
+}
+
 function runStatus(): number {
   const { root, config } = loadConfig();
   const state = buildState(config, root);
   const path = writeState(config, root, state);
+  const tier = colorTier();
 
-  for (const record of state.records) {
-    const score = record.readiness.score === null ? '-' : String(record.readiness.score);
-    const verdict = record.readiness.verdict ?? '-';
-    console.log(
-      `${record.prd}  ${record.status}  readiness=${verdict}/${score}  tasks=${record.task.checkedCount}/${record.task.checkedCount + record.task.uncheckedCount}  ${record.slug}`,
-    );
-  }
   if (state.records.length === 0) {
     console.log('(no workflow artifacts found)');
+  } else {
+    // FR-5 — aligned table. Widths are computed on PLAIN text (one record per
+    // line, space-padded only — no unicode rules), so `grep PRD-001` still works.
+    const cols = ['ID', 'STATE', 'READINESS', 'TASKS', 'SLUG'] as const;
+    const rows = state.records.map((r) => {
+      const total = r.task.checkedCount + r.task.uncheckedCount;
+      const readiness = r.readiness.verdict
+        ? r.readiness.score !== null
+          ? `${r.readiness.verdict} · ${r.readiness.score}`
+          : r.readiness.verdict
+        : '—';
+      return [
+        r.prd,
+        r.status,
+        readiness,
+        total > 0 ? `${r.task.checkedCount}/${total}` : '—',
+        r.slug,
+      ];
+    });
+    const width = cols.map((h, i) => Math.max(h.length, ...rows.map((row) => row[i]!.length)));
+    const pad = (cells: string[]): string[] => cells.map((c, i) => c.padEnd(width[i]!));
+    console.log(pad([...cols]).join('  ').trimEnd());
+    for (const row of rows) {
+      const padded = pad(row);
+      padded[2] = paintReadiness(padded[2]!, tier); // colour the readiness verdict
+      console.log(padded.join('  ').trimEnd());
+    }
   }
   for (const [label, value] of Object.entries(statusPanelMetrics(config, state.records))) {
     console.log(`${label}: ${value}`);
@@ -314,16 +382,23 @@ function runQueue(json: boolean): number {
     (r) =>
       `${r.prd}  ${r.status}/${r.readinessVerdict ?? '-'} score=${r.readinessScore ?? '-'} tasks=${r.uncheckedTasks}${r.resume ? ' [resume]' : ''}  ${r.slug}`,
   );
+  const tier = colorTier();
   if (queue.readyOverlaps.length > 0) {
-    lines.push('  ! overlap (do not run together):');
+    // FR-6 — overlaps carry the `!` marker in stale-amber (a blocking condition,
+    // not a failure); the glyph carries the meaning under NO_COLOR.
+    lines.push(`  ${paint('stale', '!', tier)} overlap (do not run together):`);
     for (const w of queue.readyOverlaps)
       lines.push(`    ${w.a} <-> ${w.b}: ${w.shared.join(', ')}`);
   }
   push(
     'IN-FLIGHT',
     queue.inFlight,
-    (r) =>
-      `${r.prd}  agent=${r.agent} ${r.phase}  ${formatLeaseRemaining(r.expiresInSeconds, r.stale)}${r.worktree ? ` ${r.worktree}` : ''}`,
+    (r) => {
+      // Stale leases render their countdown in stale-amber; live leases plain.
+      const remaining = formatLeaseRemaining(r.expiresInSeconds, r.stale);
+      const badge = r.stale ? paint('stale', remaining, tier) : remaining;
+      return `${r.prd}  agent=${r.agent} ${r.phase}  ${badge}${r.worktree ? ` ${r.worktree}` : ''}`;
+    },
   );
   push(
     'BLOCKED',
@@ -546,7 +621,10 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     prdClass,
   });
 
-  console.log(`[run] ${dryRun ? 'DRY-RUN ' : ''}plan for ${id} (${record.slug}) class=${prdClass}`);
+  // FR-7 — the plan view. The DRY-RUN header is plan-cyan (what WILL run, not a
+  // pass/fail); the chain tree follows, then a closing line.
+  const planHeader = `[run] ${dryRun ? 'DRY-RUN ' : ''}plan for ${id} (${record.slug}) class=${prdClass}`;
+  console.log(dryRun ? paint('plan', planHeader) : planHeader);
   if (fromPhase) console.log(`  resume from: phase ${fromPhase}`);
   console.log(
     `  autonomous close: ${record.autonomousClose ?? '(unset)'} | operator rows: ${record.task.operatorHandoffCount}`,
@@ -557,6 +635,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   console.log('  ── handoff card → HUMAN runs `git push` (the runner never pushes)');
 
   if (dryRun) {
+    console.log(paint('plan', 'nothing runs · nothing merges · this is a plan'));
     console.log('[run] dry-run complete — nothing executed, nothing merged, nothing pushed');
     return 0;
   }
@@ -579,7 +658,19 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
   }
   const stamps = leaseState.stamps;
 
-  const outcome = runChain({ config, root, id, chain, fromPhase });
+  // FR-3 — live status line per gate as it resolves. Core stays silent; the CLI
+  // supplies the reporter and renders via the shared status-line builder.
+  const outcome = runChain({
+    config,
+    root,
+    id,
+    fromPhase,
+    chain,
+    onResult: (phase, label, ok) => {
+      const verdict = ok ? 'passed' : 'failed';
+      console.error(paint(verdictSlot[verdict], statusLine({ phase, name: label, verdict })));
+    },
+  });
   if (outcome.stopped) {
     console.error(
       stopCard({
@@ -798,7 +889,9 @@ export function main(argv: string[]): number {
   }
 
   if (command === 'push') {
-    console.error('No. Push is yours.');
+    // The refusal reads as a decision (human-authority blue), not a failure.
+    // Text is byte-identical under NO_COLOR.
+    console.error(paint('human', 'No. Push is yours.'));
     return 1;
   }
 
