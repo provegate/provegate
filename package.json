@@ -11,7 +11,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "sharp": ">=0.35.0",
+      "postcss@<8.5.18": ">=8.5.18"
+    }
   },
   "scripts": {
     "dev": "turbo run dev",
