@@ -204,17 +204,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 9. Open Questions
 
-- [ ] **Q1 — flag vs subcommand:** `gate init --practices` (proposed: composes with
-      existing init, one entry point) vs a separate `gate practices` command. Proposed
-      default: the flag. — owner decision at review
-- [ ] **Q2 — seed learnings scope:** ship all 21 workflow seeds (proposed) or a curated
-      subset? Proposed default: all 21 — they are tool-agnostic by construction. —
-      owner decision at review
-- [ ] **Q3 — commitlint config:** install as `commitlint.config.mjs` only when absent
-      (proposed, wx handles it) — acceptable even for repos with a different commitlint
-      setup filename? Proposed default: yes; wx skips any existing file of the same
-      name, different-named configs are the adopter's to reconcile via NEXT_STEPS. —
-      owner decision at review
+(none) — all resolved by owner on 2026-07-24.
+
+**Q1 resolved:** `gate init --practices` flag (not a separate command) — composes with
+existing init and `--dry-run`.
+**Q2 resolved:** all 21 workflow seed learnings ship — tool-agnostic by construction.
+**Q3 resolved:** `commitlint.config.mjs` is written only when absent (`wx` skip);
+differently-named existing configs are reconciled by the adopter via NEXT_STEPS.
 
 ---
 
@@ -314,6 +310,7 @@ rationalize.
 
 ## Changelog
 
-| Date       | Author            | Changes       |
-| ---------- | ----------------- | ------------- |
-| 2026-07-24 | agent (for owner) | Initial draft |
+| Date       | Author            | Changes                                    |
+| ---------- | ----------------- | ------------------------------------------ |
+| 2026-07-24 | agent (for owner) | Initial draft                              |
+| 2026-07-24 | owner             | Q1–Q3 resolved (flag, all 21 seeds, wx)    |
