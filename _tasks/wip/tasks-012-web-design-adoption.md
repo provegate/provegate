@@ -133,8 +133,8 @@
   - [ ] 9.2 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build`, `gate check PRD-012`, never-push, hygiene grep.
 
-- [ ] 10.0 Phase 6 — Final Auditing
-  - [ ] 10.1 Independent adversarial review → verdict artifact at
+- [x] 10.0 Phase 6 — Final Auditing
+  - [x] 10.1 Independent adversarial review → verdict artifact at
         `_docs/reviews/review-012-web-design-adoption.md`. `Verdict: pass`
         requires `Critical: 0`. Reviewer attacks: `./cli` React-free (built
         output), prop-contract fidelity, the colour law (green only for passed),
@@ -170,7 +170,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-012`                   | repo   | passed | exit 0 | PRD passes its own gate      |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1`             | repo   | passed | exit 1 | refusal exit 1               |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz packages/design/src && exit 1 \|\| true` | design | passed | clean | no personal names            |
-| independent-review | `_docs/reviews/review-012-web-design-adoption.md`                    | repo   | pending |          | verdict pass, critical = 0   |
+| independent-review | `_docs/reviews/review-012-web-design-adoption.md`                    | repo   | passed  | Sonnet 5: PASS 0/0/1; Medium (push highlight) fixed | probed cli React-free |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

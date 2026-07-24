@@ -120,4 +120,12 @@ describe('each component renders under its contract props', () => {
     expect(container.textContent).toContain('Implement');
     expect(container.textContent).toContain('Push');
   });
+
+  it('PhasePipeline highlights the push node when active="push" (Phase-6 M1)', () => {
+    const phases = [{ n: 1, label: 'PRD', authority: 'human' as const }];
+    const { container } = render(<DS.PhasePipeline phases={phases} active="push" showPush />);
+    const current = container.querySelectorAll('[aria-current="step"]');
+    expect(current).toHaveLength(1);
+    expect(current[0]?.textContent).toContain('Push');
+  });
 });

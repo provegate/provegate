@@ -94,7 +94,11 @@ export function PhasePipeline({
       {...rest}
     >
       {phases.map((p) => node(p, p.n === active))}
-      {showPush ? node({ n: '→', label: 'Push (you)', authority: 'human' }, false) : null}
+      {/* The push node highlights when active is 'push' (its canonical name) or
+          '→' (its rendered symbol) — per the contract, `active` may be 'push'. */}
+      {showPush
+        ? node({ n: '→', label: 'Push (you)', authority: 'human' }, active === 'push' || active === '→')
+        : null}
     </div>
   );
 }
