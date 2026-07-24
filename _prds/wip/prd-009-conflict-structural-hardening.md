@@ -219,7 +219,7 @@ Run from repo root after `pnpm build`.
 | FR-1 | `pnpm --filter provegate test test/glob.test.ts`                  | provegate | intersect matrix, memoized walk        |
 | FR-2 | `pnpm --filter provegate test test/conflicts.test.ts`             | provegate | end-to-end refusal + disjoint control  |
 | FR-3 | `pnpm --filter provegate test test/glob.test.ts test/conflicts.test.ts` | provegate | grouped rerun                    |
-| FR-4 | `grep -L "documented false-negative" packages/provegate/src/core/locks/conflicts.ts` | provegate | comment gone → prints file, exit 0 |
+| FR-4 | `pnpm --filter provegate test test/conflicts.test.ts`                             | provegate | doc-truth test: comment absent (portable exit) |
 
 Cross-cutting (all green before Code Complete):
 

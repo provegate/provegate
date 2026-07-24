@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -125,6 +125,14 @@ describe('structuralOverlap', () => {
   it('keeps genuinely disjoint sibling directories claimable in parallel', () => {
     expect(structuralOverlap(['a/x/**'], ['a/y/**'])).toEqual([]);
     expect(structuralOverlap(['src/a/**'], ['src/b/**'])).toEqual([]);
+  });
+
+  // FR-4 doc truth: the "documented false-negative" comment stops being true and
+  // is deleted. Asserted as a test (portable, deterministic exit) rather than a
+  // `grep` whose absence exit code differs between BSD and GNU grep.
+  it('no longer carries the documented-false-negative comment (FR-4)', () => {
+    const src = readFileSync(resolve(__dirname, '../src/core/locks/conflicts.ts'), 'utf8');
+    expect(src).not.toContain('documented false-negative');
   });
 });
 
