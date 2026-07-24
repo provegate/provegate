@@ -109,6 +109,42 @@ philosophy:
 → READY TO PUSH — run `git push` yourself (the runner never pushes)
 ```
 
+## Single-package repos
+
+`gate` is **repo-layout-agnostic** — no monorepo required. "Workspace" throughout
+means your git repo root, and `gate init` scaffolds only the workflow tree
+(`_prds/`, `_tasks/`, …); it never creates `apps/`/`packages/` or a
+`pnpm-workspace.yaml`. Point the `commands` in `workflow.config.json` at your own
+repo's checks — that is the only place repo shape or toolchain differs:
+
+```json
+{
+  "commands": {
+    "checkTypes": "npm run check-types",
+    "lint": "npm run lint",
+    "test": "npm run test",
+    "build": "npm run build"
+  }
+}
+```
+
+The commands are plain strings, so any toolchain works — no pnpm or turbo assumed.
+A direct (non-pnpm) toolchain is just as valid:
+
+```json
+{
+  "commands": {
+    "checkTypes": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build": "tsc -b"
+  }
+}
+```
+
+`gate check --wiring` confirms these resolve (script commands to a `package.json`
+script; direct execs are accepted as-is).
+
 ## Where to go next
 
 - `METHOD.md` — the method spec (classes, gates, locks, deferral governance)
