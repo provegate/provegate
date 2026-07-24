@@ -1,0 +1,12 @@
+<!-- Paste into provegate's AGENTS.md (Codex + shared cross-agent contract). Thin pointer only. -->
+
+## Memory — `_brain`
+
+This repo keeps durable, non-derivable knowledge in `_brain/` (agent-agnostic, committed).
+
+- **Before work:** read `_brain/INDEX.md`; open detail files whose hook matches the task.
+- **Trust but verify:** a record reflects what was true when written — re-check any file,
+  flag, command, or path it names before relying on it.
+- **At close:** if you learned something the code can't reveal, add
+  `_brain/learnings/<slug>.md` (schema in `_brain/_templates/learning.md`) and its
+  `_brain/INDEX.md` pointer. Store only what is NOT derivable from code, git history, or docs.

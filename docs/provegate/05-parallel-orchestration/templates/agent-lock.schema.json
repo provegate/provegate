@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "agent-lock.schema.json",
+  "title": "Agent work-item lock",
+  "description": "One active claim: a work-item held by an agent in an isolated worktree. Lives on the MAIN checkout (git-ignored), never inside the worktree, so teardown can't orphan it. Validate locks against this schema at claim time — do not leave it doc-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "lockId", "agent", "item", "phase", "startedAt", "expiresAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "lockId": { "type": "string", "description": "<item>-<slug>-<uuid8>" },
+    "agent": { "type": "string", "minLength": 1, "description": "who holds the claim" },
+    "item": {
+      "type": "string",
+      "pattern": "^[A-Z]+-\\d+$",
+      "description": "work-item id, e.g. ITEM-123 — adjust the pattern to your id scheme"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["phase-1", "phase-2", "phase-3", "phase-4", "maintenance"],
+      "description": "CLOSED ENUM — replace with your project's phase vocabulary, but keep it a closed set synchronized with the overlap engine's execution-phase filter; a free string here means a typo'd phase silently escapes every phase-filtered safety gate"
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time", "description": "startedAt + ttlHours (default 24h). Locks EXPIRE, they don't refresh; nothing reaps them automatically." },
+    "branch": { "type": "string", "pattern": "^feat/", "description": "feat/<item>-<slug> (pattern is stricter than strictly required — deliberate)" },
+    "worktree": { "type": "string", "pattern": "^\\.worktrees/", "description": "repo-relative; MUST be under .worktrees/" },
+    "ownedPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "glob array mirrored from the spec's Conflict Surface; the overlap engine materializes these against git ls-files"
+    },
+    "touchedFiles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "OPTIONAL vestige of a pre-ownedPaths design — typically auto-seeded with only the spec doc path; its pairwise-overlap check catches just two-claims-on-one-spec. Keep or drop."
+    },
+    "notes": { "type": "string" }
+  }
+}
