@@ -80,15 +80,18 @@
   - [x] 6.1 Every §11 command run; evidence in the ledger.
   - [x] 6.2 Floor: check-types, lint, test, build, gate check, never-push, hygiene.
 
-- [ ] 7.0 Phase 6 — Final Auditing
-  - [ ] 7.1 Independent adversarial review → `_docs/reviews/review-013-landing-page.md`.
+- [x] 7.0 Phase 6 — Final Auditing
+  - [x] 7.1 Independent adversarial review → `_docs/reviews/review-013-landing-page.md`.
         `Verdict: pass` requires `Critical: 0`. Reviewer attacks: egress (any
         third-party fetch in the build), fabricated/fictional copy, token-only
         (no hex), the real-surface reconciliation, reduced-motion gating.
+        PASS after 3 rounds — see Progress Log.
 
-- [ ] 8.0 Phase 7 — Learning
-  - [ ] 8.1 Confirm the durable artifact (`apps/web/README.md`) is in the diff.
-  - [ ] 8.2 Knowledge ingest: the fictional-CLI → real-static-output decision.
+- [x] 8.0 Phase 7 — Learning
+  - [x] 8.1 Confirm the durable artifact (`apps/web/README.md`) is in the diff.
+  - [x] 8.2 Knowledge ingest: the fictional-CLI → real-static-output decision,
+        and the egress lesson (a denylist/enumerated model misses shapes; scan
+        by fetch SHAPE, over any scheme and any quote style).
 
 ---
 
@@ -113,7 +116,7 @@
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-013`   | repo  | passed  | exit 0 | |
 | never-push         | `node packages/provegate/dist/cli.js push; test $? -eq 1` | repo | passed | exit 1 | |
 | hygiene            | `grep -ri -l -e emofy -e rayvaz apps/web/app && exit 1 \|\| true` | web | passed | clean | |
-| independent-review | `_docs/reviews/review-013-landing-page.md`            | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-013-landing-page.md`            | repo  | passed  | verdict pass, critical 0 | 3 rounds — denylist→shape, then wss:/backtick closed |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -139,6 +142,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   src|href, CSS url()/@import, JS fetch/beacon/WebSocket/EventSource/XHR-open and
   .src=/.href=), ignoring framework doc-URL strings (never in a fetch shape).
   Re-validated against both reviewer injections.
+- 4.1 (Phase-6 round-2) — re-verification found two shapes the fetch-shape
+  detector still missed: a `wss://` WebSocket URL and any backtick-quoted URL.
+  Fixed: `URL_RE`/`isExternal` accept any `[a-z…]:` scheme (keeping
+  protocol-relative `//`), and the JS quote class gained backtick. Re-probed:
+  `new WebSocket('wss://…')`, `fetch(\`https://…\`)`, `el.src = \`https://…\``
+  now all fail (exit 1); clean build still exits 0.
 
 ---
 
@@ -146,6 +155,9 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
+| 2026-07-24 | 7.1 | Phase-6 round 1 → FAIL (Critical 1): egress scanner was a denylist+CSS model; reviewer injected `<script src>`/`<link preconnect>`/`fetch()` to non-denylisted hosts and it reported clean. Rewrote as fetch-shape detector (`6f2c10d`). |
+| 2026-07-24 | 7.1 | Round 2 → FAIL (Critical 1): shape detector still missed `wss://` (URL_RE scheme) and backtick-quoted URLs (JS quote class). Widened scheme to any `[a-z…]:` + added backtick to quote classes (`484f476`). |
+| 2026-07-24 | 7.1 | Round 3 → PASS (Critical 0): all three bypasses fixed; reviewer threw 12 more shapes (`ws://`, `WSS://`, backtick in beacon/importScripts/EventSource/XHR-open, unquoted CSS `url()`), none slipped; string-concat remains the declared blind spot. |
 
 ---
 
