@@ -35,6 +35,9 @@ importers:
 
   apps/docs:
     dependencies:
+      '@provegate/design':
+        specifier: workspace:*
+        version: link:../../packages/design
       cnfast:
         specifier: ^0.0.8
         version: 0.0.8
