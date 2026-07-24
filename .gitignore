@@ -12,6 +12,9 @@ out/
 _state/locks/
 _state/prd-metrics.jsonl
 
+# gate --worktree linked checkouts (provisioned under worktree.dir, never committed)
+.worktrees/
+
 # logs & OS noise
 *.tsbuildinfo
 *.log
