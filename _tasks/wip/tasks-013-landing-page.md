@@ -163,7 +163,10 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Blockers / Open Questions
 
-- (none — depends on PRD-012, landed)
+- Machine phases 4–7 complete; Phase 6 PASS (Critical 0). **Merge deferred**: the
+  four Operator Handoff rows (real-browser QA) are unaccepted. Owner deferred the
+  browser QA this session (2026-07-24) — PRD stays **Code Complete**, not Ship
+  Verified. `gate` merge stays blocked until an operator accepts those rows.
 
 ---
 
