@@ -1,6 +1,7 @@
 import { source } from '@/lib/source';
 import { ImageResponse } from 'next/og';
 import { appName } from '@/lib/shared';
+import { terminal } from '@provegate/design/tokens';
 
 export const revalidate = false;
 
@@ -17,13 +18,18 @@ function resolveTitle(slug: string[]): string {
   return source.getPage(pageSlug)?.data.title ?? appName;
 }
 
-// Literal brand values — satori (next/og) cannot read CSS custom properties,
-// so the --pg-* tokens are inlined here. Kept in sync with packages/design.
+// Brand colours come from the shared token source. Satori (next/og) cannot read
+// CSS custom properties, so we use @provegate/design's exported JS values — not a
+// second copy of the hexes — so nothing drifts when the palette changes. The
+// pixel geometry further down is OG-canvas layout (1200x630), not brand tokens.
+// Font note: Satori renders with its built-in Noto Sans (it cannot consume the
+// packaged woff2), so the OG card is not IBM Plex; brand identity carries through
+// colour + wordmark + layout rather than the typeface here.
 const BRAND = {
-  bg: '#14130d',
-  fg: '#e7e4db',
-  green: '#4fd08a',
-  subtle: '#8f8a7b',
+  bg: terminal.bg.hex,
+  fg: terminal.fg.hex,
+  green: terminal.green.hex,
+  subtle: terminal.dim.hex,
 };
 
 export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...slug]'>) {
