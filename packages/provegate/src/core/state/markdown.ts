@@ -62,16 +62,33 @@ export function countTaskChecks(content: string): { checkedCount: number; unchec
   return { checkedCount, uncheckedCount };
 }
 
-/** Count data rows of the table inside the `## Operator Handoff` section. */
+/**
+ * Count operator rows inside the `## Operator Handoff` section: table rows (the
+ * documented shape) PLUS checkbox rows.
+ *
+ * Counting checkboxes is not a second supported shape — it is the fail-closed
+ * direction. This count IS the merge gate's precondition: at zero the gate
+ * short-circuits to pass and never consumes the owner acceptance. A row written
+ * as `- [ ] 9.0 owner signs off` therefore used to DISARM the gate while every
+ * human artifact (the `operator-gated` header, the unchecked box, the status
+ * board) said a signature was pending — the exact false green PRD-016's close
+ * hit. Miscounting UP costs a spurious acceptance prompt; miscounting DOWN
+ * merges unreviewed work.
+ *
+ * A plain `- (none)` bullet is not a row, and a template's all-empty table row
+ * is not a row — an empty section legitimately means zero operator rows.
+ */
 export function countOperatorHandoff(content: string): number {
   const section = sectionAfter(content, 'Operator Handoff');
   if (!section) return 0;
-  return section
-    .split('\n')
+  const lines = section.split('\n');
+  const tableRows = lines
     .filter((line) => line.trim().startsWith('|'))
     .filter((line) => !/^\|\s*-+/.test(line))
     .filter((line) => !/^\|\s*Task\s*\|/i.test(line))
     .filter((line) => line.split('|').some((cell) => cell.trim().length > 0)).length;
+  const checkboxRows = lines.filter((line) => /^\s*-\s*\[[ xX]\]/.test(line)).length;
+  return tableRows + checkboxRows;
 }
 
 function splitTableCells(line: string): string[] | null {
