@@ -1,5 +1,21 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
+> **All four [P1]s were remediated in the PRD on 2026-07-25, on owner direction. The 6.65
+> ITERATE below still stands as the machine verdict** — the fix was written by the session
+> that recorded the round, so Phase 3 stays shut until an independent round clears it.
+> Owner decision on [P1] 1: **expand scope to the practices pack.** New FR-8 deletes the
+> three packed twins plus the packed exceptions file, removes their `PACK_MAP` entries from
+> `init.ts` (pack-drift's single source of pairing), trims the packed bundle's `CHECKS`,
+> reconciles the ledger and pack manifest, and adds the `NEXT_STEPS.md` migration line so
+> adopters are told which `gate check` flag replaced each removed script. New FR-9 ships it
+> as a minor release and the class rationale is corrected. FR-4 names its config keys
+> (`wiring.scriptsDir`, `wiring.hooksDir`, `wiring.bundlePath`) with validation; FR-3 binds
+> to PRD-021's newly exported predicate; FR-1 gives the ADR a parseable
+> `## Classification` table. **The expansion added an overlap the earlier note denied** —
+> `gate queue` now reports `PRD-020 <-> PRD-023` on `test/pack-manifest.json`, so PRD-020
+> becomes a prerequisite and the 020 ∥ 023 parallelism claim recorded across four PRDs is
+> void. Corrected in all of them.
+>
 > **Current state: iteration 3, 6.65/10, ITERATE — scored independently by Codex
 > (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 2's
 > self-scored 8.30 does not stand. The independent round found four [P1] items, and the

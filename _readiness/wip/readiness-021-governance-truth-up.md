@@ -1,5 +1,17 @@
 # Readiness Assessment: PRD-021 — Governance Truth-Up
 
+> **All four [P1]s were remediated in the PRD on 2026-07-25, on owner direction. The 7.10
+> ITERATE below still stands as the machine verdict** — the fix was written by the session
+> that recorded the round, so Phase 3 stays shut until an independent round clears it.
+> Owner decision on [P1] 1: **make the axes configurable** rather than rewrite the shipped
+> template under a snapshot addendum. FR-1 gains `axes` + axis-keyed `weights` with
+> set-equality validation and a charset that is load-bearing (FR-2 interpolates identifiers
+> into the header pattern); FR-2 generates its pattern from config and fixes dimensions to
+> `[1-5]`; FR-6's null-id contradiction, FR-12's W9 greps, the rollback's `lintPrd` call,
+> and the corpus-wording are all corrected; FR-10 additionally repairs the
+> `{{VALUE_AXES_TABLE}}` placeholder that declares the axes — unregistered, untested, and
+> unsubstituted. FR-13 now exports `isRootRelativeFilename` because PRD-023 consumes it.
+>
 > **Current state: iteration 9, 7.10/10, ITERATE — scored independently by Codex
 > (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 8's
 > self-scored 8.15 does not stand. The independent round found four [P1] items the

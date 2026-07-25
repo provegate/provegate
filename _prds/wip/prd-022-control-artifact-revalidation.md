@@ -382,10 +382,11 @@ both; the exclusive claim is what makes a mistake in that ordering visible inste
 quiet.
 
 **That order is a valid serialization, not a required one.** `gate queue` on 2026-07-25
-measures PRD-020's Conflict Surface as intersecting PRD-019's and nothing else, so once
-PRD-019 is Ship Verified PRD-020 may run **concurrently with this PRD**. PRD-021 may not:
-it also claims `packages/provegate/src/cli.ts`, so this PRD and PRD-021 stay serialized in
-either order.
+reports no intersection between PRD-020's Conflict Surface and this one, so once PRD-019 is
+Ship Verified PRD-020 may run **concurrently with this PRD**. PRD-021 may not: it also
+claims `packages/provegate/src/cli.ts`, so this PRD and PRD-021 stay serialized in either
+order. (PRD-020 may also **not** run concurrently with PRD-023 after that PRD's scope
+expansion — re-run the queue rather than carrying this sentence forward.)
 An earlier draft listed `method.mdx` as “shared, so not claimed exclusively” — a
 preference dressed as a mechanism, which suppressed the only signal that would have
 caught it.
@@ -465,6 +466,7 @@ Before Phase 2 PASS, run: `gate check PRD-022`
 
 | Date       | Author | Changes |
 | ---------- | ------ | ------- |
+| 2026-07-25 | Claude Opus 5, on owner direction | Sequencing footnote only, no FR or Target change. PRD-023's scope expansion created a PRD-020 ↔ PRD-023 overlap on `packages/provegate/test/pack-manifest.json`, so the note here now says PRD-020 may run concurrently with **this** PRD but not with PRD-023 |
 | 2026-07-25 | Claude Opus 5, via owner | Sequencing note only — no FR, Target, Conflict Surface entry, dependency, or verification command changed, and the readiness verdict is untouched. The wave-order sentence now records that the chain is a valid serialization rather than a required one: `gate queue` measures PRD-020 as overlapping PRD-019 alone, so PRD-020 may run concurrently with this PRD. PRD-021 may not — the shared `cli.ts` claim keeps that pair serialized in either order. The chain also gains its missing PRD-023 tail |
 | 2026-07-25 | Cursor | Phase 3. `gate queue` surfaced a second Conflict Surface overlap the readiness rounds had all missed: PRD-019 also claims `packages/provegate/src/cli.ts`, for `gate doctor`. No design coupling, just a shared modify-in-place file — PRD-019 joins PRD-018 as a Ship-Verified prerequisite, and the “one overlap” claim is corrected |
 | 2026-07-25 | Cursor | Readiness iteration 3 (7.55, ITERATE) resolved. W6: `extra` now has explicit ordered-union and first-occurrence dedup semantics — without them FR-3's byte-identical promise is unmeetable, since the drifted list is joined into the refusal text. W8: the precedence claim is corrected against the code — `loadConfig`/`loadManifest` already throw at cli.ts:627-628, above the lease parse, so this PRD inserts third and changes neither. That surfaced the sharpest case for the feature: `loadManifest()` falls back to `defaultManifest()` when the file is merely absent, so a locally deleted manifest still committed on base produces no error today. Added to the fixture |
