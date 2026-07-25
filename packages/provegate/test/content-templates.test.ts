@@ -939,3 +939,53 @@ describe('phase 6 round 8 self-attack (before the independent round returned)', 
     ]);
   });
 });
+
+describe('phase 6 round 9 regressions', () => {
+  it('[R9-P1-1] a pipe-bearing paragraph over dashes IS a setext heading', () => {
+    // A GFM table needs a DELIMITER row, and a delimiter row carries pipes — so
+    // it can never be the dashes-only line the setext pattern requires. The `|`
+    // exclusion was pure loss: it kept bullets below a real heading inside the
+    // section above it.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      '| not | a table',
+      '---',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — below another H2.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/real.md',
+    ]);
+  });
+
+  it('[R9-P1-1] and a real table is still a table', () => {
+    const doc = [
+      '## Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
+      '',
+    ].join('\n');
+    expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(true);
+  });
+
+  it('[R9-P1-2] an unreadable INDEX is a store issue, not an empty store', () => {
+    // An unclosed comment at the top erased every pointer: readiness and close
+    // then accepted `none` while the standalone validator still saw them all.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-index-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      ['<!-- a note nobody closed', '', '- [x](learnings/x.md) — hook', ''].join('\n'),
+    );
+    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true });
+    expect(store.records).toEqual([]);
+    expect(store.issues[0]).toContain('unclosed HTML comment');
+  });
+});

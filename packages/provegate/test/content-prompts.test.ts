@@ -151,6 +151,14 @@ describe('knowledge prompts carry the generic taxonomy (FR-4)', () => {
  * copy, so reverting this value to its original four tokens left the fixture
  * green while the prompts went unguarded. One value, both users.
  */
+/**
+ * `phase-5-testing.md` as the addendum leaves it. §8 grants phase 5 no memory
+ * obligation, and a deny-vocabulary cannot cover paraphrase, so the file is
+ * pinned by digest: any edit fails here and must be looked at. Update this ONLY
+ * after confirming the change adds no memory instruction.
+ */
+const PHASE_5_DIGEST = '55cab84570da8ef05a7cbcf6c2dda7acfcad320d5e019f4419db1cd16763facc';
+
 const MEMORY_VOCABULARY =
   /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
 
@@ -170,10 +178,15 @@ const constraintsOf = (file: string): string => {
 };
 
 /** Numbered constraint entries in a prompt's Agent Constraints list. */
-const constraintCount = (file: string): number =>
-  // Every numbered entry, bold or not: matching `^\d+\. \*\*` let an
-  // unstyled `5. Reopen every prior learning...` ship without moving the count.
-  (constraintsOf(file).match(/^\d+\.[ \t]/gm) ?? []).length;
+/** Numbered constraint entries in a block of prompt text — bold or not.
+ * Matching `^\d+\. \*\*` let an unstyled `5. Reopen every prior learning...`
+ * ship without moving the count. ONE implementation: the mutation fixture must
+ * exercise the value the production assertion uses, or reverting the production
+ * regex leaves the fixture green. */
+const constraintCountIn = (content: string): number =>
+  (content.match(/^\d+\.[ \t]/gm) ?? []).length;
+
+const constraintCount = (file: string): number => constraintCountIn(constraintsOf(file));
 
 describe('FR-3 per-file prompt obligations (W3)', () => {
   /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
@@ -366,6 +379,17 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     expect(constraintCount('phase-5-testing.md')).toBe(4);
   });
 
+  it('phase 5 is byte-pinned: §8 grants it no obligation, so any edit is a decision', () => {
+    // A deny-vocabulary cannot cover paraphrase — "reopen every prior learning
+    // chosen by the work item" imposes the forbidden obligation while matching
+    // no listed term. The addendum gives this file no memory obligation at all,
+    // so the honest guard is a digest: any edit fails here and has to be looked
+    // at. Update the digest ONLY after confirming the change adds no memory
+    // instruction.
+    const digest = createHash('sha256').update(prompt('phase-5-testing.md')).digest('hex');
+    expect(digest).toBe(PHASE_5_DIGEST);
+  });
+
   it('the phase-5 denial is discriminating, not merely satisfied', () => {
     // The checked-in prompt is clean, so the assertion above cannot distinguish
     // a working scanner from a broken one. Inject the exact mutation the scanner
@@ -513,7 +537,7 @@ describe('phase 6 round 3 — the provenance oracle is tested, not trusted', () 
 });
 
 describe('phase 6 round 8 — the constraint count is discriminating', () => {
-  const countIn = (body: string): number => (body.match(/^\d+\.[ \t]/gm) ?? []).length;
+  const countIn = constraintCountIn;
 
   it('[R8-P2-6] an UNSTYLED numbered constraint moves the count', () => {
     // `^\d+\. \*\*` counted only bold entries, so a plain

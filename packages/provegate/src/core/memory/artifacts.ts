@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MemoryConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
@@ -276,16 +276,16 @@ export function contractSection(content: string, heading: string): { count: numb
   // `#Other` over dashes IS a setext H2, and rejecting every line starting `#`
   // let an owner row below it stay inside the preceding section. Same for `-`,
   // `*`, `+` and `|`: they open a block only in the shapes below.
-  // Up to three leading spaces are legal on a heading, and a lone `|` opens a
-  // table only when the line carries a second one — excluding every `|` and
-  // every indented line suppressed REAL setext headings, which let an owner row
-  // beneath one stay inside the section above it.
+  // Up to three leading spaces are legal on a heading. There is no `|`
+  // exclusion: a GFM table needs a DELIMITER row, which carries pipes, so it can
+  // never be the dashes-only line this pattern requires — excluding pipe-bearing
+  // lines only suppressed real setext headings, and an owner row beneath one
+  // stayed inside the section above it.
   const NOT_A_PARAGRAPH = [
     '[-*+][ \\t]', // bullet list item
     '\\d+[.)][ \\t]', // ordered list item
     '#{1,6}(?:[ \\t]|$)', // ATX heading
     '>', // block quote
-    '\\|[^\\n]*\\|', // table row
     '[ \\t]{4,}', // indented code block
   ].join('|');
   const setext = rest.search(
@@ -822,7 +822,11 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
   const indexPath = resolve(root, indexRel);
   let indexIsFile: boolean;
   try {
-    indexIsFile = lstatSync(indexPath).isFile();
+    // `statSync`, following links: `config/load.ts` deliberately resolves safe
+    // in-repository symlink chains, so rejecting the final link here made a
+    // configuration that config load and `verify:brain` both accept impossible
+    // to pass at readiness.
+    indexIsFile = statSync(indexPath).isFile();
   } catch {
     indexIsFile = false;
   }
@@ -837,7 +841,17 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
   // Pointers are relative to the index's own directory, which is how the
   // shipped index writes them (`learnings/x.md` beside `INDEX.md`).
   const base = dirname(indexPath);
-  const indexText = contractView(readFileSync(indexPath, 'utf8'));
+  const rawIndex = readFileSync(indexPath, 'utf8');
+  // The INDEX is Markdown, so it can be unreadable for the same reasons a PRD
+  // can — and discarding that verdict was a fail-open: an unclosed comment at
+  // the top erased every pointer, so every watched record vanished and the gates
+  // accepted `none`, while the standalone validator still saw all of them.
+  const indexProblem = contractViewProblem(rawIndex);
+  if (indexProblem !== null) {
+    store.issues.push(`memory index '${memory.index}': ${indexProblem}`);
+    return store;
+  }
+  const indexText = contractView(rawIndex);
   const seen = new Set<string>();
   for (const match of indexText.matchAll(POINTER)) {
     const pointer = match[1]!;
