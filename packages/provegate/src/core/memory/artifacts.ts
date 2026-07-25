@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MemoryConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
@@ -112,23 +112,51 @@ function pathProblem(value: string): string | null {
  * nothing downstream has to know this happened.
  */
 function withoutFences(content: string): string {
-  let fenced = false;
+  // CommonMark's rules, not a substring test: a fence opens with 3+ of ` or ~
+  // at an indent of at most three spaces, and closes only with at least as many
+  // of the SAME character. A toggle that ignored all of this let a `~~~` block
+  // be "closed" by a ``` line inside it, exposing everything after — which is
+  // the fail-open direction, since the exposed text can be a forged section.
+  // An unclosed fence consumes the rest of the document and the section then
+  // reads as absent, which the gates refuse.
+  let open: { char: string; length: number } | null = null;
   return content
     .split('\n')
     .map((line) => {
-      if (/^\s*(```|~~~)/.test(line)) {
-        fenced = !fenced;
+      const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
+      if (match !== null) {
+        const char = match[2]![0]!;
+        const length = match[2]!.length;
+        if (open === null) {
+          // An opening backtick fence may not carry a backtick in its info
+          // string — that is what makes ```` ```inline``` ```` not a fence.
+          if (char === '`' && match[3]!.includes('`')) return line;
+          open = { char, length };
+          return '';
+        }
+        // A closer matches the opener's character, is at least as long, and
+        // carries nothing after it.
+        if (char === open.char && length >= open.length && match[3]!.trim().length === 0) {
+          open = null;
+          return '';
+        }
         return '';
       }
-      return fenced ? '' : line;
+      return open === null ? line : '';
     })
     .join('\n');
 }
 
-/** How many times an unfenced `## <heading>` appears. More than one is an
- * ambiguity, not a duplicate: the parser would silently pick one of them. */
+/**
+ * How many times an unfenced `## <heading>` appears. More than one is an
+ * ambiguity, not a duplicate: the parser would silently pick one of them.
+ *
+ * The separator is `[ \t]`, never `\s`. `\s` matches a NEWLINE, so `##` on one
+ * line and `Memory Outputs` on the next satisfied the pattern — a forged
+ * section that is not a heading at all, and the contract read it as one.
+ */
 function headingCount(content: string, heading: string): number {
-  return (content.match(new RegExp(`^##\\s+${heading}\\s*$`, 'gim')) ?? []).length;
+  return (content.match(new RegExp(`^##[ \\t]+${heading}[ \\t]*$`, 'gim')) ?? []).length;
 }
 
 /**
@@ -409,6 +437,32 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   issues.push(...unreadableStoreIssues(store));
   if (options.memory !== undefined) {
     issues.push(...outputPlacementIssues(decl.outputs.entries, options.memory));
+    // Landing a file in the store directory is not capturing a record. Without
+    // this, a branch could add `<root>/learnings/new.md` holding arbitrary
+    // text, leave it out of the INDEX, and pass: placement succeeds, the file
+    // exists, and `loadMemoryStore` never sees an unindexed file. Whether a
+    // Phase 7 validator command happens to be wired is configuration, and a
+    // gate may not depend on the adopter having wired one.
+    const indexed = new Map(
+      store.records.map((record) => [`${options.memory!.root}/${record.pointer}`, record]),
+    );
+    for (const output of decl.outputs.entries) {
+      const record = indexed.get(output.path);
+      if (record === undefined) {
+        issues.push(
+          `${OUTPUTS_HEADING}: '${output.path}' is not an indexed, valid record — a file in ` +
+            `the store is not a capture until the index points at it and it parses`,
+        );
+        continue;
+      }
+      const isAdr = record.pointer.startsWith('adr/');
+      if ((output.type === 'adr') !== isAdr) {
+        issues.push(
+          `${OUTPUTS_HEADING}: '${output.path}' is declared '${output.type}' but the store ` +
+            `holds it as ${isAdr ? 'an ADR' : 'a learning'}`,
+        );
+      }
+    }
   }
 
   for (const indexed of activeRecords(store)) {
@@ -556,18 +610,16 @@ export function changelogApproves(
  * for the PRD let an unrelated operator-row waiver license a broken promise.
  */
 export function acceptanceCoversPath(items: readonly string[], path: string): boolean {
-  // Token equality, not substring containment. A substring test fails OPEN on
-  // the one case that matters: `_brain/learnings/x.md` is a substring of
-  // `_brain/learnings/x.md.bak`, so an acceptance naming a backup, a draft, or
-  // any longer sibling would waive the removal of the real record. Items are
-  // human-written prose, so the path is matched as a whole token with its
-  // trailing sentence punctuation stripped.
+  // Two exact forms, and nothing inferred from prose. A substring test failed
+  // OPEN (`x.md` is inside `x.md.bak`); splitting prose on punctuation to fix
+  // that failed open a second way, because a comma is legal in a filename and
+  // `x.md,backup.md` split into a token equal to the path. Both attempts were
+  // trying to read intent out of a sentence. The item either IS the path, or it
+  // quotes the path — an author saying which file they waived can do either.
   return items.some((item) => {
     if (typeof item !== 'string') return false;
-    return item
-      .split(/[\s`,;()[\]]+/)
-      .map((token) => token.replace(/[.,;:]+$/, ''))
-      .includes(path);
+    if (item.trim() === path) return true;
+    return [...item.matchAll(/`([^`]+)`/g)].some((match) => match[1]!.trim() === path);
   });
 }
 
@@ -624,8 +676,21 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
     }
     seen.add(pointer);
     const file = join(base, pointer);
-    if (!existsSync(file)) {
-      store.issues.push(`memory index: dangling pointer to ${pointer}`);
+    // `existsSync` is true for a directory, and `readRecord` then throws EISDIR
+    // out of a gate whose contract is to REPORT problems. A pointer that does
+    // not resolve to a regular file is a store issue like any other.
+    let isFile: boolean;
+    try {
+      isFile = lstatSync(file).isFile();
+    } catch {
+      isFile = false;
+    }
+    if (!isFile) {
+      store.issues.push(
+        existsSync(file)
+          ? `memory index: ${pointer} is not a regular file`
+          : `memory index: dangling pointer to ${pointer}`,
+      );
       continue;
     }
     const slug = pointer.replace(/^(?:learnings|adr)\//, '').replace(/\.md$/, '');

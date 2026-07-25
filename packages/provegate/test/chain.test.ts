@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -343,6 +343,8 @@ const STORE = (watch?: string): Record<string, string> => ({
     '# index',
     '',
     '- [sample](learnings/sample-record.md) — hook',
+    // The promised output is indexed here; the feature branch supplies the file.
+    '- [new thing](learnings/new-thing.md) — hook',
     ...(watch === undefined ? [] : ['- [watcher](learnings/watcher-record.md) — hook']),
     '',
   ].join('\n'),
@@ -562,7 +564,7 @@ describe('FR-5 base-ref weakening', () => {
           {
             prd: 'PRD-002',
             owner: 'owner',
-            items: ['memory output removal: _brain/adr/ADR-0001-x.md'],
+            items: ['memory output removal: `_brain/adr/ADR-0001-x.md`'],
             reason: 'the decision moved to PRD-022',
             date: '2026-07-25',
             method: 'interactive',
@@ -779,10 +781,11 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
     const approved = prd({
       changelog: ['| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — moved |'],
     });
+    // Two exact forms only: the item IS the path, or it QUOTES the path.
+    // Inferring boundaries from prose punctuation is what failed open twice.
     for (const item of [
       '_brain/adr/ADR-0001-x.md',
       'removed `_brain/adr/ADR-0001-x.md`, moved to PRD-022',
-      'the decision at _brain/adr/ADR-0001-x.md.',
     ]) {
       const root = gitRepo(
         {
@@ -828,11 +831,13 @@ describe('phase 6 round 2 regressions', () => {
     // range is 50. A record added on unpushed local base would have counted as
     // this PRD's capture. The gate now asks the LOCAL base, which is what the
     // merge actually targets.
+    // Ordering is the whole test, and round 3 caught the first version getting it
+    // wrong: the branch must fork AFTER the local-only commit, or the record is
+    // absent from the feature range under BOTH implementations and the assertion
+    // proves nothing. Here `origin/main` is pinned before that commit, so the
+    // origin-first range WOULD have contained the record and passed.
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
-    // the record lands on main AFTER the branch forks, and origin/main is stale
     execFileSync('git', ['branch', 'origin/main'], { cwd: root, stdio: 'ignore' });
-    execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
-    execFileSync('git', ['checkout', 'main'], { cwd: root, stdio: 'ignore' });
     mkdirSync(join(root, '_brain/learnings'), { recursive: true });
     writeFileSync(join(root, '_brain/learnings/new-thing.md'), RECORD_MD('new-thing'));
     execFileSync('git', ['add', '-A'], { cwd: root, stdio: 'ignore' });
@@ -840,7 +845,10 @@ describe('phase 6 round 2 regressions', () => {
       cwd: root,
       stdio: 'ignore',
     });
-    execFileSync('git', ['checkout', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    writeFileSync(join(root, 'unrelated.txt'), 'feature work\n');
+    execFileSync('git', ['add', '-A'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'feature', '--no-verify'], { cwd: root, stdio: 'ignore' });
     const result = gate(
       chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
       'declared outputs',
@@ -893,8 +901,10 @@ describe('phase 6 round 2 regressions', () => {
       '- `_brain/adr/ADR-0001-x.md` — the decision',
     ];
     const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    // BEFORE the real section: the old parser took the first heading, so a
+    // forgery placed after it was never read and the assertion was vacuous.
     const forged = [
-      prd(),
+      '# PRD-002',
       '',
       'For reference, an approval row looks like this:',
       '',
@@ -906,6 +916,7 @@ describe('phase 6 round 2 regressions', () => {
       '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
       '```',
       '',
+      prd(),
     ].join('\n');
     const root = gitRepo(
       {
@@ -972,7 +983,7 @@ describe('phase 6 round 2 regressions', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('no file exists at that path after the merge');
-  });
+  }, 20_000);
 
   it('[R2-P2-9] the capture check is the diff status, not the injected file list', () => {
     // The reviewer's charge: replacing capturedDiffFiles with `return null`
@@ -994,5 +1005,156 @@ describe('phase 6 round 2 regressions', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('was not added or modified by the merge diff');
+  });
+});
+
+describe('phase 6 round 3 regressions', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+
+  it('[R3-P1-1] `##` and its text on separate lines is not a heading', () => {
+    // `\s+` matches a newline, so `##\nMemory Outputs` satisfied the pattern and
+    // the contract read a forged non-heading as the real section.
+    const forged = [
+      '# PRD-002',
+      '',
+      '##',
+      'Memory Outputs',
+      '',
+      '- none — forged, and not a heading at all.',
+      '',
+      prd(),
+    ].join('\n');
+    const root = gitRepo({ '_prds/wip/p.md': forged, ...STORE() }, CAPTURED_RECORD);
+    // The real section still parses; the forgery contributes nothing.
+    expect(
+      gate(chainFor({ root, prdContent: forged, changedFiles: CHANGED }), 'declared outputs'),
+    ).toEqual({ ok: true });
+  });
+
+  it('[R3-P1-2] a `~~~` fence is not closed by a ``` line inside it', () => {
+    // The toggle version exposed everything after that ``` line, so a section
+    // the author fenced OFF became live again — a forged contract, fail open.
+    const shadowed = [
+      '# PRD-002',
+      '',
+      '~~~markdown',
+      '## Memory Outputs',
+      '',
+      '- none — this example is fenced off.',
+      '```',
+      '## Memory Outputs',
+      '',
+      '- none — and so is this one.',
+      '~~~',
+      '',
+      prd(),
+    ].join('\n');
+    const decl = gate(
+      chainFor({
+        root: gitRepo({ '_prds/wip/p.md': shadowed, ...STORE() }, CAPTURED_RECORD),
+        prdContent: shadowed,
+        changedFiles: CHANGED,
+      }),
+      'declared outputs',
+    );
+    // Exactly one real section survives, so the contract reads the author's.
+    expect(decl).toEqual({ ok: true });
+  });
+
+  it('[R3-P1-3] a file in the store is not a record until the INDEX points at it', () => {
+    // Placement and lstat both succeed; only indexing separates a captured
+    // record from an arbitrary Markdown file dropped in the right directory.
+    const unindexed = {
+      ...STORE(),
+      '_brain/INDEX.md': '# index\n\n- [sample](learnings/sample-record.md) — hook\n',
+    };
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...unindexed }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('is not an indexed, valid record');
+  });
+
+  it('[R3-P1-3] and an output declared `adr` that the store holds as a learning fails', () => {
+    const content = prd({
+      outputs: ['- adr: `_brain/learnings/new-thing.md` — filed in the wrong drawer.'],
+      durable: ['- `_brain/learnings/new-thing.md` — the durable fact'],
+    });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toMatch(/must live under '_brain\/adr\/'|the store holds it as a learning/);
+  });
+
+  it('[R3-P1-4] a comma-bearing sibling filename does not waive the real path', () => {
+    // The prose-tokenizing matcher split `x.md,backup.md` into a token equal to
+    // the promised path. A comma is legal in a filename; intent is not.
+    const TWO_OUTPUTS = [
+      '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+      '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+    ];
+    const TWO_DURABLE = [
+      '- `_brain/learnings/new-thing.md` — the durable fact',
+      '- `_brain/adr/ADR-0001-x.md` — the decision',
+    ];
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: ['| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — moved |'],
+    });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': baseline,
+        '_state/acceptances.json': JSON.stringify({
+          acceptances: [
+            {
+              prd: 'PRD-002',
+              owner: 'owner',
+              items: ['_brain/adr/ADR-0001-x.md,backup.md'],
+              reason: 'a different file entirely',
+              date: '2026-07-25',
+              method: 'interactive',
+            },
+          ],
+        }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('does not name');
+  });
+
+  it('[R3-P2-8] a SYMLINK to a valid record is not a capture', () => {
+    // lstat, not stat: following the link would re-admit "point at something
+    // that already exists" as though the promised fact had been written.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    rmSync(join(root, '_brain/learnings/new-thing.md'));
+    symlinkSync('sample-record.md', join(root, '_brain/learnings/new-thing.md'));
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no file exists at that path after the merge');
+  });
+
+  it('[R3-P2-8] an index pointer resolving to a directory reports, never throws', () => {
+    // Found by this suite: `existsSync` is true for a directory, so `readRecord`
+    // threw EISDIR out of a gate whose contract is to report.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    rmSync(join(root, '_brain/learnings/new-thing.md'));
+    mkdirSync(join(root, '_brain/learnings/new-thing.md'), { recursive: true });
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('is not a regular file');
   });
 });

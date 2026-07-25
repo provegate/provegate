@@ -415,3 +415,36 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
     expect(addendum).toContain('review trigger, not a staleness verdict');
   });
 });
+
+describe('phase 6 round 3 — the provenance oracle is tested, not trusted', () => {
+  /** The deny-list is only worth its comment if a violation actually trips it.
+   * Round 3's charge was that reverting the widened vocabulary left the suite
+   * green, because nothing injected a paraphrased obligation. */
+  const MEMORY_VOCABULARY =
+    /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
+
+  it('catches an obligation phrased without the original four tokens', () => {
+    const paraphrased = [
+      '5. **Reopen the store.** Before choosing fixtures, open every `_brain` detail file',
+      '   the work item selected and confirm it still holds.',
+    ].join('\n');
+    expect(MEMORY_VOCABULARY.test(paraphrased)).toBe(true);
+    for (const phrasing of [
+      'run the capture protocol before verifying',
+      'consult the memory index for prior constraints',
+      "honour each record's watch when picking a fixture",
+    ]) {
+      expect(MEMORY_VOCABULARY.test(phrasing), phrasing).toBe(true);
+    }
+  });
+
+  it('does not fire on verification prose that mentions no store at all', () => {
+    for (const phrasing of [
+      'Every command in the §11 table is executed and its output pasted into the ledger.',
+      'Integration commands run against the real environment, not mocks.',
+      'Write at least one deny-path test where the PRD touches permissions.',
+    ]) {
+      expect(MEMORY_VOCABULARY.test(phrasing), phrasing).toBe(false);
+    }
+  });
+});
