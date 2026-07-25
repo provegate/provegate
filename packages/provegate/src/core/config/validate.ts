@@ -131,7 +131,10 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
         return;
       }
       for (const key of Object.keys(value)) {
-        if (!(key in spec.children)) {
+        // `in` walks the prototype chain, so `constructor`, `toString`, and
+        // `__proto__` read as known keys and the unknown-key promise quietly
+        // fails for exactly the names worth catching.
+        if (!Object.hasOwn(spec.children, key)) {
           issues.push({ path: path === '' ? key : `${path}.${key}`, message: 'unknown key' });
         }
       }

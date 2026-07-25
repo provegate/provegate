@@ -71,6 +71,7 @@
     ],
     "body": [
       "ADR empty section",
+      "ADR heading must match exactly",
       "ADR missing a required section",
       "empty How to apply",
       "empty Why",
@@ -699,6 +700,16 @@
       "valid": true,
       "matrix": ["links:ADR name is legal"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks: [ADR-0001-x]\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "adr-heading-prefix-only",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:ADR heading must match exactly"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Contextual\nc\n## Decision-making\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "note": "a prefix match let `## Contextual` stand in for Context on both sides at once"
     }
   ]
 }

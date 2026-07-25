@@ -382,6 +382,14 @@ describe('record conformance corpus (FR-4, W12)', () => {
     return field.startsWith('line ') ? 'structure' : field;
   };
 
+  it('has unique case ids', () => {
+    // The standalone results are keyed by id. A duplicate id would silently keep
+    // only the last, and a real disagreement in the shadowed case would then be
+    // compared against a different case's result and pass.
+    const ids = corpus.cases.map((c) => c.id);
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+
   it('binds every matrix cell to exactly one case, and every claim to real behaviour', () => {
     // Counting cases proves nothing: deleting every watch case while adding
     // filler elsewhere would keep the totals up. Each case CLAIMS the cells it

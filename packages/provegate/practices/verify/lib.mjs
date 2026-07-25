@@ -310,12 +310,13 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
   }
   if (isAdr) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
-      const found = new RegExp(`^##\\s+${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'mi').exec(
-        body,
-      );
+      const found = new RegExp(
+        `^##[ \\t]+${heading}( considered)?[ \\t]*\\r?\\n([\\s\\S]*?)(?=\\n##[ \\t]|$)`,
+        'mi',
+      ).exec(body);
       if (found === null) {
         issues.push({ field: 'body', message: `ADR requires a '## ${heading}' section` });
-      } else if (found[1].trim().length === 0) {
+      } else if (found[2].trim().length === 0) {
         issues.push({ field: 'body', message: `the '## ${heading}' section is empty` });
       }
     }

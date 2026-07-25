@@ -260,6 +260,15 @@ placeholder text. `name` equals the filename slug. A slug is lowercase kebab-cas
 segments of `[a-z0-9]` joined by single hyphens, so `-`, `foo-`, and `--` are not slugs —
 and an ADR filename is `ADR-NNNN-<slug>` whose suffix obeys the same rule.
 
+The closed vocabularies, enumerated here because the validators enforce them and a
+vocabulary asserted only in an implementation is a rule with no source:
+
+| Field   | Values |
+| ------- | ------ |
+| `type`  | `gotcha`, `convention`, `reference`, `decision` |
+| `scope` | `workflow` (true for anyone running the gated workflow), `project` (specific to the downstream product) |
+| `status` | learnings: `active`, `superseded` · ADRs: `proposed`, `accepted`, `superseded` |
+
 Learnings use `active | superseded`; ADRs use `proposed | accepted | superseded`. The two
 vocabularies stay separate: merging them would quietly accept `status: active` on a
 decision. `status: superseded` requires `superseded-by`, `superseded-by` requires that
@@ -267,8 +276,13 @@ status, and its value must be a valid record slug.
 
 `links` may name records or ADRs and may be empty. `tags` are lowercase kebab slugs only —
 never an ADR name — and `watch` holds globs; both are invalid when present and empty.
-`provenance` is optional, non-empty, and not placeholder text; the exact value
-`workflow-seed` is reserved for content shipped with the practices pack.
+`provenance` is optional, non-empty, and not placeholder text. The exact value
+`workflow-seed` is reserved for content shipped with the practices pack — a reservation
+enforced by the pack-drift gate, which requires a packed counterpart for every record
+carrying it. That gate exists only where a pack does: in a repository that merely installed
+the practices, nothing can check the reservation, because there is nothing to compare
+against. The record validator therefore does not enforce it, and this paragraph is the
+whole of the claim.
 
 `gotcha`, `convention`, and `decision` records carry `**Why:**` and `**How to apply:**`
 sections, and those sections carry CONTENT — a marker with nothing after it is the
