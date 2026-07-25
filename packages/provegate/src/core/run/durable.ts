@@ -1,4 +1,4 @@
-import { contractView } from '../memory/artifacts.js';
+import { contractSection, contractView } from '../memory/artifacts.js';
 import { sectionAfter } from '../state/markdown.js';
 
 /**
@@ -10,11 +10,28 @@ import { sectionAfter } from '../state/markdown.js';
 /** Backticked paths declared in `## Durable Artifacts`; `none` and template
  * tokens dropped (same discipline as the Conflict Surface parser). */
 export function declaredArtifacts(content: string): string[] {
-  // Read from the executable view, like every other contract section. A fenced
-  // or commented-out `## Durable Artifacts` example placed above the real one
-  // was selected instead of it — so a PRD could satisfy the "every output
-  // repeats here" rule with a list it had quoted rather than declared.
-  const section = sectionAfter(contractView(content), 'Durable Artifacts');
+  return artifactPaths(sectionAfter(content, 'Durable Artifacts'));
+}
+
+/**
+ * The same list, read the way the memory contract reads its own sections: from
+ * the executable view of the document, with the exact heading predicate, and
+ * refusing an ambiguous section.
+ *
+ * Two functions rather than one hardened one, for the reason the `frTargets`
+ * split exists: `declaredArtifacts` is the Phase 7 gate for EVERY repository,
+ * and PRD-018 promises a memory-disabled repository behaves exactly as before.
+ * A fenced example above the real section changes which paths that gate demands,
+ * so hardening it in place would have changed a disabled repo's close. Migrating
+ * the legacy reader is recorded as a deferral.
+ */
+export function declaredArtifactsStrict(content: string): string[] {
+  const { count, body } = contractSection(contractView(content), 'Durable Artifacts');
+  if (count !== 1) return [];
+  return artifactPaths(body);
+}
+
+function artifactPaths(section: string): string[] {
   const paths: string[] = [];
   for (const line of section.split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;

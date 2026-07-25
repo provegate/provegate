@@ -310,7 +310,11 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     // The row is a stated position, not an omission: "Verification is
     // verification." A prompt that adds an instruction §8 does not name is out
     // of scope for the addendum, which makes it fabricated method content.
-    expect(MEMORY_VOCABULARY.test(constraintsOf('phase-5-testing.md'))).toBe(false);
+    // WHOLE FILE for the denied phase. Scoping the scan to the constraint list
+    // created an escape: an obligation written after that section's `---` would
+    // have passed. §8 denies phase 5 a memory obligation anywhere, not just in
+    // one section.
+    expect(MEMORY_VOCABULARY.test(prompt('phase-5-testing.md'))).toBe(false);
   });
 
   it('no phase prompt carries a memory instruction its §8 row does not grant', () => {
@@ -318,6 +322,16 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
       expect(MEMORY_VOCABULARY.test(constraintsOf(file)), `${file} vs addendum §8`).toBe(
         source !== null,
       );
+    }
+  });
+
+  it('every phase prompt has exactly one Agent Constraints section', () => {
+    // `constraintsOf` returns '' for a file without one, which would make the
+    // scoped assertions vacuously true. The assumption is now checked.
+    for (const file of PHASE_PROMPTS) {
+      const headings = prompt(file).match(/^## Agent Constraints[ \t]*$/gm) ?? [];
+      expect(headings.length, file).toBe(1);
+      expect(constraintsOf(file).length, file).toBeGreaterThan(0);
     }
   });
 

@@ -195,13 +195,16 @@ export function contractView(content: string): string {
  * The separator is `[ \t]`, never `\s`, because `\s` also matches a newline —
  * `##` on one line with the text on the next is not a heading.
  */
-function contractSection(content: string, heading: string): { count: number; body: string } {
+export function contractSection(content: string, heading: string): { count: number; body: string } {
   const pattern = new RegExp(`^##[ \\t]+${heading}[ \\t]*$`, 'gim');
   const matches = [...content.matchAll(pattern)];
   if (matches.length !== 1) return { count: matches.length, body: '' };
   const match = matches[0]!;
   const rest = content.slice(match.index! + match[0].length);
-  const next = rest.search(/^##[ \t]/m);
+  // `^##[ \t]` missed a BARE `##` line, so an empty H2 inserted after the real
+  // heading did not end the section and its bullets were still read as this
+  // section's. End of line is a valid separator.
+  const next = rest.search(/^##(?:[ \t]|\r?$)/m);
   return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
 }
 
@@ -497,12 +500,8 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
     // `_brain/catalog/learnings/x.md` onto `_brain/learnings/x.md`, and an
     // arbitrary file at that outer path would have satisfied capture. It also
     // mis-joined every non-canonical root spelling.
-    const indexDir = repoRelative(dirname(options.memory.index));
     const indexed = new Map(
-      store.records.map((record) => [
-        repoRelative(indexDir.length > 0 ? `${indexDir}/${record.pointer}` : record.pointer),
-        record,
-      ]),
+      store.records.map((record) => [indexedPath(options.memory!, record.pointer), record]),
     );
     for (const output of decl.outputs.entries) {
       const record = indexed.get(output.path);
@@ -771,11 +770,9 @@ export function outputPlacementIssues(
   outputs: readonly MemoryOutput[],
   memory: MemoryConfig,
 ): string[] {
-  const root = repoRelative(memory.root);
   const issues: string[] = [];
   for (const output of outputs) {
-    const dir = output.type === 'adr' ? 'adr' : 'learnings';
-    const expected = `${root}/${dir}/`;
+    const expected = recordDir(memory, output.type === 'adr' ? 'adr' : 'learnings');
     if (!output.path.startsWith(expected)) {
       issues.push(
         `${OUTPUTS_HEADING}: '${output.path}' is declared '${output.type}', so it must live ` +
@@ -811,6 +808,28 @@ function repoRelative(value: string): string {
     .split(/[/\\]/)
     .filter((part) => part.length > 0 && part !== '.')
     .join('/');
+}
+
+/**
+ * The directory a record of each kind lives in, derived from the INDEX rather
+ * than from `memory.root`.
+ *
+ * The loader resolves pointers relative to the index, and configuration permits
+ * an index nested below the root. Deriving the placement rule from the root
+ * while deriving the lookup from the index made a VALID nested configuration
+ * impossible to close: placement demanded `_brain/learnings/`, the map held
+ * `_brain/catalog/learnings/`, and nothing could satisfy both. One base, both
+ * answers.
+ */
+function recordDir(memory: MemoryConfig, kind: 'learnings' | 'adr'): string {
+  const base = repoRelative(dirname(memory.index));
+  return base.length > 0 ? `${base}/${kind}/` : `${kind}/`;
+}
+
+/** The repo-relative path the loader read a pointer from. */
+function indexedPath(memory: MemoryConfig, pointer: string): string {
+  const base = repoRelative(dirname(memory.index));
+  return repoRelative(base.length > 0 ? `${base}/${pointer}` : pointer);
 }
 
 interface StoreView {

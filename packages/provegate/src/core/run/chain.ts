@@ -20,7 +20,7 @@ import { resolveClassGates, mergeGateCommands } from '../gates/classes.js';
 import { validateTasksReviewRow } from '../gates/review.js';
 import type { StateRecord } from '../state/build.js';
 import { loadAcceptance, operatorGateOk, validAcceptance } from './acceptance.js';
-import { declaredArtifacts, durableArtifactsOk } from './durable.js';
+import { declaredArtifacts, declaredArtifactsStrict, durableArtifactsOk } from './durable.js';
 import { appendMetric } from './metrics.js';
 import type { GateResultRow } from './cards.js';
 
@@ -316,7 +316,7 @@ export function buildGateChain(options: {
           content: prdContent,
           changedFiles,
           store: loadMemoryStore(root, config.memory),
-          durable: declaredArtifacts(prdContent),
+          durable: declaredArtifactsStrict(prdContent),
           memory: config.memory,
           capturedFiles: captured,
           // lstat, and a regular-file test: a directory named `x.md`, an added

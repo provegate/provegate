@@ -11,6 +11,7 @@ import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
   changelogApproves,
   loadMemoryStore,
+  memoryCloseIssues,
   normalizeTarget,
   outputPlacementIssues,
   outputsMissingFromDurable,
@@ -19,7 +20,7 @@ import {
 } from '../src/core/memory/artifacts.js';
 import { buildState } from '../src/core/state/build.js';
 import { statusPanelMetrics } from '../src/core/state/query.js';
-import { declaredArtifacts } from '../src/core/run/durable.js';
+import { declaredArtifacts, declaredArtifactsStrict } from '../src/core/run/durable.js';
 
 /**
  * FR-6 + W1: templates round-trip through the engine that consumes adopters'
@@ -504,7 +505,46 @@ describe('phase 6 round 4 regressions', () => {
       '- `_brain/learnings/real.md` — the actual declaration',
       '',
     ].join('\n');
-    expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/real.md']);
+    // The STRICT reader — the one the memory contract uses — reads the live
+    // section. The legacy reader keeps its old answer on purpose: it is the
+    // Phase 7 gate for every repository, including memory-disabled ones, whose
+    // behavior this PRD promises not to change. The split is a recorded
+    // deferral, not an oversight.
+    expect(declaredArtifactsStrict(doc)).toEqual(['_brain/learnings/real.md']);
+    expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/forged.md']);
+  });
+
+  it('[R5-P1-2] the strict reader also refuses a forged split heading', () => {
+    const doc = [
+      '# PRD',
+      '',
+      '##',
+      'Durable Artifacts',
+      '',
+      '- `_brain/learnings/forged.md` — not a heading at all',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/real.md` — the actual declaration',
+      '',
+    ].join('\n');
+    expect(declaredArtifactsStrict(doc)).toEqual(['_brain/learnings/real.md']);
+  });
+
+  it('[R5-P1-3] a bare `##` ends a section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      '##',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — under a different section.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/real.md',
+    ]);
   });
 
   it('[R4-P1-1] a nested index resolves records against the index directory', () => {
@@ -541,5 +581,49 @@ describe('phase 6 round 4 regressions', () => {
     const store = loadMemoryStore(root, memory);
     expect(store.records.map((r) => r.slug)).toEqual(['x']);
     expect(store.issues).toEqual([]);
+
+    // The close path is where the changed map lives, so that is what this must
+    // assert — loading the record was already correct before the fix, which is
+    // why the first version of this test could not fail.
+    const nested = '_brain/catalog/learnings/x.md';
+    const content = [
+      '## Memory Inputs',
+      '',
+      '- none — nothing applied.',
+      '',
+      '## Memory Outputs',
+      '',
+      `- learning: \`${nested}\` — the durable fact.`,
+      '',
+      '## Durable Artifacts',
+      '',
+      `- \`${nested}\` — the durable fact`,
+      '',
+    ].join('\n');
+    expect(
+      memoryCloseIssues({
+        content,
+        changedFiles: [nested],
+        capturedFiles: [nested],
+        exists: () => true,
+        store,
+        durable: [nested],
+        memory,
+      }),
+    ).toEqual([]);
+
+    // and the OUTER path the old `<root>/<pointer>` join produced is refused
+    const forged = content.split(nested).join('_brain/learnings/x.md');
+    expect(
+      memoryCloseIssues({
+        content: forged,
+        changedFiles: ['_brain/learnings/x.md'],
+        capturedFiles: ['_brain/learnings/x.md'],
+        exists: () => true,
+        store,
+        durable: ['_brain/learnings/x.md'],
+        memory,
+      }).join('; '),
+    ).toContain('must live under');
   });
 });

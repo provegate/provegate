@@ -1,7 +1,7 @@
 import type { WorkflowConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
 import { lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
-import { declaredArtifacts } from '../run/durable.js';
+import { declaredArtifactsStrict } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
 import { parseVerificationCommands } from './safety.js';
@@ -176,7 +176,7 @@ export function lintPrd(
           content,
           frs.flatMap((fr) => frTargetEntries(fr.body)),
           loadMemoryStore(root, config.memory),
-          declaredArtifacts(content),
+          declaredArtifactsStrict(content),
           config.memory,
         ),
       );
