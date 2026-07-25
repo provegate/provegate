@@ -7,7 +7,7 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `control-artifact-revalidation`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task Generation)
 > **PRD Class**: infra
 > **Class Rationale**: This changes when the runner validates gate policy in an existing
 > worktree; it is workflow tooling, not application behavior.
@@ -27,8 +27,9 @@ telling the operator to merge or rebase first.
 
 That validation runs **only on the claim path**. Both `gate run` and `gate land` enter
 through one function — `runRun()` in `packages/provegate/src/cli.ts`, where `land` is
-`runRun(rest, { mergeOnly: true })` — and that function never repeats it. So a lease taken before a control artifact changed can execute its whole lifecycle —
-every phase gate, then the merge — against gate policy the base branch no longer has, and
+`runRun(rest, { mergeOnly: true })` — and that function never repeats it. So a lease
+taken before a control artifact changed can execute its whole lifecycle — every phase
+gate, then the merge — against gate policy the base branch no longer has, and
 nothing reports it. The lease is not stale in any way the system can see; it simply never
 asks again.
 
@@ -243,6 +244,8 @@ so that a green chain recorded under old policy cannot become a merge.
    - **Targets:** `apps/docs/content/docs/method.mdx`,
      `packages/provegate/test/revalidate.test.ts`
 
+---
+
 ## 5. Non-Goals (Out of Scope)
 
 - Making the pre-commit hook cover merges, or any git-level enforcement.
@@ -297,6 +300,10 @@ so that a green chain recorded under old policy cannot become a merge.
   `apps/docs/content/docs/method.mdx` in its Conflict Surface, which this PRD also claims
   (see below). Sequencing is what keeps the two leases from ever being active together —
   there is no merge story for a concurrent claim, only a refusal.
+- **PRD-019 must also be Ship Verified first**, for the same reason and no other: it
+  claims `packages/provegate/src/cli.ts` to add `gate doctor`. There is no design
+  coupling — that PRD adds a subcommand, this one adds a check inside `runRun()` — only
+  a file both must write.
 - No new runtime dependencies.
 
 ### Rollback
@@ -360,17 +367,25 @@ FR-5 documents that as a stated boundary rather than an omission.
 - `packages/provegate/test/revalidate.test.ts`
 - `apps/docs/content/docs/method.mdx`
 
-**One path here overlaps another PRD, and it is claimed rather than excused.**
-`apps/docs/content/docs/method.mdx` is also in PRD-018's surface. Declaring it
-exclusively is deliberate: it makes the lock gate refuse if both leases are ever active,
-which is the outcome we want, because PRD-018 Ship Verified is a hard prerequisite and
-the two must never run concurrently. The earlier draft listed this path as “shared, so
-not claimed exclusively” — that was a preference dressed as a mechanism, and it
-suppressed the only signal that would have caught the mistake.
+**Two paths here overlap other PRDs, and both are claimed rather than excused.**
+`gate queue` reports them:
+
+- `apps/docs/content/docs/method.mdx` — also PRD-018's.
+- `packages/provegate/src/cli.ts` — also PRD-019's, which adds the `gate doctor`
+  subcommand. Different regions of the same file, but it is modify-in-place, not
+  append-only, so it is not union-mergeable and the lock gate is right to refuse.
+
+Declaring both exclusively is deliberate: it makes the lock gate refuse if any two of
+these leases are ever active together, which is the outcome we want. This PRD is last in
+the wave (017 → 018 → 019 → 021 → 020 → **022**), so sequencing already resolves both;
+the exclusive claim is what makes a mistake in that ordering visible instead of quiet.
+An earlier draft listed `method.mdx` as “shared, so not claimed exclusively” — a
+preference dressed as a mechanism, which suppressed the only signal that would have
+caught it.
 
 Everything else PRD-018 owns — `chain.ts`, `merge.ts`, `open.test.ts`, `merge.test.ts`,
-`chain.test.ts` — is now outside this PRD's scope entirely, after the seam moved to
-`cli.ts`. PRD-021 has no overlap with any path above.
+`chain.test.ts` — is outside this PRD's scope entirely, after the seam moved to
+`cli.ts`. PRD-020 and PRD-021 have no overlap with any path above.
 
 ---
 
@@ -443,6 +458,7 @@ Before Phase 2 PASS, run: `gate check PRD-022`
 
 | Date       | Author | Changes |
 | ---------- | ------ | ------- |
+| 2026-07-25 | Cursor | Phase 3. `gate queue` surfaced a second Conflict Surface overlap the readiness rounds had all missed: PRD-019 also claims `packages/provegate/src/cli.ts`, for `gate doctor`. No design coupling, just a shared modify-in-place file — PRD-019 joins PRD-018 as a Ship-Verified prerequisite, and the “one overlap” claim is corrected |
 | 2026-07-25 | Cursor | Readiness iteration 3 (7.55, ITERATE) resolved. W6: `extra` now has explicit ordered-union and first-occurrence dedup semantics — without them FR-3's byte-identical promise is unmeetable, since the drifted list is joined into the refusal text. W8: the precedence claim is corrected against the code — `loadConfig`/`loadManifest` already throw at cli.ts:627-628, above the lease parse, so this PRD inserts third and changes neither. That surfaced the sharpest case for the feature: `loadManifest()` falls back to `defaultManifest()` when the file is merely absent, so a locally deleted manifest still committed on base produces no error today. Added to the fixture |
 | 2026-07-25 | Cursor | Readiness iteration 2 (7.43, ITERATE) resolved. W6: the primitive is named `revalidateControlArtifacts`, given a signature, and re-exported from `run/index.ts` — `cli.ts` imports from the barrel only, so without that the call site could not reach it. W7: the ordering promise is corrected — `findRecord()` rewrites `_state/prds.json` before the seam, so the guarantee is no phase command and no chain metric row, and the PRD says why moving the check above it is not possible. W4: the fixture is now constructible, with an observable no-op phase command (`node -e` writing a marker) so “nothing executed” is a file assertion rather than an inference |
 | 2026-07-25 | Cursor | Readiness iteration 1 (6.33, ITERATE) resolved. W2 was the load-bearing one and it moved the whole design: both commands enter through `cli.ts::runRun`, so the named `chain.ts`/`merge.ts` seams were wrong and the fix is **one** insertion, not two. That shrank the Conflict Surface to a single real overlap with PRD-018 (`method.mdx`), now claimed exclusively instead of excused as shared. W1: FR-1 specifies the derivation — union of checkout and base presence, parsed bytes, one pinned ref, fail-closed — and states that the lease persists no snapshot and that the PRD blob is excluded. W3: the reuse-path core is canonical; `createWorktree()`'s message stays. W4: all proof moves to a new built-CLI fixture, `test/revalidate.test.ts`, because `chain.test.ts` and `merge.test.ts` call functions rather than commands, and `content-launch.test.ts` never opens `method.mdx`. W5: PRD-018 Ship Verified is now a blocking prerequisite |

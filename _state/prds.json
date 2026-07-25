@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T10:59:27.279Z",
+  "generatedAt": "2026-07-25T11:05:32.327Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -784,19 +784,19 @@
       "number": 22,
       "slug": "control-artifact-revalidation",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-022-control-artifact-revalidation.md",
         "readiness": "_readiness/wip/readiness-022-control-artifact-revalidation.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-022-control-artifact-revalidation.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -806,10 +806,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 73,
+        "operatorHandoffCount": 2
       },
       "summary": {
         "shipReadiness": "Unknown"
