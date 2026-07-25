@@ -176,7 +176,7 @@ export function lintPrd(
           content,
           frs.flatMap((fr) => frTargetEntries(fr.body)),
           loadMemoryStore(root, config.memory),
-          declaredArtifactsStrict(content),
+          declaredArtifactsStrict(content).paths,
           config.memory,
         ),
       );

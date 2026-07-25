@@ -102,16 +102,24 @@ function pathProblem(value: string): string | null {
 }
 
 /**
- * ONE stateful pass over the document, blanking everything a renderer does not
- * execute: fenced code, HTML comments, and inline code spans.
+ * ONE stateful scan producing the view a renderer would execute: fenced code
+ * blanked, HTML comments masked, code spans preserved.
  *
- * Two ordered strippers could not respect both syntaxes, and the gap was
- * exploitable in both directions: a `<!--` inside a fenced example deleted the
- * fence's own closer, and a backticked `` `<!--` `` did the same, which let a
- * later fence re-open somewhere else and hand back a body containing an owner
- * row that no live Changelog carried. Fence state and comment state have to be
- * decided together, in the order a reader meets them.
+ * Three rules, each earned by a round of attack:
+ *  - Fence, comment, and code-span state are decided TOGETHER, in reading
+ *    order. Two ordered strippers could not: a `<!--` inside a fence ate the
+ *    fence's own closer, and a later fence then re-opened somewhere else.
+ *  - A comment is MASKED, never spliced out. Splicing joined the text around it,
+ *    so `##<!-- --> Changelog` became a heading the source never had — and
+ *    masking with spaces would have produced the same forgery, which is why the
+ *    placeholder is not whitespace.
+ *  - Code spans SURVIVE. The grammar reads slugs and paths out of backticks, so
+ *    spans are consumed as spans while scanning but written through unchanged.
+ *    Their delimiter runs are matched by LENGTH and may cross lines: ``<!--`` is
+ *    one two-backtick span, not two one-backtick spans.
  */
+const COMMENT_MASK = '␀';
+
 function executableView(content: string): string {
   interface Fence {
     char: string;
@@ -119,45 +127,13 @@ function executableView(content: string): string {
   }
   let fence: Fence | null = null;
   let inComment = false;
+  /** Open code-span delimiter run in backticks, or 0 outside one. */
+  let span = 0;
   const out: string[] = [];
 
-  /** One line outside any fence or comment: strip inline code spans, then
-   * decide whether it opens a comment or a fence. State is returned rather
-   * than closed over, so the caller owns every transition. */
-  const scanLine = (raw: string): { text: string; opens: Fence | null; comment: boolean } => {
-    let text = raw;
-    for (;;) {
-      // Code spans are MASKED, never removed: `<!--` inside backticks is prose
-      // and must not open a comment, but the grammar this view feeds reads its
-      // slugs and paths out of backticks, so the spans have to survive. Same
-      // length, so an index into the mask is an index into the text.
-      const masked = text.replace(/`[^`]*`/g, (span) => ' '.repeat(span.length));
-      const start = masked.indexOf('<!--');
-      if (start === -1) break;
-      const end = masked.indexOf('-->', start + 4);
-      if (end === -1) return { text: text.slice(0, start), opens: null, comment: true };
-      text = text.slice(0, start) + text.slice(end + 3);
-    }
-    const opener = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(text);
-    if (opener !== null) {
-      // An opening backtick fence may not carry a backtick in its info string.
-      if (opener[2]![0] === '`' && opener[3]!.includes('`')) {
-        return { text, opens: null, comment: false };
-      }
-      return {
-        text: '',
-        opens: { char: opener[2]![0]!, length: opener[2]!.length },
-        comment: false,
-      };
-    }
-    return { text, opens: null, comment: false };
-  };
-
-  for (const line of content.split('\n')) {
-    // Inside a fence, NOTHING else is syntax — not a comment opener, not a code
-    // span. Only a matching closer ends it.
+  for (const raw of content.split('\n')) {
     if (fence !== null) {
-      const closer = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/.exec(line);
+      const closer = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/.exec(raw);
       if (
         closer !== null &&
         closer[2]![0] === fence.char &&
@@ -170,20 +146,49 @@ function executableView(content: string): string {
       continue;
     }
 
-    let text = line;
-    if (inComment) {
-      const end = text.indexOf('-->');
-      if (end === -1) {
+    // A fence opens only outside a comment and outside a code span.
+    if (!inComment && span === 0) {
+      const opener = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(raw);
+      if (opener !== null && !(opener[2]![0] === '`' && opener[3]!.includes('`'))) {
+        fence = { char: opener[2]![0]!, length: opener[2]!.length };
         out.push('');
         continue;
       }
-      text = text.slice(end + 3);
     }
 
-    const scanned = scanLine(text);
-    inComment = scanned.comment;
-    fence = scanned.opens;
-    out.push(scanned.text);
+    let line = '';
+    let i = 0;
+    while (i < raw.length) {
+      if (inComment) {
+        if (raw.startsWith('-->', i)) {
+          inComment = false;
+          line += COMMENT_MASK.repeat(3);
+          i += 3;
+          continue;
+        }
+        line += COMMENT_MASK;
+        i += 1;
+        continue;
+      }
+      if (raw[i] === '`') {
+        let run = 0;
+        while (raw[i + run] === '`') run += 1;
+        if (span === 0) span = run;
+        else if (run === span) span = 0;
+        line += raw.slice(i, i + run);
+        i += run;
+        continue;
+      }
+      if (span === 0 && raw.startsWith('<!--', i)) {
+        inComment = true;
+        line += COMMENT_MASK.repeat(4);
+        i += 4;
+        continue;
+      }
+      line += raw[i];
+      i += 1;
+    }
+    out.push(line);
   }
 
   return out.join('\n');
@@ -224,7 +229,22 @@ export function contractSection(content: string, heading: string): { count: numb
   // and treating those as a heading would truncate a real section at its last
   // bullet, which is a fail-closed regression but a regression all the same.
   // Measured across all 23 PRDs here: zero sections end early either way.
-  const setext = rest.search(/^(?![-*+|#>]|\d+[.)]|\s)[^\n]+\r?\n[ \t]{0,3}-{2,}[ \t]*\r?$/m);
+  // The exclusion tests the BLOCK GRAMMAR, not the first character. `#Other` is
+  // a paragraph — an ATX heading needs whitespace after the hashes — so
+  // `#Other` over dashes IS a setext H2, and rejecting every line starting `#`
+  // let an owner row below it stay inside the preceding section. Same for `-`,
+  // `*`, `+` and `|`: they open a block only in the shapes below.
+  const NOT_A_PARAGRAPH = [
+    '[-*+][ \\t]', // bullet list item
+    '\\d+[.)][ \\t]', // ordered list item
+    '#{1,6}(?:[ \\t]|$)', // ATX heading
+    '>', // block quote
+    '\\|', // table row
+    '[ \\t]', // indented continuation
+  ].join('|');
+  const setext = rest.search(
+    new RegExp(`^(?!(?:${NOT_A_PARAGRAPH}))[^\\n]+\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`, 'm'),
+  );
   const stops = [atx, setext].filter((i) => i !== -1);
   const next = stops.length === 0 ? -1 : Math.min(...stops);
   return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };

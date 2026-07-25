@@ -25,20 +25,26 @@ export function declaredArtifacts(content: string): string[] {
  * so hardening it in place would have changed a disabled repo's close. Migrating
  * the legacy reader is recorded as a deferral.
  */
-export function declaredArtifactsStrict(content: string): string[] {
-  const { count, body } = contractSection(contractView(content), 'Durable Artifacts');
-  // An AMBIGUOUS section is not an empty one. Collapsing "declared twice" to
-  // `[]` would tell the gate there is nothing to check, which is the permissive
-  // reading of a document nobody can parse.
-  if (count > 1) return [AMBIGUOUS_DURABLE];
-  if (count === 0) return [];
-  return artifactPaths(body);
+export interface StrictArtifacts {
+  paths: string[];
+  /**
+   * The section is declared more than once, so nothing can be parsed from it.
+   *
+   * Carried as a FLAG, never as a sentinel path. The first attempt returned a
+   * placeholder string for the gate to fail on, and git permits a file named
+   * exactly that — an error encoded as data is an error that can be satisfied.
+   */
+  ambiguous: boolean;
 }
 
-/** A path no diff can ever contain, so an ambiguous section always refuses and
- * says why. */
-export const AMBIGUOUS_DURABLE =
-  '<Durable Artifacts is declared more than once — exactly one section is parseable>';
+export function declaredArtifactsStrict(content: string): StrictArtifacts {
+  const { count, body } = contractSection(contractView(content), 'Durable Artifacts');
+  // An AMBIGUOUS section is not an empty one: "nothing to check" is the
+  // permissive reading of a document nobody can parse.
+  if (count > 1) return { paths: [], ambiguous: true };
+  if (count === 0) return { paths: [], ambiguous: false };
+  return { paths: artifactPaths(body), ambiguous: false };
+}
 
 function artifactPaths(section: string): string[] {
   const paths: string[] = [];

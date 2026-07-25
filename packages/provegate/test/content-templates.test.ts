@@ -510,7 +510,8 @@ describe('phase 6 round 4 regressions', () => {
     // Phase 7 gate for every repository, including memory-disabled ones, whose
     // behavior this PRD promises not to change. The split is a recorded
     // deferral, not an oversight.
-    expect(declaredArtifactsStrict(doc)).toEqual(['_brain/learnings/real.md']);
+    expect(declaredArtifactsStrict(doc).paths).toEqual(['_brain/learnings/real.md']);
+    expect(declaredArtifactsStrict(doc).ambiguous).toBe(false);
     expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/forged.md']);
   });
 
@@ -528,7 +529,7 @@ describe('phase 6 round 4 regressions', () => {
       '- `_brain/learnings/real.md` — the actual declaration',
       '',
     ].join('\n');
-    expect(declaredArtifactsStrict(doc)).toEqual(['_brain/learnings/real.md']);
+    expect(declaredArtifactsStrict(doc).paths).toEqual(['_brain/learnings/real.md']);
   });
 
   it('[R5-P1-3] a bare `##` ends a section', () => {
@@ -767,6 +768,89 @@ describe('phase 6 round 7 self-attack (before the independent round returned)', 
     ].join('\n');
     expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
       '_brain/learnings/real.md',
+    ]);
+  });
+});
+
+describe('phase 6 round 7 regressions', () => {
+  it('[R7-P1-1] ambiguity is a flag, not a path a repo could create', () => {
+    const doc = [
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/a.md` — one',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/b.md` — two',
+      '',
+    ].join('\n');
+    const strict = declaredArtifactsStrict(doc);
+    expect(strict.ambiguous).toBe(true);
+    expect(strict.paths).toEqual([]);
+  });
+
+  it('[R7-P1-2] a double-backtick span does not open a comment', () => {
+    const doc = [
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/output.md` — the record',
+      '``<!--``',
+      '- `docs/must-change.md` — a promise that must not vanish',
+      '',
+    ].join('\n');
+    expect(declaredArtifactsStrict(doc).paths).toEqual([
+      '_brain/learnings/output.md',
+      'docs/must-change.md',
+    ]);
+  });
+
+  it('[R7-P1-3] removing a comment does not splice a heading into existence', () => {
+    // `##<!-- --> Changelog` is a paragraph: `##` is not followed by whitespace.
+    const doc = [
+      '# PRD',
+      '',
+      '##<!-- --> Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
+      '',
+    ].join('\n');
+    expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(false);
+  });
+
+  it('[R7-P1-4] `#Other` over dashes IS a setext heading and terminates the section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      '#Other',
+      '-----',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/real.md',
+    ]);
+  });
+
+  it('[R7-P1-4] but a real ATX heading line over dashes is not a setext heading', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/first.md` — declared.',
+      '',
+      '### A subsection',
+      '-----',
+      '',
+      '- learning: `_brain/learnings/second.md` — still this section.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/first.md',
+      '_brain/learnings/second.md',
     ]);
   });
 });

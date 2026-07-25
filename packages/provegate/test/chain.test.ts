@@ -1161,3 +1161,83 @@ describe('phase 6 round 3 regressions', () => {
     expect(result.why).toContain('is not a regular file');
   });
 });
+
+describe('phase 6 round 7 regressions (integration)', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+
+  it('[R7-P2-7] the CHAIN uses the strict durable reader when memory is enabled', () => {
+    // Asserting `declaredArtifactsStrict` in isolation proved nothing about the
+    // gate: reverting chain.ts to the legacy reader left that test green and
+    // reopened the fenced-Durable bypass. This drives the chain itself.
+    const shadowed = [
+      '# PRD-002',
+      '',
+      '```markdown',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/new-thing.md` — quoted, not declared',
+      '```',
+      '',
+      '## Memory Inputs',
+      '',
+      '- none — nothing applied.',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — nothing durable expected.',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/new-thing.md` — the record',
+      '- `docs/must-change.md` — a promise the feature branch never touched',
+      '',
+      '## 11. Verification Commands',
+      '',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 | `node -e "process.exit(0)"` |',
+      '',
+    ].join('\n');
+    const root = gitRepo({ '_prds/wip/p.md': shadowed, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: shadowed, changedFiles: CHANGED }),
+      'durable artifacts touched',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('docs/must-change.md');
+  });
+
+  it('[R7-P1-1] a twice-declared Durable Artifacts section refuses at the chain', () => {
+    const twice = [
+      '## Memory Inputs',
+      '',
+      '- none — nothing applied.',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — nothing durable expected.',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/a.md` — one',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/b.md` — two',
+      '',
+      '## 11. Verification Commands',
+      '',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 | `node -e "process.exit(0)"` |',
+      '',
+    ].join('\n');
+    const root = gitRepo({ '_prds/wip/p.md': twice, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: twice, changedFiles: CHANGED }),
+      'durable artifacts touched',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('declared more than once');
+  });
+});

@@ -295,11 +295,19 @@ export function buildGateChain(options: {
     // of its own: a fenced Durable Artifacts example above the real section
     // hid every path the real section adds, so a promised doc could go
     // untouched and still close.
-    fn: () =>
-      durableArtifactsOk(
-        config.memory.enabled ? declaredArtifactsStrict(prdContent) : declaredArtifacts(prdContent),
-        changedFiles,
-      ),
+    fn: () => {
+      if (!config.memory.enabled) {
+        return durableArtifactsOk(declaredArtifacts(prdContent), changedFiles);
+      }
+      const strict = declaredArtifactsStrict(prdContent);
+      if (strict.ambiguous) {
+        return {
+          ok: false,
+          why: '`## Durable Artifacts` is declared more than once — exactly one section is parseable',
+        };
+      }
+      return durableArtifactsOk(strict.paths, changedFiles);
+    },
   });
 
   // The memory close gates are separate chain entries rather than one composite,
@@ -326,7 +334,7 @@ export function buildGateChain(options: {
           content: prdContent,
           changedFiles,
           store: loadMemoryStore(root, config.memory),
-          durable: declaredArtifactsStrict(prdContent),
+          durable: declaredArtifactsStrict(prdContent).paths,
           memory: config.memory,
           capturedFiles: captured,
           // lstat, and a regular-file test: a directory named `x.md`, an added

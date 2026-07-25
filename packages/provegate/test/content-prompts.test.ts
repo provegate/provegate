@@ -161,10 +161,17 @@ const constraintsOf = (file: string): string => {
   const body = prompt(file);
   const start = body.search(/^## Agent Constraints[ \t]*$/m);
   if (start === -1) return '';
-  const rest = body.slice(start);
-  const end = rest.search(/^---[ \t]*$/m);
+  const rest = body.slice(start + 1);
+  // The next H2 ends it, not the `---` rule. Deleting that rule would have made
+  // this consume the rest of the file, so everything after it would have counted
+  // as authorized — the boundary must be the thing that actually ends a section.
+  const end = rest.search(/^## /m);
   return end === -1 ? rest : rest.slice(0, end);
 };
+
+/** Numbered constraint entries in a prompt's Agent Constraints list. */
+const constraintCount = (file: string): number =>
+  (constraintsOf(file).match(/^\d+\. \*\*/gm) ?? []).length;
 
 describe('FR-3 per-file prompt obligations (W3)', () => {
   /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
@@ -347,6 +354,14 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
         false,
       );
     }
+  });
+
+  it('phase 5 carries exactly its four non-memory constraints', () => {
+    // A vocabulary scan cannot catch every paraphrase — "reopen every prior
+    // learning the work item chose" imposes the obligation §8 denies while
+    // matching no listed term. Counting the constraints closes that: §8 grants
+    // phase 5 none, so ANY fifth entry, however phrased, fails here.
+    expect(constraintCount('phase-5-testing.md')).toBe(4);
   });
 
   it('the phase-5 denial is discriminating, not merely satisfied', () => {
