@@ -854,3 +854,63 @@ describe('phase 6 round 7 regressions', () => {
     ]);
   });
 });
+
+describe('phase 6 round 8 self-attack (before the independent round returned)', () => {
+  const outputs = (...lines: string[]): string =>
+    ['## Memory Outputs', '', ...lines, ''].join('\n');
+
+  it('an unclosed code span does not swallow the declaration', () => {
+    const decl = parseMemoryDeclarations(
+      outputs('- learning: `_brain/learnings/x.md` — a rationale with a stray ` backtick'),
+    );
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/x.md']);
+  });
+
+  it('a stray `-->` with no opener is inert', () => {
+    const decl = parseMemoryDeclarations(
+      outputs('- learning: `_brain/learnings/x.md` — ends with --> for no reason.'),
+    );
+    expect(decl.issues).toEqual([]);
+    expect(decl.outputs.entries).toHaveLength(1);
+  });
+
+  it('a fence cannot open while a code span is open', () => {
+    // The span guard matters: treating the ``` line as a fence would blank the
+    // rest of the document and the section would read as absent.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — a rationale with an ` unclosed span',
+      '```',
+      '- learning: `_brain/learnings/y.md` — still inside the section.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.present).toBe(true);
+  });
+
+  it('the comment placeholder appears in no shipped artifact, so it changes no parse', () => {
+    const pkg = fileURLToPath(new URL('..', import.meta.url));
+    for (const name of ['prd-template.md', 'tasks-template.md', 'readiness-template.md']) {
+      expect(readFileSync(join(pkg, 'templates', name), 'utf8')).not.toContain('␀');
+    }
+  });
+
+  it('a comment spanning several lines masks all of them and nothing else', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — declared.',
+      '',
+      '<!-- a note',
+      'that runs on',
+      'for a while -->',
+      '',
+      '- learning: `_brain/learnings/y.md` — also declared.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/x.md',
+      '_brain/learnings/y.md',
+    ]);
+  });
+});
