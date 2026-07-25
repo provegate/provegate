@@ -7,16 +7,24 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `governance-truth-up`
-> **Cycle Phase**: 3 (Task Generation)
+> **Cycle Phase**: 2 (Readiness)
+>
+> <!-- Returned from Phase 3 by the owner scope change of 2026-07-25: the iteration-5
+> PASS (8.43) and the generated 82-task plan both scored the pre-relocation FR set and
+> are stale until an independent re-score clears the revised one. -->
+>
 > **PRD Class**: infra
-> **Class Rationale**: This corrects governance documents and adds two workflow verify
-> gates plus one additive config key; no application runtime behavior changes.
+> **Class Rationale**: This corrects governance documents, adds one method gate to the
+> CLI plus one repo verify gate, and one additive config key; no application runtime
+> behavior changes.
 > **Autonomous Close**: operator-gated
 > **Value**: 3.65 (MF/UI/TL/AR/RM: 5/3/3/4/3)
 
 <!-- 0.25*5 + 0.25*3 + 0.20*3 + 0.15*4 + 0.15*3 = 3.65. Re-scored at readiness
      iteration 1: the config surface and root config file lower RM from 5 to 3, while
-     configurable weights raise UI and AR. -->
+     configurable weights raise UI and AR. NOT re-scored for the 2026-07-25 relocation:
+     moving the gate into the package plausibly raises UI and AR, and the author must not
+     move his own number — the independent round owns the re-score. -->
 
 ---
 
@@ -45,6 +53,16 @@ This PRD makes the documents describe the system that exists, ships the missing
 recompute gate, and adds a narrow drift check so the "lands in wave 2" class of lie
 cannot silently return.
 
+**Where each gate ships is a decision, not a detail.** The value-score recompute is a
+rule about the *method's* artifacts — every ProveGate adopter who scores a PRD needs it,
+and the weights it enforces are already becoming part of the CLI config surface (FR-1).
+It therefore ships **inside the package**, on `gate check`. The doc-claims check is a
+rule about *this repository's* governance files, so it stays a `scripts/verify/` script.
+An earlier draft put both in `scripts/`, which would have shipped adopters the
+`valueScoring` config key with nothing that enforces it, and left this repo with a second
+copy of the weight table to keep in sync — a duplication the draft acknowledged and then
+spent FR-3 and FR-6 managing. Removing it is cheaper than pinning it.
+
 **Corpus reality that shapes the design:** the scan set holds 21 PRDs and only 6 carry a
 `Value:` header — the rule postdates PRD-016. A gate that simply required the header
 would red-fail 15 shipped artifacts on its first run. The owner chose a **prospective
@@ -70,10 +88,12 @@ cutoff** over backfilling or a per-file exemption list (§9 Q4).
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
-| In-scope PRDs whose declared value is machine-verified | 0 | all at/after the cutoff | `value-score-script.test.ts` |
+| In-scope PRDs whose declared value is machine-verified | 0 | all at/after the cutoff | `value-score.test.ts` |
 | Legacy PRDs red-failed by the new gate | n/a | 0 | pre-cutoff fixture |
 | Weight sets that can produce a non-representable total | unbounded | 0 | two-decimal weight validation |
-| Copies of the weight table that can silently diverge | n/a | 0 | `--print-weights` parity test |
+| Copies of the weight table | 1 (`DEFAULT_CONFIG`) | 1 | no second table exists to test |
+| Adopters who get the gate their `valueScoring` key configures | 0 | all | the gate ships in the package |
+| `gate` invocations on an executing surface of this repo | 0 | 1 (`verify:value-score`) | `verify:gates-wired` |
 | Stale "wave 2" claims about wired scripts | 4 | 0 | `pnpm verify:doc-claims` |
 | Pack/live pairs left one-sided | n/a | 0 | `pnpm verify:pack-drift` |
 | Runtime dependencies added | 0 | 0 | zero-dep policy |
@@ -109,8 +129,8 @@ so that the gate enforces my model rather than ProveGate's.
 
 **Acceptance Criteria:**
 
-- [ ] `valueScoring.weights` in `workflow.config.json` resolves and is used by both the
-      CLI config surface and the standalone script.
+- [ ] `valueScoring.weights` in `workflow.config.json` resolves and is the single table
+      the gate scores against — an adopter who sets it changes what `gate check` enforces.
 - [ ] Weights that are non-finite, negative, more than two decimals, missing an axis, or
       that do not sum to exactly 1 are rejected with a named issue.
 
@@ -166,23 +186,43 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/src/core/config/defaults.ts::DEFAULT_CONFIG`,
      `packages/provegate/src/core/config/validate.ts::validateConfig`,
      `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`
-2. **FR-2**: Add `scripts/verify/verify-value-score.mjs`. For every PRD under
-   `_prds/wip/` and `_prds/completed/` it parses the `Value: T (MF/UI/TL/AR/RM: a/b/c/d/e)`
-   header and recomputes the total in **integer hundredths** (`Σ weightHundredths × dim`,
-   dimensions being integers 1–5), then requires exact equality with the declared total
-   formatted to two decimals. Because every configured weight is at most two decimals,
-   every legal total is exactly representable — no tolerance band, no float compare.
-   Enforcement respects the cutoff: a PRD whose numeric id is `< enforceFrom` may omit
-   the header (reported as a skip with its reason), but a header that is present and
-   wrong fails at any id. A malformed header fails at any id.
-   - **Targets:** `scripts/verify/verify-value-score.mjs` (new),
-     `scripts/verify/lib.mjs` (reuse the existing reporter)
-3. **FR-3**: The script resolves its weights from `workflow.config.json` when present —
-   validating them by the same rules as FR-1 and failing loudly on a violation — and
-   otherwise from a documented fallback table. It exposes `--print-weights` (JSON on
-   stdout, exit 0) purely so the fallback can be proven by behavior rather than by
-   reading the source.
-   - **Targets:** `scripts/verify/verify-value-score.mjs`
+2. **FR-2**: Add the recompute as a **package gate**, `core/gates/value-score.ts`, and
+   call it from `lintPrd` so `gate check PRD-NNN` enforces it. Given the PRD body and its
+   numeric id, it parses the `Value: T (MF/UI/TL/AR/RM: a/b/c/d/e)` header and recomputes
+   the total in **integer hundredths** (`Σ weightHundredths × dim`, dimensions being
+   integers 1–5), then requires exact equality with the declared total formatted to two
+   decimals. Because every configured weight is at most two decimals, every legal total is
+   exactly representable — no tolerance band, no float compare. Enforcement respects the
+   cutoff: a PRD whose id is `< enforceFrom` may omit the header, but a header that is
+   present and wrong fails at any id, and a malformed header fails at any id.
+
+   `lintPrd` already receives the resolved `WorkflowConfig`, so FR-1's `valueScoring` key
+   arrives with **no new plumbing** — that is the whole reason this belongs here rather
+   than in a standalone script that would have to re-read and re-validate the same file.
+
+   The id is a **parameter, not a re-parse**. `lintPrd(config, manifest, content)` gains a
+   fourth argument carrying the record's `number`; `runCheck` already resolved the record
+   via `findRecord` and has it. Deriving the id from the `# PRD-NNN:` heading inside the
+   body would make the cutoff depend on a title string the lint does not otherwise trust.
+   Existing callers that have no id pass `null`, which **skips the cutoff comparison and
+   enforces the arithmetic unconditionally** — absence of an id must not become absence of
+   a check.
+   - **Targets:** `packages/provegate/src/core/gates/value-score.ts` (new),
+     `packages/provegate/src/core/gates/index.ts`,
+     `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`
+3. **FR-3**: Add a corpus sweep mode, `gate check --value-score`, beside the existing
+   `gate check --wiring` branch in `runCheck` — the same shape, a repo-wide audit rather
+   than a single-PRD lint. It iterates the records in `_state/prds.json` (each already
+   carries `number` and `artifacts.prd`), applies FR-2's decision to each, prints one line
+   per failure with the declared and recomputed totals, and reports pre-cutoff skips with
+   their reason. This is what catches a score edited **after** its PRD passed Phase 2;
+   `gate check PRD-NNN` alone only covers the PRD in front of it.
+
+   Weights come from the loaded config and nowhere else. There is no fallback table, no
+   `--print-weights`, and no parity test, because a second copy of the weights no longer
+   exists — `DEFAULT_CONFIG` supplies them when the repo declares none.
+   - **Targets:** `packages/provegate/src/cli.ts::runCheck`,
+     `packages/provegate/src/core/state/query.ts` (read-only: the record list)
 4. **FR-4**: Set this repo's cutoff by **adding one key to the existing root
    `workflow.config.json`** — `{"valueScoring": {"enforceFrom": 17}}`, PRD-017 being the
    first PRD written under the scoring rule. PRD-018 FR-6 creates that file (memory
@@ -200,14 +240,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    preflight re-checks `_state/locks` before committing, because the measurement goes stale.
    - **Targets:** `packages/provegate/test/config-value-scoring.test.ts`,
      `packages/provegate/src/core/run/open.ts` (read-only reference — no behavior change)
-6. **FR-6**: Prove the script by behavior, not by source inspection. Spawn the real
-   script against fixture roots and assert: no config → `--print-weights` deep-equals
-   `DEFAULT_CONFIG.valueScoring.weights`; custom valid config → the custom weights and a
-   total computed from them; invalid config (sum ≠ 1, three-decimal weight, missing axis)
-   → non-zero exit naming the issue; a PRD with a wrong total → non-zero exit reporting
-   declared and recomputed; a pre-cutoff PRD with no header → exit 0; an at-cutoff PRD
-   with no header → non-zero exit.
-   - **Targets:** `packages/provegate/test/value-score-script.test.ts` (new),
+6. **FR-6**: Prove the decision at the unit and the sweep at the **command**. The
+   arithmetic and cutoff matrix is a unit test over `value-score.ts` and `lintPrd`: custom
+   valid weights → a total computed from them; a wrong total → the failure names declared
+   and recomputed; a malformed header → fails at any id; a pre-cutoff PRD with no header
+   → passes; an at-cutoff PRD with no header → fails; `null` id with no header → fails.
+   Invalid weights (sum ≠ 1, three-decimal, missing axis) are FR-1's rejection, asserted
+   there rather than duplicated here.
+
+   The sweep gets a **built-CLI** fixture, as `cli-state.test.ts` does, because the thing
+   under test is that the *command* reports and exits non-zero across a corpus — a
+   function call cannot show that. A seeded fixture repo holds one correct PRD, one with a
+   wrong total, and one pre-cutoff header-less PRD; the assertion is the exit code plus
+   the failing PRD named in stdout, with the pre-cutoff one absent from the failures.
+   - **Targets:** `packages/provegate/test/value-score.test.ts` (new),
      `packages/provegate/test/fixtures/value-score/**` (new)
 7. **FR-7**: Add `scripts/verify/verify-doc-claims.mjs` with an explicit grammar, not an
    intention. Scanned files are the declared governance set (`AGENT_BOOTSTRAP.md`,
@@ -224,12 +270,31 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `scripts/verify/doc-claims-allowlist.json` (new),
      `packages/provegate/test/doc-claims-script.test.ts` (new, with positive, negative,
      and stale-allowlist fixtures)
-8. **FR-8**: Wire both gates: `verify:value-score` and `verify:doc-claims` in
-   `package.json`, membership in the `verify:workflow` bundle, and the CI hygiene job, so
-   the existing wire-or-delete audit (`verify:gates-wired`) sees each registered check on
-   an executing surface.
+8. **FR-8**: Wire both gates, on **different surfaces**, because they now have different
+   prerequisites.
+
+   `verify:doc-claims` is unchanged in kind: a `package.json` script, a member of the
+   `verify:workflow` bundle, and a step in the CI hygiene job.
+
+   `verify:value-score` runs the built CLI — `node packages/provegate/dist/cli.js check
+   --value-score` — so it **cannot** join the hygiene job, which installs but never
+   builds. It goes in the build-dependent CI job, after `pnpm build`. It is likewise
+   **not** a member of the `verify:workflow` bundle: that bundle is the no-build local
+   surface, and a member that fails on a clean checkout without `dist/` would be a gate
+   that reports the absence of a build as a governance violation.
+
+   Both must still satisfy `verify:gates-wired`, which accepts CI `run:` text as an
+   executing surface. This makes `verify:value-score` the **first `gate` invocation on any
+   automated surface of this repository** — until now the CLI has appeared in no
+   `package.json` script, no CI step, and no git hook.
+
+   **Stated residual:** a `verify:*` script whose executing surface is CI-only is a
+   weaker guarantee than a bundle member, because the local `pnpm verify:workflow` will
+   not catch it before a push. `verify:dependency-audit` is already CI-only for the same
+   class of reason (it needs registry access), so the shape is precedented rather than
+   novel — but it is a real reduction and it is recorded here, not glossed.
    - **Targets:** `package.json` (`scripts`), `scripts/verify/verify-workflow.mjs`,
-     `.github/workflows/` (hygiene job)
+     `.github/workflows/ci.yml`
 9. **FR-9**: Correct the stale governance claims: `AGENT_BOOTSTRAP.md` durable-artifacts
    (line ~128) and value-score (line ~144) sentences, the `STATUS.md` deferral-cap note
    (line ~25), and the `_brain/PROTOCOL.md` optional-tooling sections (~182, ~204). Each
@@ -328,6 +393,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   and `packages/provegate/QUICKSTART.md` are claimed by PRD-019 and PRD-020; documenting
   the key there would make a three-way conflict surface. It is documented in
   `AGENT_BOOTSTRAP.md` and its shipped pack template instead.
+- Relocating any **other** check into the package. Three method rules are currently
+  implemented twice (`verify-review-artifact` against `core/gates/review.ts`,
+  `verify-durable-artifacts` against `core/run/durable.ts`, `verify-gates-wired` against
+  `core/gates/wiring.ts`), and `verify-deferred` is a method rule with no package
+  implementation at all. This PRD fixes only the check it was already shipping, so it does
+  not grow into a refactor; the general rule and the existing duplicates belong to
+  PRD-023.
 - Memory effectiveness metrics (`gate memory stats`) — a dated deferral, owner-held.
 - Panel-vs-single-reviewer machine rule — needs an ADR before any PRD.
 - Any marketing or landscape claim re-verification.
@@ -338,17 +410,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ## 6. Acceptance Criteria (Gherkin Style)
 
 - **Given** a PRD at or after the cutoff whose declared total does not equal the weighted
-  sum, **When** `pnpm verify:value-score` runs, **Then** it exits non-zero naming the PRD,
-  the declared total, and the recomputed total.
+  sum, **When** `gate check PRD-NNN` runs, **Then** it exits non-zero naming the declared
+  total and the recomputed total.
 - **Given** a PRD at or after the cutoff with no `Value:` header, **When** the check runs,
   **Then** it fails rather than passing by absence.
 - **Given** one of the 15 pre-cutoff PRDs, **When** the check runs, **Then** it is skipped
   with a stated reason and the run stays green.
-- **Given** a `workflow.config.json` carrying `valueScoring.weights`, **When** any `gate`
-  command loads config, **Then** it resolves normally instead of failing on an unknown
-  key, **and** the standalone script's `--print-weights` reports the same weights.
-- **Given** weights that sum to 0.99, or a weight with three decimals, **When** either the
-  CLI or the script resolves them, **Then** the resolution fails with a named issue.
+- **Given** a `workflow.config.json` carrying custom `valueScoring.weights`, **When**
+  `gate check PRD-NNN` runs, **Then** config resolves instead of failing on an unknown key
+  **and** the recomputed total reflects the custom weights, not the defaults.
+- **Given** weights that sum to 0.99, or a weight with three decimals, **When** any `gate`
+  command resolves config, **Then** the resolution fails with a named issue.
+- **Given** a PRD whose score was edited to a wrong total *after* it passed Phase 2,
+  **When** `gate check --value-score` sweeps the corpus, **Then** it exits non-zero naming
+  that PRD — the per-PRD lint alone would never look at it again.
 - **Given** a governance line naming a wired script as future work, **When**
   `pnpm verify:doc-claims` runs, **Then** it fails; **given** a line naming a genuinely
   unshipped script, **Then** it passes.
@@ -364,9 +439,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Architecture
 
-- **Two more members of the existing verify library.** Both checks follow the shipped
-  shape: zero dependencies, target-root argument, shared reporter from `lib.mjs`,
-  registered in the bundle and in CI. Nothing new is invented.
+- **A method rule and a repo rule, deliberately split.** The dividing question is whose
+  artifacts a check governs. The value-score recompute governs PRDs — the method's own
+  artifacts — so it ships in `packages/provegate` and every adopter gets it. The
+  doc-claims check governs `AGENT_BOOTSTRAP.md`, `STATUS.md`, and `_brain/PROTOCOL.md`
+  as *this repo* writes them, so it stays a `scripts/verify/` script following the
+  shipped shape: zero dependencies, target-root argument, shared reporter from `lib.mjs`.
+- **The relocation removes scope rather than adding it.** A standalone script would need
+  its own config read, its own weight validation, a documented fallback table, a
+  `--print-weights` escape hatch, and a spawn test pinning that table against
+  `DEFAULT_CONFIG`. All of it exists only to keep two copies of one number agreed. In the
+  package there is one table, `lintPrd` already holds the resolved config, and the
+  scaffolding is unnecessary rather than merely cheaper.
 - **Absence is a failure, not a skip — except where a policy says otherwise.** Two
   `_brain` learnings bind this directly (a grep-a-file check must exit 1 when the file is
   absent; a declared score must be machine-compared). The cutoff is the one sanctioned
@@ -375,11 +459,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Exact arithmetic is a validation problem, not a rounding problem.** Rather than
   choosing a tolerance, FR-1 constrains weights to two decimals, so the recompute is
   integer arithmetic in hundredths and every legal total has an exact two-decimal form.
-- **Two copies of the weight table.** The verify scripts are standalone and zero-dep; they
-  cannot import the built package (PRD-016 deliberately left them convention-default). The
-  fallback table in the script and `DEFAULT_CONFIG` are therefore duplicates. FR-3's
-  `--print-weights` plus FR-5's spawn test pin them by behavior — editing either side
-  makes the printed JSON diverge from `DEFAULT_CONFIG` and the test fails.
+- **One copy of the weight table.** `DEFAULT_CONFIG` supplies the defaults, the root
+  `workflow.config.json` overrides them, and the gate reads whatever `lintPrd` was handed.
+  Nothing else holds a weight. The earlier design accepted two copies — the script's
+  fallback table and `DEFAULT_CONFIG` — and mitigated with a behavioral parity test; this
+  design has nothing to pin, which is strictly stronger than a pinned duplicate.
 - **Introducing a root `workflow.config.json` is not free.** `gate open --worktree`
   snapshots the config file as a control artifact when it exists
   (`run/open.ts` binds `configSourceFor` bytes into the lease). The file must therefore be
@@ -387,9 +471,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   FR-4's deep-equal test is what keeps "minimal" true. A worktree leased *before* the file
   existed carries a snapshot without it and is refused on reuse until it merges the base
   branch; FR-5 tests both sides of that transition rather than asserting it in prose.
-- **Phase placement.** Register both checks where their failure should surface (the
-  verify-check-phase-placement learning) — these are Phase 1/2 triage invariants, so they
-  belong on the pre-merge hygiene surface, not late in Phase 4.
+- **Phase placement.** Register each check where its failure should surface (the
+  verify-check-phase-placement learning). Both are Phase 1/2 triage invariants. The
+  relocation improves this rather than complicating it: the value-score rule now fires
+  inside `gate check PRD-NNN`, which every PRD's §11 already names as the command to run
+  **before Phase 2 PASS** — the exact moment a wrong score should stop the work. The
+  corpus sweep and the doc-claims check remain pre-merge hygiene, catching the
+  after-the-fact edit that a Phase 2 lint cannot see.
 
 ### Migration & Rollback
 
@@ -405,17 +493,30 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   claim is affected. The Phase 4 preflight re-checks it; if a lease exists, the worktree
   merges the base branch before its next `gate` command, which is the same procedure any
   control-file change already requires.
-- **Rollback of this change:** delete the two scripts, their `package.json` entries, their
-  bundle membership, and the root config file; the config-surface addition is additive and
-  inert when unused, so a published version carrying it needs no data or artifact
-  migration.
+- **Rollback of this change:** delete the doc-claims script and the `--value-score`
+  branch, drop both `package.json` entries and the CI steps, and remove the `valueScoring`
+  key. `core/gates/value-score.ts` may stay — uncalled, it changes nothing. The
+  config-surface addition is additive and inert when unused, so a published version
+  carrying it needs no data or artifact migration.
+- **Rollback is one direction shorter than before, and one direction longer.** The gate
+  now ships to adopters, so reverting it after a release is a **published** behavior
+  change: an adopter on the new CLI whose PRD scores were being checked stops being
+  checked. That is the cost of putting the rule where adopters can use it, and it argues
+  for landing FR-1 and FR-2 in the same release rather than the key first.
 
 ### Dependencies
 
-- **PRD-018 must be Ship Verified before this PRD enters Phase 4.** It creates the root
-  `workflow.config.json` that FR-4 adds a key to. That puts this PRD behind the memory
-  chain (017 → 018), which is a deliberate cost: the alternative is two PRDs each
-  creating the same control artifact, a collision the gate cannot currently see (FR-13).
+- **PRD-018 must be Ship Verified before this PRD enters Phase 4.** Two reasons now. It
+  creates the root `workflow.config.json` that FR-4 adds a key to; and its FR-2 adds the
+  readiness watch gate to the same `lintPrd` this PRD's FR-2 extends. That puts this PRD
+  behind the memory chain (017 → 018), which is a deliberate cost: the alternative is two
+  PRDs each creating the same control artifact, a collision the gate cannot currently see
+  (FR-13).
+- **PRD-019 must also be Ship Verified first**, for one reason and no other: it claims
+  `packages/provegate/src/cli.ts` to add `gate doctor`, and FR-3 adds the `--value-score`
+  branch to `runCheck` in the same file. No design coupling — only a modify-in-place file
+  both must write. This dependency is **new as of the 2026-07-25 relocation**; the
+  script-based design did not touch `cli.ts`.
 - Otherwise none — existing verify library, shipped scripts, changesets infrastructure.
 
 ---
@@ -425,12 +526,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ### In Scope
 
 - [ ] `packages/provegate/src/core/config/` — `valueScoring` types, defaults, validation
-- [ ] `scripts/verify/verify-value-score.mjs`, `scripts/verify/verify-doc-claims.mjs`,
+- [ ] `packages/provegate/src/core/gates/value-score.ts` (new) + `lintPrd` call
+- [ ] `packages/provegate/src/cli.ts` — the `--value-score` sweep branch in `runCheck`
+- [ ] `scripts/verify/verify-doc-claims.mjs`,
       `scripts/verify/doc-claims-allowlist.json` (new) + bundle/CI registration
+- [ ] `package.json` + `.github/workflows/ci.yml` — `verify:value-score` on the
+      build-dependent surface, `verify:doc-claims` on the hygiene surface
 - [ ] `workflow.config.json` — one key added to PRD-018's file, not a new file
 - [ ] `packages/provegate/src/core/state/markdown.ts` — root-file Conflict Surface claims
 - [ ] `packages/provegate/test/config-value-scoring.test.ts`,
-      `test/value-score-script.test.ts`, `test/doc-claims-script.test.ts`,
+      `test/value-score.test.ts`, `test/doc-claims-script.test.ts`,
       `test/content-canon.test.ts`, `test/fixtures/value-score/**` (new)
 - [ ] `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
 - [ ] `packages/provegate/practices/` counterparts + `pack-drift-ledger.json`
@@ -483,11 +588,17 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 > manifests, agent entry docs) — they are excluded from overlap by
 > `workflow.config.json` `sharedAppendOnly`.
 
-- `scripts/verify/verify-value-score.mjs`
 - `scripts/verify/verify-doc-claims.mjs`
 - `scripts/verify/doc-claims-allowlist.json`
 - `scripts/verify/verify-workflow.mjs`
 - `scripts/verify/pack-drift-ledger.json`
+- `packages/provegate/src/core/gates/value-score.ts`
+- `packages/provegate/src/core/gates/prd-ready.ts`
+- `packages/provegate/src/core/gates/index.ts`
+- `packages/provegate/src/cli.ts`
+- `packages/provegate/test/prd-ready.test.ts`
+- `packages/provegate/test/value-score.test.ts`
+- `.github/workflows/ci.yml`
 - `workflow.config.json` — write ownership during this PRD's execution phase only;
   PRD-018 owns creating it, and the two never run concurrently (see Dependencies)
 - `packages/provegate/src/core/state/markdown.ts`
@@ -500,7 +611,6 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/config/defaults.ts`
 - `packages/provegate/src/core/config/validate.ts`
 - `packages/provegate/test/config-value-scoring.test.ts`
-- `packages/provegate/test/value-score-script.test.ts`
 - `packages/provegate/test/doc-claims-script.test.ts`
 - `packages/provegate/test/content-canon.test.ts`
 - `packages/provegate/test/fixtures/value-score/**`
@@ -511,6 +621,23 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`
 - `packages/provegate/practices/templates/STATUS.template.md`
 - `docs/research/provegate-bootstrap/**`
+
+**The relocation adds three overlaps, and all three are claimed rather than excused.**
+Moving the gate into the package moves this PRD onto files other PRDs already own:
+
+- `packages/provegate/src/cli.ts` — also PRD-019's (`gate doctor`) and PRD-022's (the
+  revalidation seam in `runRun()`). Three PRDs, three different regions, one
+  modify-in-place file that is not union-mergeable.
+- `packages/provegate/src/core/gates/prd-ready.ts` — also PRD-018's (FR-2, the readiness
+  watch gate). Both add a check to `lintPrd`.
+- `packages/provegate/test/prd-ready.test.ts` — same pair, same reason.
+
+The wave order (017 → 018 → 019 → **021** → 020 → 022) already resolves all three by
+sequencing, and PRD-018 is already a blocking prerequisite for other reasons (FR-4).
+PRD-019 now becomes one too, on the `cli.ts` overlap alone. Declaring them exclusively is
+the point: the lock gate then refuses if the ordering is ever violated, instead of two
+agents silently editing the same function. **Run `gate queue` before claiming** — PRD-022
+learned the hard way that a PRD's own overlap list is not evidence.
 
 ---
 
@@ -538,14 +665,15 @@ single line — and never a pipe character inside a backticked command in this t
 | FR    | Command / Check                                                        | Scope | Notes                                                       |
 | ----- | ------------------------------------------------------------------------ | ----- | ------------------------------------------------------------- |
 | FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject     |
-| FR-2  | `node scripts/verify/verify-value-score.mjs`                              | repo  | live corpus green under the cutoff                             |
-| FR-3  | `pnpm --filter provegate test test/value-score-script.test.ts`            | pkg   | config resolution + print-weights parity with DEFAULT_CONFIG   |
+| FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; a null id still enforces the arithmetic |
+| FR-3  | `pnpm --filter provegate test test/value-score.test.ts`                   | pkg   | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
 | FR-4  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | resolved config deep-equals defaults except the cutoff         |
 | FR-5  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | pre-existing worktree refused before merge, accepted after     |
-| FR-6  | `pnpm --filter provegate test test/value-score-script.test.ts`            | pkg   | the behavior matrix, including every failing fixture           |
+| FR-6  | `pnpm --filter provegate test test/value-score.test.ts`                   | pkg   | the arithmetic and cutoff matrix, including every failing fixture |
 | FR-7  | `pnpm --filter provegate test test/doc-claims-script.test.ts`             | pkg   | positive, negative, and stale-allowlist cases                  |
-| FR-8  | `pnpm verify:gates-wired`                                                 | repo  | both checks wired to an executing surface                      |
-| FR-8  | `pnpm verify:workflow`                                                    | repo  | the bundle runs both new members                               |
+| FR-8  | `pnpm verify:gates-wired`                                                 | repo  | both checks wired; the CI-only one is seen via CI step text    |
+| FR-8  | `pnpm verify:workflow`                                                    | repo  | the bundle runs doc-claims; value-score is deliberately absent |
+| FR-8  | `pnpm verify:value-score`                                                 | repo  | the built CLI sweeps the live corpus green (needs `pnpm build`) |
 | FR-9  | `pnpm verify:doc-claims`                                                  | repo  | zero stale wave-2 claims about wired scripts                   |
 | FR-10 | `pnpm verify:pack-drift`                                                  | repo  | pack/live pairs reconciled, ledger updated                     |
 | FR-11 | `pnpm --filter provegate test test/content-canon.test.ts`                 | pkg   | banner, canonical link, roadmap phase marks                    |
@@ -554,6 +682,9 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-13 | `pnpm --filter provegate test test/markdown.test.ts`                     | pkg   | root-file claims parse; each rejection names token and reason  |
 | FR-13 | `pnpm --filter provegate test test/conflicts.test.ts`                    | pkg   | enforcing path: an untracked root claim conflicts structurally |
 | FR-13 | `pnpm --filter provegate test test/state-query.test.ts`                  | pkg   | the queue advisory prints rejected tokens                      |
+
+The FR-3 and FR-8 rows drive the **built** CLI, so `pnpm build` must precede them; the
+root `pnpm test` already depends on `build` through turbo, and the floor below runs both.
 
 Cross-cutting floor (run before Code Complete):
 
@@ -564,9 +695,9 @@ Cross-cutting floor (run before Code Complete):
 
 Hard caps (when your gates manifest configures them):
 
-- Deny test: `packages/provegate/test/value-score-script.test.ts` — "a wrong declared
-  total fails the check" and "an at-cutoff PRD with no header fails"; a check that only
-  passes on good input is not evidence.
+- Deny test: `packages/provegate/test/value-score.test.ts` — "a wrong declared total
+  fails the check" and "an at-cutoff PRD with no header fails"; a check that only passes
+  on good input is not evidence.
 - Contract test: n/a — no client→server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-021`
@@ -588,6 +719,18 @@ rationalize.
   legal values such as 0.29; check the canonical decimal text first.
 - DO NOT use `pnpm changeset status` as proof that a changeset exists; it exits 0 on an
   empty `.changeset/`.
+- DO NOT reintroduce a standalone `verify-value-score.mjs`, a fallback weight table, or
+  `--print-weights`. A second copy of the weights is the defect this revision removed; a
+  parity test for it is not a substitute for its absence.
+- DO NOT let the `null` id path skip the arithmetic. Absent id means "cutoff unknown", not
+  "unchecked" — a caller with no record must still fail a wrong total.
+- DO NOT derive the cutoff id by parsing the `# PRD-NNN:` heading from the body; the
+  caller has the record and passes the number.
+- DO NOT add `verify:value-score` to the `verify:workflow` bundle. It runs the built CLI,
+  and the bundle is the no-build local surface — a member that fails on a clean checkout
+  would report a missing build as a governance violation.
+- DO NOT claim `verify:value-score` is enforced locally; it is CI-only until the root
+  gates manifest exists, and FR-8 records that as a stated reduction.
 - DO NOT backfill invented scores into the pre-cutoff PRDs.
 - DO NOT put anything except the cutoff key into the root `workflow.config.json`, and DO
   NOT create that file — PRD-018 owns its creation; a missing file means the dependency
@@ -613,6 +756,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-25 | Cursor, on owner direction | **Owner scope change — the value-score gate moves from `scripts/verify/` into the package.** The gate enforces a rule about PRDs, which are the method's own artifacts, while FR-1 was already putting `valueScoring` into the CLI config surface — so the previous split shipped adopters a config key with nothing that reads it, and left this repo a second weight table to keep agreed. FR-2 becomes `core/gates/value-score.ts` called from `lintPrd`, so `gate check PRD-NNN` enforces it at exactly the Phase 2 moment §11 already names; FR-3 becomes a `gate check --value-score` corpus sweep beside the existing `--wiring` branch. The relocation **removes** scope: the fallback table, `--print-weights`, and the parity test existed only to manage the duplication. It also **adds** three Conflict Surface overlaps (`cli.ts` with PRD-019 and PRD-022, `prd-ready.ts` and its test with PRD-018) and a new PRD-019 prerequisite, all declared rather than excused. `verify-doc-claims` stays a script — it governs this repo's files, not the method's. Cycle Phase returns to 2: the iteration-5 PASS and the 82-task plan are stale. Value not re-scored by the author |
 | 2026-07-25 | Cursor | Readiness iteration 5 (ITERATE 7.78): W10 and W11 cleared. W12 caught FR-13 contradicting itself — "contains a `.`" accepts `e.g.` while the test list demanded prose tokens be rejected. FR-13(a) is now two literal regex shapes (named file, dotfile) that forbid a trailing dot, and the `Node.js`-shaped residual is accepted explicitly rather than left implied |
 | 2026-07-25 | Cursor | Readiness iteration 4 (ITERATE 7.60): FR-13 as first written would not have fixed the defect it names. `findConflicts` only falls back to structural overlap when a surface materializes to zero tracked files, so two surfaces claiming the untracked `workflow.config.json` still would not collide after the parser fix (W11). FR-13 now has three required parts, and W10's rejection diagnostics get a named function and the two consumers that actually read the surface — `gate check` does not |
 | 2026-07-25 | Cursor | Next-wave audit: `declaredGlobs` silently drops every Conflict Surface claim without a `/`, so this PRD's `workflow.config.json`/`AGENT_BOOTSTRAP.md`/`STATUS.md` claims and PRD-018's `workflow.config.json`/`gates.manifest.json` claims never reach a lease. Owner folded the fix in as FR-13 and assigned root-config creation to PRD-018, so FR-4 becomes an add-a-key step behind a new PRD-018 dependency and FR-5 narrows to the edit case (FR count 12 → 13) |

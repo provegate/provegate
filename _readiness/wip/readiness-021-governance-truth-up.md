@@ -1,12 +1,21 @@
 # Readiness Assessment: PRD-021 — Governance Truth-Up
 
+> **STALE as of 2026-07-25** — this PASS scored a PRD that no longer exists. The owner
+> relocated the value-score gate from `scripts/verify/verify-value-score.mjs` into the
+> package (`core/gates/value-score.ts` + `gate check --value-score`), which rewrote FR-2,
+> FR-3, FR-6, and FR-8, added `packages/provegate/src/cli.ts` and
+> `packages/provegate/src/core/gates/prd-ready.ts` to the Conflict Surface, and made
+> PRD-019 a prerequisite. **The 8.43 verdict does not transfer.** A fresh independent
+> round must score the revised FR set before Phase 3 regenerates the task plan. W1–W12
+> below remain useful as prior findings, but W-coverage for the new FRs does not exist.
+
 ## Quick Meta
 
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 8.43/10 |
-| Verdict | PASS |
+| Score | superseded — no score stands for the current PRD |
+| Verdict | ITERATE — the iteration-6 PASS (8.43) scored the pre-relocation FR set; see the banner above. The original verdict is preserved in the analysis below, not overwritten |
 | Iteration | 6 |
 | Model Tier (Execution) | high |
 | Model Tier (Audit) | high |

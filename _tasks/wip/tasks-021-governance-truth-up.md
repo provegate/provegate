@@ -1,5 +1,12 @@
 # Tasks: Governance Truth-Up
 
+> **SUPERSEDED as of 2026-07-25 — do not execute this plan.** It was generated against
+> the FR set that shipped the value-score gate as `scripts/verify/verify-value-score.mjs`.
+> The owner moved that gate into the package, so every sub-task under FR-2, FR-3, FR-6,
+> and FR-8 names a file that will not be written. PRD-021 is back at Cycle Phase 2; this
+> file is regenerated after the independent re-score clears the revised PRD. Nothing here
+> is checked off, so no work is lost.
+
 > **PRD**: [prd-021-governance-truth-up.md](../../_prds/wip/prd-021-governance-truth-up.md)
 > **Readiness**: [readiness-021-governance-truth-up.md](../../_readiness/wip/readiness-021-governance-truth-up.md)
 > **Status**: Not Started
