@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T09:36:15.656Z",
+  "generatedAt": "2026-07-25T09:42:28.964Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -710,19 +710,19 @@
       "number": 20,
       "slug": "adopter-enablement",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-020-adopter-enablement.md",
         "readiness": "_readiness/wip/readiness-020-adopter-enablement.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-020-adopter-enablement.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -732,10 +732,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 58,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -747,19 +747,19 @@
       "number": 21,
       "slug": "governance-truth-up",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-021-governance-truth-up.md",
         "readiness": "_readiness/wip/readiness-021-governance-truth-up.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-021-governance-truth-up.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -769,10 +769,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 73,
+        "operatorHandoffCount": 2
       },
       "summary": {
         "shipReadiness": "Unknown"

@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies. PRD-020 (PASS 8.5) and PRD-021 (PASS 8.43) cleared readiness at iteration 3; PRD-020's Phase 4 is gated on PRD-019 being Ship Verified |
+| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies. PRD-020 (PASS 8.5, 0/58 tasks) and PRD-021 (PASS 8.43, 0/73 tasks) are Phase 3 complete and ready for Phase 4; PRD-020's Phase 4 is gated on PRD-019 being Ship Verified |
 
 ## Deferrals
 
@@ -34,6 +34,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-25 — Phase 3 plans generated for PRD-020 (58 tasks) and PRD-021 (73 tasks); every readiness watch item is mapped to binding sub-tasks in each file's Watch Coverage table. PRD-020's task 0.2 hard-blocks Phase 4 until `_state/prds.json` records PRD-019 as Ship Verified, and PRD-021's task 0.2/9.5 bracket the merge with a `_state/locks` check because its new root `workflow.config.json` becomes a worktree control artifact
 - 2026-07-25 — PRD-020 and PRD-021 reached **PASS** (8.5 / 8.43) at readiness iteration 3, both recommended high-tier for execution and audit. Two watch items stay binding on Phase 3: PRD-020 W8 (run the copied `verify:route-guards` script from a temp adopter-shaped repo, not just assert the copy instruction) and PRD-021 W9 (one semantic changeset-entry assertion instead of two quote-sensitive greps). Three iterations of independent review changed the design substantially — the class-default example described subtraction the runner cannot do, a cookbook command pointed inside our own checkout, and the two-decimal weight rule would have rejected 0.29
 - 2026-07-25 — PRD-020 and PRD-021 scored independently (gpt-5.6, not the authoring model): both **ITERATE**, 6.075 and 4.43, no hard cap, lint green. Two premises were wrong and the review caught them — PRD-019 claims `cli.mdx` and the package `QUICKSTART.md` but not the docs-site `quickstart.mdx`, and the value-score gate would fail on contact because only 6 of 21 PRDs carry a `Value:` header. W1–W6 (020) and W1–W7 (021) bind the revision
 - 2026-07-25 — the vision gap analysis was triaged into the pipeline: its P0 memory items were already PRD-017/018/019 and its README drift was already closed by release prep, so only two candidates were new — **PRD-020** adopter enablement (manifest cookbook, brownfield playbook, `--practices` first-class in the published docs, which name the flag on zero pages today) and **PRD-021** governance truth-up (the value-score recompute gate that never shipped, plus three "lands in wave 2" claims about gates that already run). Both Draft; PRD-020 overlaps PRD-019 on `apps/docs` CLI pages and should follow it

@@ -7,7 +7,7 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `adopter-enablement`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task Generation)
 > **PRD Class**: feature
 > **Autonomous Close**: operator-gated
 > **Value**: 3.90 (MF/UI/TL/AR/RM: 3/5/2/5/5)

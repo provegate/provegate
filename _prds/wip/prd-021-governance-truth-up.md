@@ -7,7 +7,7 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `governance-truth-up`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task Generation)
 > **PRD Class**: infra
 > **Class Rationale**: This corrects governance documents and adds two workflow verify
 > gates plus one additive config key; no application runtime behavior changes.
