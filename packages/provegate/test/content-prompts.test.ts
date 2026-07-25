@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { contractView } from '../src/core/memory/artifacts.js';
 
 /** FR-2..5 + W3: prompt census, calibrated-number spot checks vs the snapshot
  * values, codex-starter drift fix, CLI-mention audit. */
@@ -166,7 +167,10 @@ const MEMORY_VOCABULARY =
  * vocabulary is applied to. Scanning the whole file made ordinary prose — "write
  * fixtures outside `_brain`" — read as an obligation it does not impose. */
 const constraintsOf = (file: string): string => {
-  const body = prompt(file);
+  // The executable view: a heading inside a comment or a fence is not a
+  // heading, so hiding `## Agent Constraints` in one and putting a visible
+  // obligation outside it made the obligation look authorized.
+  const body = contractView(prompt(file));
   const start = body.search(/^ {0,3}## Agent Constraints[ \t]*$/m);
   if (start === -1) return '';
   const rest = body.slice(start + 1);
@@ -354,7 +358,8 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     // `constraintsOf` returns '' for a file without one, which would make the
     // scoped assertions vacuously true. The assumption is now checked.
     for (const file of PHASE_PROMPTS) {
-      const headings = prompt(file).match(/^## Agent Constraints[ \t]*$/gm) ?? [];
+      const headings =
+        contractView(prompt(file)).match(/^ {0,3}## Agent Constraints[ \t]*$/gm) ?? [];
       expect(headings.length, file).toBe(1);
       expect(constraintsOf(file).length, file).toBeGreaterThan(0);
     }

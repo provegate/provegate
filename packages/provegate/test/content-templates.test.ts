@@ -10,6 +10,7 @@ import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gate
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
   changelogApproves,
+  contractView,
   loadMemoryStore,
   memoryCloseIssues,
   normalizeTarget,
@@ -890,10 +891,14 @@ describe('phase 6 round 8 self-attack (before the independent round returned)', 
       '- learning: `_brain/learnings/y.md` — declared.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/x.md',
-      '_brain/learnings/y.md',
-    ]);
+    // Since round 10 a fence inside a contract section refuses the section
+    // outright, so the unmatched-run rule is asserted where it still decides an
+    // outcome: the scanner must not let the run swallow the fence and leak its
+    // contents into the view.
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('contains a code fence'),
+    );
+    expect(contractView(doc)).not.toContain('_brain/learnings/quoted.md');
   });
 
   it('a MATCHED span still shields its contents', () => {
@@ -1128,5 +1133,65 @@ describe('phase 6 round 11 regressions — every one was fail-open', () => {
     const decl = parseMemoryDeclarations(doc);
     expect(decl.issues).toEqual([]);
     expect(decl.outputs.entries[0]!.rationale).toBe('a rationale that wraps onto a second line.');
+  });
+});
+
+describe('phase 6 round 12 regressions — fail-open, every one', () => {
+  it('[R12-P1-1] a `<? … ?>` processing instruction hides no declaration', () => {
+    const doc = ['## Memory Outputs', '', '<?probe', '- none — forged.', '?>', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.issues).toContainEqual(expect.stringContaining('a raw HTML block'));
+  });
+
+  it('[R12-P1-2] a block comment owns its closing line, text after `-->` included', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — baseline.',
+      '',
+      '<!-- -->Other',
+      '-',
+      '',
+      '- learning: `_brain/learnings/x.md` — contradiction.',
+      '',
+    ].join('\n');
+    // The contradiction must be VISIBLE to the gate, not sliced away by a
+    // forged setext heading — so the mutual-exclusion rule fires.
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('mutually exclusive'),
+    );
+  });
+
+  it('[R12-P1-3] an INDEX pointer inside raw HTML is not a pointer', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-index-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      ['# index', '', '<?index', '- [x](learnings/x.md) — hook', '?>', ''].join('\n'),
+    );
+    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true });
+    expect(store.records).toEqual([]);
+  });
+
+  it('[R12-P1-4] a rationale of entities or tags renders as nothing', () => {
+    for (const rationale of ['&#32;', '<br>', '&nbsp; <span></span>']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
+        expect.stringContaining('requires a rationale'),
+      );
+    }
+  });
+
+  it('[R12-P2] an autolink on a wrapped rationale line is not a raw HTML block', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — See',
+      '  <https://example.com> for the rationale.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
   });
 });

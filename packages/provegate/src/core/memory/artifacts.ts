@@ -127,6 +127,14 @@ function executableView(content: string): { view: string; unreliable: string | n
   }
   let fence: Fence | null = null;
   let inComment = false;
+  /** Inside a raw HTML block, which a renderer passes through rather than
+   * parsing as Markdown. Ends at a blank line. */
+  let htmlBlock = false;
+  /** The previous line was blank, so this one starts a block. */
+  let previousBlank = true;
+  /** The open comment began a line, so it is an HTML block and owns its closing
+   * line entirely. */
+  let blockComment = false;
   /** Open code-span delimiter run in backticks, or 0 outside one. Only ever
    * opened when a matching run closes it on the same line. */
   let span = 0;
@@ -144,6 +152,7 @@ function executableView(content: string): { view: string; unreliable: string | n
         fence = null;
       }
       out.push('');
+      previousBlank = false;
       continue;
     }
 
@@ -153,8 +162,22 @@ function executableView(content: string): { view: string; unreliable: string | n
       if (opener !== null && !(opener[2]![0] === '`' && opener[3]!.includes('`'))) {
         fence = { char: opener[2]![0]!, length: opener[2]!.length };
         out.push('');
+        previousBlank = false;
         continue;
       }
+      // A raw HTML block is not executed either, and blanking it here is what
+      // covers the INDEX as well as a contract section: a pointer written
+      // inside `<? … ?>` renders as nothing and must not count.
+      if (previousBlank && /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(raw)) {
+        htmlBlock = true;
+      }
+    }
+    if (htmlBlock) {
+      // A blank line ends every HTML block kind this scanner recognizes.
+      if (raw.trim().length === 0) htmlBlock = false;
+      out.push('');
+      previousBlank = raw.trim().length === 0;
+      continue;
     }
 
     let line = '';
@@ -165,6 +188,14 @@ function executableView(content: string): { view: string; unreliable: string | n
           inComment = false;
           line += COMMENT_MASK.repeat(3);
           i += 3;
+          // A comment that OPENED a line is an HTML block, and the block runs to
+          // the end of the closing line — text after `-->` is block content, not
+          // Markdown. Masking only the comment let `<!-- -->Other` become a
+          // setext heading's text and truncate the section.
+          if (blockComment) {
+            line += COMMENT_MASK.repeat(raw.length - i);
+            i = raw.length;
+          }
           continue;
         }
         line += COMMENT_MASK;
@@ -195,6 +226,7 @@ function executableView(content: string): { view: string; unreliable: string | n
       }
       if (span === 0 && raw.startsWith('<!--', i)) {
         inComment = true;
+        blockComment = /^ {0,3}$/.test(raw.slice(0, i));
         line += COMMENT_MASK.repeat(4);
         i += 4;
         continue;
@@ -203,6 +235,7 @@ function executableView(content: string): { view: string; unreliable: string | n
       i += 1;
     }
     out.push(line);
+    previousBlank = raw.trim().length === 0;
   }
 
   // State left open at EOF means the document and this scanner disagree about
@@ -320,7 +353,13 @@ function unsupportedContainer(body: string): string | null {
   let previousBlank = true;
   for (const line of body.split('\n')) {
     if (/^[ \t]*(?:```|~~~)/.test(line)) return 'a code fence';
-    if (/^ {0,3}<[a-zA-Z/!]/.test(line)) return 'a raw HTML block';
+    // An HTML block STARTS a block, so only a line after a blank one can open
+    // it. A `<https://…>` autolink wrapping onto a rationale's second line is
+    // paragraph continuation, and refusing it would block an author writing an
+    // ordinary link. An HTML COMMENT is excluded too: it is masked in the view,
+    // a block comment owns its closing line, and the shipped template uses one
+    // to show the alternative form.
+    if (previousBlank && /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(line)) return 'a raw HTML block';
     // Four spaces after a blank line opens an indented code block; the same
     // indentation directly under a bullet is that bullet's continuation.
     if (previousBlank && /^ {4,}\S/.test(line)) return 'an indented code block';
@@ -344,8 +383,10 @@ function bulletBlocks(section: string): string[] {
     // entirely by text a renderer never shows as a top-level list. Telling a
     // nested item from a top-level one needs list-context tracking, which is
     // the CommonMark chase that did not converge; column zero is a rule an
-    // author can see, and all 312 bullets in this repository's real contract
-    // sections already sit there.
+    // author can see, and all 64 bullets in the sections this parser actually
+    // reads already sit there. (An earlier note said 312 — that figure counted
+    // Conflict Surface too, which this parser never reads. Corrected after
+    // round 12 refuted it.)
     if (/^-[ \t]+\S/.test(line)) {
       blocks.push(line.trim().replace(/^-[ \t]+/, ''));
       continue;
@@ -365,7 +406,17 @@ function bulletBlocks(section: string): string[] {
  * comment satisfied the check that exists to reject an unreasoned `none`. */
 function visibleLength(rationale: string | null): number {
   if (rationale === null) return 0;
-  return rationale.split(COMMENT_MASK).join('').trim().length;
+  return (
+    rationale
+      .split(COMMENT_MASK)
+      .join('')
+      // `&#32;` and `<br>` render as whitespace or nothing, so a rationale made
+      // of them satisfied a length check while showing the reader no reason at
+      // all — the ceremonial `none` this rule exists to reject, spelled in HTML.
+      .replace(/&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .trim().length
+  );
 }
 
 function splitRationale(block: string): { head: string; rationale: string | null } {
@@ -403,6 +454,7 @@ function parseBlock(block: string): ParsedBlock {
 
 function parseSection<T>(
   content: string,
+  rawContent: string,
   heading: string,
   kinds: readonly string[],
   build: (kind: string, value: string, rationale: string) => T,
@@ -423,7 +475,11 @@ function parseSection<T>(
   // in a list item is code to a renderer and was bullets to `bulletBlocks`, so
   // declarations could be forged inside one. Refusing is cheap: measured across
   // 52 real contract sections in this repository, none contains a fence.
-  const container = unsupportedContainer(body);
+  // The container check reads the RAW section, because the scanner has already
+  // blanked what it recognized — and "the section is empty" is a true but
+  // useless message when the cause is an HTML block the author can see.
+  const raw = contractSection(rawContent, heading);
+  const container = raw.count === 1 ? unsupportedContainer(raw.body) : null;
   if (container !== null) {
     issues.push(
       `${heading}: contains ${container} — a contract section is a plain bullet list, and a ` +
@@ -518,6 +574,7 @@ export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations 
   const content = contractView(rawContent);
   const inputs = parseSection<MemoryInput>(
     content,
+    rawContent,
     INPUTS_HEADING,
     DISPOSITIONS,
     (kind, value, rationale) => ({
@@ -530,6 +587,7 @@ export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations 
   );
   const outputs = parseSection<MemoryOutput>(
     content,
+    rawContent,
     OUTPUTS_HEADING,
     OUTPUT_TYPES,
     (kind, value, rationale) => ({ type: kind as OutputType, path: value, rationale }),
