@@ -11,8 +11,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent | Work item | Phase | Started |
 |-------|-----------|-------|---------|
-
-<!-- row shape: | claude-code | PRD-016 | 4 | 2026-07-24 | -->
+| claude-code | PRD-016 | 7 (awaiting operator acceptance) | 2026-07-24 |
 
 ## Current state
 
@@ -35,6 +34,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-25 — both tooling deferrals resolved (guard/scanner hardenings upstreamed; verify gates wired into CI for `gate check --wiring`); PRD-016 quorum 3/3 pass, awaiting operator acceptance
 - 2026-07-24 — practices handoff complete: waves 3–4 imported (lifecycle docs + tiers, stop-and-ask, orchestration spec as docs-only), 7 high dep advisories fixed, handoff scaffolding deleted
 - 2026-07-24 — practices handoff wave 2 imported (verify:* library, known-red ledger, CI hygiene job)
 - 2026-07-24 — practices handoff wave 1 imported (`_brain`, governance + coordination practices)

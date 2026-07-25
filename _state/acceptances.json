@@ -92,6 +92,16 @@
       "reason": "reviewed the codex two-round review and the fix commit; accepting autonomous close on the green machine gates + the pass review, with the two real-browser operator rows waived without an in-browser pass this session",
       "date": "2026-07-24",
       "method": "interactive"
+    },
+    {
+      "prd": "PRD-016",
+      "owner": "owner",
+      "items": [
+        "9.0 operator acceptance of autonomous close (method-content sign-off): packed practices/ content reviewed via the 3/3 quorum review artifact"
+      ],
+      "reason": "owner directed the close in chat after the three-reviewer quorum (codex 4 rounds + two sonnet sessions; 7 criticals found and closed); accepting autonomous close via gate land — push stays human",
+      "date": "2026-07-25",
+      "method": "owner chat directive (recorded by agent at explicit owner instruction)"
     }
   ]
 }
