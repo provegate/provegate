@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T11:55:30.195Z",
+  "generatedAt": "2026-07-25T12:56:22.021Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -763,9 +763,9 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
+        "score": 7.3,
         "verdict": "ITERATE",
-        "modelTierExecution": "high",
+        "modelTierExecution": null,
         "modelTierAudit": "high"
       },
       "task": {
@@ -826,21 +826,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-023-gate-self-hosting.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-023-gate-self-hosting.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 7.95,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",

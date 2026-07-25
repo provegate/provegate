@@ -11,20 +11,23 @@
 >
 > <!-- Returned from Phase 3 by the owner scope change of 2026-07-25: the iteration-5
 > PASS (8.43) and the generated 82-task plan both scored the pre-relocation FR set and
-> are stale until an independent re-score clears the revised one. -->
+> are stale until an independent re-score clears the revised one. Readiness iteration 7
+> then scored the relocated set at 7.30 ITERATE; this revision answers W13–W21. The next
+> round must be scored by a session that did not write this revision. -->
 >
 > **PRD Class**: infra
 > **Class Rationale**: This corrects governance documents, adds one method gate to the
 > CLI plus one repo verify gate, and one additive config key; no application runtime
 > behavior changes.
 > **Autonomous Close**: operator-gated
-> **Value**: 3.65 (MF/UI/TL/AR/RM: 5/3/3/4/3)
+> **Value**: 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)
 
-<!-- 0.25*5 + 0.25*3 + 0.20*3 + 0.15*4 + 0.15*3 = 3.65. Re-scored at readiness
-     iteration 1: the config surface and root config file lower RM from 5 to 3, while
-     configurable weights raise UI and AR. NOT re-scored for the 2026-07-25 relocation:
-     moving the gate into the package plausibly raises UI and AR, and the author must not
-     move his own number — the independent round owns the re-score. -->
+<!-- 0.25*5 + 0.25*4 + 0.20*4 + 0.15*4 + 0.15*3 = 4.10. Re-scored by readiness
+     iteration 7, which is the independent round this comment previously reserved the
+     re-score for: the relocation ships the gate to every adopter with configurable
+     weights (UI 3 → 4), and FR-13 repairs a measured parser defect that would otherwise
+     void root-file Conflict Surface claims for PRD-018, PRD-021, and PRD-023 (TL 3 → 4).
+     MF, AR, and RM unchanged. At 4.10 this crosses the 4.00 top-tier triage threshold. -->
 
 ---
 
@@ -63,10 +66,32 @@ An earlier draft put both in `scripts/`, which would have shipped adopters the
 copy of the weight table to keep in sync — a duplication the draft acknowledged and then
 spent FR-3 and FR-6 managing. Removing it is cheaper than pinning it.
 
-**Corpus reality that shapes the design:** the scan set holds 21 PRDs and only 6 carry a
-`Value:` header — the rule postdates PRD-016. A gate that simply required the header
-would red-fail 15 shipped artifacts on its first run. The owner chose a **prospective
-cutoff** over backfilling or a per-file exemption list (§9 Q4).
+**Corpus reality that shapes the design.** The rule postdates PRD-016, so most of the
+corpus carries no `Value:` header. Exact counts are deliberately **not** stated here —
+two earlier drafts stated them and both went stale within a day as the wave grew (that
+being the class of defect this PRD exists to remove). FR-3's sweep reports the live
+numbers; the design fact that matters is only this: **a gate that required the header
+would red-fail every pre-rule artifact on its first run.**
+
+**How the source snapshot solves that, and why this PRD must not solve it differently.**
+`docs/research/provegate-bootstrap/source-snapshot/scripts/verify-prd-ready.mjs:280-306`
+already implements this exact rule, and its comment states the design: *"Presence-triggered:
+only PRDs carrying a `**V-Skor:**` line are checked, so pre-triage PRDs are never
+retro-failed."* `validateVScore` takes no PRD number and has no cutoff guard — it is a
+pure presence trigger. The snapshot's id cutoff (`ENFORCE_FROM_PRD = 248`) is a separate,
+repo-local constant governing *other* checks, and its own PRD template carries no
+`V-Skor` line at all.
+
+That combination is the whole answer. **Presence-triggered is the shipped default**; an
+id cutoff is a repository's own opt-in to the stricter rule that the header must also be
+*present*. An earlier draft of FR-1 defaulted `enforceFrom: 1` — "enforce everywhere" —
+which fused the snapshot's two mechanisms into one and produced an adopter-facing trap:
+`templates/prd-template.md` emits no `Value:` line, no prompt asks for one, and the
+shipped `AGENT_BOOTSTRAP.template.md` has no triage section, so an adopter's first
+`gate check` would have failed on a header nothing told them to write. Adding that line
+to the shipped template is not the fix either — the snapshot's template omits it, so
+writing one would be fabricated method content under critical rule 4. The fix is to ship
+the snapshot's behavior and keep the cutoff a local choice (FR-1, FR-4).
 
 ---
 
@@ -88,10 +113,11 @@ cutoff** over backfilling or a per-file exemption list (§9 Q4).
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
-| In-scope PRDs whose declared value is machine-verified | 0 | all at/after the cutoff | `value-score.test.ts` |
+| In-scope PRDs whose declared value is machine-verified | 0 | every PRD carrying a header, plus every id at/after this repo's cutoff | `value-score.test.ts` |
 | Legacy PRDs red-failed by the new gate | n/a | 0 | pre-cutoff fixture |
+| Adopter PRDs red-failed by the shipped default | n/a | 0 | presence-triggered default fixture (FR-1) |
 | Weight sets that can produce a non-representable total | unbounded | 0 | two-decimal weight validation |
-| Copies of the weight table | 1 (`DEFAULT_CONFIG`) | 1 | no second table exists to test |
+| Copies of the weight table that no check compares | 1 (`AGENT_BOOTSTRAP.md` prose) | 0 | `content-canon.test.ts` pins the prose table to `DEFAULT_CONFIG` (FR-9) |
 | Adopters who get the gate their `valueScoring` key configures | 0 | all | the gate ships in the package |
 | `gate` invocations on an executing surface of this repo | 0 | 1 (`verify:value-score`) | `verify:gates-wired` |
 | Stale "wave 2" claims about wired scripts | 4 | 0 | `pnpm verify:doc-claims` |
@@ -114,10 +140,14 @@ so that a rounded-up score cannot carry a below-threshold candidate into the que
 
 - [ ] A PRD declaring `Value: 4.05 (MF/UI/TL/AR/RM: 5/3/5/3/4)` passes; changing one
       dimension without changing the total fails with both numbers reported.
-- [ ] A PRD **at or after the cutoff** with no `Value:` header fails — a missing header
-      must not be a pass (per the false-green-on-missing-file learning).
+- [ ] **With no cutoff configured (the shipped default), a PRD with no header passes and
+      a PRD with a wrong header fails.** Presence is the trigger; absence is not a claim
+      to check. This is the snapshot's behavior and it is what an adopter gets.
+- [ ] **With a cutoff configured, a PRD at or after it with no header fails** — a missing
+      header must not be a pass once a repo has declared the header mandatory (per the
+      false-green-on-missing-file learning, which governs a claim that should exist).
 - [ ] A PRD **before the cutoff** with no header passes, and one before the cutoff with a
-      *wrong* header still fails: exemption covers absence, never a false number.
+      *wrong* header still fails: the cutoff excuses absence, never a false number.
 
 #### User Story 2
 
@@ -173,28 +203,75 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    rejects unknown axes and non-numbers; semantic validation (`validateResolvedConfig`)
    requires all five axes present, each finite, `> 0`, expressed in at most two decimal
    places, summing to exactly 1 (compared in integer hundredths, never float equality),
-   and `enforceFrom` a non-negative integer. The two-decimal test is **lexical, not
-   arithmetic**: `String(weight)` must match `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`, because
+   and `enforceFrom`, **when present**, a non-negative integer. The two-decimal test is
+   **lexical, not arithmetic**: `String(weight)` must match
+   `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`, because
    JS number-to-string emits the shortest round-tripping form (`String(0.29) === "0.29"`)
    while `Number.isInteger(0.29 * 100)` is false and would reject a legal weight. Only
    after the lexical check passes is the value scaled with `Math.round(weight * 100)` into
    the integer hundredths used everywhere downstream. Accept fixtures must include 0.29
-   and 0.58; reject fixtures must include 0.155 and 1e-7. Package defaults keep today's weights
-   (.25/.25/.20/.15/.15) and `enforceFrom: 1` — a fresh adopter has no legacy corpus, so
-   the safe default is "enforce everywhere".
+   and 0.58; reject fixtures must include 0.155 and 1e-7.
+
+   **`enforceFrom` is optional and its shipped default is absent, not `1`.** Package
+   defaults keep today's weights (.25/.25/.20/.15/.15) and **omit `enforceFrom`
+   entirely**, which selects the presence-triggered mode FR-2 defines and the source
+   snapshot ships (§1). An earlier draft defaulted it to `1` on the argument that "a fresh
+   adopter has no legacy corpus, so the safe default is enforce everywhere" — that
+   argument is wrong in the one direction that matters. The shipped
+   `templates/prd-template.md` emits no `Value:` line, no shipped prompt asks for one, and
+   `practices/templates/AGENT_BOOTSTRAP.template.md` carries no triage section, so
+   `enforceFrom: 1` would fail an adopter's very first `gate check` for omitting something
+   nothing had asked them to write. The type must therefore make absence expressible:
+   `enforceFrom?: number`, absent ≠ 0. A configured `0` is legal and means the same as
+   `1` (every id is ≥ both), but it is a deliberate opt-in rather than a default.
+
+   Fixtures must include the adopter case directly: a config with `valueScoring` absent
+   entirely, and a config with `valueScoring.weights` set but no `enforceFrom` — in both,
+   a header-less PRD passes.
    - **Targets:** `packages/provegate/src/core/config/types.ts`,
      `packages/provegate/src/core/config/defaults.ts::DEFAULT_CONFIG`,
      `packages/provegate/src/core/config/validate.ts::validateConfig`,
      `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`
 2. **FR-2**: Add the recompute as a **package gate**, `core/gates/value-score.ts`, and
    call it from `lintPrd` so `gate check PRD-NNN` enforces it. Given the PRD body and its
-   numeric id, it parses the `Value: T (MF/UI/TL/AR/RM: a/b/c/d/e)` header and recomputes
-   the total in **integer hundredths** (`Σ weightHundredths × dim`, dimensions being
-   integers 1–5), then requires exact equality with the declared total formatted to two
-   decimals. Because every configured weight is at most two decimals, every legal total is
-   exactly representable — no tolerance band, no float compare. Enforcement respects the
-   cutoff: a PRD whose id is `< enforceFrom` may omit the header, but a header that is
-   present and wrong fails at any id, and a malformed header fails at any id.
+   numeric id, it parses the value header, recomputes the total in **integer hundredths**
+   (`Σ weightHundredths × dim`, dimensions being integers 1–5), and requires exact
+   equality with the declared total. Because every configured weight is at most two
+   decimals, every legal total is exactly representable — no tolerance band, no float
+   compare. This is a deliberate strengthening of the snapshot, which compares with
+   `Math.abs(stated - computed) > 0.005`; the tolerance exists there because its weights
+   are unvalidated constants, and FR-1's two-decimal rule is what makes exactness sound
+   here. Record it as a divergence, not an oversight.
+
+   **The header grammar is part of this FR, because the obvious one matches nothing.**
+   Every PRD in the corpus writes the header inside the metadata blockquote with bold
+   delimiters and the colon *outside* them:
+
+   ```
+   > **Value**: 4.15 (MF/UI/TL/AR/RM: 4/4/4/5/4)
+   ```
+
+   A pattern written against the bare prose form `Value: T (…)` matches zero files. The
+   snapshot's regex (`verify-prd-ready.mjs:292`) is the model to port, with two
+   adjustments — it expects `**V-Skor:**` with the colon *inside* the bold run, and this
+   repo's axis names differ. The accepted form is therefore: optional leading `>` and
+   whitespace; `Value` with optional surrounding `**`; a colon that may sit inside or
+   outside the bold run; the total; any non-`(` filler; then
+   `(MF/UI/TL/AR/RM: a/b/c/d/e)` with each dim a single digit. Following the snapshot, do
+   **not** anchor on the closing paren — trailing prose after the dims is legal. If more
+   than one line matches, that is an error rather than a first-match-wins race.
+
+   **The declared total's own decimal form is specified, not inferred.** Parse it
+   lexically into integer hundredths: it must carry one or two decimal places
+   (`4.1` → 410, `4.10` → 410), and any other form — three decimals, exponent notation, a
+   bare integer — fails as malformed. This is stricter than the snapshot's `Number()`
+   parse and is what keeps the comparison exact on both sides.
+
+   Enforcement respects the cutoff **when one is configured**: with `enforceFrom` absent
+   the check is presence-triggered, so a PRD with no header passes; with `enforceFrom`
+   set, a PRD whose id is `< enforceFrom` may omit the header while one at or after it may
+   not. In every mode a header that is present and wrong fails at any id, and a malformed
+   header fails at any id.
 
    `lintPrd` already receives the resolved `WorkflowConfig`, so FR-1's `valueScoring` key
    arrives with **no new plumbing** — that is the whole reason this belongs here rather
@@ -225,7 +302,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/src/core/state/query.ts` (read-only: the record list)
 4. **FR-4**: Set this repo's cutoff by **adding one key to the existing root
    `workflow.config.json`** — `{"valueScoring": {"enforceFrom": 17}}`, PRD-017 being the
-   first PRD written under the scoring rule. PRD-018 FR-6 creates that file (memory
+   first PRD written under the scoring rule. This is the opt-in FR-1 keeps out of the
+   shipped defaults: it is what makes a *missing* header a failure here while adopters
+   stay on the presence-triggered mode. PRD-018 FR-6 creates that file (memory
    config); this PRD merges a key into it and must not recreate or rewrite it. If the file
    is absent at Phase 4 time the dependency was violated — stop rather than create it, or
    the two PRDs each land a different "first" version of a control artifact.
@@ -300,8 +379,21 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    (line ~25), and the `_brain/PROTOCOL.md` optional-tooling sections (~182, ~204). Each
    sentence states the shipped script name and the surface that runs it. The
    AGENT_BOOTSTRAP triage section additionally documents that the weights and the cutoff
-   are configurable, with the default values named.
-   - **Targets:** `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
+   are configurable, with the default values named, and that the shipped default is
+   presence-triggered while this repo opts in at PRD-017.
+
+   **Naming the default values creates the one duplication this PRD would otherwise
+   ship, so it is pinned rather than tolerated.** `AGENT_BOOTSTRAP.md:137-141` holds the
+   five weights as a prose table, and a human scoring a candidate needs them there — but
+   after the relocation `DEFAULT_CONFIG` is the authority, and nothing compares the two.
+   Retuning a weight in code would leave the document silently wrong, which is precisely
+   the failure this PRD exists to remove. Add an assertion to `content-canon.test.ts`
+   (already this PRD's file, via FR-11) that parses the AGENT_BOOTSTRAP triage table and
+   deep-equals it against `DEFAULT_CONFIG.valueScoring.weights`, keyed by axis. The
+   document keeps the numbers; the check keeps them true. `verify:doc-claims` (FR-7) is
+   *not* the right home — its grammar is about future-tense claims, not value agreement.
+   - **Targets:** `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`,
+     `packages/provegate/test/content-canon.test.ts`
 10. **FR-10**: Port the same corrections to the shipped practices copies and reconcile the
    hash ledger in the same change — `brain/PROTOCOL.md`,
    `templates/AGENT_BOOTSTRAP.template.md`, and `templates/STATUS.template.md` are all
@@ -362,6 +454,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
     rejection is loud — an unintended claim surfaces as an overlap, while a silent drop
     surfaces as nothing.
 
+    **Two further weaknesses in `readyOverlaps` are scoped out, and named so the advisory
+    is not mistaken for trustworthy afterwards.** It compares declared globs by exact
+    string equality (`state/query.ts:181`), so `docs/research/**` never matches
+    `docs/research/DECISIONS.md`; and it is handed only READY records, so an in-flight
+    lease never produces a warning. Both are real — together they are why `gate queue`
+    stays silent about this PRD's five-surface overlap with the active PRD-017 lease (see
+    Dependencies). Neither is fixed here: (c) already changes `findConflicts`, which is
+    the **enforcing** path, and that is where a missed overlap is a hazard rather than a
+    missed hint — `gate open` does refuse the PRD-017 case today. Widening the advisory's
+    matching is a separate change with its own false-positive budget. What FR-13(b) buys
+    the advisory is rejected-token visibility, and that is all it claims.
+
     **(c) Fix the enforcing path, which (a) alone does not reach.** `findConflicts`
     (`locks/conflicts.ts`) materializes globs against `git ls-files` and only falls back
     to `structuralOverlap` when a surface materializes to **zero** files. PRD-018 and
@@ -400,6 +504,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   implementation at all. This PRD fixes only the check it was already shipping, so it does
   not grow into a refactor; the general rule and the existing duplicates belong to
   PRD-023.
+- **Adding a `Value:` line to `templates/prd-template.md` or the Phase 1 generator
+  prompt.** Both are method content and the source snapshot's own PRD template omits the
+  line, so writing one would be fabrication under critical rule 4. Presence-triggered
+  enforcement (FR-1) is what makes the omission harmless; a shipped header line would need
+  an owner-approved snapshot addendum and belongs to whichever PRD seeks one.
+- **Widening `readyOverlaps`' glob matching or extending it to in-flight leases** —
+  named in FR-13(b), scoped out there with the reason.
 - Memory effectiveness metrics (`gate memory stats`) — a dated deferral, owner-held.
 - Panel-vs-single-reviewer machine rule — needs an ADR before any PRD.
 - Any marketing or landscape claim re-verification.
@@ -414,6 +525,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   total and the recomputed total.
 - **Given** a PRD at or after the cutoff with no `Value:` header, **When** the check runs,
   **Then** it fails rather than passing by absence.
+- **Given** a config with no `enforceFrom` — the shipped default — **When** a PRD with no
+  header is checked, **Then** it passes; and **when** a PRD with a wrong header is
+  checked, **Then** it still fails. An adopter on the stock template is never red-failed.
+- **Given** the header as every PRD actually writes it,
+  `> **Value**: 4.15 (MF/UI/TL/AR/RM: 4/4/4/5/4)`, **When** the parser runs, **Then** it
+  matches; **given** a declared total with three decimals or in exponent form, **Then**
+  it fails as malformed rather than being coerced.
+- **Given** the AGENT_BOOTSTRAP triage table and `DEFAULT_CONFIG.valueScoring.weights`,
+  **When** `content-canon.test.ts` runs, **Then** they deep-equal by axis; changing one
+  without the other fails.
 - **Given** one of the 15 pre-cutoff PRDs, **When** the check runs, **Then** it is skipped
   with a stated reason and the run stays green.
 - **Given** a `workflow.config.json` carrying custom `valueScoring.weights`, **When**
@@ -481,18 +602,26 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Migration & Rollback
 
-- **Corpus migration:** prospective cutoff at PRD-017. The 15 pre-cutoff PRDs are skipped
-  by id, with no file list to maintain and no fabricated scores. New PRDs are in scope
-  automatically because their ids exceed the cutoff.
-- **Rollout order:** release the CLI carrying `valueScoring` (FR-11 minor bump) → adopters
+- **Corpus migration:** prospective cutoff at PRD-017, opted into by this repo alone
+  (FR-4). Pre-cutoff PRDs are skipped by id, with no file list to maintain and no
+  fabricated scores. New PRDs are in scope automatically because their ids exceed the
+  cutoff. Pre-cutoff PRDs that *do* carry a header are still checked for arithmetic — the
+  cutoff excuses absence only — and every such header in the corpus recomputes correctly
+  today, so the first run is green.
+- **Adopter migration: none, by construction.** With `enforceFrom` absent the gate is
+  presence-triggered, so upgrading the CLI cannot fail a PRD that was passing before.
+  This is the property that makes the release safe to ship ahead of any template change,
+  and it is why FR-1 refuses the "enforce everywhere" default.
+- **Rollout order:** release the CLI carrying `valueScoring` (FR-12 minor bump) → adopters
   upgrade → only then may they add the key. The reverse order hard-fails, because unknown
   keys are config errors; the changeset note states this.
 - **Downgrade:** remove the `valueScoring` key from `workflow.config.json` before
   installing an older CLI. Nothing else in the repo depends on the key.
-- **In-flight worktrees:** `_state/locks` is empty at the time of writing, so no live
-  claim is affected. The Phase 4 preflight re-checks it; if a lease exists, the worktree
-  merges the base branch before its next `gate` command, which is the same procedure any
-  control-file change already requires.
+- **In-flight worktrees:** do not assert a count here — an earlier draft claimed
+  `_state/locks` was empty and the PRD-017 lease was active within hours. The Phase 4
+  preflight is the measurement: re-check `_state/locks` then, and for any live lease the
+  worktree merges the base branch before its next `gate` command, which is the same
+  procedure any control-file change already requires.
 - **Rollback of this change:** delete the doc-claims script and the `--value-score`
   branch, drop both `package.json` entries and the CI steps, and remove the `valueScoring`
   key. `core/gates/value-score.ts` may stay — uncalled, it changes nothing. The
@@ -517,6 +646,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   branch to `runCheck` in the same file. No design coupling — only a modify-in-place file
   both must write. This dependency is **new as of the 2026-07-25 relocation**; the
   script-based design did not touch `cli.ts`.
+- **PRD-017 must be Ship Verified first, and its lease released.** This was undeclared
+  until readiness iteration 7 measured it. The live lease owns
+  `packages/provegate/src/core/config/**` (which contains all three of FR-1's targets),
+  `_brain/**` (FR-9's `_brain/PROTOCOL.md`), `packages/provegate/practices/brain/**`
+  (FR-10's counterpart), `scripts/verify/pack-drift-ledger.json` (FR-10), and
+  `docs/research/provegate-bootstrap/{DECISIONS.md, source-snapshot/**}` — five surfaces
+  inside this PRD's claim. The chain 017 → 018 → 019 → 021 already resolves it, and
+  `findConflicts` would refuse a concurrent `gate open` because the tracked files
+  intersect, so nothing was ever at risk; the omission was in the document, not the gate.
+  It matters beyond bookkeeping for one reason: **FR-1 extends the same config surface
+  PRD-017 is mid-flight on**, so FR-1 must be written against whatever `core/config/`
+  looks like after PRD-017 merges, not against today's tree.
 - Otherwise none — existing verify library, shipped scripts, changesets infrastructure.
 
 ---
@@ -551,19 +692,30 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 **Q1 resolved:** exact two-decimal equality, made sound by constraining configured weights
 to two decimals and recomputing in integer hundredths (FR-1, FR-2).
 **Q2 resolved:** the doc-claims drift check ships, scoped narrowly to the governance file
-set with an expiring allowlist (FR-6).
-**Q3 resolved:** the weights live in `workflow.config.json` — which pulls the CLI config
-surface into scope (FR-1) and the behavioral parity test with it (FR-5).
-**Q4 resolved (readiness W1):** the 15 header-less legacy PRDs are handled by a
-**prospective cutoff** (`enforceFrom: 17`), not by backfill and not by a per-file
-exemption list.
+set with an expiring allowlist (FR-7).
+**Q3 resolved:** the weights live in `workflow.config.json`, which pulls the CLI config
+surface into scope (FR-1). The behavioral parity test this answer originally dragged in
+**no longer exists** — the 2026-07-25 relocation deleted the second weight table it
+existed to pin, and §12 now forbids reintroducing either. What remains of that thread is
+FR-9's prose-table assertion, which pins a *document* to `DEFAULT_CONFIG` rather than a
+second implementation to the first.
+**Q4 resolved (readiness W1, amended at W13):** the header-less legacy PRDs are handled by
+a **prospective cutoff** (`enforceFrom: 17`), not by backfill and not by a per-file
+exemption list. The cutoff is this repository's opt-in; the shipped default is
+presence-triggered, which is what keeps the same mechanism from red-failing adopters
+whose template never emitted the header (§1, FR-1).
 
 ---
 
 ## 10. References
 
 - Gap analysis: P0 item 3 (doc drift remainder) + P2 item 7 (value-score recompute)
-- Readiness W1–W7: `_readiness/wip/readiness-021-governance-truth-up.md`
+- Readiness W1–W21: `_readiness/wip/readiness-021-governance-truth-up.md`
+- **Source-snapshot precedent for this gate:**
+  `docs/research/provegate-bootstrap/source-snapshot/scripts/verify-prd-ready.mjs:280-306`
+  (`validateVScore`, presence-triggered, no id parameter) and `:65` (`ENFORCE_FROM_PRD`,
+  the separate repo-local id cutoff). The snapshot's PRD template carries no value header,
+  which is why presence-triggering is load-bearing rather than lenient
 - `_brain/learnings/score-must-equal-weighted-sum.md`
 - `_brain/learnings/false-green-on-missing-file.md`
 - `_brain/learnings/known-red-ledger-must-expire.md`
@@ -622,22 +774,40 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/practices/templates/STATUS.template.md`
 - `docs/research/provegate-bootstrap/**`
 
-**The relocation adds three overlaps, and all three are claimed rather than excused.**
-Moving the gate into the package moves this PRD onto files other PRDs already own:
+**This PRD overlaps four others, and every overlap is claimed rather than excused.** The
+list below is what `gate queue` reports on 2026-07-25 — not what this PRD believes, which
+is the distinction that cost it a round:
 
-- `packages/provegate/src/cli.ts` — also PRD-019's (`gate doctor`) and PRD-022's (the
-  revalidation seam in `runRun()`). Three PRDs, three different regions, one
-  modify-in-place file that is not union-mergeable.
+- `packages/provegate/src/cli.ts` — also PRD-019's (`gate doctor`), PRD-022's (the
+  revalidation seam in `runRun()`), and PRD-023's (its sweep branches). Four PRDs, four
+  different regions, one modify-in-place file that is not union-mergeable.
 - `packages/provegate/src/core/gates/prd-ready.ts` — also PRD-018's (FR-2, the readiness
-  watch gate). Both add a check to `lintPrd`.
-- `packages/provegate/test/prd-ready.test.ts` — same pair, same reason.
+  watch gate) and PRD-023's (FR-3's declaration lint). All three add a check to `lintPrd`.
+- `packages/provegate/test/prd-ready.test.ts` — PRD-018, same reason.
+- `scripts/verify/verify-workflow.mjs`, `.github/workflows/ci.yml`, and
+  `packages/provegate/src/core/config/types.ts` — all three also PRD-023's.
+- `scripts/verify/pack-drift-ledger.json` — also PRD-018's and PRD-019's, and held by the
+  **active PRD-017 lease** along with `packages/provegate/src/core/config/**`,
+  `_brain/**`, `packages/provegate/practices/brain/**`, and
+  `docs/research/provegate-bootstrap/**` (see Dependencies).
 
-The wave order (017 → 018 → 019 → **021** → 020 → 022) already resolves all three by
+The PRD-023 and PRD-017 rows are the ones an earlier revision missed while asserting the
+list was complete — in the same paragraph that told the reader to run `gate queue`.
+
+The wave order (017 → 018 → 019 → **021** → 020 → 022 → 023) already resolves all three by
 sequencing, and PRD-018 is already a blocking prerequisite for other reasons (FR-4).
 PRD-019 now becomes one too, on the `cli.ts` overlap alone. Declaring them exclusively is
 the point: the lock gate then refuses if the ordering is ever violated, instead of two
 agents silently editing the same function. **Run `gate queue` before claiming** — PRD-022
 learned the hard way that a PRD's own overlap list is not evidence.
+
+**That order is a valid serialization, not a required one.** `gate queue` on 2026-07-25
+measures PRD-020's Conflict Surface as intersecting PRD-019's and nothing else, so once
+PRD-019 is Ship Verified PRD-020 may run **concurrently with this PRD**. What must stay
+serialized is this PRD against PRD-022, which shares `packages/provegate/src/cli.ts`.
+
+PRD-023 declares this PRD as a Ship-Verified prerequisite and runs last, so sequencing
+resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019 → 021 chain.
 
 ---
 
@@ -664,7 +834,7 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR    | Command / Check                                                        | Scope | Notes                                                       |
 | ----- | ------------------------------------------------------------------------ | ----- | ------------------------------------------------------------- |
-| FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject     |
+| FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject, and enforceFrom absent by default |
 | FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; a null id still enforces the arithmetic |
 | FR-3  | `pnpm --filter provegate test test/value-score.test.ts`                   | pkg   | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
 | FR-4  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | resolved config deep-equals defaults except the cutoff         |
@@ -675,6 +845,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-8  | `pnpm verify:workflow`                                                    | repo  | the bundle runs doc-claims; value-score is deliberately absent |
 | FR-8  | `pnpm verify:value-score`                                                 | repo  | the built CLI sweeps the live corpus green (needs `pnpm build`) |
 | FR-9  | `pnpm verify:doc-claims`                                                  | repo  | zero stale wave-2 claims about wired scripts                   |
+| FR-9  | `pnpm --filter provegate test test/content-canon.test.ts`                 | pkg   | the AGENT_BOOTSTRAP triage table deep-equals DEFAULT_CONFIG    |
 | FR-10 | `pnpm verify:pack-drift`                                                  | repo  | pack/live pairs reconciled, ledger updated                     |
 | FR-11 | `pnpm --filter provegate test test/content-canon.test.ts`                 | pkg   | banner, canonical link, roadmap phase marks                    |
 | FR-12 | `grep -rc "provegate': minor" .changeset`                                 | repo  | exits 1 when the minor changeset is missing                    |
@@ -696,8 +867,9 @@ Cross-cutting floor (run before Code Complete):
 Hard caps (when your gates manifest configures them):
 
 - Deny test: `packages/provegate/test/value-score.test.ts` — "a wrong declared total
-  fails the check" and "an at-cutoff PRD with no header fails"; a check that only passes
-  on good input is not evidence.
+  fails the check", "an at-cutoff PRD with no header fails", and the paired positive
+  "with no cutoff configured, a header-less PRD passes"; a check that only passes on good
+  input is not evidence, and one that only fails is a trap.
 - Contract test: n/a — no client→server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-021`
@@ -711,8 +883,18 @@ rationalize.
 
 - DO NOT introduce `any`; use `unknown` + narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
-- DO NOT let a missing header pass at or after the cutoff, or let a *wrong* header pass
-  anywhere — the exemption covers absence only.
+- DO NOT let a missing header pass at or after a **configured** cutoff, or let a *wrong*
+  header pass anywhere — the exemption covers absence only.
+- DO NOT default `enforceFrom` to `1`, `0`, or any other value. Its shipped default is
+  **absent**, which selects presence-triggered mode. The stock `templates/prd-template.md`
+  emits no `Value:` line, so any id-based default red-fails an adopter's first
+  `gate check` for omitting something nothing asked them to write.
+- DO NOT "fix" that by adding a `Value:` line to the shipped PRD template or the Phase 1
+  prompt. The source snapshot's template omits it too; writing one is fabricated method
+  content under critical rule 4.
+- DO NOT write the header pattern against the bare form `Value: T (…)`. Every PRD in the
+  corpus writes `> **Value**: T (…)` and the bare pattern matches nothing — port the
+  snapshot's regex shape, adjusted for the colon sitting outside the bold run.
 - DO NOT compare totals as floats or introduce a tolerance band; the weight validation is
   what makes exact comparison sound.
 - DO NOT validate the two-decimal rule with `Number.isInteger(weight * 100)` — it rejects
@@ -729,8 +911,11 @@ rationalize.
 - DO NOT add `verify:value-score` to the `verify:workflow` bundle. It runs the built CLI,
   and the bundle is the no-build local surface — a member that fails on a clean checkout
   would report a missing build as a governance violation.
-- DO NOT claim `verify:value-score` is enforced locally; it is CI-only until the root
-  gates manifest exists, and FR-8 records that as a stated reduction.
+- DO NOT claim `verify:value-score` is enforced locally. It is CI-only, full stop — the
+  reduction is that it is absent from the `verify:workflow` bundle, which is the local
+  no-build surface, and no manifest changes that. An earlier draft conditioned this on
+  "until the root gates manifest exists", a condition PRD-018 satisfies **before** this
+  PRD's Phase 4 can start, which made the clause expire before anyone could read it.
 - DO NOT backfill invented scores into the pre-cutoff PRDs.
 - DO NOT put anything except the cutoff key into the root `workflow.config.json`, and DO
   NOT create that file — PRD-018 owns its creation; a missing file means the dependency
@@ -756,6 +941,8 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-25 | Claude Opus 5, via owner | **Readiness iteration 7 remediation (W13–W21). The blocking fix came from the source snapshot rather than from a judgement call.** `verify-prd-ready.mjs:280-306` already implements this gate and its comment states the design — *"Presence-triggered: only PRDs carrying a `**V-Skor:**` line are checked, so pre-triage PRDs are never retro-failed."* `validateVScore` takes no PRD number and has no cutoff guard; the snapshot's `ENFORCE_FROM_PRD = 248` is a separate repo-local constant for other checks, and its PRD template carries no value header. The earlier `enforceFrom: 1` default fused those two mechanisms and produced W13: the shipped `templates/prd-template.md` emits no `Value:` line, so an adopter's first `gate check` would fail on a header nothing asked for. **FR-1 now ships `enforceFrom` absent (presence-triggered) and FR-4's `17` becomes this repo's opt-in**; adding the line to the shipped template is refused as fabricated method content and moved to Non-Goals with the reason. **FR-2 gains the header grammar** (W14) — the specified bare form `Value: T (…)` matched zero files against the real `> **Value**: T (…)`, so the snapshot regex is ported with the colon-outside-bold adjustment, plus a stated rule for the declared total's own decimal form and a recorded divergence from the snapshot's 0.005 tolerance. **FR-9 pins the AGENT_BOOTSTRAP weight table to `DEFAULT_CONFIG` in `content-canon.test.ts`** (W15) rather than shipping the prose duplicate the relocation claimed to remove. Overlap list rebuilt from `gate queue` and now carries PRD-023 (five files) and the active PRD-017 lease (five surfaces), the latter added to Dependencies with the note that FR-1 extends a config surface PRD-017 is mid-flight on (W16, W17). FR-13(b) states the two `readyOverlaps` weaknesses it does **not** fix and why the enforcing path is where it matters (W18). Cross-reference drift fixed: FR-11 → FR-12, FR-6 → FR-7, §9 Q3's deleted parity test, W1–W7 → W1–W21 (W19). Stale corpus counts and the "`_state/locks` is empty" claim removed rather than re-measured, since both went stale within a day (W20). The self-expiring "until the root gates manifest exists" DO NOT replaced with the unconditional reduction (W21). Value re-scored 3.65 → 4.10 per iteration 7. **Written by the same session that scored iteration 7 — the next round must be independent of it** |
+| 2026-07-25 | Claude Opus 5, via owner | Sequencing and overlap-list corrections only — no FR, Target, dependency, or verification command changed, and no Conflict Surface path was added or removed. Two fixes, both measured with `gate queue`: the wave-order sentence now says the chain is a valid serialization rather than a required one (PRD-020 overlaps PRD-019 alone, so it may run concurrently with this PRD; PRD-021 ∥ PRD-022 stays forbidden on `cli.ts`), and the "three overlaps" claim now names the fourth it omitted — `PRD-021 <-> PRD-023` on five files. Readiness iteration 7 (ITERATE 7.30) is recorded separately in `_readiness/wip/readiness-021-governance-truth-up.md`; W13–W21 there are unaddressed by this edit |
 | 2026-07-25 | Cursor, on owner direction | **Owner scope change — the value-score gate moves from `scripts/verify/` into the package.** The gate enforces a rule about PRDs, which are the method's own artifacts, while FR-1 was already putting `valueScoring` into the CLI config surface — so the previous split shipped adopters a config key with nothing that reads it, and left this repo a second weight table to keep agreed. FR-2 becomes `core/gates/value-score.ts` called from `lintPrd`, so `gate check PRD-NNN` enforces it at exactly the Phase 2 moment §11 already names; FR-3 becomes a `gate check --value-score` corpus sweep beside the existing `--wiring` branch. The relocation **removes** scope: the fallback table, `--print-weights`, and the parity test existed only to manage the duplication. It also **adds** three Conflict Surface overlaps (`cli.ts` with PRD-019 and PRD-022, `prd-ready.ts` and its test with PRD-018) and a new PRD-019 prerequisite, all declared rather than excused. `verify-doc-claims` stays a script — it governs this repo's files, not the method's. Cycle Phase returns to 2: the iteration-5 PASS and the 82-task plan are stale. Value not re-scored by the author |
 | 2026-07-25 | Cursor | Readiness iteration 5 (ITERATE 7.78): W10 and W11 cleared. W12 caught FR-13 contradicting itself — "contains a `.`" accepts `e.g.` while the test list demanded prose tokens be rejected. FR-13(a) is now two literal regex shapes (named file, dotfile) that forbid a trailing dot, and the `Node.js`-shaped residual is accepted explicitly rather than left implied |
 | 2026-07-25 | Cursor | Readiness iteration 4 (ITERATE 7.60): FR-13 as first written would not have fixed the defect it names. `findConflicts` only falls back to structural overlap when a surface materializes to zero tracked files, so two surfaces claiming the untracked `workflow.config.json` still would not collide after the parser fix (W11). FR-13 now has three required parts, and W10's rejection diagnostics get a named function and the two consumers that actually read the surface — `gate check` does not |
