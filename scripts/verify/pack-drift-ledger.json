@@ -99,13 +99,13 @@
     },
     "verify/lib.mjs": {
       "dest": "scripts/verify/lib.mjs",
-      "pack": "aa7917c2d3d6dc41",
-      "repo": "ec6eacd8137cb92b"
+      "pack": "7f90a4726bd30a49",
+      "repo": "9788d39c2369c258"
     },
     "verify/verify-brain.mjs": {
       "dest": "scripts/verify/verify-brain.mjs",
-      "pack": "5a24e56191274c70",
-      "repo": "442331c7181d3819"
+      "pack": "ddf6073bec55afae",
+      "repo": "27dfe8af068e883f"
     },
     "verify/verify-review-artifact.mjs": {
       "dest": "scripts/verify/verify-review-artifact.mjs",

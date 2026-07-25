@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_CONFIG,
   deepMerge,
@@ -501,5 +502,86 @@ describe('default-off compatibility (task 6.2)', () => {
     walk(src);
     // core/index.ts re-exports the barrel; that is publication, not consumption.
     expect(offenders.map((f) => f.slice(src.length + 1))).toEqual(['core/index.ts']);
+  });
+});
+
+/**
+ * PRD-017 FR-3 containment, against a REAL filesystem. The corpus is a static
+ * contract and cannot express a symlink, so these cases build a tree and run
+ * both implementations against it. Labelling them inside the corpus instead —
+ * as an earlier version did — claimed coverage that nothing exercised, which is
+ * the vacuous green the corpus exists to prevent.
+ */
+describe('watch containment against a real tree (FR-3)', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  /** A repo with an escaping symlink, a dangling one, a loop, and a clean path. */
+  function tree(): string {
+    const base = mkdtempSync(join(tmpdir(), 'provegate-contain-'));
+    roots.push(base);
+    const repo = join(base, 'repo');
+    mkdirSync(join(repo, 'packages', 'pkg'), { recursive: true });
+    mkdirSync(join(repo, 'ok', 'src'), { recursive: true });
+    mkdirSync(join(base, 'outside', 'src'), { recursive: true });
+    symlinkSync(join(base, 'outside', 'src'), join(repo, 'packages', 'pkg', 'src'));
+    symlinkSync(join(base, 'gone', 'nowhere'), join(repo, 'dangling'));
+    symlinkSync('loop', join(repo, 'loop'));
+    return repo;
+  }
+
+  const record = (glob: string): string =>
+    [
+      '---',
+      'name: sample',
+      'description: a real one-line description',
+      'type: gotcha',
+      'scope: workflow',
+      'status: active',
+      `watch: [${glob}]`,
+      '---',
+      '',
+      '**Why:** w',
+      '**How to apply:** h',
+      '',
+    ].join('\n');
+
+  /** Field verdicts from the SHIPPED standalone validator, spawned as a module. */
+  function standaloneFields(repo: string, glob: string): string[] {
+    const libPath = join(fixturesDir, '..', '..', 'practices', 'verify', 'lib.mjs');
+    const script = [
+      `import { validateMemoryRecord } from ${JSON.stringify(libPath)};`,
+      `const content = ${JSON.stringify(record(glob))};`,
+      `const out = validateMemoryRecord(content, { slug: 'sample', root: ${JSON.stringify(repo)} });`,
+      `process.stdout.write(JSON.stringify(out.issues.map((i) => i.field).sort()));`,
+    ].join('\n');
+    return JSON.parse(
+      execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+      }),
+    ) as string[];
+  }
+
+  const typedFields = (repo: string, glob: string): string[] =>
+    validateRecord(record(glob), 'x.md', 'sample', { root: repo })
+      .issues.map((i) => i.path.split(':').pop()!)
+      .sort();
+
+  it.each([
+    ['a symlink hidden behind a wildcard', 'packages/*/src/**', false],
+    ['a dangling symlink pointing outside', 'dangling/**', false],
+    ['a symlink loop', 'loop/sub/**', false],
+    ['a contained path with a wildcard', 'ok/*/**', true],
+  ])('%s: both implementations agree', (_label, glob, shouldPass) => {
+    const repo = tree();
+    const typed = typedFields(repo, glob);
+    const standalone = standaloneFields(repo, glob);
+    expect(standalone, 'the two implementations disagree').toEqual(typed);
+    // Over-rejection is a defect too: a legitimate wildcard must survive.
+    if (shouldPass) expect(typed).toEqual([]);
+    else expect(typed).toContain('watch');
   });
 });

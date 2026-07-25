@@ -17,7 +17,12 @@
     "Coverage matrix — every field crossed with every failure mode it can exhibit. Adding a",
     "Coverage matrix — every field crossed with every failure mode it can exhibit. EVERY cell",
     "must be claimed by at least one case's `matrix` array, and the suite asserts that; a cell",
-    "with no case is how two parsers 'agree' while proving nothing."
+    "with no case is how two parsers 'agree' while proving nothing.",
+    "",
+    "Filesystem behaviour is NOT claimed here. Symlink escapes, dangling links, and",
+    "resolution errors need a real tree, so they live in fixture tests that build one and",
+    "run both implementations against it. A label in this file asserting coverage it does",
+    "not exercise is the same vacuous green the corpus exists to prevent."
   ],
   "_matrix": {
     "structure": [
@@ -59,8 +64,6 @@
       "drive letter",
       "escapes without a root",
       "per-entry",
-      "symlink escape (needs a real root; covered by fixture tests)",
-      "realpath error fails closed (fixture-covered)",
       "traversal after a metacharacter"
     ],
     "body": [
@@ -343,11 +346,7 @@
       "valid": false,
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [../outside/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "fields": ["watch"],
-      "matrix": [
-        "watch:escapes workspace",
-        "watch:symlink escape (needs a real root; covered by fixture tests)",
-        "watch:realpath error fails closed (fixture-covered)"
-      ]
+      "matrix": ["watch:escapes workspace"]
     },
     {
       "id": "watch-absolute",

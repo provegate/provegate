@@ -119,11 +119,13 @@ if (!existsSync(indexPath)) {
     // Case-insensitive: the default macOS and Windows filesystems resolve
     // `PRIVATE/` to the same directory, so an exact-case check is a boundary
     // that holds on the CI host and not on the developer's laptop.
-    // Belt and braces: the decoded segments, plus the raw text. A spelling this
-    // decoder does not know still fails if the word survives in the source — and
-    // one that hides the word is caught by the decode above.
-    const segments = target.split(/[/\\]/).map((seg) => seg.toLowerCase());
-    if (segments.includes('private') || /private/i.test(raw)) {
+    // Segment-aware on BOTH the decoded target and the raw text: a spelling this
+    // decoder does not know still fails if the segment survives in the source,
+    // while `docs/private-api.md` stays legal — the protocol forbids a `private/`
+    // directory, not the word.
+    const isPrivate = (value) =>
+      value.split(/[/\\]/).some((seg) => seg.toLowerCase() === 'private');
+    if (isPrivate(target) || isPrivate(raw)) {
       r.fail(`INDEX.md: link '${raw}' resolves under private/ — the public index must not list it`);
     }
   }

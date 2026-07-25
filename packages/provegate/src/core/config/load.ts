@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
 import { dirname, isAbsolute, posix, resolve, sep } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
@@ -71,25 +71,37 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
   ];
   for (const [path, value] of entries) {
     if (value.length === 0 || isAbsolute(value)) continue; // lexical rules own these
-    let target = resolve(rootReal, value);
-    for (;;) {
+    let target = rootReal;
+    let escaped = false;
+    let unresolvable = false;
+    for (const segment of value.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.')) {
+      target = resolve(target, segment);
+      try {
+        // A DANGLING symlink raises ENOENT from realpath exactly like an
+        // ordinary missing path, so read the link itself rather than walking
+        // past it: `_brain -> /gone/elsewhere` must not read as contained.
+        if (lstatSync(target).isSymbolicLink()) {
+          const link = readlinkSync(target);
+          const resolved = isAbsolute(link) ? link : resolve(dirname(target), link);
+          if (resolved !== rootReal && !resolved.startsWith(rootReal + sep)) escaped = true;
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') unresolvable = true;
+        break; // the rest does not exist yet; where it would live is contained
+      }
+    }
+    if (!escaped && !unresolvable) {
       try {
         const real = realpathSync(target);
-        if (real !== rootReal && !real.startsWith(rootReal + sep)) {
-          issues.push({ path, message: 'resolves outside the workspace through a symlink' });
-        }
-        break;
+        if (real !== rootReal && !real.startsWith(rootReal + sep)) escaped = true;
       } catch (error) {
-        // Only "missing" means keep walking. An ELOOP path never establishes
-        // containment and is unusable as a store either way.
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-          issues.push({ path, message: 'could not be resolved to a contained path' });
-          break;
-        }
-        const parent = dirname(target);
-        if (parent === target) break;
-        target = parent;
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') unresolvable = true;
       }
+    }
+    if (escaped) {
+      issues.push({ path, message: 'resolves outside the workspace through a symlink' });
+    } else if (unresolvable) {
+      issues.push({ path, message: 'could not be resolved to a contained path' });
     }
   }
   return issues;

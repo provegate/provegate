@@ -1,8 +1,15 @@
 // Shared helpers for the verify:* library — wave 2.
 // One module for every parser that two checks read (shared-module rule: two gates
 // reading the same format must import one parser so they cannot drift).
-import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  realpathSync,
+} from 'node:fs';
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 /** Repo root: optional first positional arg (used by self-tests), else cwd. */
 export function targetRoot() {
@@ -157,35 +164,65 @@ function watchEscapes(glob) {
   return glob.split(/[/\\]/).includes('..');
 }
 
+/** Bound on wildcard expansion: containment must not become a directory crawl. */
+const MAX_GLOB_MATCHES = 200;
+
 /**
- * The lexical rule cannot see a symlink: `link/sub/**` where `link -> /outside`
- * spells a contained path. Only run when a root is known; without one, both
- * implementations do the lexical check alone and agree by construction.
+ * Resolve a watch glob under `root` and report whether it lands outside. Same
+ * algorithm as the package parser, deliberately: a symlink resolving outside, a
+ * DANGLING symlink (whose realpath raises ENOENT exactly like an ordinary
+ * missing path), and a component after a wildcard all have to be caught, and the
+ * only way two implementations agree on that is to do the same thing.
+ *
+ * Errors other than "missing" fail CLOSED — an ELOOP symlink is where guessing
+ * "contained" is worst.
  */
 function watchEscapesRealpath(root, glob) {
-  const literal = glob.split(/[*?[]/)[0] ?? '';
-  const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
-  if (probe.length === 0) return false;
+  let rootReal;
   try {
-    const rootReal = realpathSync(resolve(root));
-    let target = resolve(rootReal, probe);
-    for (;;) {
-      try {
-        const real = realpathSync(target);
-        return real !== rootReal && !real.startsWith(rootReal + sep);
-      } catch (err) {
-        // Only "missing" means keep walking. Anything else — ELOOP above all —
-        // means containment was NOT established, and treating that as contained
-        // is the one guess with a security consequence.
-        if (err.code !== 'ENOENT') return true;
-        const parent = dirname(target);
-        if (parent === target) return false;
-        target = parent;
-      }
-    }
+    rootReal = realpathSync(resolve(root));
   } catch {
     return true;
   }
+  const outside = (real) => real !== rootReal && !real.startsWith(rootReal + sep);
+
+  const walk = (current, segments) => {
+    try {
+      if (lstatSync(current).isSymbolicLink()) {
+        const target = readlinkSync(current);
+        const resolved = isAbsolute(target) ? target : resolve(dirname(current), target);
+        if (outside(resolve(resolved))) return true;
+      }
+    } catch (err) {
+      // Only "missing" means not-yet-created; anything else (ELOOP) means
+      // containment was never established.
+      if (err.code !== 'ENOENT') return true;
+    }
+    if (segments.length === 0) {
+      try {
+        return outside(realpathSync(current));
+      } catch (err) {
+        return err.code !== 'ENOENT';
+      }
+    }
+    const head = segments[0];
+    const rest = segments.slice(1);
+    if (/[*?[]/.test(head)) {
+      let entries;
+      try {
+        entries = readdirSync(current).slice(0, MAX_GLOB_MATCHES);
+      } catch {
+        return false;
+      }
+      return entries.some((entry) => walk(join(current, entry), rest));
+    }
+    return walk(join(current, head), rest);
+  };
+
+  return walk(
+    rootReal,
+    glob.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.'),
+  );
 }
 
 /**
