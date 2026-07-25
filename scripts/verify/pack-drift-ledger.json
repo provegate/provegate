@@ -99,8 +99,8 @@
     },
     "verify/lib.mjs": {
       "dest": "scripts/verify/lib.mjs",
-      "pack": "f17b568b0c065f06",
-      "repo": "1bcc0bf7b5641f05"
+      "pack": "efcead0fdb4ea9f4",
+      "repo": "df9d627211aaf0fa"
     },
     "verify/verify-brain.mjs": {
       "dest": "scripts/verify/verify-brain.mjs",

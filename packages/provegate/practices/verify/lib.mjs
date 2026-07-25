@@ -146,6 +146,7 @@ const ADR_STATUSES = new Set(['proposed', 'accepted', 'superseded']);
 // are not slugs, and a bare `[a-z0-9-]+` accepts all three.
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ADR_RE = /^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SEED_PROVENANCE = 'workflow-seed';
 const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** A watch glob's literal prefix must stay inside the workspace. */
@@ -224,6 +225,14 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
       issues.push({ field: 'provenance', message: 'must be a non-empty scalar' });
     } else if (PLACEHOLDER_RE.test(provenanceRaw)) {
       issues.push({ field: 'provenance', message: 'placeholder text is not a value' });
+    } else if (provenanceRaw === SEED_PROVENANCE && isAdr) {
+      // The pack ships learnings and no ADRs, and the drift gate only scans
+      // learnings, so an ADR carrying the reserved value claims a guarantee
+      // nothing can check.
+      issues.push({
+        field: 'provenance',
+        message: `'${SEED_PROVENANCE}' is reserved for packed learnings`,
+      });
     }
   }
 
@@ -300,24 +309,44 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
         `\\*\\*${marker}:\\*\\*([\\s\\S]*?)(?=\\n\\s*\\n|\\*\\*[A-Z]|$)`,
       ).exec(body);
       if (found === null) {
-        issues.push({ field: 'body', message: `type '${type}' requires a **${marker}:** section` });
+        issues.push({
+          field: 'body',
+          message: `type '${type}' requires a **${marker}:** section`,
+          entry: marker,
+        });
       } else if (found[1].trim().length === 0) {
         // A marker with nothing after it is the ceremonial record this
         // validator exists to reject — the heading is not the rationale.
-        issues.push({ field: 'body', message: `the **${marker}:** section is empty` });
+        issues.push({
+          field: 'body',
+          message: `the **${marker}:** section is empty`,
+          entry: marker,
+        });
       }
     }
   }
   if (isAdr) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
+      // Exact spelling, case-sensitive; only `Alternatives` may carry the
+      // ` considered` suffix the template uses. The stop is `^## ` so a heading
+      // that follows with no blank line still ends the section.
+      const suffix = heading === 'Alternatives' ? '(?: considered)?' : '';
       const found = new RegExp(
-        `^##[ \\t]+${heading}( considered)?[ \\t]*\\r?\\n([\\s\\S]*?)(?=\\n##[ \\t]|$)`,
-        'mi',
+        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
+        'm',
       ).exec(body);
       if (found === null) {
-        issues.push({ field: 'body', message: `ADR requires a '## ${heading}' section` });
-      } else if (found[2].trim().length === 0) {
-        issues.push({ field: 'body', message: `the '## ${heading}' section is empty` });
+        issues.push({
+          field: 'body',
+          message: `ADR requires a '## ${heading}' section`,
+          entry: heading,
+        });
+      } else if (found[1].trim().length === 0) {
+        issues.push({
+          field: 'body',
+          message: `the '## ${heading}' section is empty`,
+          entry: heading,
+        });
       }
     }
   }

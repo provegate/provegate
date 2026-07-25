@@ -102,6 +102,7 @@ function stripComment(rawValue: string): string {
 // are not slugs, and a bare `[a-z0-9-]+` accepts all three.
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ADR_NAME = /^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SEED_PROVENANCE = 'workflow-seed';
 const PLACEHOLDER = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** Frontmatter keys the subset knows. An unknown key is a typo, not an extension. */
@@ -322,6 +323,14 @@ export function validateRecord(
       issues.push({ path: at('provenance'), message: 'must be a non-empty scalar' });
     } else if (PLACEHOLDER.test(provenanceRaw)) {
       issues.push({ path: at('provenance'), message: 'placeholder text is not a value' });
+    } else if (provenanceRaw === SEED_PROVENANCE && isAdr) {
+      // The pack ships learnings and no ADRs, and the drift gate only scans
+      // learnings — so an ADR carrying the reserved value claims a guarantee
+      // nothing can check. Refusing it keeps the reservation honest everywhere.
+      issues.push({
+        path: at('provenance'),
+        message: `'${SEED_PROVENANCE}' is reserved for packed learnings`,
+      });
     }
   }
 
@@ -430,24 +439,44 @@ export function validateRecord(
         issues.push({
           path: at('body'),
           message: `type '${type}' requires a **${marker}:** section`,
+          entry: marker,
         });
       } else if (found[1]!.trim().length === 0) {
         // A marker with nothing after it is the ceremonial record this
         // validator exists to reject — the heading is not the rationale.
-        issues.push({ path: at('body'), message: `the **${marker}:** section is empty` });
+        issues.push({
+          path: at('body'),
+          message: `the **${marker}:** section is empty`,
+          entry: marker,
+        });
       }
     }
   }
   if (isAdr) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
+      // Exact spelling, case-sensitive, and only `Alternatives` may carry the
+      // ` considered` suffix the template uses. A shared optional suffix plus an
+      // `i` flag accepted `## Context considered` and `## context` as Context.
+      // The stop is `^## ` rather than `\n## ` so a heading that follows with no
+      // blank line still ends the section — otherwise an empty one swallowed the
+      // next section's body and read as full.
+      const suffix = heading === 'Alternatives' ? '(?: considered)?' : '';
       const found = new RegExp(
-        `^##[ \\t]+${heading}( considered)?[ \\t]*\\r?\\n([\\s\\S]*?)(?=\\n##[ \\t]|$)`,
-        'mi',
+        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
+        'm',
       ).exec(body);
       if (found === null) {
-        issues.push({ path: at('body'), message: `ADR requires a '## ${heading}' section` });
-      } else if (found[2]!.trim().length === 0) {
-        issues.push({ path: at('body'), message: `the '## ${heading}' section is empty` });
+        issues.push({
+          path: at('body'),
+          message: `ADR requires a '## ${heading}' section`,
+          entry: heading,
+        });
+      } else if (found[1]!.trim().length === 0) {
+        issues.push({
+          path: at('body'),
+          message: `the '## ${heading}' section is empty`,
+          entry: heading,
+        });
       }
     }
   }

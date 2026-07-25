@@ -55,7 +55,7 @@
       "present when not superseded",
       "wrong form"
     ],
-    "provenance": ["placeholder", "wrong form"],
+    "provenance": ["placeholder", "workflow-seed is for learnings", "wrong form"],
     "links": ["ADR name is legal", "empty is legal", "invalid slug"],
     "tags": ["ADR name is not a tag", "empty when present", "invalid slug"],
     "watch": [
@@ -71,12 +71,15 @@
     ],
     "body": [
       "ADR empty section",
+      "ADR empty section with no blank line",
+      "ADR heading case",
       "ADR heading must match exactly",
       "ADR missing a required section",
       "empty How to apply",
       "empty Why",
       "missing How to apply",
       "missing Why",
+      "only Alternatives may say considered",
       "reference exempt",
       "wikilink boundary hyphen",
       "wikilink slug"
@@ -710,6 +713,60 @@
       "matrix": ["body:ADR heading must match exactly"],
       "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Contextual\nc\n## Decision-making\nd\n## Consequences\nq\n## Alternatives considered\na\n",
       "note": "a prefix match let `## Contextual` stand in for Context on both sides at once"
+    },
+    {
+      "id": "adr-empty-section-adjacent",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:ADR empty section with no blank line"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "note": "the lookahead needed a newline, so an adjacent heading was read as the section's content"
+    },
+    {
+      "id": "adr-heading-case",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:ADR heading case"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "adr-heading-borrowed-suffix",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:only Alternatives may say considered"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context considered\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "adr-provenance-workflow-seed",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["provenance"],
+      "matrix": ["provenance:workflow-seed is for learnings"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\nprovenance: workflow-seed\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "valid-adr-alternatives-plain",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": true,
+      "matrix": [],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives\na\n",
+      "note": "the suffix is optional on Alternatives, not required"
+    },
+    {
+      "id": "valid-learning-workflow-seed",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "matrix": [],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nprovenance: workflow-seed\n---\n\n**Why:** w\n**How to apply:** h\n"
     }
   ]
 }

@@ -277,18 +277,25 @@ status, and its value must be a valid record slug.
 `links` may name records or ADRs and may be empty. `tags` are lowercase kebab slugs only —
 never an ADR name — and `watch` holds globs; both are invalid when present and empty.
 `provenance` is optional, non-empty, and not placeholder text. The exact value
-`workflow-seed` is reserved for content shipped with the practices pack — a reservation
-enforced by the pack-drift gate, which requires a packed counterpart for every record
-carrying it. That gate exists only where a pack does: in a repository that merely installed
+`workflow-seed` is reserved for LEARNINGS shipped with the practices pack: the pack ships
+no ADRs, so an ADR carrying it claims membership of a set it cannot join, and the
+validators refuse it. For learnings the reservation is enforced by the pack-drift gate,
+which requires a packed counterpart for every record carrying the value. That gate exists only where a pack does: in a repository that merely installed
 the practices, nothing can check the reservation, because there is nothing to compare
 against. The record validator therefore does not enforce it, and this paragraph is the
 whole of the claim.
 
+A record body may reference another record inline as `[[slug]]`. Those targets obey the
+same slug rules as `links`, and are validated with them: a reference the reader is meant to
+follow is not exempt from being a real name because of where it sits.
+
 `gotcha`, `convention`, and `decision` records carry `**Why:**` and `**How to apply:**`
 sections, and those sections carry CONTENT — a marker with nothing after it is the
 ceremonial record this schema exists to reject. `reference` records carry neither. An ADR's
-four sections (Context, Decision, Consequences, Alternatives) are its rationale and must
-likewise be non-empty.
+four sections are its rationale and must likewise be non-empty. Their headings are exact
+and case-sensitive — `## Context`, `## Decision`, `## Consequences`, and `## Alternatives`
+or `## Alternatives considered` — so a near-miss like `## Contextual` is a missing section
+rather than a loose match.
 
 ### Index
 
