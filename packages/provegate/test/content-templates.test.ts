@@ -989,3 +989,75 @@ describe('phase 6 round 9 regressions', () => {
     expect(store.issues[0]).toContain('unclosed HTML comment');
   });
 });
+
+describe('phase 6 round 10 regressions', () => {
+  it('[R10-P1-1] a masked comment over a rule does not truncate the section', () => {
+    // The `␀` placeholder is not whitespace, so `<!-- note -->` over `---`
+    // looked like a setext heading: the section was cut short and a declaration
+    // contradicting the reasoned `none` disappeared.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — nothing durable expected.',
+      '',
+      '<!-- separator note -->',
+      '---',
+      '',
+      '- learning: `_brain/learnings/hidden.md` — actual output.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(true);
+    expect(decl.outputs.entries).toHaveLength(1);
+    expect(decl.issues).toContainEqual(expect.stringContaining('mutually exclusive'));
+  });
+
+  it('[R10-P1-2] a fence nested in a list item cannot smuggle a declaration', () => {
+    const doc = [
+      '## Memory Inputs',
+      '',
+      '10. ```markdown',
+      '    - none — forged inside list-item code.',
+      '    ```',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('contains a code fence'),
+    );
+  });
+
+  it('[R10-P2-5] `none` takes no value, and only one of them', () => {
+    const valued = ['## Memory Inputs', '', '- none: `not-a-disposition` — reason.', ''].join('\n');
+    expect(parseMemoryDeclarations(valued).issues).toContainEqual(
+      expect.stringContaining('`none` takes no value'),
+    );
+
+    const twice = [
+      '## Memory Outputs',
+      '',
+      '- none — one reason.',
+      '- none — another reason.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(twice).issues).toContainEqual(
+      expect.stringContaining('appears more than once'),
+    );
+  });
+
+  it('[R10-P2] the `|` setext case is discriminating, not a companion', () => {
+    // Round 10: the "a real table is still a table" assertion stays green if the
+    // removed exclusion is restored, so this is the one that must fail.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      '| not | a table',
+      '---',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — below another H2.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries).toHaveLength(1);
+  });
+});

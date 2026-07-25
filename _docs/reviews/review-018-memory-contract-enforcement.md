@@ -6,18 +6,25 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 17
+> **Critical:** 41
 > **High:** 0
-> **Medium:** 10
+> **Medium:** 32
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 3 (a fourth is running)
+> **Rounds:** 10
 
 ## How this review was run
 
-Three adversarial rounds so far, each one pointed at the PREVIOUS round's repairs rather
-than at the original code — because that is where every round after the first found its
-defects. Round 1 attacked the implementation, round 2 the fixes, round 3 the fixes to the
-fixes. All three returned FAIL.
+Ten adversarial rounds, each pointed at the PREVIOUS round's repairs rather than at the
+original code — because that is where every round after the first found its defects.
+Round 1 attacked the implementation; rounds 2-10 each attacked the preceding round's
+fixes. All ten returned FAIL.
+
+Every finding was re-verified against source by the implementer before being recorded,
+and several were confirmed by direct measurement on this repository rather than by
+reading. The reviewer also checked the implementer's own measurements and **refuted one**
+— a claim of "four artifacts carry an unmatched backtick run" was six, because the
+implementer's scan covered six directories and omitted `_docs/`. The corrected figure is
+in the source comment that rests on it.
 
 Round 1 was directed at the merge diff, directed at the three attacks the PRD names
 in task 10.1: can a declared output be removed while the gate stays green; does a watch
@@ -130,3 +137,53 @@ all green after round 3's remediation.
 
 The ledger row for `independent-review` stays `failed` until a round returns `pass` with
 `Critical: 0`.
+
+---
+
+## Rounds 4-10 — the fix layer, seven times
+
+Each round attacked the previous round's repairs. The counts: round 4 (4 CRITICAL,
+4 MEDIUM), round 5 (4/3), round 6 (4/3), round 7 (4/3), round 8 (3/3), round 9 (2/4),
+round 10 (3/2). Every finding was remediated; each remediation carries a regression that
+fails when the fix is reverted, and four rounds specifically named earlier regressions
+that did NOT — those were rewritten rather than defended.
+
+The through-line, stated plainly because it is the most useful thing this review produced:
+**the contract's Markdown scanner is a hand-rolled approximation, the package takes zero
+runtime dependencies so there is no parser to defer to, and every round found another rule
+it approximated.** Each individual fix was correct and insufficient. Two strategy changes
+came out of that, and both are worth more than the individual repairs:
+
+1. **Drift refuses.** An unclosed fence or HTML comment makes a document unreadable, and
+   every contract read says so instead of guessing. Measured across 85 artifacts: none is
+   refused.
+2. **A contract section is a plain bullet list.** A fence at any indentation inside one is
+   a construct the scanner cannot classify against CommonMark — a fence nested in a list
+   item is code to a renderer and was bullets to the parser — so the section refuses.
+   Measured across 52 real contract sections: none contains a fence.
+
+Recurring classes, each closed and each worth naming:
+
+- **Fail-open beats fail-closed as a bug.** Six findings were the permissive direction of
+  a parser disagreement: a deleted output counting as a capture, a stale `origin/base`
+  lending its commits, an unmatched backtick swallowing a fence, a masked comment forging
+  a setext heading, an unreadable INDEX erasing every watched record, an ambiguity encoded
+  as a path a repository could create.
+- **Two implementations of one rule.** The `frTargets` split, the Durable Artifacts split,
+  and the package-versus-standalone INDEX divergence are all the shape
+  `_brain/learnings/two-parsers-wrong-together.md` describes. Two are deliberate and
+  recorded as deferrals with owners and dates; the third is the open item below.
+- **Assertions that cannot fail.** Seven regressions across rounds 2-10 would have stayed
+  green with their fix reverted — a mutation fixture holding its own copy of the value
+  under test, three times over. They are rewritten to share one helper or to drive the
+  real gate.
+
+## Open at round 10
+
+- **Package and standalone INDEX parsers disagree, fail-open.** The package ignores a
+  pointer inside a fenced example; `verify-brain.mjs` and its packed twin still count it.
+  An active watched record can therefore vanish from readiness and close while
+  `verify:brain` passes. Both copies and their shared corpus are outside PRD-018's
+  Conflict Surface, so it is on the deferral board rather than half-fixed here.
+- A legitimate code span wrapping across lines is read literally, and a `<!--` inside one
+  refuses the document. Fail-closed, named, deferred.

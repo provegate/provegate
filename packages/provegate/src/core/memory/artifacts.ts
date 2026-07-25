@@ -179,8 +179,10 @@ function executableView(content: string): { view: string; unreliable: string | n
           // closes it on this line. CommonMark renders an unmatched run
           // literally, and letting one stay open across blocks was a fail-open:
           // a following fence became span content, so a path quoted inside an
-          // example counted as declared. Measured first — four real artifacts
-          // in this repository carry an unmatched run and must keep parsing.
+          // example counted as declared. Measured first — SIX artifacts in this
+          // repository carry an unmatched run and must keep parsing. (The first
+          // count said four; it scanned six directories and left out `_docs/`.
+          // Corrected after round 10 refuted it.)
           const rest = raw.slice(i + run);
           const closer = new RegExp(`(?<!\`)\`{${run}}(?!\`)`).test(rest);
           if (closer) span = run;
@@ -288,9 +290,13 @@ export function contractSection(content: string, heading: string): { count: numb
     '>', // block quote
     '[ \\t]{4,}', // indented code block
   ].join('|');
+  // A line that is only a masked HTML comment is not a paragraph, so it cannot
+  // be a setext heading's text. Masking with a non-whitespace placeholder made
+  // `<!-- note -->` over `---` look like one, which TRUNCATED the section and
+  // hid a declaration that contradicted a reasoned `none`.
   const setext = rest.search(
     new RegExp(
-      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`,
+      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))(?![${COMMENT_MASK}\\s]*\\r?$)[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`,
       'm',
     ),
   );
@@ -363,11 +369,34 @@ function parseSection<T>(
     issues.push(`${heading}: declared ${count} times — exactly one section is parseable`);
     return { section, issues };
   }
+  // A contract section is a plain bullet list. A fence at ANY indentation is a
+  // construct this scanner cannot classify against CommonMark — a fence nested
+  // in a list item is code to a renderer and was bullets to `bulletBlocks`, so
+  // declarations could be forged inside one. Refusing is cheap: measured across
+  // 52 real contract sections in this repository, none contains a fence.
+  if (/^[ \t]*(?:```|~~~)/m.test(body)) {
+    issues.push(
+      `${heading}: contains a code fence — a contract section is a plain bullet list, and a ` +
+        `fenced block inside one cannot be told from a declaration`,
+    );
+    return { section, issues };
+  }
 
   for (const block of bulletBlocks(body)) {
     const parsed = parseBlock(block);
 
     if (parsed.kind === 'none') {
+      // Exactly `none`, with nothing before the rationale. `none: \`x\` — reason`
+      // reduced to kind `none` and its value was ignored, so a malformed entry
+      // parsed as a deliberate empty set.
+      if (parsed.value !== null) {
+        issues.push(`${heading}: \`none\` takes no value — write \`- none — <reason>\``);
+        continue;
+      }
+      if (section.none) {
+        issues.push(`${heading}: \`none\` appears more than once — it asserts one empty set`);
+        continue;
+      }
       // A rationale is required in every form, including `none`. An unreasoned
       // `none` is the ceremonial answer the contract exists to prevent.
       if (parsed.rationale === null || parsed.rationale.length === 0) {

@@ -173,7 +173,10 @@ const constraintsOf = (file: string): string => {
   // The next H2 ends it, not the `---` rule. Deleting that rule would have made
   // this consume the rest of the file, so everything after it would have counted
   // as authorized — the boundary must be the thing that actually ends a section.
-  const end = rest.search(/^## /m);
+  // Every valid ATX H2 ends it, not just `## ` — `##\tExecution Loop` is a
+  // heading, and treating it as body text made an obligation below it count as
+  // authorized.
+  const end = rest.search(/^##(?:[ \t]|\r?$)/m);
   return end === -1 ? rest : rest.slice(0, end);
 };
 
