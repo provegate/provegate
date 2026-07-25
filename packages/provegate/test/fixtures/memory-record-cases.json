@@ -30,12 +30,17 @@
       "unparseable line",
       "comment before form"
     ],
-    "name": ["missing", "slug mismatch", "not kebab-case", "ADR pattern"],
+    "name": ["missing", "slug mismatch", "not kebab-case", "ADR pattern", "boundary hyphen"],
     "description": ["missing", "empty fold", "placeholder"],
     "type": ["missing", "out of set", "ADR must be decision"],
     "scope": ["out of set"],
     "status": ["out of set", "superseded without target", "ADR vocabulary vs learning vocabulary"],
-    "superseded-by": ["missing when superseded", "present when not superseded", "wrong form"],
+    "superseded-by": [
+      "missing when superseded",
+      "present when not superseded",
+      "wrong form",
+      "invalid slug"
+    ],
     "provenance": ["placeholder", "wrong form"],
     "links": ["invalid slug", "empty is legal"],
     "tags": ["empty when present", "invalid slug"],
@@ -45,7 +50,8 @@
       "absolute",
       "drive letter",
       "escapes without a root",
-      "per-entry"
+      "per-entry",
+      "symlink escape (needs a real root; covered by fixture tests)"
     ],
     "body": [
       "missing Why",
@@ -326,7 +332,10 @@
       "valid": false,
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [../outside/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "fields": ["watch"],
-      "matrix": ["watch:escapes workspace"]
+      "matrix": [
+        "watch:escapes workspace",
+        "watch:symlink escape (needs a real root; covered by fixture tests)"
+      ]
     },
     {
       "id": "watch-absolute",
@@ -512,6 +521,26 @@
       "content": "---\nname: sample\ndescription: #not-a-value\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "a `#` opening the value is a comment in YAML, so the description is empty",
       "matrix": ["description:missing"]
+    },
+    {
+      "id": "slug-boundary-hyphen",
+      "slug": "foo-",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["name"],
+      "matrix": ["name:boundary hyphen"],
+      "content": "---\nname: foo-\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "`foo-`, `-`, and `--` all pass a bare [a-z0-9-]+ but are not kebab-case"
+    },
+    {
+      "id": "superseded-by-invalid-slug",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["superseded-by"],
+      "matrix": ["superseded-by:invalid slug"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\nsuperseded-by: Not_A_Slug\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "verify-brain rejected this target in its referenced-slug pass while the helper accepted it"
     }
   ]
 }

@@ -124,6 +124,10 @@ conformance corpus holds both to one behaviour.
   kept briefly for traceability, then removable.
 - **links / superseded-by** — record slugs; may point to a slug that doesn't exist yet
   (marks something worth writing). Not an error.
+- **provenance** — optional; where a seeded record came from. The exact value
+  `workflow-seed` is reserved and load-bearing: the pack-drift gate reads it and requires
+  a matching packed copy, so a repo-local record must not borrow it. Use any other value,
+  or omit the key.
 - **tags** — optional inline list of kebab-case slugs used for retrieval. Must not be empty
   when present: an empty selector claims a capability the record does not have.
 - **watch** — optional inline list of globs naming the paths whose change makes this record

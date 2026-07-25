@@ -36,7 +36,7 @@ const referenced = new Set();
 function checkRecord(file, isAdr) {
   const slug = basename(file, '.md');
   const content = read(file);
-  for (const issue of validateMemoryRecord(content, { slug, isAdr }).issues) {
+  for (const issue of validateMemoryRecord(content, { slug, isAdr, root }).issues) {
     r.fail(`${file}: ${issue.field} — ${issue.message}`);
   }
 
@@ -81,13 +81,24 @@ if (!existsSync(indexPath)) {
   // Scanned over EVERY local link, not over `counts`: that map only holds paths
   // already filtered to `learnings/` or `adr/`, so a direct `private/secret.md`
   // link could never appear in it and the check could never fire.
-  for (const m of indexText.matchAll(/\]\(([^)]+)\)/g)) {
-    const target = m[1];
+  // Every way Markdown can name a target, not just the inline one: a reference
+  // definition (`[s]: private/secret.md`), an angle-wrapped target, and a
+  // percent-encoded segment all reach the same file, so a check that reads only
+  // `](...)` is a privacy boundary with a documented way around it.
+  const linkTargets = [
+    ...[...indexText.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1]),
+    ...[...indexText.matchAll(/^\s*\[[^\]]+\]:\s*(\S+)/gm)].map((m) => m[1]),
+  ];
+  for (const raw of linkTargets) {
+    let target = raw.trim().replace(/^<|>$/g, '').split(/\s+/)[0];
+    try {
+      target = decodeURIComponent(target);
+    } catch {
+      /* a malformed escape stays as written — still worth checking */
+    }
     if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')) continue; // external / anchor
     if (target.split(/[/\\]/).includes('private')) {
-      r.fail(
-        `INDEX.md: link '${target}' resolves under private/ — the public index must not list it`,
-      );
+      r.fail(`INDEX.md: link '${raw}' resolves under private/ — the public index must not list it`);
     }
   }
   for (const line of indexText.split('\n')) {

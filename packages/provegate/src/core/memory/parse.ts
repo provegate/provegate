@@ -68,7 +68,9 @@ function stripComment(rawValue: string): string {
   return trimmed.replace(/\s+#.*$/, '').trim();
 }
 
-const SLUG = /^[a-z0-9-]+$/;
+// Kebab-case means segments joined by single hyphens: `-`, `foo-`, and `--`
+// are not slugs, and a bare `[a-z0-9-]+` accepts all three.
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ADR_NAME = /^ADR-\d{4}-[a-z0-9-]+$/;
 const PLACEHOLDER = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
@@ -303,6 +305,17 @@ export function validateRecord(
   }
   if (supersededBy !== null && supersededBy.length > 0 && status !== 'superseded') {
     issues.push({ path: at('superseded-by'), message: 'set, but status is not superseded' });
+  }
+  if (supersededBy !== null && supersededBy.length > 0) {
+    // The standalone validator rejects a malformed target in its referenced-slug
+    // pass, so accepting it here made one implementation stricter than the other
+    // end to end, even though the shared helper agreed.
+    if (!SLUG.test(supersededBy) && !ADR_NAME.test(supersededBy)) {
+      issues.push({
+        path: at('superseded-by'),
+        message: `'${supersededBy}' is not a valid record slug`,
+      });
+    }
   }
 
   for (const key of ['links', 'tags', 'watch'] as const) {

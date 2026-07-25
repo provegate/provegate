@@ -1,8 +1,8 @@
 // Shared helpers for the verify:* library — wave 2.
 // One module for every parser that two checks read (shared-module rule: two gates
 // reading the same format must import one parser so they cannot drift).
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 
 /** Repo root: optional first positional arg (used by self-tests), else cwd. */
 export function targetRoot() {
@@ -141,7 +141,9 @@ const STATUSES = new Set(['active', 'superseded']);
 // ADRs carry a decision lifecycle, learnings a validity one — two vocabularies
 // that predate this validator and must not be silently merged into one.
 const ADR_STATUSES = new Set(['proposed', 'accepted', 'superseded']);
-const SLUG_RE = /^[a-z0-9-]+$/;
+// Kebab-case means segments joined by single hyphens: `-`, `foo-`, and `--`
+// are not slugs, and a bare `[a-z0-9-]+` accepts all three.
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ADR_RE = /^ADR-\d{4}-[a-z0-9-]+$/;
 const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
@@ -156,12 +158,40 @@ function watchEscapes(glob) {
 }
 
 /**
+ * The lexical rule cannot see a symlink: `link/sub/**` where `link -> /outside`
+ * spells a contained path. Only run when a root is known; without one, both
+ * implementations do the lexical check alone and agree by construction.
+ */
+function watchEscapesRealpath(root, glob) {
+  const literal = glob.split(/[*?[]/)[0] ?? '';
+  const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
+  if (probe.length === 0) return false;
+  try {
+    const rootReal = realpathSync(resolve(root));
+    let target = resolve(rootReal, probe);
+    for (;;) {
+      try {
+        const real = realpathSync(target);
+        return real !== rootReal && !real.startsWith(rootReal + sep);
+      } catch (err) {
+        if (err.code !== 'ENOENT') return false;
+        const parent = dirname(target);
+        if (parent === target) return false;
+        target = parent;
+      }
+    }
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Validate one record against the schema in the source addendum. Returns issues
  * tagged by FIELD, not by message text: the corpus asserts that both
  * implementations agree on what is wrong, and leaves them free to word it
  * differently.
  */
-export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
+export function validateMemoryRecord(content, { slug, isAdr = false, root } = {}) {
   const { values, body, issues } = parseRecordFrontmatter(content);
   const str = (k) => (typeof values.get(k) === 'string' ? values.get(k) : null);
   const list = (k) => (Array.isArray(values.get(k)) ? values.get(k) : null);
@@ -225,6 +255,14 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
   if (supersededBy !== null && supersededBy.length > 0 && status !== 'superseded') {
     issues.push({ field: 'superseded-by', message: 'set, but status is not superseded' });
   }
+  if (supersededBy !== null && supersededBy.length > 0) {
+    if (!SLUG_RE.test(supersededBy) && !ADR_RE.test(supersededBy)) {
+      issues.push({
+        field: 'superseded-by',
+        message: `'${supersededBy}' is not a valid record slug`,
+      });
+    }
+  }
 
   for (const key of ['links', 'tags', 'watch']) {
     if (!values.has(key)) continue;
@@ -238,7 +276,7 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
     }
     if (key === 'watch') {
       for (const glob of entries) {
-        if (watchEscapes(glob)) {
+        if (watchEscapes(glob) || (root !== undefined && watchEscapesRealpath(root, glob))) {
           issues.push({ field: 'watch', message: `'${glob}' escapes the workspace` });
         }
       }

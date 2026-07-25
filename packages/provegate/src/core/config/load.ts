@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, posix, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { dirname, isAbsolute, posix, resolve, sep } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
 import { validateConfig, validateResolvedConfig } from './validate.js';
@@ -43,6 +43,47 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** Plain objects merge recursively; arrays and scalars replace wholesale. */
+/**
+ * Symlink containment for configured memory paths. The lexical rule in
+ * `validate.ts` is pure and cannot see the filesystem, but a repository symlink
+ * pointing outside the workspace spells a perfectly contained relative path —
+ * so the check that needs a real root lives here, where one exists.
+ */
+function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
+  const memory = config.memory;
+  if (memory === undefined) return [];
+  const issues: ConfigIssue[] = [];
+  let rootReal: string;
+  try {
+    rootReal = realpathSync(resolve(root));
+  } catch {
+    return issues; // an unreadable root is not this check's failure to report
+  }
+  const entries: [string, string][] = [
+    ['memory.root', memory.root],
+    ['memory.index', memory.index],
+    ...memory.entrypoints.map((e, i): [string, string] => [`memory.entrypoints[${i}]`, e]),
+  ];
+  for (const [path, value] of entries) {
+    if (value.length === 0 || isAbsolute(value)) continue; // lexical rules own these
+    let target = resolve(rootReal, value);
+    for (;;) {
+      try {
+        const real = realpathSync(target);
+        if (real !== rootReal && !real.startsWith(rootReal + sep)) {
+          issues.push({ path, message: 'resolves outside the workspace through a symlink' });
+        }
+        break;
+      } catch {
+        const parent = dirname(target);
+        if (parent === target) break;
+        target = parent;
+      }
+    }
+  }
+  return issues;
+}
+
 export function deepMerge<T>(base: T, override: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override === undefined ? base : override) as T;
@@ -92,7 +133,7 @@ export function resolveConfig(root: string): WorkflowConfig {
   }
   configSourceByRoot.set(resolve(root), source);
   const merged = deepMerge(DEFAULT_CONFIG, parsed as PartialWorkflowConfig);
-  const semanticIssues = validateResolvedConfig(merged);
+  const semanticIssues = [...validateResolvedConfig(merged), ...memoryPathsContained(root, merged)];
   if (semanticIssues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is semantically invalid`, semanticIssues);
   }
