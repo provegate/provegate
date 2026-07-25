@@ -3,7 +3,10 @@ import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
 import { normalizedWorktreeDir } from '../config/index.js';
+import { listLockFiles } from '../locks/index.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
+import { withWorkspaceMutex } from './mutex.js';
+import { claimMutexPath } from './open.js';
 
 /**
  * Local no-ff merge with post-merge verification and auto-revert. Two
@@ -180,9 +183,49 @@ export function mergePreconditions(
 }
 
 /**
+ * Unexpired leases belonging to some OTHER work item, by lock filename.
+ *
+ * A lock that will not parse counts as a blocker. It cannot be shown to be
+ * expired or to belong to this item, and "unreadable" is not "absent" — the one
+ * direction a barrier may never guess in is the permissive one.
+ */
+export function foreignActiveLeases(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+  { now = Date.now() }: { now?: number } = {},
+): string[] {
+  const mine = `${id.toLowerCase()}-`;
+  const blockers: string[] = [];
+  for (const entry of listLockFiles(config, root)) {
+    if (entry.name.startsWith(mine)) continue;
+    if (entry.error !== undefined || entry.data === undefined) {
+      blockers.push(`${entry.name} (unreadable: ${entry.error ?? 'no data'})`);
+      continue;
+    }
+    const expiresAt = Date.parse(String(entry.data['expiresAt']));
+    // An unparseable expiry is not an expired one.
+    if (Number.isFinite(expiresAt) && expiresAt < now) continue;
+    const holder = typeof entry.data['agent'] === 'string' ? entry.data['agent'] : 'unknown agent';
+    blockers.push(`${entry.name} (${holder})`);
+  }
+  return blockers;
+}
+
+/**
  * Merge the current feature branch into the local base branch, verify, and
  * auto-revert on failure. Preconditions: not on base, not detached; feature
  * checkout clean of non-coordination dirt.
+ *
+ * In a memory-enabled repository the merge additionally runs inside the claim
+ * mutex and refuses while a foreign lease is active (FR-6). Reading the lock
+ * table outside that mutex would be a check-then-merge race, not a barrier: a
+ * claim could install itself in the window. The scope is honest and narrow —
+ * this is a `gate land` precondition, NOT a git-level invariant. A direct
+ * `git merge` bypasses it exactly as it bypasses every other gate here, and a
+ * worktree that survives the merge does not re-check control artifacts, because
+ * only a new claim revalidates them (PRD-022's scope, stated rather than
+ * claimed away).
  */
 export function mergeToLocalBase(options: {
   config: WorkflowConfig;
@@ -201,17 +244,34 @@ export function mergeToLocalBase(options: {
   const branch = pre.branch!;
   const source = sourceSha ?? branch;
 
-  const worktreeDir = findBaseWorktree(root, base);
-  if (worktreeDir !== null && worktreeDir !== root) {
-    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
-  }
+  const merge = (): MergeOutcome => {
+    const worktreeDir = findBaseWorktree(root, base);
+    if (worktreeDir !== null && worktreeDir !== root) {
+      return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
+    }
+    try {
+      git(root, ['rev-parse', '--verify', base]);
+    } catch {
+      return { ok: false, why: `no local branch '${base}' to merge into` };
+    }
+    return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
+  };
 
-  try {
-    git(root, ['rev-parse', '--verify', base]);
-  } catch {
-    return { ok: false, why: `no local branch '${base}' to merge into` };
-  }
-  return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
+  if (!config.memory.enabled) return merge();
+
+  return withWorkspaceMutex(claimMutexPath(config, root), (): MergeOutcome => {
+    const blockers = foreignActiveLeases(config, root, id);
+    if (blockers.length > 0) {
+      return {
+        ok: false,
+        why:
+          `a foreign lease is active — ${blockers.join(', ')}; this merge changes gate policy, ` +
+          `so it refuses rather than land under another agent's feet. Wait for the lease to ` +
+          `expire or have its holder release it, then re-run`,
+      };
+    }
+    return merge();
+  });
 }
 
 function mergeInWorktree(options: {

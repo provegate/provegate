@@ -32,20 +32,33 @@ export interface InitReport {
 }
 
 /** Starter config: the two highest-churn fields populated from defaults so the
- * file teaches its own surface; everything else falls back to defaults. */
-function starterConfig(config: WorkflowConfig): string {
+ * file teaches its own surface; everything else falls back to defaults.
+ *
+ * With the practices pack, `memory.enabled` is written explicitly. That is
+ * configuration, not detection (invariant 4): the same run installs the record
+ * store, so the opt-in is recorded in the file rather than inferred later from
+ * a directory existing. A repository that scaffolds without the pack gets no
+ * memory key at all and keeps the default-off behavior. */
+function starterConfig(config: WorkflowConfig, memory: boolean): string {
   return `${JSON.stringify(
     {
       branches: { base: config.branches.base },
       idPattern: config.idPattern,
+      ...(memory ? { memory: { enabled: true } } : {}),
     },
     null,
     2,
   )}\n`;
 }
 
-/** The plan: every dir and file init would create for this config. */
-export function planInit(config: WorkflowConfig): InitAction[] {
+/** The validator the pack installs, wired where it belongs: Phase 7, after
+ * capture (`verify-check-phase-placement`). */
+const PACK_BRAIN_GATE = 'node scripts/verify/verify-brain.mjs';
+
+/** The plan: every dir and file init would create for this config. With
+ * `memory`, the scaffold is the practices one: the config opts in and the
+ * manifest wires the packed validator. */
+export function planInit(config: WorkflowConfig, { memory = false } = {}): InitAction[] {
   const actions: InitAction[] = [];
   for (const artifact of Object.values(config.dirs.artifacts)) {
     for (const state of config.dirs.states) {
@@ -59,15 +72,26 @@ export function planInit(config: WorkflowConfig): InitAction[] {
   actions.push({ path: join(config.dirs.locksDir, '.gitkeep'), kind: 'file', content: '' });
   actions.push({ path: config.dirs.reviewsDir, kind: 'dir' });
   actions.push({ path: join(config.dirs.reviewsDir, '.gitkeep'), kind: 'file', content: '' });
-  actions.push({ path: CONFIG_FILENAME, kind: 'file', content: starterConfig(config) });
+  actions.push({ path: CONFIG_FILENAME, kind: 'file', content: starterConfig(config, memory) });
   // Explicit empty floors, not `{}`: a bare object would inherit the default
   // pnpm gate commands, which a fresh (possibly non-node) scaffold cannot
   // resolve — and the wiring audit would rightly flag that. The scaffold
   // starts honest: no gates until the adopter wires their own.
+  //
+  // The practices manifest is the opposite case and the reason `phases.4` is
+  // OMITTED rather than emptied there. Manifest load deep-merges over the
+  // built-in floor, so `phases.4: []` would ERASE the four configured floor
+  // commands, while an absent key leaves them intact. The pack ships a runnable
+  // node validator, so Phase 7 can be wired immediately; Phase 4 stays whatever
+  // the adopter's config says it is.
   actions.push({
     path: MANIFEST_FILENAME,
     kind: 'file',
-    content: `${JSON.stringify({ phases: { '4': [] }, postMerge: [] }, null, 2)}\n`,
+    content: `${JSON.stringify(
+      memory ? { phases: { '7': [PACK_BRAIN_GATE] } } : { phases: { '4': [] }, postMerge: [] },
+      null,
+      2,
+    )}\n`,
   });
   return actions;
 }
@@ -216,13 +240,21 @@ export function containedPath(root: string, rel: string): string {
 export function initWorkspace(
   config: WorkflowConfig,
   root: string,
-  { dryRun = false, extra = [] }: { dryRun?: boolean; extra?: InitAction[] } = {},
+  {
+    dryRun = false,
+    extra = [],
+    // Defaults to "this run installs the pack", because `extra` IS the practices
+    // plan and nothing else populates it. Derived from what is being written
+    // now, never from what already exists on disk — an adopter's stray `_brain`
+    // directory must not turn a plain `gate init` into a memory-enabled one.
+    practices = extra.length > 0,
+  }: { dryRun?: boolean; extra?: InitAction[]; practices?: boolean } = {},
 ): InitReport {
   const report: InitReport = { created: [], skipped: [] };
   const rootAbs = resolve(root);
   // Validate the WHOLE plan before writing anything: a config with one bad
   // path must not leave a partial scaffold behind.
-  const planned = [...planInit(config), ...extra].map((action) => ({
+  const planned = [...planInit(config, { memory: practices }), ...extra].map((action) => ({
     ...action,
     full: containedPath(rootAbs, action.path),
   }));

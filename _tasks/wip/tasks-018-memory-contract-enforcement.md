@@ -181,11 +181,11 @@ Records to open and confirm still accurate before the dependent task starts (tas
         happy path and the non-worktree refusal text. Only the second is new.
 
 - [ ] 6.0 FR-6 — Safe activation, manifest wiring, and the land barrier
-  - [ ] 6.1 In `packages/provegate/src/core/run/init.ts`, generate memory-enabled config
+  - [x] 6.1 In `packages/provegate/src/core/run/init.ts`, generate memory-enabled config
         and a manifest containing `phases.7` only for a fresh `gate init --practices`.
         The generated manifest must **omit** `phases.4` entirely so default floor commands
         survive deep merge.
-  - [ ] 6.2 Assert in `packages/provegate/test/init.test.ts` that existing config,
+  - [x] 6.2 Assert in `packages/provegate/test/init.test.ts` that existing config,
         manifests, and entrypoints stay byte-unchanged, and in `test/manifest.test.ts`
         that a fresh manifest's absent `phases.4` still resolves to the four floor
         commands while `phases.4: []` erases them.
@@ -196,13 +196,13 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [ ] 6.4 Write the root `workflow.config.json` enabling memory. Both files are new
         worktree control artifacts from this moment; PRD-021 later adds one key to the
         config and PRD-022 closes the revalidation residual.
-  - [ ] 6.5 Implement the activation barrier in `packages/provegate/src/core/run/merge.ts`:
+  - [x] 6.5 Implement the activation barrier in `packages/provegate/src/core/run/merge.ts`:
         `gate land` reads `_state/locks` **inside the workspace mutex** (`run/mutex.ts`,
         the same critical section that guards lease claims) and refuses while a foreign
         lease is active. Outside the mutex it is a check-then-merge race, not a barrier.
-  - [ ] 6.6 In `packages/provegate/test/merge.test.ts`, assert the refusal with a foreign
+  - [x] 6.6 In `packages/provegate/test/merge.test.ts`, assert the refusal with a foreign
         lease present, the pass with none, and that the refusal message names the lease.
-  - [ ] 6.7 W5 — in `packages/provegate/test/open.test.ts`, prove the control-artifact
+  - [x] 6.7 W5 — in `packages/provegate/test/open.test.ts`, prove the control-artifact
         **introduction** transition: a worktree leased before these files exist is refused
         on reuse, and succeeds after merging the base.
   - [ ] 6.8 Record the residual honestly in **Deferrals & Decisions**: a direct

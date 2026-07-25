@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -21,7 +22,12 @@ import {
 } from '../src/core/config/index.js';
 import { defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
 import { auditWiring, packageScriptOf } from '../src/core/gates/wiring.js';
-import { initWorkspace, planInit } from '../src/core/run/init.js';
+import {
+  initWorkspace,
+  planInit,
+  planPractices,
+  practicesPackDir,
+} from '../src/core/run/init.js';
 import { buildState } from '../src/core/state/build.js';
 
 const run = promisify(execFile);
@@ -191,5 +197,61 @@ describe('gate init (live CLI)', () => {
 
     const status = await run(process.execPath, [cliPath, 'status'], { cwd: root });
     expect(status.stdout).toContain('(no workflow artifacts found)');
+  });
+});
+
+describe('FR-6 memory-enabled scaffold (practices only)', () => {
+  const practices = () => planPractices(practicesPackDir());
+
+  it('a plain init opts into nothing: no memory key, empty phase-4 floor', () => {
+    const root = tempRoot();
+    initWorkspace(cfg, root);
+    const config = JSON.parse(readFileSync(join(root, 'workflow.config.json'), 'utf8'));
+    expect(config.memory).toBeUndefined();
+    const manifest = JSON.parse(readFileSync(join(root, 'gates.manifest.json'), 'utf8'));
+    expect(manifest.phases).toEqual({ '4': [] });
+  });
+
+  it('a practices init writes the opt-in and omits phases.4 entirely', () => {
+    const root = tempRoot();
+    initWorkspace(cfg, root, { extra: practices() });
+    const config = JSON.parse(readFileSync(join(root, 'workflow.config.json'), 'utf8'));
+    expect(config.memory).toEqual({ enabled: true });
+    const manifest = JSON.parse(readFileSync(join(root, 'gates.manifest.json'), 'utf8'));
+    // The rule this fixture exists for: the key is ABSENT, not empty.
+    expect(Object.keys(manifest.phases)).toEqual(['7']);
+    expect('4' in manifest.phases).toBe(false);
+    expect(manifest.phases['7']).toEqual(['node scripts/verify/verify-brain.mjs']);
+  });
+
+  it('the generated Phase 7 command is allowlist-safe', () => {
+    const root = tempRoot();
+    initWorkspace(cfg, root, { extra: practices() });
+    const manifest = JSON.parse(readFileSync(join(root, 'gates.manifest.json'), 'utf8'));
+    for (const cmd of manifest.phases['7']) {
+      expect(cfg.commands.allowedPrefixes.some((p: string) => cmd.startsWith(p)), cmd).toBe(true);
+    }
+  });
+
+  it('never overwrites: an existing config and manifest stay byte-identical', () => {
+    const root = tempRoot();
+    const config = '{ "branches": { "base": "trunk" } }\n';
+    const manifest = '{ "phases": { "4": ["make check"] } }\n';
+    writeFileSync(join(root, 'workflow.config.json'), config);
+    writeFileSync(join(root, 'gates.manifest.json'), manifest);
+    const report = initWorkspace(cfg, root, { extra: practices() });
+    expect(readFileSync(join(root, 'workflow.config.json'), 'utf8')).toBe(config);
+    expect(readFileSync(join(root, 'gates.manifest.json'), 'utf8')).toBe(manifest);
+    expect(report.skipped).toContain('workflow.config.json');
+    expect(report.skipped).toContain('gates.manifest.json');
+  });
+
+  it('an adopter’s stray `_brain` never enables memory — only the pack does', () => {
+    const root = tempRoot();
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(join(root, '_brain/INDEX.md'), '# index\n');
+    initWorkspace(cfg, root);
+    const config = JSON.parse(readFileSync(join(root, 'workflow.config.json'), 'utf8'));
+    expect(config.memory).toBeUndefined();
   });
 });

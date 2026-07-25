@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, deepMerge, type WorkflowConfig } from '../src/core/config/index.js';
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
 import { archiveCommitMessage, archivePrdArtifacts } from '../src/core/run/archive.js';
-import { ensureCheckoutClean, mergeToLocalBase, mergeMessage } from '../src/core/run/merge.js';
+import {
+  ensureCheckoutClean,
+  foreignActiveLeases,
+  mergeToLocalBase,
+  mergeMessage,
+} from '../src/core/run/merge.js';
+import { claimMutexPath } from '../src/core/run/open.js';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -297,5 +303,121 @@ describe('codex round-2 test adequacy', () => {
     const result = mergeToLocalBase({ config: cfg, manifest, root, id: 'PRD-002' });
     expect(result.ok).toBe(false);
     expect(git(root, ['rev-parse', 'main'])).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-6 — the activation barrier.
+// ---------------------------------------------------------------------------
+
+describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
+  const memOn: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+
+  /** Write a lease into the lock dir the barrier reads. */
+  function lease(
+    root: string,
+    name: string,
+    over: { prd?: string; agent?: string; expiresAt?: string } = {},
+  ): void {
+    const dir = resolve(root, cfg.dirs.locksDir);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, `${name}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        lockId: name,
+        agent: over.agent ?? 'other-agent',
+        prd: over.prd ?? 'PRD-009',
+        phase: 'Phase 4',
+        startedAt: '2026-07-25T00:00:00.000Z',
+        expiresAt: over.expiresAt ?? new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['packages/x/**'],
+        ownedPaths: ['packages/x/**'],
+      }),
+    );
+  }
+
+  it('refuses while another agent holds an unexpired lease, and names it', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-other-work');
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('a foreign lease is active');
+    expect(result.why).toContain('prd-009-other-work.json (other-agent)');
+    expect(result.why).toContain('Wait for the lease to expire or have its holder release it');
+    // and the merge did NOT happen
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('feat/x');
+  });
+
+  it('ignores this work item’s own lease', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-002-x', { prd: 'PRD-002' });
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(true);
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+  });
+
+  it('ignores an expired foreign lease', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-stale', { expiresAt: '2020-01-01T00:00:00.000Z' });
+    expect(
+      mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }).ok,
+    ).toBe(true);
+  });
+
+  it('treats an unreadable lease as a blocker — unreadable is not absent', () => {
+    const root = fixtureRepo();
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    writeFileSync(join(resolve(root, cfg.dirs.locksDir), 'prd-009-broken.json'), '{ not json');
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('prd-009-broken.json (unreadable');
+  });
+
+  it('a lease with no parseable expiry blocks — it cannot be shown to be expired', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-no-expiry', { expiresAt: 'whenever' });
+    expect(
+      mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }).ok,
+    ).toBe(false);
+  });
+
+  it('a memory-disabled repository merges with the same foreign lease present', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-other-work');
+    const result = mergeToLocalBase({ config: cfg, manifest: okManifest(cfg), root, id: 'PRD-002' });
+    expect(result.ok).toBe(true);
+  });
+
+  it('the barrier holds the SAME mutex a claim takes — a claim cannot slip in', () => {
+    const root = fixtureRepo();
+    const mutex = claimMutexPath(memOn, root);
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    // Hold the claim mutex; the merge must not proceed past it. `withWorkspaceMutex`
+    // gives up rather than breaking a live marker, so the merge throws instead of
+    // landing — which is the whole point: no check-then-merge window exists.
+    writeFileSync(mutex, `${process.pid}:held:${new Date().toISOString()}\n`);
+    try {
+      expect(() =>
+        mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }),
+      ).toThrow(/could not acquire workspace mutex/);
+      expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('feat/x');
+    } finally {
+      rmSync(mutex, { force: true });
+    }
+    // The mutex waits out a LIVE holder (200 × 50ms) before giving up, so this
+    // case is slower than the default per-test budget by construction.
+  }, 20_000);
+
+  it('foreignActiveLeases is the predicate, and it is exact', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-a');
+    lease(root, 'prd-010-b', { prd: 'PRD-010', agent: 'agent-b' });
+    lease(root, 'prd-002-mine', { prd: 'PRD-002' });
+    expect(foreignActiveLeases(memOn, root, 'PRD-002')).toEqual([
+      'prd-009-a.json (other-agent)',
+      'prd-010-b.json (agent-b)',
+    ]);
+    expect(foreignActiveLeases(memOn, root, 'PRD-009')).toEqual(['prd-002-mine.json (other-agent)', 'prd-010-b.json (agent-b)']);
   });
 });

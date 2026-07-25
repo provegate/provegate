@@ -39,6 +39,7 @@ export {
   ensureCheckoutClean,
   findBaseWorktree,
   mergeMessage,
+  foreignActiveLeases,
   mergePreconditions,
   mergeToLocalBase,
   type MergeOutcome,
