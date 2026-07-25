@@ -92,6 +92,13 @@ function pathProblem(value: string): string | null {
   if (/[{}]/.test(value)) return 'is an unsubstituted template token, not a path';
   if (value.endsWith('/')) return 'is a directory, not a file';
   if (!value.includes('/')) return 'is not a repo-relative path';
+  // A record is a Markdown file (§12), so requiring the extension is the rule
+  // that makes readiness and Phase 7 agree. Without it `_brain/learnings` reads
+  // as an exact path here — `declaredArtifacts` returns it and
+  // `durableArtifactsOk` lets any child satisfy it — while the close gate needs
+  // that exact path in the diff and rejects it. Readiness must not pass what
+  // Phase 7 will refuse.
+  if (!value.endsWith('.md')) return 'is not a `.md` record path';
   return null;
 }
 
@@ -284,19 +291,39 @@ export function outputsMissingFromDurable(
 // Phase 7 enforcement (FR-4).
 // ---------------------------------------------------------------------------
 
-/** A declared output is satisfied by the file itself, never by a sibling. The
- * directory-prefix tolerance `durableArtifactsOk` allows is deliberately absent:
- * an output IS an exact path, so accepting a prefix would re-admit the "promise
- * to capture learnings" the grammar just refused. */
-function touched(path: string, changedFiles: readonly string[]): boolean {
-  return changedFiles.includes(path);
-}
-
 export interface MemoryCloseOptions {
   content: string;
   changedFiles: readonly string[];
   store: MemoryStore;
   durable: readonly string[];
+  /**
+   * Paths the diff ADDED or MODIFIED, when the caller can tell them apart from
+   * deletions, plus a predicate for "this path exists as a regular file".
+   *
+   * Both exist because `changedFiles` is `git diff --name-only`, which includes
+   * DELETIONS — so deleting a promised record put its path in the diff and read
+   * as a successful capture. Membership in a name list is not evidence that
+   * anything was written.
+   */
+  capturedFiles?: readonly string[];
+  exists?: (path: string) => boolean;
+}
+
+/** A declared output is satisfied by the file itself, never by a sibling. The
+ * directory-prefix tolerance `durableArtifactsOk` allows is deliberately absent:
+ * an output IS an exact path, so accepting a prefix would re-admit the "promise
+ * to capture learnings" the grammar just refused. */
+function captureProblem(path: string, options: MemoryCloseOptions): string | null {
+  const inDiff = (options.capturedFiles ?? options.changedFiles).includes(path);
+  if (!inDiff) {
+    return options.capturedFiles === undefined
+      ? 'is declared but absent from the merge diff — a declaration is not a capture'
+      : 'is declared but was not added or modified by the merge diff — a deletion is not a capture';
+  }
+  if (options.exists !== undefined && !options.exists(path)) {
+    return 'is declared and in the diff, but no file exists at that path after the merge';
+  }
+  return null;
 }
 
 /**
@@ -310,7 +337,7 @@ export interface MemoryCloseOptions {
  * false green `durable-artifact-must-commit` describes from the other side.
  */
 export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
-  const { content, changedFiles, store, durable } = options;
+  const { content, store, durable } = options;
   const issues: string[] = [];
   const decl = parseMemoryDeclarations(content);
 
@@ -324,19 +351,34 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
     issues.push(`${OUTPUTS_HEADING}: '${path}' is not listed in Durable Artifacts`);
   }
   for (const output of decl.outputs.entries) {
-    if (touched(output.path, changedFiles)) continue;
+    const problem = captureProblem(output.path, options);
+    if (problem !== null) issues.push(`${OUTPUTS_HEADING}: '${output.path}' ${problem}`);
+  }
+
+  // The close resolves inputs too. Readiness approved a set of slugs; nothing
+  // re-checked them at the merge, so an input could be swapped for a name that
+  // resolves to nothing after the verdict that accepted it.
+  const { declared: declaredInputs, issues: inputIssues } = resolveInputs(
+    decl.inputs.entries,
+    storeView(store),
+  );
+  issues.push(...inputIssues);
+
+  // An indexed record that will not parse has no readable watch, so its watch
+  // cannot fire. Deleting a watched record and its pointer would otherwise
+  // erase the trigger and leave a smaller, self-consistent store behind.
+  for (const slug of store.unreadable) {
     issues.push(
-      `${OUTPUTS_HEADING}: '${output.path}' is declared but absent from the merge diff — ` +
-        `a declaration is not a capture`,
+      `memory store: indexed record '${slug}' does not validate, so its watch cannot be ` +
+        `evaluated — repair it before closing`,
     );
   }
 
-  const declaredInputs = new Set(decl.inputs.entries.map((input) => input.slug));
   for (const indexed of activeRecords(store)) {
     const watch = indexed.record.watch;
     if (watch === undefined || watch.length === 0) continue;
     if (declaredInputs.has(indexed.slug)) continue;
-    const matched = watchMatches(watch, changedFiles);
+    const matched = watchMatches(watch, options.changedFiles);
     if (matched.length === 0) continue;
     issues.push(
       `${INPUTS_HEADING}: '${indexed.slug}' watches ${matched.join(', ')} — the merge diff ` +
@@ -370,9 +412,32 @@ export interface Weakening {
  * get an acceptance) and guessing between the two would report a rename as a
  * lesser thing than it is.
  */
+/**
+ * Why the base-ref copy cannot serve as a baseline, or null when it can.
+ *
+ * Addendum §7 fails closed on a missing, **malformed**, or uncommitted
+ * baseline. Only the uncommitted case was handled: a base-ref blob with no
+ * Memory Outputs section parsed to zero entries, and zero entries read as
+ * "nothing was promised", so pointing the comparison at any section-less file
+ * silently licensed every removal.
+ */
+export function baselineProblem(baselineContent: string): string | null {
+  const decl = parseMemoryDeclarations(baselineContent);
+  if (!decl.outputs.present) return `it has no \`## ${OUTPUTS_HEADING}\` section`;
+  const outputIssues = decl.issues.filter((issue) => issue.startsWith(`${OUTPUTS_HEADING}:`));
+  if (outputIssues.length > 0) return `its ${OUTPUTS_HEADING} do not parse: ${outputIssues.join('; ')}`;
+  if (!decl.outputs.none && decl.outputs.entries.length === 0) {
+    return `its ${OUTPUTS_HEADING} declare neither an entry nor a reasoned \`none\``;
+  }
+  return null;
+}
+
 export function outputWeakenings(baselineContent: string, workingContent: string): Weakening[] {
   const baseline = parseMemoryDeclarations(baselineContent).outputs;
   const working = parseMemoryDeclarations(workingContent).outputs;
+  // A deliberate, reasoned `none` on the base ref promised nothing, so nothing
+  // can be weakened. Every OTHER way of reaching zero entries is a malformed
+  // baseline and is refused by `baselineProblem` before this runs.
   if (baseline.entries.length === 0) return [];
 
   const byPath = new Map(working.entries.map((entry) => [entry.path, entry]));
@@ -431,9 +496,24 @@ export function changelogApproves(
       .map((cell) => cell.trim());
     if (parts.length < 3) continue;
     if (!ownerSet.has((parts[1] ?? '').toLowerCase())) continue;
-    if (parts.slice(2).join(' ').includes(path)) return true;
+    // The path must be QUOTED, not merely mentioned. A bare substring match let
+    // any owner row that happened to name the file in prose — a documentation
+    // audit, a moved-file note — waive a removal it never considered. A
+    // backticked span is a deliberate reference to that exact path.
+    const quoted = [...parts.slice(2).join(' ').matchAll(/`([^`]+)`/g)].map((m) => m[1]!.trim());
+    if (quoted.includes(path)) return true;
   }
   return false;
+}
+
+/**
+ * Does an owner acceptance cover THIS removal? An acceptance entry is scoped by
+ * its `items`, and a weakening waiver has to name the path it waives — the
+ * addendum requires a *matching* acceptance, and accepting any entry recorded
+ * for the PRD let an unrelated operator-row waiver license a broken promise.
+ */
+export function acceptanceCoversPath(items: readonly string[], path: string): boolean {
+  return items.some((item) => typeof item === 'string' && item.includes(path));
 }
 
 // ---------------------------------------------------------------------------
@@ -501,6 +581,55 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
   return store;
 }
 
+interface StoreView {
+  bySlug: Map<string, IndexedRecord>;
+  superseded: Set<string>;
+  unreadable: Set<string>;
+}
+
+/** Build the three lookups both gates resolve inputs against. */
+function storeView(store: MemoryStore): StoreView {
+  return {
+    bySlug: new Map(activeRecords(store).map((indexed) => [indexed.slug, indexed])),
+    superseded: new Set(
+      store.records.filter((i) => i.record.status === 'superseded').map((i) => i.slug),
+    ),
+    unreadable: new Set(store.unreadable),
+  };
+}
+
+/**
+ * Resolve declared inputs against the store. Shared by readiness and the close
+ * gate on purpose: Phase 7 previously read the slugs without checking any of
+ * this, so an input could be replaced with a name that resolves to nothing
+ * between the readiness that approved it and the merge that closed it.
+ */
+function resolveInputs(
+  entries: readonly MemoryInput[],
+  view: StoreView,
+): { declared: Set<string>; issues: string[] } {
+  const declared = new Set<string>();
+  const issues: string[] = [];
+  for (const input of entries) {
+    if (declared.has(input.slug)) {
+      // Two dispositions for one record is a contradiction, not a repetition:
+      // the reader cannot tell which one the work item acted on.
+      issues.push(`${INPUTS_HEADING}: '${input.slug}' is named more than once`);
+      continue;
+    }
+    declared.add(input.slug);
+    if (view.bySlug.has(input.slug)) continue;
+    if (view.superseded.has(input.slug)) {
+      issues.push(`${INPUTS_HEADING}: '${input.slug}' is superseded — it cannot be an input`);
+    } else if (view.unreadable.has(input.slug)) {
+      issues.push(`${INPUTS_HEADING}: '${input.slug}' does not validate — repair the record first`);
+    } else {
+      issues.push(`${INPUTS_HEADING}: '${input.slug}' is not an active indexed record`);
+    }
+  }
+  return { declared, issues };
+}
+
 /**
  * Records eligible to be named as inputs. `superseded` is the one status that
  * makes a record inactive in both vocabularies — a learning replaced by another
@@ -535,30 +664,11 @@ export function lintMemoryContract(
   if (!decl.inputs.present || !decl.outputs.present) return issues;
 
   const active = activeRecords(store);
-  const bySlug = new Map(active.map((indexed) => [indexed.slug, indexed]));
-  const superseded = new Set(
-    store.records.filter((i) => i.record.status === 'superseded').map((i) => i.slug),
+  const { declared: declaredInputs, issues: inputIssues } = resolveInputs(
+    decl.inputs.entries,
+    storeView(store),
   );
-  const unreadable = new Set(store.unreadable);
-
-  const declaredInputs = new Set<string>();
-  for (const input of decl.inputs.entries) {
-    if (declaredInputs.has(input.slug)) {
-      // Two dispositions for one record is a contradiction, not a repetition:
-      // the reader cannot tell which one the work item acted on.
-      issues.push(`${INPUTS_HEADING}: '${input.slug}' is named more than once`);
-      continue;
-    }
-    declaredInputs.add(input.slug);
-    if (bySlug.has(input.slug)) continue;
-    if (superseded.has(input.slug)) {
-      issues.push(`${INPUTS_HEADING}: '${input.slug}' is superseded — it cannot be an input`);
-    } else if (unreadable.has(input.slug)) {
-      issues.push(`${INPUTS_HEADING}: '${input.slug}' does not validate — repair the record first`);
-    } else {
-      issues.push(`${INPUTS_HEADING}: '${input.slug}' is not an active indexed record`);
-    }
-  }
+  issues.push(...inputIssues);
 
   // A watch is a REVIEW TRIGGER, not a staleness verdict: the obligation is to
   // name the record with a disposition, never to edit it.

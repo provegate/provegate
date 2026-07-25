@@ -123,7 +123,17 @@ the obligation is to say what you did about the record, never to edit it.
 At close, declared outputs are compared against the work item **as committed on the base
 branch** — the one version an agent editing its own artifact cannot rewrite. Appending an
 output discovered during implementation is always allowed. Removing one, changing its type
-or path, or replacing it with `none` is weakening, and needs owner acceptance.
+or path, or replacing it with `none` is **weakening**, and what happens then depends on
+the work item's close mode:
+
+- **Eligible for autonomous close** → refused outright. No acceptance can waive it; restore
+  the output or re-open the item under operator gating.
+- **Operator-gated** → allowed only with BOTH a changelog row authored by a configured
+  owner that names the exact path, AND an owner acceptance entry whose items name that
+  same path.
+
+A missing, malformed, or uncommitted baseline fails closed and names the remedy: commit the
+work item to the base branch.
 
 Enabled by `memory.enabled` in `workflow.config.json`. A repository that has not opted in
 behaves exactly as it did before.

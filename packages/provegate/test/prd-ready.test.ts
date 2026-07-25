@@ -428,8 +428,15 @@ describe('FR Targets are read as an entry, not as one line', () => {
     ],
   });
 
-  it('a hard cap fires on a target from a continuation line', () => {
-    expect(lintPrd(cfg, capFor('packages/y/**'), WRAPPED).issues).toContainEqual(
+  it('hard caps keep the LEGACY line-only target set, memory or not', () => {
+    // Deliberate, and the reason is the default-off promise: the hard-cap engine
+    // runs in every repository, so widening what it sees would fire caps that
+    // the previous release did not — a behavior change in a memory-DISABLED
+    // repo. The wider read is scoped to the memory gate below; migrating the
+    // cap side is a recorded deferral, not a silent ride-along.
+    expect(lintPrd(cfg, capFor('packages/y/**'), WRAPPED).ok).toBe(true);
+    const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    expect(lintPrd(on, capFor('packages/y/**'), WRAPPED).issues).not.toContainEqual(
       expect.stringContaining('hard cap cap'),
     );
   });

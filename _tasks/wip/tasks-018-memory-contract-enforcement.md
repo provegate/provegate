@@ -257,16 +257,49 @@ Records to open and confirm still accurate before the dependent task starts (tas
         activation depends on.
 
 - [ ] 10.0 Phase 6 — Independent adversarial audit
-  - [ ] 10.1 After Phase 5 is green, obtain an independent review (different model family,
+  - [x] 10.1 After Phase 5 is green, obtain an independent review (different model family,
         never the implementing agent) of the merge diff against the PRD, the PRD-017
         addendum, and watch items W1–W13. Direct it at the three sharpest attacks: can a
         declared output be removed while the gate stays green; does a watch overlap
         actually block; and did anything become reachable while memory is disabled.
-  - [ ] 10.2 Save the verdict to
+  - [x] 10.2 Save the verdict to
         `_docs/reviews/review-018-memory-contract-enforcement.md`; the ledger row may read
         `passed` only with verdict `pass` and `Critical: 0`.
   - [ ] 10.3 For each finding, append remediation sub-tasks here, fix under the same
         lease, re-run the affected Phase 5 gates, and obtain a fresh verdict.
+    - [x] 10.3.1 [P1-1] `outputWeakenings` treats a malformed or section-less baseline as
+          "nothing was promised". Fail closed on a baseline whose Memory Outputs section is
+          absent, unparseable, or declares neither form — addendum §7 requires it and only
+          the uncommitted case was handled.
+    - [x] 10.3.2 [P1-2] Bind the weakening approval to the removal: the Changelog row must
+          name the exact path in a backticked span, and the acceptance entry must carry an
+          `items` element naming that path. Today any owner row containing the path as a
+          substring plus any acceptance for the PRD waives it.
+    - [x] 10.3.3 [P1-3] A deleted output counts as a capture, because `collectDiffFiles`
+          is `git diff --name-only` and includes deletions. Require the declared path to be
+          added or modified AND to exist as a regular file at close.
+    - [x] 10.3.4 [P1-4] Phase 7 never resolves declared inputs, and `activeRecords` drops
+          unreadable records so deleting a watched record erases its watch. Reuse the
+          readiness resolution at close and make an unreadable indexed record blocking.
+    - [x] 10.3.5 [P1-5] The repaired `frTargets` feeds the hard-cap engine outside the
+          `memory.enabled` branch, so a memory-disabled repository's behavior changed.
+          Scope the entry-aware parse to the memory gate and leave hard caps on the legacy
+          target set, with the migration recorded as a deferral.
+    - [ ] 10.3.6 [P1-6] `prompts/phase-5-testing.md` carries a memory obligation that
+          addendum §8 explicitly denies phase 5. The PRD's FR-3 table contradicts the
+          addendum, and the addendum is law. **Owner decision required** — remove the
+          obligation, or approve a new addendum entry.
+    - [x] 10.3.7 [P1-7] The packed `AGENT_BOOTSTRAP.template.md` omits that an `eligible`
+          work item refuses weakening outright; it says only that acceptance is needed. The
+          root copy is correct. Port the split, then reconcile pack-drift.
+    - [x] 10.3.8 [P2-8] `pathProblem` accepts a directory (`_brain/learnings`) that the
+          close gate later rejects. Require a `.md` record path so readiness and Phase 7
+          agree.
+    - [ ] 10.3.9 [P2-9] The provenance test asserts that addendum phrases exist, not that
+          each shipped prompt addition traces to its own obligation — it is the test that
+          should have caught [P1-6]. Bind per prompt. Depends on 10.3.6.
+    - [x] 10.3.10 [P2-10] The mutex fixture proves acquisition, not retention. Prove the
+          claim mutex is held ACROSS the merge and its post-merge verification.
 
 - [ ] 11.0 Phase 7 — Durable learning and close preparation
   - [ ] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is

@@ -152,8 +152,9 @@ the one version an agent editing its own PRD cannot rewrite. Appending an output
 discovered during implementation is always allowed, with a rationale. Removing one,
 changing its type or path, or replacing it with `none` is weakening: refused outright for
 an `eligible` PRD, and for an `operator-gated` one it needs both a Changelog row authored
-by an owner naming the path and a matching acceptance entry. A PRD with no committed copy
-on `main` fails closed and names the remedy.
+by an owner naming the exact path **in backticks** and an acceptance entry whose `items`
+name that same path. A PRD whose copy on `main` is missing, malformed, or has no
+`## Memory Outputs` section fails closed and names the remedy.
 
 Enabled by `memory.enabled` in `workflow.config.json`. Historical PRDs are outside the
 contract and are never rewritten to manufacture compliance.

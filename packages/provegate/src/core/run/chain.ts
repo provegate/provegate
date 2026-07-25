@@ -1,7 +1,11 @@
 import { execFileSync, execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import {
+  acceptanceCoversPath,
+  baselineProblem,
   changelogApproves,
   loadMemoryStore,
   memoryCloseIssues,
@@ -71,6 +75,48 @@ export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
   return gatePhaseNumber(gate) < fromPhase;
 }
 
+/**
+ * Paths the diff ADDED, MODIFIED, or renamed INTO — never the ones it deleted.
+ *
+ * `collectDiffFiles` is `git diff --name-only`, which lists deletions too, so
+ * membership there is not evidence a record was written: deleting a promised
+ * output put its path in the list and read as a capture. Returns null when the
+ * status cannot be read, and the caller then falls back to the name list rather
+ * than silently treating every output as uncaptured.
+ */
+function capturedDiffFiles(root: string, base: string): string[] | null {
+  for (const ref of [`origin/${base}`, base]) {
+    try {
+      const mergeBase = execFileSync('git', ['merge-base', 'HEAD', ref], {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+      const out = execFileSync('git', ['diff', '--name-status', `${mergeBase}...HEAD`], {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const captured: string[] = [];
+      for (const line of out.split('\n')) {
+        if (line.trim().length === 0) continue;
+        const parts = line.split('\t');
+        const status = parts[0] ?? '';
+        if (/^[AM]/.test(status)) {
+          if (parts[1] !== undefined) captured.push(parts[1].trim());
+        } else if (/^R/.test(status)) {
+          // A rename captures the DESTINATION; the source is a deletion.
+          if (parts[2] !== undefined) captured.push(parts[2].trim());
+        }
+      }
+      return captured;
+    } catch {
+      // try the next ref
+    }
+  }
+  return null;
+}
+
 /** The PRD exactly as committed on the base ref, or null when it is not there.
  * Never the working copy: the whole point of the comparison is a baseline the
  * editing agent does not control. */
@@ -121,6 +167,18 @@ function memoryWeakeningGate(options: {
         `branch before closing, or reclaim with \`--worktree\``,
     };
   }
+  // A malformed baseline fails closed for the same reason a missing one does:
+  // it cannot say what was promised, and "cannot say" must never read as
+  // "promised nothing".
+  const malformed = baselineProblem(baseline);
+  if (malformed !== null) {
+    return {
+      ok: false,
+      why:
+        `${record.prd}'s copy on \`${base}\` cannot serve as a baseline — ${malformed}; ` +
+        `commit a parseable PRD to the base branch before closing`,
+    };
+  }
 
   const weakenings = outputWeakenings(baseline, prdContent);
   if (weakenings.length === 0) return { ok: true };
@@ -144,12 +202,25 @@ function memoryWeakeningGate(options: {
         `Changelog naming ${unapproved.map((w) => `'${w.path}'`).join(', ')}: ${detail}`,
     };
   }
-  if (!validAcceptance(config, loadAcceptance(config, root, record.prd))) {
+  const acceptance = loadAcceptance(config, root, record.prd);
+  if (!validAcceptance(config, acceptance)) {
     return {
       ok: false,
       why:
         `Memory Outputs weakened against \`${base}\`; the Changelog approves it but no valid ` +
         `owner acceptance entry exists for ${record.prd}: ${detail}`,
+    };
+  }
+  // The acceptance must cover THIS removal. Accepting any entry recorded for the
+  // PRD let an operator-row waiver — signed for something else entirely — also
+  // license a broken output promise.
+  const uncovered = weakenings.filter((w) => !acceptanceCoversPath(acceptance!.items, w.path));
+  if (uncovered.length > 0) {
+    return {
+      ok: false,
+      why:
+        `Memory Outputs weakened against \`${base}\`; the owner acceptance for ${record.prd} ` +
+        `does not name ${uncovered.map((w) => `'${w.path}'`).join(', ')} in its items: ${detail}`,
     };
   }
   return { ok: true, waived: true, why: `weakening accepted by the owner: ${detail}` };
@@ -213,11 +284,14 @@ export function buildGateChain(options: {
       phase: '7 Learning',
       label: 'memory: declared outputs in Durable Artifacts and the merge diff',
       fn: () => {
+        const captured = capturedDiffFiles(root, config.branches.base);
         const issues = memoryCloseIssues({
           content: prdContent,
           changedFiles,
           store: loadMemoryStore(root, config.memory),
           durable: declaredArtifacts(prdContent),
+          ...(captured === null ? {} : { capturedFiles: captured }),
+          exists: (path) => existsSync(resolve(root, path)),
         });
         return issues.length === 0 ? { ok: true } : { ok: false, why: issues.join('; ') };
       },

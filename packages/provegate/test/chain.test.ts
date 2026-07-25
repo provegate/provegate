@@ -299,24 +299,44 @@ const prd = (parts: PrdParts = {}): string =>
     '',
   ].join('\n');
 
-/** A committed repo: the baseline PRD lives on `main`, as FR-5 requires. */
-function gitRepo(files: Record<string, string>): string {
+/**
+ * A committed repo: the baseline PRD lives on `main`, as FR-5 requires, and the
+ * work lands on a feature branch.
+ *
+ * The feature commit is the point. The close gate reads `git diff --name-status`
+ * against the merge base, so a fixture that only writes files on `main` proves
+ * nothing about capture — the diff is empty and every "declared output is in the
+ * diff" assertion would be testing the fallback rather than the real path.
+ */
+function gitRepo(files: Record<string, string>, branchFiles: Record<string, string> = {}): string {
   const root = tempRoot();
   const run = (args: string[]): void => {
     execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+  };
+  const write = (path: string, content: string): void => {
+    mkdirSync(join(root, dirname(path)), { recursive: true });
+    writeFileSync(join(root, path), content);
   };
   run(['init', '-b', 'main']);
   run(['config', 'user.email', 'gate@example.test']);
   run(['config', 'user.name', 'gate']);
   run(['config', 'commit.gpgsign', 'false']);
-  for (const [path, content] of Object.entries(files)) {
-    mkdirSync(join(root, dirname(path)), { recursive: true });
-    writeFileSync(join(root, path), content);
-  }
+  for (const [path, content] of Object.entries(files)) write(path, content);
   run(['add', '-A']);
   run(['commit', '-m', 'baseline', '--no-verify']);
+  if (Object.keys(branchFiles).length > 0) {
+    run(['checkout', '-b', 'feat/x']);
+    for (const [path, content] of Object.entries(branchFiles)) write(path, content);
+    run(['add', '-A']);
+    run(['commit', '-m', 'feature', '--no-verify']);
+  }
   return root;
 }
+
+/** The record a PRD promises, as the feature branch actually captures it. */
+const CAPTURED_RECORD = {
+  '_brain/learnings/new-thing.md': RECORD_MD('new-thing'),
+};
 
 const STORE = (watch?: string): Record<string, string> => ({
   '_brain/INDEX.md': [
@@ -361,7 +381,7 @@ describe('FR-4 memory close gates', () => {
   const CHANGED = ['_brain/learnings/new-thing.md'];
 
   it('passes when every declared output is durable and in the diff', () => {
-    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
     expect(gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs')).toEqual(
       { ok: true },
     );
@@ -371,8 +391,8 @@ describe('FR-4 memory close gates', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
     const result = gate(chainFor({ root, prdContent: prd(), changedFiles: [] }), 'declared outputs');
     expect(result.ok).toBe(false);
-    expect(result.why).toContain("'_brain/learnings/new-thing.md' is declared but absent");
-    expect(result.why).toContain('a declaration is not a capture');
+    expect(result.why).toContain("'_brain/learnings/new-thing.md' is declared but was not added");
+    expect(result.why).toContain('a deletion is not a capture');
   });
 
   it('refuses an output that is not also a Durable Artifact', () => {
@@ -399,7 +419,7 @@ describe('FR-4 memory close gates', () => {
     const content = prd({
       inputs: ['- not-applicable: `watcher-record` — matched, but the trap is elsewhere.'],
     });
-    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE('packages/x/**') });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE('packages/x/**') }, CAPTURED_RECORD);
     expect(
       gate(
         chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
@@ -542,7 +562,7 @@ describe('FR-5 base-ref weakening', () => {
           {
             prd: 'PRD-002',
             owner: 'owner',
-            items: ['memory output removal'],
+            items: ['memory output removal: _brain/adr/ADR-0001-x.md'],
             reason: 'the decision moved to PRD-022',
             date: '2026-07-25',
             method: 'interactive',
@@ -567,5 +587,145 @@ describe('FR-5 base-ref weakening', () => {
     const noned = prd({ outputs: ['- none — turns out nothing durable came of it.'] });
     const nonedResult = gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening');
     expect(nonedResult.why).toContain('the working PRD declares `none`');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 6 round 1 — regressions for the seven CRITICAL findings that touch the
+// runner. Each one reproduces the reviewer's counterexample and asserts the
+// refusal, so a revert of the fix reddens the suite rather than the reviewer.
+// ---------------------------------------------------------------------------
+
+describe('phase 6 round 1 regressions', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    '- `_brain/adr/ADR-0001-x.md` — the decision',
+  ];
+  const OWNER_ROW =
+    '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — moved to PRD-022 |';
+
+  const acceptance = (items: string[]): string =>
+    JSON.stringify({
+      acceptances: [
+        {
+          prd: 'PRD-002',
+          owner: 'owner',
+          items,
+          reason: 'the decision moved to PRD-022',
+          date: '2026-07-25',
+          method: 'interactive',
+        },
+      ],
+    });
+
+  it('[P1-1] a base-ref copy with no Memory Outputs section is not an empty promise', () => {
+    // The reviewer pointed the comparison at README.md and got {ok:true}: zero
+    // baseline entries read as "nothing was promised".
+    const root = gitRepo({ '_prds/wip/p.md': '# PRD-002\n\nno sections at all.\n', ...STORE() });
+    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('cannot serve as a baseline');
+    expect(result.why).toContain('has no `## Memory Outputs` section');
+  });
+
+  it('[P1-1] a base-ref copy whose Memory Outputs do not parse also fails closed', () => {
+    const broken = prd({ outputs: ['- learning: `_brain/learnings/x.md`'] }); // no rationale
+    const root = gitRepo({ '_prds/wip/p.md': broken, ...STORE() });
+    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('do not parse');
+  });
+
+  it('[P1-1] a baseline that deliberately declared `none` still promises nothing', () => {
+    const noned = prd({ outputs: ['- none — nothing durable was expected.'], durable: ['- none'] });
+    const root = gitRepo({ '_prds/wip/p.md': noned, ...STORE() }, CAPTURED_RECORD);
+    expect(gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening')).toEqual(
+      { ok: true },
+    );
+  });
+
+  it('[P1-2] an owner row that merely MENTIONS the path does not approve the removal', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const mentioned = prd({
+      changelog: ['| 2026-07-25 | owner | documentation audit covered _brain/adr/ADR-0001-x.md |'],
+    });
+    const root = gitRepo(
+      { '_prds/wip/p.md': baseline, '_state/acceptances.json': acceptance(['anything']), ...STORE() },
+      CAPTURED_RECORD,
+    );
+    const result = gate(
+      chainFor({ root, prdContent: mentioned, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no owner approval row in the Changelog naming');
+  });
+
+  it('[P1-2] an acceptance that does not name the path does not waive it', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({ changelog: [OWNER_ROW] });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': baseline,
+        '_state/acceptances.json': acceptance(['staging smoke test signed off']),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('does not name');
+    expect(result.why).toContain("'_brain/adr/ADR-0001-x.md'");
+  });
+
+  it('[P1-3] deleting a promised record is not a capture, though the path is in the diff', () => {
+    // git diff --name-only lists deletions, so the old membership test passed.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE(), ...CAPTURED_RECORD });
+    execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['rm', '-q', '_brain/learnings/new-thing.md'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'remove the record', '--no-verify'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('was not added or modified by the merge diff');
+    expect(result.why).toContain('a deletion is not a capture');
+  });
+
+  it('[P1-4] the close resolves inputs, so a slug that resolves to nothing is refused', () => {
+    const content = prd({ inputs: ['- applied: `no-such-record` — it shaped this.'] });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'no-such-record' is not an active indexed record");
+  });
+
+  it('[P1-4] an indexed record that will not parse blocks the close, watch or not', () => {
+    const store = STORE();
+    store['_brain/learnings/sample-record.md'] = RECORD_MD('sample-record').replace(
+      'type: gotcha',
+      'type: nonsense',
+    );
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...store }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("indexed record 'sample-record' does not validate");
+    expect(result.why).toContain('its watch cannot be evaluated');
   });
 });

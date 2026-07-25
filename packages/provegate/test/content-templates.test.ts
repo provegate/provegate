@@ -271,6 +271,8 @@ describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
       ['_brain/learnings/?.md', 'is a pattern, not an exact path'],
       ['{{MEMORY_ROOT}}/learnings/x.md', 'is an unsubstituted template token, not a path'],
       ['_brain/learnings/', 'is a directory, not a file'],
+      ['_brain/learnings', 'is not a `.md` record path'],
+      ['_brain/adr/ADR-0001-x.txt', 'is not a `.md` record path'],
       ['/etc/passwd', 'is not repo-relative'],
       ['../outside/x.md', 'escapes the workspace'],
       ['~/notes.md', 'is home-relative'],

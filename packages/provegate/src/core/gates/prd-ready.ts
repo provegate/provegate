@@ -36,20 +36,42 @@ function frBlocks(content: string): FrBlock[] {
 }
 
 /**
- * Backticked target paths of one FR body, read from the `**Targets:**` ENTRY —
- * its opening line plus the wrapped continuation lines beneath it.
+ * Backticked target paths on the `**Targets:**` LINE of one FR body.
  *
- * Reading only the line carrying the marker was a silent under-count: a real FR
- * wraps its target list across several lines, so everything after the first was
- * invisible to both consumers. On this PRD that was 7 of ~30 paths. The hard-cap
- * rules under-fired, and the memory watch gate — whose whole job is to notice an
- * overlap with a declared target — could not see the targets it was matching
- * against. A gate that reads part of its input reports a pass it did not earn.
+ * This under-reads: a real FR wraps its target list, and everything after the
+ * first line is invisible here — measured at 7 of ~30 paths on PRD-018. It is
+ * kept, unchanged, for the hard-cap engine, because that engine runs in every
+ * repository including memory-disabled ones, and widening what it sees would
+ * fire caps that the previous release did not fire. PRD-018 promises a
+ * memory-disabled repository behaves exactly as before; migrating the hard-cap
+ * side is real work with its own blast radius and is recorded as a deferral
+ * rather than smuggled in here.
  *
- * The entry ends where the next list bullet, the next numbered FR, or a blank
- * line begins, so prose elsewhere in the FR body is still excluded.
+ * The memory watch gate uses `frTargetEntries` below, which reads the whole
+ * entry — it is new surface, so there is no previous behavior to preserve.
  */
 function frTargets(body: string): string[] {
+  const targets: string[] = [];
+  for (const line of body.split('\n')) {
+    if (!/\*\*Targets:\*\*/.test(line)) continue;
+    for (const match of line.matchAll(/`([^`]+)`/g)) {
+      const value = match[1]!.trim();
+      if (value.includes('/')) targets.push(value);
+    }
+  }
+  return targets;
+}
+
+/**
+ * Backticked target paths of one FR body, read from the whole `**Targets:**`
+ * ENTRY — its opening line plus the wrapped continuation lines beneath it.
+ *
+ * The entry ends where the next list bullet, the next numbered FR, or a blank
+ * line begins, so a path mentioned in a sibling bullet is prose, not a target.
+ * This is what the memory watch gate matches against: a gate whose job is to
+ * notice an overlap with a declared target cannot read a fifth of the targets.
+ */
+function frTargetEntries(body: string): string[] {
   const targets: string[] = [];
   const lines = body.split('\n');
   for (let i = 0; i < lines.length; i += 1) {
@@ -152,7 +174,7 @@ export function lintPrd(
       issues.push(
         ...lintMemoryContract(
           content,
-          allTargets,
+          frs.flatMap((fr) => frTargetEntries(fr.body)),
           loadMemoryStore(root, config.memory),
           declaredArtifacts(content),
         ),

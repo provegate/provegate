@@ -389,6 +389,62 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('the mutex is HELD across the merge and its post-merge gates, not just taken', () => {
+    // Acquisition alone proves nothing: an acquire-check-release-then-merge
+    // implementation passes the "cannot acquire" test below and still leaves the
+    // check-then-merge window W9 exists to close. So probe from INSIDE the merge:
+    // a post-merge gate tries to take the same mutex with `wx` and fails only if
+    // the merge is still holding it.
+    const root = fixtureRepo();
+    const mutex = claimMutexPath(memOn, root);
+    const verdict = join(root, 'mutex-probe.txt');
+    // A FILE, not `node -e`: the command-safety allowlist refuses shell
+    // metacharacters, and this probe needs braces and semicolons. It lives
+    // outside the repo so it is not checkout dirt, always exits 0, and records
+    // WHAT happened — a failure then names its cause instead of collapsing every
+    // outcome into "post-merge gate failed".
+    const probeFile = join(mkdtempSync(join(tmpdir(), 'provegate-probe-')), 'probe.mjs');
+    roots.push(join(probeFile, '..'));
+    writeFileSync(
+      probeFile,
+      [
+        "import { writeFileSync, unlinkSync } from 'node:fs';",
+        "let verdict = 'ACQUIRED-mutex-was-not-held';",
+        'try {',
+        "  writeFileSync(process.env.GATE_MUTEX, 'probe', { flag: 'wx' });",
+        '  unlinkSync(process.env.GATE_MUTEX);',
+        '} catch (error) {',
+        '  verdict = error.code ?? String(error);',
+        '}',
+        'writeFileSync(process.env.GATE_VERDICT, verdict);',
+        '',
+      ].join('\n'),
+    );
+    const probe = `node ${probeFile}`;
+    const previousMutex = process.env['GATE_MUTEX'];
+    const previousVerdict = process.env['GATE_VERDICT'];
+    process.env['GATE_MUTEX'] = mutex;
+    process.env['GATE_VERDICT'] = verdict;
+    try {
+      const result = mergeToLocalBase({
+        config: memOn,
+        manifest: { ...defaultManifest(memOn), postMerge: [probe] },
+        root,
+        id: 'PRD-002',
+      });
+      expect(result.ok, result.why).toBe(true);
+      // EEXIST == the marker was still there mid-merge == the mutex was HELD.
+      expect(readFileSync(verdict, 'utf8')).toBe('EEXIST');
+      expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+    } finally {
+      if (previousMutex === undefined) delete process.env['GATE_MUTEX'];
+      else process.env['GATE_MUTEX'] = previousMutex;
+      if (previousVerdict === undefined) delete process.env['GATE_VERDICT'];
+      else process.env['GATE_VERDICT'] = previousVerdict;
+      rmSync(mutex, { force: true });
+    }
+  });
+
   it('the barrier holds the SAME mutex a claim takes — a claim cannot slip in', () => {
     const root = fixtureRepo();
     const mutex = claimMutexPath(memOn, root);
