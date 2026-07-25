@@ -30,12 +30,15 @@ installs `_brain/`, the hooks, and the `verify:*` library — appears only in th
 `README.md` and `QUICKSTART.md`, and in **no page** under `apps/docs/content/docs/`.
 An adopter following the public quickstart never learns the practice layer exists.
 
-This PRD closes the enablement gap with content, not new CLI surface: two canonical
-example manifests, one brownfield adoption page, and a docs pass that makes the
-practices path first-class. No command behavior changes.
+This PRD closes the enablement gap with shipped content and the tests that keep it
+honest: two canonical example manifests, one brownfield adoption page, and a docs pass
+that makes the practices path first-class. **No production CLI or runner behavior
+changes** — the only executable code added is test code (Vitest fixtures) and the
+package's exact tarball allowlist is updated to match the new files.
 
-**Dependency:** PRD-019 must be Ship Verified before this PRD enters Phase 4 — both
-claim `apps/docs/content/docs/cli.mdx` and `quickstart.mdx` (owner decision, see §9).
+**Dependency:** PRD-019 must be Ship Verified before this PRD enters Phase 4. PRD-019
+claims `apps/docs/content/docs/cli.mdx` and `packages/provegate/QUICKSTART.md`; this PRD
+edits both, and must reconcile onto PRD-019's shipped text rather than overwrite it.
 
 ---
 
@@ -43,23 +46,25 @@ claim `apps/docs/content/docs/cli.mdx` and `quickstart.mdx` (owner decision, see
 
 ### Primary Goals
 
-- [ ] Give adopters a copyable, schema-valid manifest for the two shapes that actually
-      occur: a single-package Node library and an existing monorepo.
+- [ ] Give adopters a copyable, parser-valid manifest for the two shapes that actually
+      occur: a single-package Node library and a generic pnpm monorepo.
 - [ ] Write the brownfield ladder: existing CI → `verify:workflow` → empty floors →
       filled floors, with the failure mode of each rung named.
 - [ ] Make `gate init --practices` first-class in the published docs, including what
       stays manual and why.
-- [ ] Gate the docs against re-drifting away from the shipped flag surface.
+- [ ] Prove the shipped content by behavior — the examples load through the real parser
+      and the docs claims are asserted, not grepped.
 
 ### Success Metrics
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | Canonical example manifests shipped | 0 | 2 | `examples/manifests/` contents |
-| Example manifests that load through the real parser | n/a | 2 | fixture test via `loadManifest` |
-| Published docs pages naming `--practices` | 0 | ≥ 2 | grep gate on `apps/docs` |
-| Brownfield adoption page | none | 1 | `apps/docs/content/docs/brownfield.mdx` |
-| CLI/runner behavior changed | n/a | none | no `src/` file in the conflict surface |
+| Example manifests that load through `loadManifest` | n/a | 2 | `example-manifests.test.ts` |
+| Malformed manifest fixtures proven to throw | 0 | ≥ 1 | mutation case in the same test |
+| Published docs pages naming `--practices` | 0 | ≥ 2 | `content-adoption.test.ts` |
+| Tarball allowlist entries missing for new files | n/a | 0 | `pack.test.ts` |
+| Production CLI/runner behavior changed | n/a | none | no `src/` path in scope |
 
 ---
 
@@ -75,8 +80,10 @@ so that my first `gate run` enforces something instead of passing vacuously.
 
 **Acceptance Criteria:**
 
-- [ ] `examples/manifests/single-package/gates.manifest.json` drops into a repo scaffolded
-      by `gate init` and loads without a manifest error.
+- [ ] `examples/manifests/single-package/gates.manifest.json`, copied into a repo
+      scaffolded by `gate init`, loads through `loadManifest` without a `ManifestError`.
+- [ ] Every command it declares passes `isSafeCommand` — a cookbook entry the runner
+      would refuse is not a cookbook entry.
 - [ ] Its README explains every key it uses: Phase 4 floor commands, `classDefaults`,
       and one hard cap.
 
@@ -104,9 +111,10 @@ so that I don't rebuild the memory protocol and verify library by hand.
 
 **Acceptance Criteria:**
 
-- [ ] `quickstart.mdx` presents `--practices` as the recommended path and links the
-      manual wiring steps the pack prints.
-- [ ] `cli.mdx`'s `gate init` entry documents the flag.
+- [ ] `quickstart.mdx` presents `--practices` as the recommended path and states that
+      wiring steps stay manual.
+- [ ] `cli.mdx`'s `gate init` entry documents the flag and the never-overwrite guarantee,
+      **and** still documents PRD-019's shipped memory commands.
 
 ---
 
@@ -116,62 +124,91 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
 1. **FR-1**: Ship `examples/manifests/single-package/` — a `gates.manifest.json` for a
-   greenfield single-package Node library (Phase 4 floor: types, lint, test, build;
-   one `classDefaults` entry showing how `hotfix` narrows the floor) plus a `README.md`
-   annotating every key and naming the failure each gate catches.
+   greenfield single-package Node library plus a `README.md` annotating every key and
+   naming the failure each gate catches. The manifest declares `phases["4"]` with the
+   four floor commands (`npm run check-types`, `npm run lint`, `npm run test`,
+   `npm run build`), a `classDefaults.hotfix` rule narrowing the floor, `postMerge`, and
+   an empty `wiringExceptions`.
    - **Targets:** `packages/provegate/examples/manifests/single-package/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/single-package/README.md` (new)
 2. **FR-2**: Ship `examples/manifests/monorepo/` — the same for a **generic** pnpm
-   workspace (not a copy of this repo's manifest): filtered per-package floor commands,
-   a `classDefaults` split across `feature`/`infra`/`hotfix`, and one hard cap wired to
-   the `route-guard-coverage` example plugin so the two galleries connect.
+   workspace (not a copy of this repo's manifest), with a complete, copyable hard cap
+   rather than a described one. The `hardCaps` entry is fully specified per the
+   `HardCap` interface — `id`, `when.targetsMatch` globs, `requireLine` regex source,
+   and `message` — and pairs with the shipped `route-guard-coverage` plugin invoked as
+   `node examples/route-guard-coverage/check.mjs`; `classDefaults` carries a rule for
+   each of `feature`, `infra`, and `hotfix`. The README shows the cap firing: which FR
+   target path triggers it and which PRD line satisfies it.
    - **Targets:** `packages/provegate/examples/manifests/monorepo/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/monorepo/README.md` (new)
-3. **FR-3**: A fixture test loads both example manifests through the real
-   `loadManifest` parser (not `JSON.parse`) and asserts each declares at least one
-   Phase 4 floor command and that every referenced example plugin path exists in the
-   package. A malformed example must fail this test, not ship.
+3. **FR-3**: A fixture test proves the examples by behavior. For each example: create a
+   temp directory, copy the example's `gates.manifest.json` to `<tmp>/gates.manifest.json`
+   (`loadManifest(config, root)` always reads that filename at the root it is given),
+   call `loadManifest(DEFAULT_CONFIG, tmp)`, and assert it returns without throwing, that
+   `phases["4"]` is non-empty, that every command in every phase satisfies
+   `isSafeCommand`, and that each plugin path named in a command resolves to a file that
+   exists in the package. Two mutation cases must FAIL loudly: a manifest with an unknown
+   top-level key and one whose `hardCaps[0]` drops `requireLine` both throw
+   `ManifestError`.
    - **Targets:** `packages/provegate/test/example-manifests.test.ts` (new)
 4. **FR-4**: Add `apps/docs/content/docs/brownfield.mdx`: the adoption ladder (adopt
-   `verify:workflow` alongside existing CI → `gate init` into the existing tree →
-   fill floors from the cookbook → turn on class defaults and hard caps), each rung
-   naming its stop-here failure mode, plus the "empty manifest is honestly green"
-   warning. Register it in `meta.json`.
+   `verify:workflow` alongside existing CI → `gate init` into the existing tree → fill
+   floors from the cookbook → turn on class defaults and hard caps), each rung naming
+   its stop-here failure mode, plus the "empty manifest is honestly green" warning.
+   Register it in `meta.json`.
    - **Targets:** `apps/docs/content/docs/brownfield.mdx` (new),
      `apps/docs/content/docs/meta.json`
 5. **FR-5**: Make `--practices` first-class in the published docs: `quickstart.mdx`
-   presents it as the recommended install and summarizes what stays manual;
+   presents it as the recommended install and states that wiring stays manual;
    `cli.mdx`'s `gate init` section documents the flag and the never-overwrite guarantee.
+   The edit is additive — PRD-019's shipped memory-command documentation stays intact.
    - **Targets:** `apps/docs/content/docs/quickstart.mdx`,
      `apps/docs/content/docs/cli.mdx`
 6. **FR-6**: `packages/provegate/QUICKSTART.md` and `examples/README.md` cross-link the
    manifest cookbook so the package-local and published surfaces agree.
    - **Targets:** `packages/provegate/QUICKSTART.md`,
      `packages/provegate/examples/README.md`
+7. **FR-7**: A docs-content test asserts the claims rather than the tokens, following the
+   established `content-launch.test.ts` pattern of reading `apps/docs` from the package
+   suite: `quickstart.mdx` contains the `--practices` invocation **and** a manual-wiring
+   caveat; `cli.mdx` documents the flag, the never-overwrite guarantee, and still
+   contains PRD-019's memory commands; `brownfield.mdx` names every ladder rung with a
+   failure mode and is registered in `meta.json`'s `pages` array; both cross-links from
+   FR-6 resolve to files that exist.
+   - **Targets:** `packages/provegate/test/content-adoption.test.ts` (new)
+8. **FR-8**: Update the exact tarball allowlist. `package.json` `files` already ships
+   `examples`, but `test/pack-manifest.json` is a byte-exact list compared against
+   `npm pack --dry-run` by `test/pack.test.ts`; every new cookbook file is added there.
+   - **Targets:** `packages/provegate/test/pack-manifest.json`
 
 ---
 
 ## 5. Non-Goals (Out of Scope)
 
-- Any change to `gate init`, the runner, or manifest schema semantics — this PRD ships
-  content only.
+- Any change to `gate init`, the runner, or manifest schema semantics — the only
+  executable code this PRD adds is test code.
 - Shipping domain gates in the package (the ~55 Emofy gates stay out by decision).
 - Auto-generating or auto-filling an adopter's manifest.
 - Memory documentation (`--memory`, `gate doctor --memory`, `gate memory find`) — owned
-  by PRD-018 and PRD-019.
+  by PRD-018 and PRD-019; this PRD must preserve it, not extend it.
 - Persona / day-0-to-day-30 adopter journey narrative.
 
 ---
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** a repo scaffolded by `gate init`, **When** the single-package example
-  manifest is copied over the empty one, **Then** it loads without a manifest error and
-  `gate run` executes its floor commands.
-- **Given** the published docs build, **When** a reader follows the quickstart, **Then**
-  `gate init --practices` appears with its manual-wiring caveat.
-- **Given** an example manifest referencing a plugin path that does not exist, **When**
-  the fixture test runs, **Then** it fails.
+- **Given** either example manifest copied to a temp root, **When** `loadManifest` runs
+  against it, **Then** it returns a manifest whose `phases["4"]` is non-empty and whose
+  every command is `isSafeCommand`.
+- **Given** an example manifest mutated to carry an unknown top-level key, **When** the
+  fixture runs, **Then** `loadManifest` throws `ManifestError`.
+- **Given** the published docs, **When** `content-adoption.test.ts` runs, **Then**
+  quickstart's practices recommendation, cli's never-overwrite guarantee, and
+  brownfield's ladder rungs are each asserted present.
+- **Given** PRD-019's shipped memory-command docs, **When** this PRD's `cli.mdx` edit
+  lands, **Then** those sections are still present.
+- **Given** the new cookbook files, **When** `pack.test.ts` runs, **Then** the tarball
+  allowlist matches `npm pack --dry-run` exactly.
 
 ---
 
@@ -179,24 +216,33 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Architecture
 
-- **Content, not code.** The manifest cookbook extends the existing `examples/` gallery
-  pattern (zero-dependency script + wiring snippet); nothing under
-  `packages/provegate/src/` is touched, which keeps this a low-risk close.
+- **Content plus its proof.** The cookbook extends the existing `examples/` gallery
+  pattern (zero-dependency script + wiring snippet). Nothing under
+  `packages/provegate/src/` is touched; the new Vitest fixtures are test code, and Phase
+  6 should read them as in-scope rather than as drift.
 - **The examples must be parsed by the real parser.** A hand-checked JSON example rots
-  the first time the manifest shape moves; FR-3 binds the gallery to `loadManifest` so
-  a schema change breaks the test instead of the adopter.
-- **Sequencing against the memory program.** PRD-019 also writes public CLI
-  documentation (`gate doctor --memory`, `gate memory find`). `apps/docs/content/docs/cli.mdx`
-  and `quickstart.mdx` therefore appear in both conflict surfaces. The owner resolved
-  this by sequencing rather than re-scoping: PRD-019 is already readiness-approved at
-  8.425, and widening its scope would force a re-score. This PRD keeps FR-5 and enters
-  Phase 4 only after PRD-019 is Ship Verified.
-- **`package.json` `files`** must include the new example directory for the published
-  tarball; it is a shared append-only manifest and stays out of the conflict surface.
+  the first time the manifest shape moves; FR-3 binds the gallery to `loadManifest` so a
+  schema change breaks the test instead of the adopter. `loadManifest(config, root)`
+  resolves `<root>/gates.manifest.json`, which is why the fixture copies rather than
+  loads in place.
+- **Reading `apps/docs` from the package suite is an established pattern.**
+  `test/content-launch.test.ts` already asserts over `apps/docs/content/docs/*.mdx`, and
+  turbo's `test` task declares no narrowed `inputs` (`verify:turbo-inputs` keeps it that
+  way), so FR-7 cannot replay a stale cached green.
+- **Sequencing against the memory program.** PRD-019's conflict surface claims
+  `apps/docs/content/docs/cli.mdx` and `packages/provegate/QUICKSTART.md` — not the
+  docs-site `quickstart.mdx`. The owner resolved the overlap by sequencing rather than
+  re-scoping: PRD-019 is already readiness-approved at 8.425 and widening it would force
+  a re-score. The Phase 3 plan therefore opens with a preflight task that fails unless
+  `_state/prds.json` records PRD-019 as Ship Verified, and FR-7 asserts coexistence
+  afterwards.
+- **Distribution.** `package.json` `files` already contains `examples` and stays out of
+  the conflict surface as a shared append-only manifest; the real distribution edit is
+  the exact allowlist in `test/pack-manifest.json` (FR-8).
 
 ### Dependencies
 
-- PRD-019 Ship Verified (sequencing only, for the shared docs pages). No code dependency.
+- PRD-019 Ship Verified (sequencing only). No code dependency.
 
 ---
 
@@ -205,7 +251,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ### In Scope
 
 - [ ] `packages/provegate/examples/manifests/**` (new)
-- [ ] `packages/provegate/test/example-manifests.test.ts` (new)
+- [ ] `packages/provegate/test/example-manifests.test.ts` (new, test code)
+- [ ] `packages/provegate/test/content-adoption.test.ts` (new, test code)
+- [ ] `packages/provegate/test/pack-manifest.json` (exact tarball allowlist)
 - [ ] `apps/docs/content/docs/brownfield.mdx` (new) + `meta.json`
 - [ ] `apps/docs/content/docs/quickstart.mdx`, `cli.mdx`
 - [ ] `packages/provegate/QUICKSTART.md`, `packages/provegate/examples/README.md`
@@ -228,9 +276,12 @@ manifest PRD-018 will write.
 
 - Gap analysis: P1 items 4–6 (`hardCap`/`classDefaults` cookbook, brownfield playbook,
   `--practices` first-class)
+- Readiness W1–W6: `_readiness/wip/readiness-020-adopter-enablement.md`
 - Existing gallery: `packages/provegate/examples/README.md`
+- Manifest contract: `packages/provegate/src/core/gates/manifest.ts` (`HardCap`,
+  `ClassRule`, `loadManifest`)
+- Docs-content precedent: `packages/provegate/test/content-launch.test.ts`
 - Practices manual steps: `packages/provegate/practices/NEXT_STEPS.md`
-- Empty-manifest rationale: `apps/docs/content/docs/quickstart.mdx` (line ~99)
 
 ---
 
@@ -246,6 +297,8 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 
 - `packages/provegate/examples/**`
 - `packages/provegate/test/example-manifests.test.ts`
+- `packages/provegate/test/content-adoption.test.ts`
+- `packages/provegate/test/pack-manifest.json`
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/brownfield.mdx`
 - `apps/docs/content/docs/quickstart.mdx`
@@ -273,16 +326,16 @@ with a runnable backticked command** (allowlisted prefix, no shell metacharacter
 single line — and never a pipe character inside a backticked command in this table).
 `gate check` lints this section; `gate run` executes it and refuses unsafe rows.
 
-| FR   | Command / Check                                                            | Scope | Notes                                     |
-| ---- | -------------------------------------------------------------------------- | ----- | ----------------------------------------- |
-| FR-1 | `test -f packages/provegate/examples/manifests/single-package/gates.manifest.json` | pkg   | greenfield example ships                  |
-| FR-2 | `test -f packages/provegate/examples/manifests/monorepo/gates.manifest.json` | pkg   | monorepo example ships                    |
-| FR-3 | `pnpm --filter provegate test test/example-manifests.test.ts`               | pkg   | real parser + plugin paths asserted       |
-| FR-4 | `test -f apps/docs/content/docs/brownfield.mdx`                             | docs  | brownfield page exists                    |
-| FR-4 | `grep -c brownfield apps/docs/content/docs/meta.json`                       | docs  | page registered in the nav                |
-| FR-5 | `grep -rc "init --practices" apps/docs/content/docs/quickstart.mdx`         | docs  | practices path published                  |
-| FR-5 | `grep -rc "init --practices" apps/docs/content/docs/cli.mdx`                | docs  | flag documented in the CLI reference      |
-| FR-6 | `grep -c manifests packages/provegate/examples/README.md`                   | pkg   | gallery cross-links the cookbook          |
+| FR   | Command / Check                                                     | Scope | Notes                                                        |
+| ---- | --------------------------------------------------------------------- | ----- | -------------------------------------------------------------- |
+| FR-1 | `pnpm --filter provegate test test/example-manifests.test.ts`           | pkg   | single-package example loads, commands safe                     |
+| FR-2 | `pnpm --filter provegate test test/example-manifests.test.ts`           | pkg   | monorepo hard cap complete, plugin path resolves                |
+| FR-3 | `pnpm --filter provegate test test/example-manifests.test.ts`           | pkg   | the fixture itself, including both mutation cases               |
+| FR-4 | `pnpm --filter provegate test test/content-adoption.test.ts`            | pkg   | ladder rungs + failure modes + nav registration asserted        |
+| FR-5 | `pnpm --filter provegate test test/content-adoption.test.ts`            | pkg   | practices recommendation, never-overwrite, memory docs preserved |
+| FR-6 | `pnpm --filter provegate test test/content-adoption.test.ts`            | pkg   | both cross-links resolve                                        |
+| FR-7 | `pnpm --filter provegate test test/content-adoption.test.ts`            | pkg   | the docs-content fixture itself                                 |
+| FR-8 | `pnpm --filter provegate test test/pack.test.ts`                        | pkg   | tarball allowlist matches npm pack exactly                      |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -293,8 +346,8 @@ Cross-cutting floor (run before Code Complete):
 
 Hard caps (when your gates manifest configures them):
 
-- Deny test: n/a — no protected surface is touched (content-only PRD)
-- Contract test: n/a — no client→server payload ships
+- Deny test: n/a — no protected route, endpoint, or query path is touched.
+- Contract test: n/a — no client→server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-020`
 
@@ -309,10 +362,11 @@ rationalize.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
 - DO NOT change `gate init`, the runner, or the manifest schema to make an example
   work — the example adapts to the shipped surface, never the reverse.
-- DO NOT ship an example manifest whose commands cannot actually run in the shape it
-  claims to describe.
+- DO NOT ship an example manifest whose commands `isSafeCommand` would refuse.
+- DO NOT prove a docs claim with a bare token grep; assert the claim.
+- DO NOT overwrite or trim PRD-019's shipped memory-command documentation in `cli.mdx`.
+- DO NOT enter Phase 4 before `_state/prds.json` records PRD-019 as Ship Verified.
 - DO NOT copy domain gates out of the source inventory into the package.
-- DO NOT document memory commands that PRD-018/019 have not shipped yet.
 
 ---
 
@@ -322,3 +376,4 @@ rationalize.
 | ---------- | ------ | ---------------------------------------------------------------------------- |
 | 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P1 4–6)                          |
 | 2026-07-25 | Cursor | Open Questions resolved by owner: keep FR-5 and sequence after PRD-019; generic monorepo example |
+| 2026-07-25 | Cursor | Readiness iteration 1 (ITERATE 6.075): fixture and hard-cap contracts specified, tarball allowlist owned (FR-8), token greps replaced by a docs-content test (FR-7), PRD-019 overlap corrected, scope language fixed to "no production CLI/runner change" |
