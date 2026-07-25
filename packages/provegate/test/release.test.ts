@@ -39,7 +39,7 @@ function writeLock(locks: string, name: string, data: unknown): string {
 }
 
 describe('releaseLease', () => {
-  it('releases the caller\'s own lease and unlinks the file', () => {
+  it("releases the caller's own lease and unlinks the file", () => {
     const { root, locks } = workspace();
     const path = writeLock(locks, 'prd-001-test.json', lockFor());
     const result = releaseLease(DEFAULT_CONFIG, root, 'PRD-001'); // default agent = owner
@@ -89,7 +89,11 @@ describe('releaseLease', () => {
 
   it('does not touch a well-formed lease belonging to a DIFFERENT id', () => {
     const { root, locks } = workspace();
-    const other = writeLock(locks, 'prd-002-other.json', lockFor({ prd: 'PRD-002', lockId: 'prd-002-other' }));
+    const other = writeLock(
+      locks,
+      'prd-002-other.json',
+      lockFor({ prd: 'PRD-002', lockId: 'prd-002-other' }),
+    );
     const mine = writeLock(locks, 'prd-001-test.json', lockFor());
     const result = releaseLease(DEFAULT_CONFIG, root, 'PRD-001');
     expect(result.ok).toBe(true);

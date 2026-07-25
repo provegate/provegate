@@ -13,7 +13,12 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG, validateConfig, validateResolvedConfig, deepMerge } from '../src/core/config/index.js';
+import {
+  DEFAULT_CONFIG,
+  validateConfig,
+  validateResolvedConfig,
+  deepMerge,
+} from '../src/core/config/index.js';
 import { defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
 import { auditWiring, packageScriptOf } from '../src/core/gates/wiring.js';
 import { initWorkspace, planInit } from '../src/core/run/init.js';
@@ -40,7 +45,10 @@ describe('initWorkspace (FR-2, W1)', () => {
     expect(report.skipped).toEqual([]);
     for (const artifact of Object.values(cfg.dirs.artifacts)) {
       for (const state of cfg.dirs.states) {
-        expect(existsSync(join(root, artifact.dir, state, '.gitkeep')), `${artifact.dir}/${state}`).toBe(true);
+        expect(
+          existsSync(join(root, artifact.dir, state, '.gitkeep')),
+          `${artifact.dir}/${state}`,
+        ).toBe(true);
       }
     }
     expect(existsSync(join(root, cfg.dirs.locksDir))).toBe(true);

@@ -93,4 +93,18 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
     prd: '',
   },
   sharedAppendOnly: ['package.json', 'pnpm-lock.yaml', 'README.md', 'CLAUDE.md', 'AGENTS.md'],
+  // Memory ships DISABLED. The paths below are the conventional layout an
+  // opt-in repository gets, not an implicit activation: nothing reads them
+  // while `enabled` is false, and no code path infers enablement from a
+  // `_brain` directory existing. `entrypoints` starts empty because the set is
+  // per-repository — a fresh practices install fills it, an existing repo
+  // declares its own.
+  memory: {
+    enabled: false,
+    root: '_brain',
+    index: '_brain/INDEX.md',
+    entrypoints: [],
+    verifyCommand: '',
+    retroAfterCompleted: 0,
+  },
 };

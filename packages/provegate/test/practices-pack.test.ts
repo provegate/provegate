@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -197,6 +198,111 @@ describe('gate init --practices (real temp repos)', () => {
         stdio: 'pipe',
       }),
     ).toThrow();
+  });
+
+  /**
+   * PRD-017 W10: the strengthened record rules are proved by mutation, not by
+   * asserting today's green. Each case below is a record or index line the
+   * INSTALLED validator accepted before this PRD — the empty folded description
+   * most of all, which slipped through because the old parser stored the fold
+   * marker and never read the fold.
+   */
+  it('the installed validator rejects what the old one accepted (mutation matrix)', () => {
+    const repo = makeRepo();
+    gateInit(repo, '--practices');
+    const brainCheck = () =>
+      execFileSync(process.execPath, [join(repo, 'scripts/verify/verify-brain.mjs')], {
+        cwd: repo,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    // The pack installs a valid store, so the baseline must be green — a red
+    // baseline would make every case below pass for the wrong reason.
+    expect(() => brainCheck()).not.toThrow();
+
+    const record = (frontmatter: string, body = '\n**Why:** w\n**How to apply:** h\n'): string =>
+      `---\n${frontmatter}\n---\n${body}`;
+    const indexPath = join(repo, '_brain/INDEX.md');
+    const indexBefore = readFileSync(indexPath, 'utf8');
+    const recordPath = join(repo, '_brain/learnings/mutation-case.md');
+
+    const cases: [string, string][] = [
+      [
+        'empty folded description',
+        record(
+          'name: mutation-case\ndescription: >-\ntype: gotcha\nscope: workflow\nstatus: active',
+        ),
+      ],
+      [
+        'missing Why section',
+        record(
+          'name: mutation-case\ndescription: a real description\ntype: gotcha\nscope: workflow\nstatus: active',
+          '\n**How to apply:** h\n',
+        ),
+      ],
+      [
+        'placeholder description',
+        record(
+          'name: mutation-case\ndescription: <one line>\ntype: gotcha\nscope: workflow\nstatus: active',
+        ),
+      ],
+      [
+        'watch escaping the workspace',
+        record(
+          'name: mutation-case\ndescription: a real description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [../outside/**]',
+        ),
+      ],
+      [
+        'unknown key',
+        record(
+          'name: mutation-case\ndescription: a real description\ntype: gotcha\nscope: workflow\nstatus: active\nprovanance: seed',
+        ),
+      ],
+      [
+        'duplicate key',
+        record(
+          'name: mutation-case\ndescription: a real description\ndescription: a second one\ntype: gotcha\nscope: workflow\nstatus: active',
+        ),
+      ],
+    ];
+
+    for (const [label, content] of cases) {
+      writeFileSync(recordPath, content);
+      writeFileSync(
+        indexPath,
+        `${indexBefore}- [mutation case](learnings/mutation-case.md) — a hook\n`,
+      );
+      expect(() => brainCheck(), label).toThrow();
+    }
+    // The wrapper and the shared helper must agree: `[[ slug ]]` is one
+    // reference written with spaces. Keeping the raw capture made the installed
+    // verifier reject what the helper accepted — a gate disagreeing with itself.
+    writeFileSync(
+      recordPath,
+      record(
+        'name: mutation-case\ndescription: a real description\ntype: gotcha\nscope: workflow\nstatus: active',
+        '\nsee [[ memory-index-vs-detail ]]\n\n**Why:** w\n**How to apply:** h\n',
+      ),
+    );
+    writeFileSync(
+      indexPath,
+      `${indexBefore}- [mutation case](learnings/mutation-case.md) — a hook\n`,
+    );
+    expect(() => brainCheck(), 'a spaced wikilink').not.toThrow();
+
+    rmSync(recordPath);
+    writeFileSync(indexPath, indexBefore);
+    expect(() => brainCheck()).not.toThrow();
+
+    // W10 is a forward-only constraint: no existing hook is over the limit, so
+    // the rule is proved by writing one that is, never by shortening a record.
+    writeFileSync(
+      indexPath,
+      `${indexBefore}- [long hook](learnings/memory-index-vs-detail.md) — ${'x'.repeat(121)}\n`,
+    );
+    expect(() => brainCheck(), '121-character hook').toThrow();
+    writeFileSync(indexPath, indexBefore);
+    expect(() => brainCheck()).not.toThrow();
   });
 
   it('installed security scripts hold under adversarial staging (scanner bypass, injection names, guard deletions/renames)', () => {

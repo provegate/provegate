@@ -16,8 +16,8 @@
   "pairs": {
     "brain/PROTOCOL.md": {
       "dest": "_brain/PROTOCOL.md",
-      "pack": "667e00b75b733a0b",
-      "repo": "1a62337f03deb1e5"
+      "pack": "8b0aa7889cbb9b14",
+      "repo": "f483d5fce5e19fe4"
     },
     "brain/README.md": {
       "dest": "_brain/README.md",
@@ -26,14 +26,14 @@
     },
     "brain/INDEX.md": {
       "dest": "_brain/INDEX.md",
-      "pack": "56807bf14412fdd4",
+      "pack": "88d9de413f4fd430",
       "track": "pack",
       "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
     },
     "brain/_templates/learning.md": {
       "dest": "_brain/_templates/learning.md",
-      "pack": "d6f6fdd8d74487ce",
-      "repo": "32243e4f62b1370a"
+      "pack": "404fc25783a009a1",
+      "repo": "38b1a31dfa338753"
     },
     "brain/_templates/adr.md": {
       "dest": "_brain/_templates/adr.md",
@@ -99,13 +99,13 @@
     },
     "verify/lib.mjs": {
       "dest": "scripts/verify/lib.mjs",
-      "pack": "c39541dd0bdb1fc1",
-      "repo": "9d887cfbc9364f89"
+      "pack": "8f7007b856250116",
+      "repo": "a5365bff88aa8dee"
     },
     "verify/verify-brain.mjs": {
       "dest": "scripts/verify/verify-brain.mjs",
-      "pack": "b677807a767d9dcb",
-      "repo": "b677807a767d9dcb"
+      "pack": "2f99d602ce4ebed1",
+      "repo": "a0832d3d3fc8a0bc"
     },
     "verify/verify-review-artifact.mjs": {
       "dest": "scripts/verify/verify-review-artifact.mjs",

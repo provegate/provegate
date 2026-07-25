@@ -164,9 +164,7 @@ describe('runChain', () => {
     // One report per result row, same order, same pass/fail — the CLI renders a
     // live status line from each (core stays silent).
     expect(reported.map(([p, l]) => `${p}: ${l}`)).toEqual(outcome.results.map((r) => r[0]));
-    expect(reported.map(([, , ok]) => ok)).toEqual(
-      outcome.results.map((r) => r[1] === 'passed'),
-    );
+    expect(reported.map(([, , ok]) => ok)).toEqual(outcome.results.map((r) => r[1] === 'passed'));
     expect(reported.some(([, , ok]) => ok)).toBe(true);
   });
 

@@ -199,7 +199,13 @@ describe('buildQueue', () => {
       '/nonexistent-root',
       records,
       [
-        { prd: 'PRD-100', agent: 'a', phase: 'Phase 4', worktree: null, expiresAt: '2026-07-22T14:00:00.000Z' },
+        {
+          prd: 'PRD-100',
+          agent: 'a',
+          phase: 'Phase 4',
+          worktree: null,
+          expiresAt: '2026-07-22T14:00:00.000Z',
+        },
         { prd: 'PRD-101', agent: 'a', phase: 'Phase 4', worktree: null, expiresAt: 'not-a-date' },
       ],
       { now },

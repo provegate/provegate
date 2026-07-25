@@ -230,7 +230,14 @@ describe('codex r1 regressions', () => {
     await run('git', ['-C', root, 'branch', `feat/${stem}`]);
     const { mkdirSync: mkdir } = await import('node:fs');
     mkdir(join(root, '.worktrees'), { recursive: true });
-    await run('git', ['-C', root, 'worktree', 'add', join(root, `.worktrees/${stem}`), `feat/${stem}`]);
+    await run('git', [
+      '-C',
+      root,
+      'worktree',
+      'add',
+      join(root, `.worktrees/${stem}`),
+      `feat/${stem}`,
+    ]);
 
     const result = claimPrd(cfg, root, id, { worktree: true });
     expect(result.ok).toBe(false);
@@ -383,7 +390,15 @@ describe('codex r5 regressions', () => {
     // Layout: primary parked on another branch; base 'main' held by a linked worktree.
     await run('git', ['-C', root, 'checkout', '-b', 'parked']);
     await run('git', ['-C', root, 'worktree', 'add', join(root, 'base-holder'), 'main']);
-    await run('git', ['-C', join(root, 'base-holder'), 'merge', '--no-ff', made.branch, '-m', 'land']);
+    await run('git', [
+      '-C',
+      join(root, 'base-holder'),
+      'merge',
+      '--no-ff',
+      made.branch,
+      '-m',
+      'land',
+    ]);
 
     const removal = removeWorktree(cfg, root, { worktree: made.relPath, branch: made.branch });
     expect(removal.removed).toBe(true);
@@ -408,8 +423,7 @@ describe('codex r5 regressions', () => {
     expect(result.ok).toBe(false);
     expect(result.issues.join(' ')).toContain('rollback INCOMPLETE');
     // Restored to the pathname (or reported at quarantine) — never invisible.
-    const visible =
-      existsSync(leaseFile) || result.issues.join(' ').includes('preserved at');
+    const visible = existsSync(leaseFile) || result.issues.join(' ').includes('preserved at');
     expect(visible).toBe(true);
     chmodSync(leaseFile, 0o644);
   });
@@ -504,9 +518,7 @@ describe('codex r8 regressions', () => {
   it('provisioning refuses option-like and protected featurePattern expansions (P1/P2)', async () => {
     const root = await gitRoot();
     const dashed = { ...cfg, branches: { ...cfg.branches, featurePattern: '-m-{slug}' } };
-    expect(() => createWorktree(dashed, root, { id: 'PRD-001', slug: 'x' })).toThrow(
-      /option-like/,
-    );
+    expect(() => createWorktree(dashed, root, { id: 'PRD-001', slug: 'x' })).toThrow(/option-like/);
     const prot = { ...cfg, branches: { ...cfg.branches, featurePattern: 'staging' } };
     expect(() => createWorktree(prot, root, { id: 'PRD-001', slug: 'x' })).toThrow(/protected/);
   });
@@ -556,9 +568,9 @@ describe('codex r9 regressions', () => {
   it('a hostile slug through the public API cannot escape worktree.dir (P2)', async () => {
     const root = await gitRoot();
     const flat = { ...cfg, branches: { ...cfg.branches, featurePattern: 'feat/static-{id}' } };
-    expect(() =>
-      createWorktree(flat, root, { id: 'PRD-001', slug: '../../../escaped' }),
-    ).toThrow(/escapes \.worktrees/);
+    expect(() => createWorktree(flat, root, { id: 'PRD-001', slug: '../../../escaped' })).toThrow(
+      /escapes \.worktrees/,
+    );
     expect(existsSync(join(root, 'escaped'))).toBe(false);
   });
 
@@ -575,10 +587,7 @@ describe('codex r9 regressions', () => {
     );
     const refreshed = claimPrd(cfg, root, id);
     expect(refreshed.ok).toBe(true);
-    const lease = JSON.parse(readFileSync(refreshed.leasePath!, 'utf8')) as Record<
-      string,
-      unknown
-    >;
+    const lease = JSON.parse(readFileSync(refreshed.leasePath!, 'utf8')) as Record<string, unknown>;
     expect(lease['worktree']).toBe(first.worktree!.relPath);
     expect(lease['branch']).toBe(first.worktree!.branch);
   });
@@ -843,7 +852,11 @@ describe('codex r15 regressions', () => {
     // The provisioned checkout CONTAINS the PRD it claims.
     expect(
       existsSync(
-        join(claimed.worktree!.path, '_prds/wip', `prd-${id.slice(4).toLowerCase()}-uncommitted.md`),
+        join(
+          claimed.worktree!.path,
+          '_prds/wip',
+          `prd-${id.slice(4).toLowerCase()}-uncommitted.md`,
+        ),
       ),
     ).toBe(true);
   });
@@ -1243,9 +1256,9 @@ describe('codex r15 regressions', () => {
     expect(refused.issues.join(' ')).toContain('worktree metadata is incomplete');
     // The victim is back in the active lock domain, not stranded in quarantine.
     expect(existsSync(ghost)).toBe(true);
-    expect(
-      readdirSync(join(root, '_state/locks')).some((n) => n.startsWith('.quarantine-')),
-    ).toBe(false);
+    expect(readdirSync(join(root, '_state/locks')).some((n) => n.startsWith('.quarantine-'))).toBe(
+      false,
+    );
   });
 
   it('a plain claim (no --worktree) is unaffected by uncommitted artifacts', async () => {

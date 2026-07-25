@@ -1,6 +1,6 @@
 # _brain — index
 
-> One-line pointers only. Detail lives in each file. Keep hooks short (≤ ~120 chars).
+> One-line pointers only. Detail lives in each file. Keep hooks short — 120 characters of hook text, enforced.
 > Never inline a record body here. Grouped by section; add sections as needed.
 
 ## Workflow gotchas

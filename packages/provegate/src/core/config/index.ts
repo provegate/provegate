@@ -6,6 +6,7 @@ export type {
   DeepPartial,
   DirsConfig,
   IdPatternConfig,
+  MemoryConfig,
   PartialWorkflowConfig,
   StatusVocabConfig,
   WorkflowConfig,

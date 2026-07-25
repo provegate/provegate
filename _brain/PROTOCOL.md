@@ -27,13 +27,13 @@ a different agent. `_brain` is in-repo and tool-neutral by design.
 If a fact is recoverable by reading the repo, it does **not** belong in `_brain`.
 Concretely — do NOT store:
 
-- code structure, module maps, API signatures  → read the code
-- past bug fixes recoverable from `git log`     → read history
-- task-only context that dies with the PR        → ephemeral, not durable
-- secrets or secret-adjacent values              → never
+- code structure, module maps, API signatures → read the code
+- past bug fixes recoverable from `git log` → read history
+- task-only context that dies with the PR → ephemeral, not durable
+- secrets or secret-adjacent values → never
 - product/domain specifics that don't generalize → out of scope for seed content
 
-Do store: traps the code can't reveal, decisions and their *why*, external constraints,
+Do store: traps the code can't reveal, decisions and their _why_, external constraints,
 cross-cutting conventions, pointers to external resources.
 
 ---
@@ -91,6 +91,25 @@ superseded-by: <slug>                     # optional; set when status: supersede
 Link related records inline with [[absence-must-be-asserted]].
 ```
 
+### Supported frontmatter subset
+
+Frontmatter is parsed as the subset authorized in the source addendum (§12), not as
+general YAML. Four forms exist:
+
+| Form          | Example                                                   |
+| ------------- | --------------------------------------------------------- |
+| scalar        | `type: gotcha`                                            |
+| folded scalar | `description: >-` followed by indented continuation lines |
+| inline list   | `links: [a-slug, b-slug]`                                 |
+| comment       | a whole line starting with `#`, or a trailing ` # …`      |
+
+Anything else fails with a message naming the field or line: a block list, a nested map, a
+literal block (`|`), a duplicate key, an unknown key. The subset is small because two
+implementations parse it and cannot import each other — the package's typed parser, and the
+standalone validator that runs in repositories where the package is not installed. Every
+form either one tolerates is a form they can disagree about, so neither guesses; a shared
+conformance corpus holds both to one behaviour.
+
 ### Field rules
 
 - **name** — kebab-case, equals the filename without `.md`, unique across `_brain`.
@@ -108,6 +127,20 @@ Link related records inline with [[absence-must-be-asserted]].
   kept briefly for traceability, then removable.
 - **links / superseded-by** — record slugs; may point to a slug that doesn't exist yet
   (marks something worth writing). Not an error.
+- **provenance** — optional; where a seeded record came from. The exact value
+  `workflow-seed` is reserved and load-bearing: the pack-drift gate reads it and requires
+  a matching packed copy, so a repo-local record must not borrow it. Use any other value,
+  or omit the key.
+- **tags** — optional inline list of kebab-case slugs used for retrieval. Must not be empty
+  when present: an empty selector claims a capability the record does not have.
+- **watch** — optional inline list of globs naming the paths whose change makes this record
+  worth re-reading. A watch is a **review trigger, not a staleness verdict** — an overlap
+  asks someone to look, it does not assert the record is wrong, and it is not an ownership
+  claim (two records may watch the same path). Only the glob's SHAPE is validated: it must
+  be repo-relative, with no absolute, `~`, drive, or UNC prefix and no `..` segment. A watch
+  is matched against diff paths and never dereferenced, so a pattern pointing outside is
+  dead configuration rather than a way out of the workspace; the paths that ARE read — the
+  configured memory root, index, and entrypoints — are resolved through symlinks instead.
 
 ---
 
@@ -119,16 +152,19 @@ body ever goes here.
 ```markdown
 # provegate _brain — index
 
-> One-line pointers only. Detail lives in each file. Keep hooks short (≤ ~120 chars).
+> One-line pointers only. Detail lives in each file. Keep hooks short — 120 characters of hook text, enforced.
 
 ## Workflow gotchas
+
 - [false green on missing file](learnings/false-green-on-missing-file.md) — grep-a-file check must exit 1 when file absent
 - [absence must be asserted](learnings/absence-must-be-asserted.md) — "must NOT exist" needs an explicit assert-absent, not a negative grep
 
 ## Conventions
+
 - ...
 
 ## ADRs
+
 - [ADR-0001 …](adr/ADR-0001-....md) — <one-line hook>
 ```
 
@@ -145,7 +181,7 @@ Because no agent-neutral harness auto-injects memory, recall is explicit:
    at task start.
 2. **Match by hook.** Scan the one-line hooks/`description`s against the task. Read the
    detail file only for matches — don't bulk-read `learnings/`.
-3. **Verify before trusting.** A record reflects what was true *when written*. If it names
+3. **Verify before trusting.** A record reflects what was true _when written_. If it names
    a file, flag, command, or path, confirm that still exists in the repo before acting on
    it. A stale record is a lead, not a fact.
 
@@ -157,21 +193,22 @@ This is the pipeline the user asked for — the workflow's Learning phase output
 durable memory. Make it an explicit step of the workflow's final phase so it is never
 skipped:
 
-1. **Trigger.** At phase/PRD close, ask: *did we hit something not derivable from the
-   code?* (a trap, a non-obvious decision, an external constraint). **Mid-task capture is
+1. **Trigger.** At phase/PRD close, ask: _did we hit something not derivable from the
+   code?_ (a trap, a non-obvious decision, an external constraint). **Mid-task capture is
    allowed and encouraged** — a discovered trap may be written the moment it is found;
    don't wait for close and risk losing it.
    Routing (event → record):
 
-   | Event | Record |
-   |-------|--------|
-   | non-obvious trap hit | `learnings/` `type: gotcha` |
-   | lightweight decision made | `learnings/` `type: decision` |
-   | architecture-level decision | `adr/` ADR |
-   | same pattern used 3+ times | promote to `type: convention` (or the patterns doc) |
-   | useful external resource | `learnings/` `type: reference` |
-2. **Generalize filter.** *Would this be true for anyone, or is it a one-off for this
-   task?* One-off → discard. Generalizable → continue.
+   | Event                       | Record                                              |
+   | --------------------------- | --------------------------------------------------- |
+   | non-obvious trap hit        | `learnings/` `type: gotcha`                         |
+   | lightweight decision made   | `learnings/` `type: decision`                       |
+   | architecture-level decision | `adr/` ADR                                          |
+   | same pattern used 3+ times  | promote to `type: convention` (or the patterns doc) |
+   | useful external resource    | `learnings/` `type: reference`                      |
+
+2. **Generalize filter.** _Would this be true for anyone, or is it a one-off for this
+   task?_ One-off → discard. Generalizable → continue.
 3. **Write the record.** Create `learnings/<slug>.md` per §4. Terse. Include **Why** +
    **How to apply** for gotchas.
 4. **Index it.** Add the one-line pointer to `INDEX.md`.
@@ -191,8 +228,8 @@ section — nudging capture without forcing noise.
 `_brain` does not auto-load; each agent reads a different entrypoint. Put ONE pointer
 line in each, all substance stays in `_brain`:
 
-- `CLAUDE.md`            → Claude Code
-- `AGENTS.md`            → Codex, and the shared cross-agent contract
+- `CLAUDE.md` → Claude Code
+- `AGENTS.md` → Codex, and the shared cross-agent contract
 - `.cursor/rules/brain.mdc` → Cursor
 
 Ready-to-paste snippets are in `agent-shims/`. Rule: shims are **thin** — a pointer and
@@ -201,24 +238,31 @@ it will drift.
 
 ---
 
-## 9. Optional tooling (wave 2 — specify later, stub now)
+## 9. Validation (`verify:brain`)
 
-A `verify:brain` check (runnable in CI and the workflow gate) that asserts:
+`verify:brain` runs in CI and in the workflow gate bundle, and asserts:
 
-- every `learnings/*.md` and `adr/*.md` has valid frontmatter (required: `name`,
-  `description`, `type`, `scope`, `status`);
-- `name` equals the filename slug and is unique;
-- every record has exactly one `INDEX.md` pointer (no orphans, no duplicates);
-- no `[[link]]` / `links:` / `superseded-by:` points at a name that violates the slug
-  rules (dangling to a not-yet-written *valid* slug is allowed and reported as a soft
-  note, not a failure);
-- ADR records are validated per the ADR template's own rules (`ADR-NNNN-<slug>` names,
-  `proposed | accepted | superseded` status), not the learning-record rules.
+- every `learnings/*.md` and `adr/*.md` parses as the subset above and carries the required
+  fields (`name`, `description`, `type`, `scope`, `status`) with no placeholder values;
+- a folded `description` has an actual body — the marker alone is not a description;
+- `name` equals the filename slug and is unique across the store;
+- `gotcha`, `convention`, and `decision` records carry **Why** and **How to apply**;
+  `reference` records do not, and an ADR's four sections are its rationale instead;
+- optional `tags` and `watch` lists are non-empty, and no `watch` glob escapes the workspace;
+- `status: superseded` has a `superseded-by`, and a `superseded-by` has that status;
+- every record has exactly one `INDEX.md` pointer (no orphans, no duplicates, no dangling),
+  each pointer carries a hook within the length limit, and no public pointer resolves under
+  `private/`;
+- no `[[link]]` / `links:` / `superseded-by:` points at a name that violates the slug rules
+  (dangling to a not-yet-written _valid_ slug is allowed and reported as a soft note, not a
+  failure);
+- ADR records are validated by the ADR rules (`ADR-NNNN-<slug>` names, and the
+  `proposed | accepted | superseded` status vocabulary), not the learning-record rules — the
+  two lifecycles are separate and merging them would quietly accept `status: active` on a
+  decision.
 
-Keep it out of wave 1 to avoid blocking `_brain` bring-up; the schema above is designed so
-the check is mechanical to add. Alongside it, a periodic (e.g. weekly) `_brain` lint pass
-is worth one recurring line: sweep for stale `superseded` records, hook/description drift,
-and near-duplicate candidates to merge.
+Alongside it, a periodic `_brain` lint pass is worth one recurring line: sweep for stale
+`superseded` records, hook/description drift, and near-duplicate candidates to merge.
 
 ---
 
@@ -226,7 +270,7 @@ and near-duplicate candidates to merge.
 
 - **Default: committed.** OSS knowledge is shared; that is the whole value.
 - **Sensitive project learnings** (`scope: project` with private detail) → `_brain/private/`,
-  gitignored. Keep the *pointer* out of the public `INDEX.md`, or use a separate
+  gitignored. Keep the _pointer_ out of the public `INDEX.md`, or use a separate
   `private/INDEX.md`. Never put secrets in `_brain` at all — private is for
   business-sensitive, not credentials.
 

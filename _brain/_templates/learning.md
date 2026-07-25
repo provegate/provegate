@@ -1,11 +1,13 @@
 ---
-name: <kebab-case-slug>            # == filename without .md, unique across _brain
-description: >-                     # ONE self-contained line; recall relevance matches on this
+name: <kebab-case-slug> # == filename without .md, unique across _brain
+description: >- # ONE self-contained line; recall relevance matches on this
   <one line: what the trap/rule/fact is, tersely>
-type: gotcha                       # gotcha | convention | reference | decision
-scope: workflow                    # workflow | project
-status: active                     # active | superseded
-links: []                          # optional: related record slugs
+type: gotcha # gotcha | convention | reference | decision
+scope: workflow # workflow | project
+status: active # active | superseded
+links: [] # optional: related record slugs
+# tags: [retrieval, gates]                 # optional; kebab-case slugs, non-empty if present
+# watch: [path/to/**]                      # optional; paths whose change makes this worth re-reading
 # provenance: <where a seed came from>     # optional
 # superseded-by: <slug>                    # set only when status: superseded
 ---

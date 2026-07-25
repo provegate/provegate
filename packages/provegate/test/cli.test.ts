@@ -35,7 +35,18 @@ describe('cli skeleton', () => {
     const result = await cli('--help');
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('ProveGate');
-    for (const name of ['init', 'new', 'check', 'open', 'renew', 'release', 'run', 'land', 'queue', 'status']) {
+    for (const name of [
+      'init',
+      'new',
+      'check',
+      'open',
+      'renew',
+      'release',
+      'run',
+      'land',
+      'queue',
+      'status',
+    ]) {
       expect(result.stdout).toContain(name);
     }
   });
@@ -47,7 +58,9 @@ describe('cli skeleton', () => {
     expect(result.stdout).toContain('\nUSAGE\n');
     expect(result.stdout).toContain('\nCOMMANDS\n');
     expect(result.stdout).toContain('\nOPTIONS\n');
-    expect(result.stdout).toContain('humans own intent and release · the machine owns the verified middle');
+    expect(result.stdout).toContain(
+      'humans own intent and release · the machine owns the verified middle',
+    );
   });
 
   it('renew + release ask for usage (exit 1) when the PRD id is missing', async () => {

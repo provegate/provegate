@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { colorTier, paint, statusLine, verdictSlot, glyph, VERDICTS } from '../src/core/ui/theme.js';
+import {
+  colorTier,
+  paint,
+  statusLine,
+  verdictSlot,
+  glyph,
+  VERDICTS,
+} from '../src/core/ui/theme.js';
 
 // The CLI's colour comes from @provegate/design/cli via core/ui/theme. These
 // pin the capability tiers and the NO_COLOR identity the whole CLI relies on
