@@ -296,13 +296,37 @@ export function contractSection(content: string, heading: string): { count: numb
   // hid a declaration that contradicted a reasoned `none`.
   const setext = rest.search(
     new RegExp(
-      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))(?![${COMMENT_MASK}\\s]*\\r?$)[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`,
+      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))(?![${COMMENT_MASK}\\s]*\\r?$)[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-+[ \\t]*\\r?$`,
       'm',
     ),
   );
   const stops = [atx, setext].filter((i) => i !== -1);
   const next = stops.length === 0 ? -1 : Math.min(...stops);
   return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
+}
+
+/**
+ * The block construct that makes a section unreadable as a plain bullet list, or
+ * null when there is none.
+ *
+ * Chasing CommonMark one construct per review round did not converge, so the
+ * section declares its own shape instead: bullets, prose, blank lines. A fence,
+ * an indented code block, or a raw HTML block inside one is refused, because a
+ * renderer shows those as code or markup while a line-based parser sees
+ * bullets. Measured across 52 real contract sections in this repository: none
+ * contains any of them.
+ */
+function unsupportedContainer(body: string): string | null {
+  let previousBlank = true;
+  for (const line of body.split('\n')) {
+    if (/^[ \t]*(?:```|~~~)/.test(line)) return 'a code fence';
+    if (/^ {0,3}<[a-zA-Z/!]/.test(line)) return 'a raw HTML block';
+    // Four spaces after a blank line opens an indented code block; the same
+    // indentation directly under a bullet is that bullet's continuation.
+    if (previousBlank && /^ {4,}\S/.test(line)) return 'an indented code block';
+    previousBlank = line.trim().length === 0;
+  }
+  return null;
 }
 
 /**
@@ -314,8 +338,16 @@ export function contractSection(content: string, heading: string): { count: numb
 function bulletBlocks(section: string): string[] {
   const blocks: string[] = [];
   for (const line of section.split('\n')) {
-    if (/^\s*-\s+\S/.test(line)) {
-      blocks.push(line.trim().replace(/^-\s+/, ''));
+    // COLUMN ZERO only. Accepting a bullet at any indentation meant one inside
+    // indented code, inside a raw HTML block, or NESTED under another list item
+    // was read as a declaration — so both contract sections could be satisfied
+    // entirely by text a renderer never shows as a top-level list. Telling a
+    // nested item from a top-level one needs list-context tracking, which is
+    // the CommonMark chase that did not converge; column zero is a rule an
+    // author can see, and all 312 bullets in this repository's real contract
+    // sections already sit there.
+    if (/^-[ \t]+\S/.test(line)) {
+      blocks.push(line.trim().replace(/^-[ \t]+/, ''));
       continue;
     }
     if (blocks.length === 0) continue;
@@ -328,6 +360,14 @@ function bulletBlocks(section: string): string[] {
 
 /** The rationale after the em dash. The separator is exact: an author who wrote
  * something else gets told which form is required, not a silently empty reason. */
+/** Rationale length with masked comment characters removed. `- none — <!-- x -->`
+ * renders with NO rationale, but the mask has nonzero length, so a hidden
+ * comment satisfied the check that exists to reject an unreasoned `none`. */
+function visibleLength(rationale: string | null): number {
+  if (rationale === null) return 0;
+  return rationale.split(COMMENT_MASK).join('').trim().length;
+}
+
 function splitRationale(block: string): { head: string; rationale: string | null } {
   const idx = block.indexOf('—');
   if (idx === -1) return { head: block.trim(), rationale: null };
@@ -335,7 +375,9 @@ function splitRationale(block: string): { head: string; rationale: string | null
 }
 
 interface ParsedBlock {
-  /** Lower-cased token before the colon; '' when the block has no colon. */
+  /** The whole head, lower-cased — everything before the rationale. */
+  head: string;
+  /** Lower-cased token before the colon; the whole head when there is none. */
   kind: string;
   /** Backticked value, when present. */
   value: string | null;
@@ -345,11 +387,18 @@ interface ParsedBlock {
 
 function parseBlock(block: string): ParsedBlock {
   const { head, rationale } = splitRationale(block);
+  const flat = head.toLowerCase();
   const colon = head.indexOf(':');
-  if (colon === -1) return { kind: head.toLowerCase(), value: null, rationale, raw: block };
+  if (colon === -1) return { head: flat, kind: flat, value: null, rationale, raw: block };
   const kind = head.slice(0, colon).trim().toLowerCase();
   const quoted = /`([^`]*)`/.exec(head.slice(colon + 1));
-  return { kind, value: quoted === null ? null : quoted[1]!.trim(), rationale, raw: block };
+  return {
+    head: flat,
+    kind,
+    value: quoted === null ? null : quoted[1]!.trim(),
+    rationale,
+    raw: block,
+  };
 }
 
 function parseSection<T>(
@@ -374,10 +423,11 @@ function parseSection<T>(
   // in a list item is code to a renderer and was bullets to `bulletBlocks`, so
   // declarations could be forged inside one. Refusing is cheap: measured across
   // 52 real contract sections in this repository, none contains a fence.
-  if (/^[ \t]*(?:```|~~~)/m.test(body)) {
+  const container = unsupportedContainer(body);
+  if (container !== null) {
     issues.push(
-      `${heading}: contains a code fence — a contract section is a plain bullet list, and a ` +
-        `fenced block inside one cannot be told from a declaration`,
+      `${heading}: contains ${container} — a contract section is a plain bullet list, and a ` +
+        `declaration inside another block cannot be told from a real one`,
     );
     return { section, issues };
   }
@@ -386,10 +436,10 @@ function parseSection<T>(
     const parsed = parseBlock(block);
 
     if (parsed.kind === 'none') {
-      // Exactly `none`, with nothing before the rationale. `none: \`x\` — reason`
-      // reduced to kind `none` and its value was ignored, so a malformed entry
-      // parsed as a deliberate empty set.
-      if (parsed.value !== null) {
+      // Exactly `none`, with nothing before the rationale. `none: <anything>`
+      // reduced to kind `none` and the remainder was ignored — quoted or not —
+      // so a malformed entry parsed as a deliberate empty set.
+      if (parsed.head !== 'none') {
         issues.push(`${heading}: \`none\` takes no value — write \`- none — <reason>\``);
         continue;
       }
@@ -399,7 +449,7 @@ function parseSection<T>(
       }
       // A rationale is required in every form, including `none`. An unreasoned
       // `none` is the ceremonial answer the contract exists to prevent.
-      if (parsed.rationale === null || parsed.rationale.length === 0) {
+      if (visibleLength(parsed.rationale) === 0) {
         issues.push(`${heading}: \`none\` requires a rationale after ' — '`);
       }
       section.none = true;
@@ -422,11 +472,11 @@ function parseSection<T>(
       issues.push(`${heading}: '${parsed.value}' ${problem}`);
       continue;
     }
-    if (parsed.rationale === null || parsed.rationale.length === 0) {
+    if (visibleLength(parsed.rationale) === 0) {
       issues.push(`${heading}: '${parsed.value}' requires a rationale after ' — '`);
       continue;
     }
-    section.entries.push(build(parsed.kind, parsed.value, parsed.rationale));
+    section.entries.push(build(parsed.kind, parsed.value, parsed.rationale ?? ''));
   }
 
   if (section.none && section.entries.length > 0) {

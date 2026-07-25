@@ -1061,3 +1061,72 @@ describe('phase 6 round 10 regressions', () => {
     expect(parseMemoryDeclarations(doc).outputs.entries).toHaveLength(1);
   });
 });
+
+describe('phase 6 round 11 regressions — every one was fail-open', () => {
+  it('[R11-P1-1] a bullet inside indented code is not a declaration', () => {
+    const doc = ['## Memory Outputs', '', '    - none — indented code.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('an indented code block'),
+    );
+  });
+
+  it('[R11-P1-1] a bullet inside a raw HTML block is not a declaration', () => {
+    const doc = ['## Memory Outputs', '', '<div>', '- none — raw HTML.', '</div>', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R11-P1-1] a NESTED bullet is not a top-level declaration', () => {
+    const doc = ['## Memory Outputs', '', '-', '  - none — nested list.', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries).toEqual([]);
+  });
+
+  it('[R11-P1-2] a ONE-hyphen setext underline still ends the section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      'Other',
+      '-',
+      '',
+      '- none — forged below another rendered H2.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
+  });
+
+  it('[R11-P1-3] a rationale hidden in a comment is no rationale', () => {
+    const doc = ['## Memory Outputs', '', '- none — <!-- rationale hidden -->', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('requires a rationale'),
+    );
+  });
+
+  it('[R11-P1-4] `none` takes no value, quoted OR unquoted', () => {
+    for (const bullet of ['- none: arbitrary-text — reason.', '- none: `quoted` — reason.']) {
+      const doc = ['## Memory Inputs', '', bullet, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, bullet).toContainEqual(
+        expect.stringContaining('`none` takes no value'),
+      );
+    }
+  });
+
+  it('and an ordinary declaration still parses after all of it', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — a rationale that wraps',
+      '  onto a second line.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toEqual([]);
+    expect(decl.outputs.entries[0]!.rationale).toBe('a rationale that wraps onto a second line.');
+  });
+});

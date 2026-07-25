@@ -167,7 +167,7 @@ const MEMORY_VOCABULARY =
  * fixtures outside `_brain`" — read as an obligation it does not impose. */
 const constraintsOf = (file: string): string => {
   const body = prompt(file);
-  const start = body.search(/^## Agent Constraints[ \t]*$/m);
+  const start = body.search(/^ {0,3}## Agent Constraints[ \t]*$/m);
   if (start === -1) return '';
   const rest = body.slice(start + 1);
   // The next H2 ends it, not the `---` rule. Deleting that rule would have made
@@ -176,7 +176,7 @@ const constraintsOf = (file: string): string => {
   // Every valid ATX H2 ends it, not just `## ` — `##\tExecution Loop` is a
   // heading, and treating it as body text made an obligation below it count as
   // authorized.
-  const end = rest.search(/^##(?:[ \t]|\r?$)/m);
+  const end = rest.search(/^ {0,3}##(?:[ \t]|\r?$)/m);
   return end === -1 ? rest : rest.slice(0, end);
 };
 
