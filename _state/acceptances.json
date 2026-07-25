@@ -102,6 +102,16 @@
       "reason": "owner directed the close in chat after the three-reviewer quorum (codex 4 rounds + two sonnet sessions; 7 criticals found and closed); accepting autonomous close via gate land — push stays human",
       "date": "2026-07-25",
       "method": "owner chat directive (recorded by agent at explicit owner instruction)"
+    },
+    {
+      "prd": "PRD-017",
+      "owner": "owner",
+      "items": [
+        "10.0 operator acceptance of autonomous close"
+      ],
+      "reason": "owner directed the close in chat after the twelve-round independent audit; accepting autonomous close via gate land - push stays human",
+      "date": "2026-07-25",
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     }
   ]
 }
