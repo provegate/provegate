@@ -106,6 +106,12 @@ for (const rel of packOnly) {
 }
 
 // 2. Each pair must still be reconciled: both sides at the hashes a human last compared.
+//    `track: "pack"` narrows that to the pack side alone, for the pairs whose repo copy
+//    is LIVE DATA rather than content — the status board's rows, the memory index's
+//    pointers, the allowlist JSONs. Those churn weekly and carry nothing an adopter
+//    would want ported, so demanding a reconcile per edit would train people to run
+//    --reconcile without looking, which is how a real one-sided change gets waved
+//    through. The pack side of those pairs is still content, and still tracked.
 for (const { src, dest } of pairs) {
   const packPath = join(PACK_DIR, src);
   const repoPath = join(root, dest);
@@ -117,15 +123,25 @@ for (const { src, dest } of pairs) {
     r.fail(`pack ships '${src}' but this repo has no '${dest}' — the live layer lost its copy`);
     continue;
   }
-  const now = { pack: sha(packPath), repo: sha(repoPath) };
-  next[src] = { dest, ...now, ...(recorded[src]?.note ? { note: recorded[src].note } : {}) };
+  const carried = recorded[src] ?? {};
+  const packOnlyTracking = carried.track === 'pack';
+  const now = { pack: sha(packPath), ...(packOnlyTracking ? {} : { repo: sha(repoPath) }) };
+  next[src] = {
+    dest,
+    ...now,
+    ...(packOnlyTracking ? { track: 'pack' } : {}),
+    ...(carried.note ? { note: carried.note } : {}),
+  };
   if (reconcile) continue;
   const was = recorded[src];
-  if (!was) {
+  if (!was.pack) {
     r.fail(`'${src}' ↔ '${dest}' has no ledger entry — review both sides, then --reconcile`);
     continue;
   }
-  const moved = [was.pack !== now.pack && 'pack', was.repo !== now.repo && 'repo'].filter(Boolean);
+  const moved = [
+    was.pack !== now.pack && 'pack',
+    !packOnlyTracking && was.repo !== now.repo && 'repo',
+  ].filter(Boolean);
   if (moved.length > 0) {
     r.fail(
       `'${src}' ↔ '${dest}': the ${moved.join(' and ')} side changed since reconciliation — ` +

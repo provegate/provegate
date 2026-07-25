@@ -27,7 +27,8 @@
     "brain/INDEX.md": {
       "dest": "_brain/INDEX.md",
       "pack": "56807bf14412fdd4",
-      "repo": "80ace589dfe5259f"
+      "track": "pack",
+      "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
     },
     "brain/_templates/learning.md": {
       "dest": "_brain/_templates/learning.md",
@@ -52,7 +53,8 @@
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",
       "pack": "b8845ca5022c7245",
-      "repo": "5659127dcdbba6b1"
+      "track": "pack",
+      "note": "repo side is the live board (agents, deferral rows, activity log) — data, not content an adopter would want"
     },
     "templates/commitlint.config.template.mjs": {
       "dest": "commitlint.config.mjs",
@@ -72,7 +74,8 @@
     "templates/known-red-verifies.json": {
       "dest": "_state/known-red-verifies.json",
       "pack": "774abe2251b69da2",
-      "repo": "d6acd7e75a7176fb"
+      "track": "pack",
+      "note": "repo side is the live acknowledged-red ledger — entries come and go by design"
     },
     "hooks/pre-commit": {
       "dest": ".githooks/pre-commit",
@@ -143,17 +146,20 @@
     "verify/gates-wired-exceptions.json": {
       "dest": "scripts/verify/gates-wired-exceptions.json",
       "pack": "865f651360a4feaf",
-      "repo": "37517e5f3dc66819"
+      "track": "pack",
+      "note": "repo side is this repo's acknowledged exceptions — shrink-only data"
     },
     "verify/test-task-allowlist.json": {
       "dest": "scripts/verify/test-task-allowlist.json",
       "pack": "37517e5f3dc66819",
-      "repo": "165ee847bab4bbe7"
+      "track": "pack",
+      "note": "repo side names this repo's packages — data"
     },
     "verify/audit-allowlist.json": {
       "dest": "scripts/verify/audit-allowlist.json",
       "pack": "37517e5f3dc66819",
-      "repo": "37517e5f3dc66819"
+      "track": "pack",
+      "note": "repo side is this repo's accepted advisories — data"
     },
     "brain/learnings/absence-must-be-asserted.md": {
       "dest": "_brain/learnings/absence-must-be-asserted.md",
