@@ -198,24 +198,24 @@ and commands it names still exist **before** the dependent task starts (task 0.2
         inputs replays a cached green (`turbo-cache-masks-out-of-input-reads`). Verify by
         re-running the affected suite with the cache busted.
 
-- [ ] 5.0 FR-5 — Schema documentation and pack parity (W10, W11)
-  - [ ] 5.1 Specify the validated schema in `_brain/PROTOCOL.md` — this file is the human
+- [x] 5.0 FR-5 — Schema documentation and pack parity (W10, W11)
+  - [x] 5.1 Specify the validated schema in `_brain/PROTOCOL.md` — this file is the human
         spec the validator now enforces; state the supported frontmatter subset explicitly
         and that unsupported YAML fails.
-  - [ ] 5.2 Update `_brain/_templates/learning.md` and `_brain/_templates/adr.md` to match
+  - [x] 5.2 Update `_brain/_templates/learning.md` and `_brain/_templates/adr.md` to match
         the enforced schema exactly. Note: the ADR template already carries all four
         required sections — verify before editing.
-  - [ ] 5.3 W10 — assert, do not migrate: add a check that every existing record in
+  - [x] 5.3 W10 — assert, do not migrate: add a check that every existing record in
         `_brain/learnings/` passes the strengthened validator unchanged. Editing a
         conforming record is forbidden here — each needless edit forces a paired pack
         change plus a ledger reconcile for no gain.
-  - [ ] 5.4 W11 — sync the genericized copies under
+  - [x] 5.4 W11 — sync the genericized copies under
         `packages/provegate/practices/brain/**` for every file 5.1–5.2 touched, then run
         `node scripts/verify/verify-pack-drift.mjs --reconcile` and **read its per-pair
         output**: every line it prints is a change being accepted. Paste that output into
         the Progress Log. Reconciling without reading it is the failure mode the ledger
         exists to prevent.
-  - [ ] 5.5 Confirm no repo-specific fact leaked into the package copies (no repo name,
+  - [x] 5.5 Confirm no repo-specific fact leaked into the package copies (no repo name,
         no wave/practice numbering, English only) via the existing hygiene assertions in
         `packages/provegate/test/practices-pack.test.ts`.
 
@@ -329,6 +329,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task | Notes |
 | ---------- | ---- | ----- |
+| 2026-07-25 | 5.0 | FR-5 landed. PROTOCOL now states the supported subset as a table with the reason it is small (two implementations, no shared import, so neither may guess), documents `tags`/`watch` including that a watch is a review trigger rather than a staleness verdict, and §9 stopped calling `verify:brain` a wave-2 stub — it lists what the gate actually asserts, including the two separate status vocabularies. W10 held: `git status _brain/learnings/` is EMPTY, so the 23 conforming records were asserted, never migrated. W11 exercised on myself — three pairs went red (`PROTOCOL.md`, `INDEX.md`, `learning.md`), and the reconcile output named each side that moved: `accepted pack + repo change` twice, `accepted pack change` once for INDEX, whose repo side is tracked as data. Pack hygiene clean: no repo-of-origin fact leaked into the genericized copies. |
 | 2026-07-25 | 4.0 | FR-4 landed: 42-case conformance corpus, both implementations, mutation cover. Writing the corpus is what found the schema bug — ADRs use `proposed/accepted/superseded` and learnings `active/superseded`, two vocabularies the first draft had merged into one, which would have rejected every valid ADR PRD-018 writes. That is exactly the "thin corpus proves nothing" failure W12 names, caught by broadening the matrix rather than by review. The standalone validator is spawned, not imported: it is untyped `.mjs` because it must run where no TypeScript and no package exist, so the test exercises it the way an adopter does. The shipped copy under `practices/` is the one under test — an adopter runs that file, and the drift ledger keeps the repository's copy reconciled with it. 4.8 resolved differently than planned: the corpus and the spawned validator both live INSIDE the package, so they are already in the test task's hash, and declaring turbo `inputs` is now forbidden by `verify:turbo-inputs`. 543 tests green. |
 | 2026-07-25 | 3.0 | FR-3 parser landed. The subset was derived from the corpus, not guessed: an inventory of all 44 records and templates found exactly four frontmatter forms (scalar, folded `>-` with continuations, inline list, `#` comment) and nothing else, so everything outside them fails loud. Two design calls came out of the tests. A `#` opens a comment only when whitespace precedes it — YAML's rule, borrowed rather than invented, because two implementations must agree on where a value ends. And an ADR is exempt from `**Why:**`/`**How to apply:**`: its four required sections ARE its rationale, so demanding both shapes would make every ADR argue twice. The parser accepts all 44 live records with zero issues, which is task 5.3's assertion arriving early. 2.2 closed here — `containedPath` is imported from the init module rather than reimplemented; only its message is re-tagged, since the risk in duplication is the algorithm drifting, not the wording. 538 tests green. |
 | 2026-07-25 | 2.0 | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates. |

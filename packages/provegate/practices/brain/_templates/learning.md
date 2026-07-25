@@ -6,6 +6,8 @@ type: gotcha # gotcha | convention | reference | decision
 scope: workflow # workflow | project
 status: active # active | superseded
 links: [] # optional: related record slugs
+# tags: [retrieval, gates] # optional; kebab-case slugs, non-empty if present
+# watch: [path/to/**] # optional; paths whose change makes this worth re-reading
 # provenance: <where a seed came from>     # optional
 # superseded-by: <slug>                    # set only when status: superseded
 ---

@@ -16,8 +16,8 @@
   "pairs": {
     "brain/PROTOCOL.md": {
       "dest": "_brain/PROTOCOL.md",
-      "pack": "667e00b75b733a0b",
-      "repo": "1a62337f03deb1e5"
+      "pack": "a41f33eb1adcc6f3",
+      "repo": "37b7b178533d3569"
     },
     "brain/README.md": {
       "dest": "_brain/README.md",
@@ -26,14 +26,14 @@
     },
     "brain/INDEX.md": {
       "dest": "_brain/INDEX.md",
-      "pack": "56807bf14412fdd4",
+      "pack": "88d9de413f4fd430",
       "track": "pack",
       "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
     },
     "brain/_templates/learning.md": {
       "dest": "_brain/_templates/learning.md",
-      "pack": "d6f6fdd8d74487ce",
-      "repo": "32243e4f62b1370a"
+      "pack": "404fc25783a009a1",
+      "repo": "38b1a31dfa338753"
     },
     "brain/_templates/adr.md": {
       "dest": "_brain/_templates/adr.md",

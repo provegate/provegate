@@ -88,6 +88,25 @@ superseded-by: <slug>                     # optional; set when status: supersede
 Link related records inline with [[absence-must-be-asserted]].
 ```
 
+### Supported frontmatter subset
+
+Frontmatter is parsed as an explicitly documented subset, not as general YAML. Four forms
+exist:
+
+| Form          | Example                                                   |
+| ------------- | --------------------------------------------------------- |
+| scalar        | `type: gotcha`                                            |
+| folded scalar | `description: >-` followed by indented continuation lines |
+| inline list   | `links: [a-slug, b-slug]`                                 |
+| comment       | a whole line starting with `#`, or a trailing ` # …`      |
+
+Anything else fails with a message naming the field or line: a block list, a nested map, a
+literal block (`|`), a duplicate key, an unknown key. The subset is small because two
+implementations parse it and cannot import each other — the package's typed parser, and the
+standalone validator that runs in repositories where the package is not installed. Every
+form either one tolerates is a form they can disagree about, so neither guesses; a shared
+conformance corpus holds both to one behaviour.
+
 ### Field rules
 
 - **name** — kebab-case, equals the filename without `.md`, unique across `_brain`.
@@ -105,6 +124,12 @@ Link related records inline with [[absence-must-be-asserted]].
   kept briefly for traceability, then removable.
 - **links / superseded-by** — record slugs; may point to a slug that doesn't exist yet
   (marks something worth writing). Not an error.
+- **tags** — optional inline list of kebab-case slugs used for retrieval. Must not be empty
+  when present: an empty selector claims a capability the record does not have.
+- **watch** — optional inline list of globs naming the paths whose change makes this record
+  worth re-reading. A watch is a **review trigger, not a staleness verdict** — an overlap
+  asks someone to look, it does not assert the record is wrong, and it is not an ownership
+  claim (two records may watch the same path). Globs must stay inside the workspace.
 
 ---
 
@@ -116,7 +141,7 @@ body ever goes here.
 ```markdown
 # _brain — index
 
-> One-line pointers only. Detail lives in each file. Keep hooks short (≤ ~120 chars).
+> One-line pointers only. Detail lives in each file. Keep hooks short — 120 characters of hook text, enforced.
 
 ## Workflow gotchas
 
@@ -202,23 +227,31 @@ it will drift.
 
 ---
 
-## 9. Optional tooling — `verify:brain`
+## 9. Validation (`verify:brain`)
 
-A `verify:brain` check (runnable in CI and the workflow gate) that asserts:
+`verify:brain` runs in CI and in the workflow gate bundle, and asserts:
 
-- every `learnings/*.md` and `adr/*.md` has valid frontmatter (required: `name`,
-  `description`, `type`, `scope`, `status`);
-- `name` equals the filename slug and is unique;
-- every record has exactly one `INDEX.md` pointer (no orphans, no duplicates);
-- no `[[link]]` / `links:` / `superseded-by:` points at a name that violates the slug
-  rules (dangling to a not-yet-written _valid_ slug is allowed and reported as a soft
-  note, not a failure);
-- ADR records are validated per the ADR template's own rules (`ADR-NNNN-<slug>` names,
-  `proposed | accepted | superseded` status), not the learning-record rules.
+- every `learnings/*.md` and `adr/*.md` parses as the subset above and carries the required
+  fields (`name`, `description`, `type`, `scope`, `status`) with no placeholder values;
+- a folded `description` has an actual body — the marker alone is not a description;
+- `name` equals the filename slug and is unique across the store;
+- `gotcha`, `convention`, and `decision` records carry **Why** and **How to apply**;
+  `reference` records do not, and an ADR's four sections are its rationale instead;
+- optional `tags` and `watch` lists are non-empty, and no `watch` glob escapes the workspace;
+- `status: superseded` has a `superseded-by`, and a `superseded-by` has that status;
+- every record has exactly one `INDEX.md` pointer (no orphans, no duplicates, no dangling),
+  each pointer carries a hook within the length limit, and no public pointer resolves under
+  `private/`;
+- no `[[link]]` / `links:` / `superseded-by:` points at a name that violates the slug rules
+  (dangling to a not-yet-written _valid_ slug is allowed and reported as a soft note, not a
+  failure);
+- ADR records are validated by the ADR rules (`ADR-NNNN-<slug>` names, and the
+  `proposed | accepted | superseded` status vocabulary), not the learning-record rules — the
+  two lifecycles are separate and merging them would quietly accept `status: active` on a
+  decision.
 
-The record schema above is designed so the check is mechanical to add. Alongside it, a periodic (e.g. weekly) `_brain` lint pass
-is worth one recurring line: sweep for stale `superseded` records, hook/description drift,
-and near-duplicate candidates to merge.
+Alongside it, a periodic `_brain` lint pass is worth one recurring line: sweep for stale
+`superseded` records, hook/description drift, and near-duplicate candidates to merge.
 
 ---
 
