@@ -289,7 +289,17 @@ export function buildGateChain(options: {
   chain.push({
     phase: '7 Learning',
     label: 'durable artifacts touched in merge diff',
-    fn: () => durableArtifactsOk(declaredArtifacts(prdContent), changedFiles),
+    // The strict reader when memory is on, the legacy one when it is off. The
+    // split existed to keep a memory-DISABLED repo byte-identical, but leaving
+    // the universal gate on the legacy reader in an ENABLED repo opened a hole
+    // of its own: a fenced Durable Artifacts example above the real section
+    // hid every path the real section adds, so a promised doc could go
+    // untouched and still close.
+    fn: () =>
+      durableArtifactsOk(
+        config.memory.enabled ? declaredArtifactsStrict(prdContent) : declaredArtifacts(prdContent),
+        changedFiles,
+      ),
   });
 
   // The memory close gates are separate chain entries rather than one composite,

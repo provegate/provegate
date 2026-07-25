@@ -27,9 +27,18 @@ export function declaredArtifacts(content: string): string[] {
  */
 export function declaredArtifactsStrict(content: string): string[] {
   const { count, body } = contractSection(contractView(content), 'Durable Artifacts');
-  if (count !== 1) return [];
+  // An AMBIGUOUS section is not an empty one. Collapsing "declared twice" to
+  // `[]` would tell the gate there is nothing to check, which is the permissive
+  // reading of a document nobody can parse.
+  if (count > 1) return [AMBIGUOUS_DURABLE];
+  if (count === 0) return [];
   return artifactPaths(body);
 }
+
+/** A path no diff can ever contain, so an ambiguous section always refuses and
+ * says why. */
+export const AMBIGUOUS_DURABLE =
+  '<Durable Artifacts is declared more than once — exactly one section is parseable>';
 
 function artifactPaths(section: string): string[] {
   const paths: string[] = [];

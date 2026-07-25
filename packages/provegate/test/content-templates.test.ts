@@ -627,3 +627,95 @@ describe('phase 6 round 4 regressions', () => {
     ).toContain('must live under');
   });
 });
+
+describe('phase 6 round 6 regressions', () => {
+  it('[R6-P1-2] a comment opener inside a fence cannot eat the fence closer', () => {
+    const doc = [
+      '# PRD',
+      '',
+      '```markdown',
+      '<!-- an example of a commented section',
+      '## Changelog',
+      '```',
+      '',
+      '## Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | agent | no approval here |',
+      '',
+    ].join('\n');
+    // The real Changelog has no owner row, so nothing is approved. Before the
+    // single scanner, the comment swallowed the fence closer and the body
+    // handed back was somebody else's.
+    expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(false);
+  });
+
+  it('[R6-P1-2] a backticked comment opener is prose, and backticks survive', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — a rationale mentioning `<!--` inline.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toEqual([]);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/x.md']);
+  });
+
+  it('[R6-P1-3] a setext H2 terminates a contract section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      'Other',
+      '-----',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/real.md',
+    ]);
+  });
+
+  it('[R6-P1-4] a fenced INDEX example is not a pointer', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-index-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      [
+        '# index',
+        '',
+        'The pointer form looks like this:',
+        '',
+        '```markdown',
+        '- [example](learnings/not-real.md) — hook',
+        '```',
+        '',
+      ].join('\n'),
+    );
+    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true });
+    expect(store.records).toEqual([]);
+    expect(store.issues).toEqual([]);
+  });
+
+  it('[R6-P2-6] an index that is a directory reports, never throws', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-index-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/INDEX.md'), { recursive: true });
+    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true });
+    expect(store.issues).toEqual(["memory index '_brain/INDEX.md' is not a regular file"]);
+  });
+
+  it('[R6-P2-5] a backslash-separated index resolves like the validator reads it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-index-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(join(root, '_brain/INDEX.md'), '# index\n');
+    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true, index: '_brain\\INDEX.md' });
+    expect(store.issues).toEqual([]);
+  });
+});

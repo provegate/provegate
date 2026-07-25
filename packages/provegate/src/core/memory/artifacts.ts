@@ -102,84 +102,97 @@ function pathProblem(value: string): string | null {
 }
 
 /**
- * The document with fenced code blocks blanked out, line for line.
+ * ONE stateful pass over the document, blanking everything a renderer does not
+ * execute: fenced code, HTML comments, and inline code spans.
  *
- * Section lookup takes the FIRST matching heading, so a fenced example
- * containing `## Memory Outputs` shadowed the real section: a PRD could carry a
- * quoted, well-formed example above a malformed real one and the gate would read
- * the example. Blanking rather than deleting keeps every other offset intact, so
- * nothing downstream has to know this happened.
+ * Two ordered strippers could not respect both syntaxes, and the gap was
+ * exploitable in both directions: a `<!--` inside a fenced example deleted the
+ * fence's own closer, and a backticked `` `<!--` `` did the same, which let a
+ * later fence re-open somewhere else and hand back a body containing an owner
+ * row that no live Changelog carried. Fence state and comment state have to be
+ * decided together, in the order a reader meets them.
  */
-function withoutHtmlComments(content: string): string {
-  // Line-preserving, like the fence stripper: an HTML comment is invisible in
-  // rendered Markdown, so a `## Changelog` inside one is not a section — but a
-  // regex that only knew about fences counted it as the real thing and let a
-  // commented-out owner row waive a removal.
-  let open = false;
-  return content
-    .split('\n')
-    .map((line) => {
-      let out = line;
-      if (open) {
-        const end = out.indexOf('-->');
-        if (end === -1) return '';
-        open = false;
-        out = out.slice(end + 3);
-      }
-      for (;;) {
-        const start = out.indexOf('<!--');
-        if (start === -1) return out;
-        const end = out.indexOf('-->', start + 4);
-        if (end === -1) {
-          open = true;
-          return out.slice(0, start);
-        }
-        out = out.slice(0, start) + out.slice(end + 3);
-      }
-    })
-    .join('\n');
-}
+function executableView(content: string): string {
+  interface Fence {
+    char: string;
+    length: number;
+  }
+  let fence: Fence | null = null;
+  let inComment = false;
+  const out: string[] = [];
 
-function withoutFences(content: string): string {
-  // CommonMark's rules, not a substring test: a fence opens with 3+ of ` or ~
-  // at an indent of at most three spaces, and closes only with at least as many
-  // of the SAME character. A toggle that ignored all of this let a `~~~` block
-  // be "closed" by a ``` line inside it, exposing everything after — which is
-  // the fail-open direction, since the exposed text can be a forged section.
-  // An unclosed fence consumes the rest of the document and the section then
-  // reads as absent, which the gates refuse.
-  let open: { char: string; length: number } | null = null;
-  return content
-    .split('\n')
-    .map((line) => {
-      const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
-      if (match !== null) {
-        const char = match[2]![0]!;
-        const length = match[2]!.length;
-        if (open === null) {
-          // An opening backtick fence may not carry a backtick in its info
-          // string — that is what makes ```` ```inline``` ```` not a fence.
-          if (char === '`' && match[3]!.includes('`')) return line;
-          open = { char, length };
-          return '';
-        }
-        // A closer matches the opener's character, is at least as long, and
-        // carries nothing after it.
-        if (char === open.char && length >= open.length && match[3]!.trim().length === 0) {
-          open = null;
-          return '';
-        }
-        return '';
+  /** One line outside any fence or comment: strip inline code spans, then
+   * decide whether it opens a comment or a fence. State is returned rather
+   * than closed over, so the caller owns every transition. */
+  const scanLine = (raw: string): { text: string; opens: Fence | null; comment: boolean } => {
+    let text = raw;
+    for (;;) {
+      // Code spans are MASKED, never removed: `<!--` inside backticks is prose
+      // and must not open a comment, but the grammar this view feeds reads its
+      // slugs and paths out of backticks, so the spans have to survive. Same
+      // length, so an index into the mask is an index into the text.
+      const masked = text.replace(/`[^`]*`/g, (span) => ' '.repeat(span.length));
+      const start = masked.indexOf('<!--');
+      if (start === -1) break;
+      const end = masked.indexOf('-->', start + 4);
+      if (end === -1) return { text: text.slice(0, start), opens: null, comment: true };
+      text = text.slice(0, start) + text.slice(end + 3);
+    }
+    const opener = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(text);
+    if (opener !== null) {
+      // An opening backtick fence may not carry a backtick in its info string.
+      if (opener[2]![0] === '`' && opener[3]!.includes('`')) {
+        return { text, opens: null, comment: false };
       }
-      return open === null ? line : '';
-    })
-    .join('\n');
+      return {
+        text: '',
+        opens: { char: opener[2]![0]!, length: opener[2]!.length },
+        comment: false,
+      };
+    }
+    return { text, opens: null, comment: false };
+  };
+
+  for (const line of content.split('\n')) {
+    // Inside a fence, NOTHING else is syntax — not a comment opener, not a code
+    // span. Only a matching closer ends it.
+    if (fence !== null) {
+      const closer = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/.exec(line);
+      if (
+        closer !== null &&
+        closer[2]![0] === fence.char &&
+        closer[2]!.length >= fence.length &&
+        closer[3]!.trim().length === 0
+      ) {
+        fence = null;
+      }
+      out.push('');
+      continue;
+    }
+
+    let text = line;
+    if (inComment) {
+      const end = text.indexOf('-->');
+      if (end === -1) {
+        out.push('');
+        continue;
+      }
+      text = text.slice(end + 3);
+    }
+
+    const scanned = scanLine(text);
+    inComment = scanned.comment;
+    fence = scanned.opens;
+    out.push(scanned.text);
+  }
+
+  return out.join('\n');
 }
 
 /** Everything a rendered document does not execute: fenced code and HTML
  * comments. Contract sections are read from this view and nothing else. */
 export function contractView(content: string): string {
-  return withoutFences(withoutHtmlComments(content));
+  return executableView(content);
 }
 
 /**
@@ -203,8 +216,12 @@ export function contractSection(content: string, heading: string): { count: numb
   const rest = content.slice(match.index! + match[0].length);
   // `^##[ \t]` missed a BARE `##` line, so an empty H2 inserted after the real
   // heading did not end the section and its bullets were still read as this
-  // section's. End of line is a valid separator.
-  const next = rest.search(/^##(?:[ \t]|\r?$)/m);
+  // section's. End of line is a valid separator — and so is a SETEXT heading,
+  // `Other` over `-----`, which renders as an H2 while looking like prose.
+  const atx = rest.search(/^##(?:[ \t]|\r?$)/m);
+  const setext = rest.search(/^[^\n]+\r?\n[ \t]{0,3}-{2,}[ \t]*\r?$/m);
+  const stops = [atx, setext].filter((i) => i !== -1);
+  const next = stops.length === 0 ? -1 : Math.min(...stops);
   return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
 }
 
@@ -714,15 +731,30 @@ const POINTER = /^- \[[^\]]*\]\(((?:learnings|adr)\/[^)]+\.md)\)/gm;
  */
 export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore {
   const store: MemoryStore = { records: [], unreadable: [], issues: [] };
-  const indexPath = resolve(root, memory.index);
-  if (!existsSync(indexPath)) {
-    store.issues.push(`memory index '${memory.index}' does not exist`);
+  // Separators are normalized before any filesystem call: config validation
+  // treats `_brain\\catalog\\INDEX.md` and `_brain/catalog/INDEX.md` as the same
+  // path, and passing the raw value to `resolve` made the loader disagree with
+  // the validator that accepted it.
+  const indexRel = repoRelative(memory.index);
+  const indexPath = resolve(root, indexRel);
+  let indexIsFile: boolean;
+  try {
+    indexIsFile = lstatSync(indexPath).isFile();
+  } catch {
+    indexIsFile = false;
+  }
+  if (!indexIsFile) {
+    store.issues.push(
+      existsSync(indexPath)
+        ? `memory index '${memory.index}' is not a regular file`
+        : `memory index '${memory.index}' does not exist`,
+    );
     return store;
   }
   // Pointers are relative to the index's own directory, which is how the
   // shipped index writes them (`learnings/x.md` beside `INDEX.md`).
   const base = dirname(indexPath);
-  const indexText = readFileSync(indexPath, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+  const indexText = contractView(readFileSync(indexPath, 'utf8'));
   const seen = new Set<string>();
   for (const match of indexText.matchAll(POINTER)) {
     const pointer = match[1]!;

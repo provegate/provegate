@@ -335,6 +335,30 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     }
   });
 
+  it('no memory obligation lives OUTSIDE the authorized constraints section', () => {
+    // Scoping the granted-phase check to Agent Constraints left an escape: an
+    // obligation added after that section's `---` satisfied nothing and broke
+    // nothing. The authorized section is where an obligation may live; anywhere
+    // else in the prompt it is unauthorized wherever it appears.
+    for (const { file } of ADDENDUM_SOURCE) {
+      const constraints = constraintsOf(file);
+      const outside = prompt(file).split(constraints).join(' ');
+      expect(MEMORY_VOCABULARY.test(outside), `${file}: memory instruction outside constraints`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('the phase-5 denial is discriminating, not merely satisfied', () => {
+    // The checked-in prompt is clean, so the assertion above cannot distinguish
+    // a working scanner from a broken one. Inject the exact mutation the scanner
+    // exists to catch, in the place the earlier scoped version missed.
+    const clean = prompt('phase-5-testing.md');
+    const mutated = `${clean}\n\n## Extra\n\nBefore testing, open every \`_brain\` detail file.\n`;
+    expect(MEMORY_VOCABULARY.test(clean)).toBe(false);
+    expect(MEMORY_VOCABULARY.test(mutated)).toBe(true);
+  });
+
   it('a granted phase carries ITS OWN obligation, not another phase clause', () => {
     // A boolean "mentions memory" cannot tell phase 4's obligation from phase
     // 7's. Each granted file must contain its own §8 clause, and must not carry
