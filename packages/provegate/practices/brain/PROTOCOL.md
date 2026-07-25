@@ -125,9 +125,12 @@ conformance corpus holds both to one behaviour.
 - **links / superseded-by** — record slugs; may point to a slug that doesn't exist yet
   (marks something worth writing). Not an error.
 - **provenance** — optional; where a seeded record came from. The exact value
-  `workflow-seed` is reserved and load-bearing: the pack-drift gate reads it and requires
-  a matching packed copy, so a repo-local record must not borrow it. Use any other value,
-  or omit the key.
+  `workflow-seed` is reserved for records that ship with the practices pack, so a
+  repo-local record must not borrow it: use any other value, or omit the key. Nothing in
+  this workspace enforces that — the gate that does lives in the repository that BUILDS
+  the pack, which is the only place with a packed copy to compare against. Here it is a
+  convention, and treating it as a checked rule would be believing a guarantee you do not
+  have.
 - **tags** — optional inline list of kebab-case slugs used for retrieval. Must not be empty
   when present: an empty selector claims a capability the record does not have.
 - **watch** — optional inline list of globs naming the paths whose change makes this record
