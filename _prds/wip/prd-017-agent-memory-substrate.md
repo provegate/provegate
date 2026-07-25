@@ -7,7 +7,7 @@
 > **Author**: Codex, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `agent-memory-substrate`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task Generation)
 > **PRD Class**: infra
 > **Class Rationale**: This hardens the local workflow substrate and method source;
 > all behavior remains default-off.
@@ -327,3 +327,5 @@ Before Phase 2 PASS, run: `gate check PRD-017`
 | 2026-07-25 | Codex, for owner | Rescoped to default-off memory substrate; returned to Phase 1 |
 | 2026-07-25 | owner            | Approved revised PRD-017 Phase 1 scope |
 | 2026-07-25 | independent agent via owner | Readiness iteration 3: PASS 8.425 (infra weights), tiers high/high. Measured the PRD's own claims: the folded-description hole is real, the hook/record/ADR migrations are not. Watch items W10–W13. Phase 3 awaits owner Go |
+| 2026-07-25 | owner            | Go for Phase 3 |
+| 2026-07-25 | independent agent via owner | Phase 3 plan generated: 48 sub-tasks under the `infra` skeleton with Migration & Rollback as its own parent; W10–W13 each bound to explicit tasks |
