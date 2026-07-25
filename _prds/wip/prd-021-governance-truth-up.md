@@ -1,13 +1,13 @@
 # PRD-021: Governance Truth-Up — Stale Wave-2 Claims and the Value-Score Recompute Gate
 
-> **Status**: Draft
+> **Status**: Approved
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `governance-truth-up`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 2 (Readiness)
 > **PRD Class**: infra
 > **Class Rationale**: This corrects governance documents and adds two workflow verify
 > gates plus one additive config key; no application runtime behavior changes.

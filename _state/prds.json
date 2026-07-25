@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T09:15:53.316Z",
+  "generatedAt": "2026-07-25T09:36:15.656Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -709,8 +709,8 @@
       "prd": "PRD-020",
       "number": 20,
       "slug": "adopter-enablement",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -726,10 +726,10 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.075,
-        "verdict": "ITERATE",
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.5,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
@@ -746,8 +746,8 @@
       "prd": "PRD-021",
       "number": 21,
       "slug": "governance-truth-up",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -763,10 +763,10 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 4.43,
-        "verdict": "ITERATE",
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.43,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",

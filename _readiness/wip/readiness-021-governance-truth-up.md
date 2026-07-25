@@ -5,15 +5,15 @@
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 7.50/10 |
-| Verdict | ITERATE |
-| Iteration | 2 |
-| Model Tier (Execution) | Do not assign — fix PRD first |
-| Model Tier (Audit) | — |
+| Score | 8.43/10 |
+| Verdict | PASS |
+| Iteration | 3 |
+| Model Tier (Execution) | high |
+| Model Tier (Audit) | high |
 | Scored by | Independent readiness scorer |
 | Self-scored | no |
 | Date | 2026-07-25 |
-| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 2) |
+| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 3) |
 | State Record | pending — intentionally not updated during this assessment |
 
 ---
@@ -22,8 +22,8 @@
 
 | Phase | Tier | Rationale |
 | ----- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign | Score remains below 8: the precision-safe implementation contract, changeset evidence, and existing-worktree migration behavior need specification before an agent can implement without inventing policy. |
-| Phase 6 (Audit) | — | Assign after the remaining mutation cases prove decimal validation and the root-config control-artifact transition, and after a check proves an actual minor changeset exists. |
+| Phase 4 (Execution) | high | Score is in the 8–8.9 band. The implementation spans a published config contract, two standalone verifiers, release metadata, and worktree provenance; the detail is executable but mistakes are systemic. |
+| Phase 6 (Audit) | high | Audit the standalone/CLI decimal parity, legacy-worktree refusal-and-recovery fixture, and that changeset evidence binds package, release level, and compatibility note in one file. |
 
 ---
 
@@ -157,6 +157,31 @@ forgot it. The PRD must add a targeted assertion that the `provegate` package ha
 required pending minor release and that the changeset text carries the compatibility
 instruction.
 
+### 6. Iteration-3 independent measurement
+
+FR-1 now gives an implementable float-safe rule. Its `String(weight)` expression accepts
+legal JSON-number values `0.5`, `1` (including source spelling `1.0`, which parses to
+the shortest form `1`), `0.29`, and `0.58`; semantic positivity and the five-axis
+hundredths sum exclude an otherwise individually valid weight of 1. It rejects `0.155`
+and `1e-7`, as required. Once the lexical form has passed, `Math.round(weight * 100)`
+is safe for the allowed range, so the integer-cent total remains exact.
+
+FR-5 correctly models the control-artifact transition: existing `open.ts` behavior
+compares required artifact snapshots against both base and the reused checkout, and
+therefore refuses a worktree that predates `workflow.config.json` until it merges or
+rebases. The existing `worktree.test.ts` already has real-git root, commit, PRD, claim,
+and cleanup helpers proving that test style. Those helpers are local rather than
+exported, so the named config test must repeat a small helper or locate the fixture in
+the worktree test; that is implementation mechanics, not an unresolved design choice.
+
+The new FR-11 direct content-canon test resolves the banner-proof gap. FR-12 fixes the
+old absence false green: either grep fails when no matching changeset exists. It is
+still not a durable semantic check: valid YAML may use `"provegate": minor` rather than
+`'provegate': minor`, and independent recursive greps can match the minor declaration
+in one changeset and the compatibility sentence in another. This is a bounded watch
+item, not a hard cap; require one parser/test that finds a single changeset entry with
+all three properties.
+
 ---
 
 ## Scorecard
@@ -166,17 +191,17 @@ Class `infra` weights, per
 
 | # | Dimension | Weight | Score | Notes |
 | - | --------- | ------ | ----- | ----- |
-| 1 | Clarity | 15% | 8.0/10 | All 11 FRs name targets and executable verification, the cutoff is explicit, and open questions are resolved. Docked for not prescribing the binary-float-safe two-decimal validator, the pre-existing-worktree transition, or an assertion that a minor changeset actually exists. |
-| 2 | Completeness | 20% | 7.5/10 | The cutoff, schema, rollout, allowlist lifecycle, changeset, and mutation fixtures close the iteration-1 holes. Remaining omissions are the exact decimal-input algorithm and worktree-lease migration/rollback test. |
-| 3 | Technical Depth | 20% | 7.5/10 | Integer-cent recomputation is the correct architecture, and `--print-weights` tests real standalone behavior. The acceptance contract must prevent naïve `weight * 100` validation from rejecting legal values such as 0.29 and 0.58. |
-| 4 | Multi-Tenancy & Security | 10% | 8.5/10 | No tenant, auth, endpoint, query, or client/server payload surface changes. Narrow scanning, fenced/history exclusions, and an expiring allowlist reduce governance-bypass and false-positive risk. |
-| 5 | Scope & Testability | 15% | 7.0/10 | Spawn/unit fixtures replace weak greps and `verify:gates-wired` proves wiring. `pnpm changeset status` is a false-green for FR-11, FR-10 is oddly mapped to the doc-claims test rather than a research-doc assertion, and no fixture covers a legacy leased worktree receiving the new config artifact. |
-| 6 | Migration & Rollback | 20% | 7.0/10 | The prospective cutoff, release-before-config ordering, downgrade instruction, and no-backfill choice are concrete. Root config changes worktree control-artifact provenance, however; reuse of existing worktrees needs an explicit merge/rebase procedure and regression test. |
-| **Total** | **Weighted** | | **7.500/10** | **ITERATE** |
+| 1 | Clarity | 15% | 8.5/10 | All 12 FRs carry targets and runnable checks. The lexical decimal rule, worktree transition, content assertion, and changed changeset evidence resolve prior ambiguity; docked only for FR-12's format-dependent greps. |
+| 2 | Completeness | 20% | 8.5/10 | Cutoff, validation, parity, drift grammar, release policy, and operational rollback are covered. A single-entry semantic changeset assertion would close the remaining evidence gap. |
+| 3 | Technical Depth | 20% | 8.5/10 | Lexical validation followed by rounded integer cents avoids binary-float rejection while retaining exact arithmetic. The standalone parity and real worktree recovery fixtures exercise the two highest-risk boundaries. |
+| 4 | Multi-Tenancy & Security | 10% | 8.5/10 | No protected tenant/auth/payload surface changes. Bounded document scanning and expiring allowlist prevent the main governance bypasses. |
+| 5 | Scope & Testability | 15% | 8.0/10 | The rebuilt table maps every FR to outcome evidence, including direct content and worktree tests. FR-12's two separate greps remain brittle and do not prove the required metadata/note coexist in one changeset. |
+| 6 | Migration & Rollback | 20% | 8.5/10 | The cutoff, release ordering, downgrade, rollback, Phase 4 lease preflight, and refusal-then-merge/rebase fixture give this infra change a concrete operational plan. |
+| **Total** | **Weighted** | | **8.425/10** | **PASS** |
 
 Weighted sum:
-`0.15×8.0 + 0.20×7.5 + 0.20×7.5 + 0.10×8.5 + 0.15×7.0 + 0.20×7.0`
-= `1.20 + 1.50 + 1.50 + 0.85 + 1.05 + 1.40 = 7.500`, reported as **7.50/10**.
+`0.15×8.5 + 0.20×8.5 + 0.20×8.5 + 0.10×8.5 + 0.15×8.0 + 0.20×8.5`
+= `1.275 + 1.70 + 1.70 + 0.85 + 1.20 + 1.70 = 8.425`, reported as **8.43/10**.
 
 Hard caps checked:
 
@@ -196,10 +221,9 @@ Hard caps checked:
 2. **W2 — RESOLVED: explicit config schema.** The five axes, unknown-axis rejection,
    positive/two-decimal/sum constraints, and non-negative cutoff are now specified for
    structural and resolved validation.
-3. **W3 — OPEN: prescribe float-safe decimal validation.** Keep integer-hundredths
-   arithmetic, but specify the parsing algorithm (for example, validate the JSON number
-   by canonical decimal text or a safe scale-and-round trip) and add 0.29/0.58 accept
-   fixtures. Do not use `Number.isInteger(weight * 100)`.
+3. **W3 — RESOLVED: float-safe decimal validation.** The `String(weight)` lexical gate
+   plus `Math.round` after validation admits 0.29/0.58 and rejects three-decimal and
+   exponent-form values without `Number.isInteger(weight * 100)`.
 4. **W4 — RESOLVED: behavioral duplicate-default proof.** `--print-weights` and
    spawned real-script fixtures cover absent/custom config and failure behavior without
    a runtime package import.
@@ -209,13 +233,15 @@ Hard caps checked:
 6. **W6 — RESOLVED: bounded doc-claims grammar.** The file set, tokens, markers,
    exclusions, manifest lookup, and expiring shrink-only allowlist are specific; PRDs
    and unrelated `_brain` records are outside the scanner.
-7. **W7 — OPEN: make every verification row prove its FR.** Replace `pnpm changeset
-   status` with a command/test that fails without a `provegate` minor changeset and
-   asserts its compatibility note. Give FR-10 a direct research-banner/canonical-link
-   assertion, not an incidental doc-claims test.
-8. **W8 — NEW: handle the root-config control-artifact transition.** State that an
-   existing `gate open --worktree` checkout created before this file must merge/rebase
-   before reuse; add a fixture that proves refusal before that action and success after.
+7. **W7 — PARTIALLY RESOLVED: outcome evidence.** FR-11 now directly tests the
+   content-canon outcome and FR-12 fails absent a changeset. W9 narrows the remaining
+   association/format problem in the two FR-12 greps.
+8. **W8 — RESOLVED: worktree control-artifact transition.** FR-5, the migration
+   preflight, and the refusal-before/acceptance-after-merge fixture cover existing
+   worktree reuse.
+9. **W9 — watch item: parse one changeset entry.** Replace FR-12's two greps with a
+   test/parser that accepts normal YAML quote styles and proves the same new changeset
+   declares `provegate` minor and contains the required upgrade-before-config sentence.
 
 ---
 
@@ -225,6 +251,7 @@ Hard caps checked:
 | - | ---- | ----- | ------- | ----------- |
 | 1 | 2026-07-25 | 4.43 | ITERATE | Independent infra-weighted assessment. Lint passed, but measured 21 scanned PRDs with only 6 value headers; configuration, arithmetic, compatibility, claim-parser, evidence, and rollback gaps require Phase 1 revision. |
 | 2 | 2026-07-25 | 7.50 | ITERATE | Re-score verified the prospective cutoff, complete config contract, exact-cent architecture, behavioral standalone tests, bounded doc-claim grammar, and changeset/rollout plan. W3 remains open for float-safe decimal validation; W7 for false-green changeset evidence; W8 records the root-config worktree-control-artifact transition. |
+| 3 | 2026-07-25 | 8.43 | PASS | Re-score verified the lexical decimal rule accepts 0.5/1/0.29/0.58 and rejects 0.155/1e-7, the real-git worktree test is implementable, and direct content evidence replaces the old FR-11 gap. W9 binds Phase 3/6 to replace brittle independent changeset greps with one semantic entry assertion. |
 
 ---
 
@@ -248,28 +275,26 @@ Hard caps checked:
   result for every legal five-axis weight set.
 - [x] Verified the PRD's scanner excludes PRD-021 and non-target `_brain` records.
 - [x] Verified there are no current lease files under `_state/locks`.
-- [ ] Define and test float-safe acceptance of legal two-decimal JSON weights.
-- [ ] Replace `pnpm changeset status` with evidence that fails absent a provegate minor
-  changeset and validates its compatibility note.
-- [ ] State and test existing-worktree handling after `workflow.config.json` becomes a
-  required control artifact.
-- [ ] Give FR-10 a direct banner/canonical-link verification command.
+- [x] Verified the lexical decimal contract accepts 0.5, 1/1.0, 0.29, and 0.58 while
+  rejecting 0.155 and 1e-7.
+- [x] Verified existing worktree helpers support the control-artifact refusal/recovery
+  fixture.
+- [x] Verified FR-11 has a direct banner/canonical-link test.
+- [ ] Replace FR-12's independent quote-sensitive greps with one semantic changeset
+  assertion (W9).
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.50/10, iteration 2.** The revision resolves W1, W2, W4, W5, and W6 and
-raises the PRD from a corpus-wide immediate failure to a credible implementation plan.
-It remains below the Phase-2 PASS band because JavaScript-safe decimal validation is not
-specified, `pnpm changeset status` succeeds when no changeset exists, and the new root
-configuration file changes the control-artifact set for existing worktrees without a
-documented/tested transition.
+**PASS — 8.43/10, iteration 3.** The lint passed again, no hard cap applies, and the
+revision resolves W3 and W8 while giving FR-11 direct evidence. The config's lexical
+decimal contract is safe for all legal numeric values, the proposed root cutoff is
+coherent, and the documented worktree transition matches the current control-artifact
+implementation.
 
-The lint passed again. The cutoff itself is coherent: package default `enforceFrom: 1`
-is appropriate for a fresh adopter, while this repository's prospective `17` cutoff
-keeps legacy missing headers green and still checks present bad headers. Two-decimal
-integer-cent recomputation is mathematically exact; the remaining problem is accepting
-legal two-decimal JSON inputs without binary-float false rejection. The doc-claims
-grammar does not scan this PRD or arbitrary `_brain` records, so neither can trigger the
-new checker.
+W9 is a binding Phase 3/6 watch item, not a blocker: make FR-12 parse one changeset
+entry rather than independently grepping for a single-quoted package line and a sentence.
+The current commands can reject a valid double-quoted YAML entry or certify a minor
+declaration and compatibility sentence that appear in different changesets. Phase 4
+should use a high-tier implementation agent; Phase 6 should use a high-tier auditor.

@@ -5,15 +5,15 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-020-adopter-enablement.md` |
-| Score                  | 7.000/10 |
-| Verdict                | ITERATE |
-| Iteration              | 2 |
-| Model Tier (Execution) | Do not assign — fix PRD first |
-| Model Tier (Audit)     | — |
+| Score                  | 8.500/10 |
+| Verdict                | PASS |
+| Iteration              | 3 |
+| Model Tier (Execution) | high |
+| Model Tier (Audit)     | high |
 | Scored by              | independent GPT-5.6 Terra scorer |
 | Self-scored            | no |
 | Date                   | 2026-07-25 |
-| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-020` exit 0 (iteration 2) |
+| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-020` exit 0 (iteration 3) |
 | State Record           | pending — intentionally not updated; this assessment did not run `gate status` |
 
 ---
@@ -22,8 +22,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign | The fixture, distribution, and verification contracts require unresolved design choices. |
-| Phase 6 (Audit)     | — | Re-score after the example commands and class-default semantics are made executable. |
+| Phase 4 (Execution) | high | Score is in the 8–8.9 band. The change crosses package examples, parser fixtures, tarball allowlisting, and docs surfaces; the main risk is preserving the specified adopter workflow exactly. |
+| Phase 6 (Audit)     | high | Audit must attempt the cookbook from a fresh adopter-shaped repository, challenge every claimed docs assertion, and confirm PRD-019 documentation survives the shared CLI-page edit. |
 
 ---
 
@@ -127,6 +127,29 @@
   `mergeGateCommands`); it has no subtraction/override behavior. The described outcome
   is impossible without a production semantic change that the PRD prohibits.
 
+### Iteration 3 Addendum — Revision Verification
+
+- **W2 resolved.** FR-2 now copies the route-guard gallery's actual hard-cap contract:
+  `route-deny-test`, `src/routes/**`, `Deny test: \`[^\`]+\``, and the canonical message.
+  It also changes the manifest command to the adopter's `pnpm verify:route-guards` and
+  explicitly instructs copying the script into `scripts/verify-route-guards.mjs`. This
+  matches the shipped example README; the §7 rule and DO NOT list forbid a
+  package-checkout-relative command.
+- **W4 resolved.** FR-3 now asserts the four-floor ordering, the concrete non-empty hard
+  cap and compilable regex, all class/default/post-merge command safety, README command
+  coverage plus failure descriptions, two malformed-manifest failures, and the
+  require-line's negative/positive behavior. The §11 test command is now meaningful
+  evidence for FRs 1–3, rather than parser acceptance alone.
+- **W7 resolved.** FR-1 accurately describes class defaults as additive, cites the
+  runner's `resolveClassGates`/`mergeGateCommands` behavior, and tells adopters that a
+  narrower floor requires editing `phases["4"]`.
+- **W8 — watch item, not a blocker.** The specified fixture proves the manifest's
+  commands are safe and the README names them, but does not explicitly build a temporary
+  adopter package with `scripts/verify-route-guards.mjs` and its package script before
+  executing `pnpm verify:route-guards`. The requirement is unambiguous enough to
+  implement; Phase 3 should bind that end-to-end assertion so the portability claim is
+  exercised rather than inferred.
+
 ---
 
 ## Scorecard
@@ -135,17 +158,17 @@ Class `feature` weights, per `prompts/phase-2-readiness-scorer.md`.
 
 | #         | Dimension                | Weight | Score      | Notes |
 | --------- | ------------------------ | ------ | ---------- | ----- |
-| 1         | Clarity                  | 15%    | 7.0/10     | The executability checklist passes and FR-3 is concrete, but FR-2 still omits the actual hard-cap contract and describes an adopter command that cannot run in the claimed copy-only shape. |
-| 2         | Completeness             | 20%    | 6.5/10     | Tarball ownership, docs semantics, and sequencing are now covered; example semantics still permit empty hard caps and unverified README claims. |
-| 3         | Technical Depth          | 25%    | 6.0/10     | Correct parser seam and package audit, but a class default cannot narrow Phase 4 and the generic plugin invocation is not portable to an adopter repository. |
-| 4         | Multi-Tenancy & Security | 20%    | 8.5/10     | No protected route/query/payload surface; parser safety and the no-network/no-push constraints remain applicable. |
-| 5         | Scope & Testability      | 10%    | 6.5/10     | Every FR now invokes a test, but the example test's specified assertions do not prove all promised manifest and README behavior. |
-| 6         | Migration & Rollback     | 10%    | 8.0/10     | Additive, reversible, and now owns distribution; PRD-019 sequencing is a stated preflight rather than merely a note. |
-| **Total** | **Weighted**             |        | **7.000/10** | **ITERATE** |
+| 1         | Clarity                  | 15%    | 8.5/10     | Every FR has concrete targets and root-runnable verification; the former fixture, cap, and class semantics ambiguities are resolved. |
+| 2         | Completeness             | 20%    | 8.0/10     | Covers content, parser behavior, semantic docs proof, exact tarball contents, and sequencing. Docked for not explicitly executing the copied adopter plugin workflow. |
+| 3         | Technical Depth          | 25%    | 8.5/10     | Uses the real parser/safety mechanisms, canonical hard-cap contract, correct class-gate semantics, and a portable local-script integration pattern. |
+| 4         | Multi-Tenancy & Security | 20%    | 9.0/10     | No protected route/query/payload surface; safety checks, no network, zero runtime dependencies, and no-push constraints hold. |
+| 5         | Scope & Testability      | 10%    | 8.0/10     | Bounded content/test scope with behavioral tests for every FR. W8 is a useful end-to-end enhancement, not a missing design decision. |
+| 6         | Migration & Rollback     | 10%    | 9.0/10     | Additive and revertible; exact package distribution and PRD-019 Ship Verified ordering are explicitly wired. |
+| **Total** | **Weighted**             |        | **8.500/10** | **PASS** |
 
 Weighted sum:
-`0.15×7.0 + 0.20×6.5 + 0.25×6.0 + 0.20×8.5 + 0.10×6.5 + 0.10×8.0`
-= `1.05 + 1.30 + 1.50 + 1.70 + 0.65 + 0.80 = 7.000`.
+`0.15×8.5 + 0.20×8.0 + 0.25×8.5 + 0.20×9.0 + 0.10×8.0 + 0.10×9.0`
+= `1.275 + 1.60 + 2.125 + 1.80 + 0.80 + 0.90 = 8.500`.
 
 Hard caps checked — none triggered:
 
@@ -159,25 +182,25 @@ Hard caps checked — none triggered:
 
 ---
 
-## Missing Pieces (iteration 2 watch items)
+## Missing Pieces (iteration 3 watch items)
 
 1. **W1 — resolved.** FR-3 now has the requested root/config/parser/path/mutation
    contract.
-2. **W2 — still open: make the hard cap and plugin runnable.** Write the actual object
-   values in FR-2 (the existing example is the canonical source), state where a generic
-   adopter copies the plugin, and wire a command that resolves there. Add a fixture that
-   proves the cap fires without its required evidence and passes with it.
+2. **W2 — resolved.** FR-2 now names the canonical hard-cap values, adopter-local script
+   location, and adopter package script; FR-3 tests the cap's negative/positive evidence
+   behavior.
 3. **W3 — resolved.** FR-8 owns the exact tarball allowlist and runs `pack.test.ts`.
-4. **W4 — still open: make example evidence semantic.** Require
-   `example-manifests.test.ts` to assert every stated Phase-4/class-default/post-merge
-   command, the non-empty concrete hard cap and its four fields, and the README key/failure
-   explanations. Keep FR-7's docs assertions.
+4. **W4 — resolved.** FR-3 now requires all of the promised manifest, README, and cap
+   assertions; FR-7 remains the semantic docs test.
 5. **W5 — resolved.** The overlap claim is corrected; the Ship Verified preflight and
    preservation requirement are explicit.
 6. **W6 — resolved.** The PRD distinguishes test code from production behavior.
-7. **W7 — new: reconcile class-default semantics.** Remove “hotfix narrows the floor,”
-   or change the example to demonstrate class defaults adding conditional gates. Do not
-   change runner semantics under this PRD.
+7. **W7 — resolved.** FR-1 now demonstrates additive class defaults and explains how an
+   adopter narrows a floor without changing runner semantics.
+8. **W8 — bind an adopter-shaped plugin execution fixture.** In Phase 3, require the
+   fixture to copy `check.mjs`, create the package script, and execute
+   `pnpm verify:route-guards` in a temporary adopter root. This is a watch item for
+   Phase 6, not a readiness blocker.
 
 ---
 
@@ -187,6 +210,7 @@ Hard caps checked — none triggered:
 | - | ---------- | ----- | ------- | ----------- |
 | 1 | 2026-07-25 | 6.075 | ITERATE | Initial independent assessment. Lint passes, but measured package distribution, fixture specification, semantic verification, and PRD-019 overlap gaps prevent autonomous execution. |
 | 2 | 2026-07-25 | 7.000 | ITERATE | W1, W3, W5, and W6 resolved; docs tests replace greps. Re-score found the monorepo command is not runnable by a copy-only adopter, FR-2 still lacks actual hard-cap values, and class defaults cannot narrow Phase 4. |
+| 3 | 2026-07-25 | 8.500 | PASS | W2, W4, and W7 resolved: canonical cap values and adopter-local plugin wiring are explicit; fixture semantics now cover the manifest and README contract; class defaults are correctly additive. W8 carries forward as a Phase 3/6 end-to-end fixture watch item. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
@@ -204,25 +228,25 @@ Hard caps checked — none triggered:
   README; the stated gallery premise is real.
 - [x] `package.json` already includes `examples` in `files`.
 - [x] W1: real-parser fixture defines roots, config, plugin resolution, and malformed case.
-- [ ] W2: generic monorepo hard-cap/class-default contract has exact values and an
+- [x] W2: generic monorepo hard-cap/class-default contract has exact values and an
   adopter-runnable plugin command.
 - [x] W3: exact tarball allowlist (`test/pack-manifest.json`) is owned and tested.
-- [ ] W4: every §11 test proves all promised example and README behavior, not only
+- [x] W4: every §11 test proves all promised example and README behavior, not only
   parser acceptance and docs claims.
 - [x] W5: PRD-019 sequencing has a Ship Verified preflight; the false quickstart-overlap
   claim is corrected.
 - [x] W6: scope wording acknowledges the new test code.
-- [ ] W7: class-default example matches the runner's additive semantics.
+- [x] W7: class-default example matches the runner's additive semantics.
+- [ ] W8: Phase 3 binds execution of the copied adopter-local route-guard script.
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.000/10.** The lint is green and no hard cap is triggered. The revision
-substantially improves testability, distribution, sequencing, and scope accuracy, but it
-still makes a generic adopter run a package-checkout-relative plugin command, does not
-state the hard-cap values it asks the implementer to write, and requires a class default
-to perform an operation the runner cannot perform.
+**PASS — 8.500/10.** The lint is green and no hard cap is triggered. The iteration-three
+revision resolves every prior blocking watch item: the cookbook now uses the canonical
+hard-cap contract, command paths are adopter-local, fixture evidence covers its claimed
+semantics, and class-default behavior matches the runner.
 
-Resolve W2, W4, and W7, then re-run `node packages/provegate/dist/cli.js check PRD-020` and
-independently re-score before Phase 3.
+Proceed to Phase 3. W8 is binding Phase 3/6 audit work: execute the copied local plugin
+from a temporary adopter-shaped root, rather than only asserting its README instructions.

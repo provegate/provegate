@@ -1,13 +1,13 @@
 # PRD-020: Adopter Enablement — Manifest Cookbook, Brownfield Playbook, Practices-First Quickstart
 
-> **Status**: Draft
+> **Status**: Approved
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `adopter-enablement`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 2 (Readiness)
 > **PRD Class**: feature
 > **Autonomous Close**: operator-gated
 > **Value**: 3.90 (MF/UI/TL/AR/RM: 3/5/2/5/5)
