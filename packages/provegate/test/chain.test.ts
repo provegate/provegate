@@ -729,3 +729,86 @@ describe('phase 6 round 1 regressions', () => {
     expect(result.why).toContain('its watch cannot be evaluated');
   });
 });
+
+describe('phase 6 round 2 self-attack (before the independent round returned)', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    '- `_brain/adr/ADR-0001-x.md` — the decision',
+  ];
+
+  it('an acceptance naming a LONGER sibling path does not waive the real one', () => {
+    // Found attacking round 1's own fix: `includes(path)` is true for
+    // `_brain/adr/ADR-0001-x.md.bak`, so an acceptance about a backup would
+    // have waived removal of the record itself. Fails open, which is the one
+    // direction a waiver may never fail in.
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: ['| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — moved |'],
+    });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': baseline,
+        '_state/acceptances.json': JSON.stringify({
+          acceptances: [
+            {
+              prd: 'PRD-002',
+              owner: 'owner',
+              items: ['archived _brain/adr/ADR-0001-x.md.bak during cleanup'],
+              reason: 'unrelated cleanup of a backup file',
+              date: '2026-07-25',
+              method: 'interactive',
+            },
+          ],
+        }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('does not name');
+  });
+
+  it('and the exact path, however it is punctuated in prose, still waives it', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: ['| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — moved |'],
+    });
+    for (const item of [
+      '_brain/adr/ADR-0001-x.md',
+      'removed `_brain/adr/ADR-0001-x.md`, moved to PRD-022',
+      'the decision at _brain/adr/ADR-0001-x.md.',
+    ]) {
+      const root = gitRepo(
+        {
+          '_prds/wip/p.md': baseline,
+          '_state/acceptances.json': JSON.stringify({
+            acceptances: [
+              {
+                prd: 'PRD-002',
+                owner: 'owner',
+                items: [item],
+                reason: 'the decision moved to PRD-022',
+                date: '2026-07-25',
+                method: 'interactive',
+              },
+            ],
+          }),
+          ...STORE(),
+        },
+        CAPTURED_RECORD,
+      );
+      const result = gate(
+        chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+        'no weakening',
+      );
+      expect(result.ok, `${item}: ${result.why ?? ''}`).toBe(true);
+      expect(result.waived).toBe(true);
+    }
+  });
+});

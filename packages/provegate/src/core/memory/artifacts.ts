@@ -513,7 +513,19 @@ export function changelogApproves(
  * for the PRD let an unrelated operator-row waiver license a broken promise.
  */
 export function acceptanceCoversPath(items: readonly string[], path: string): boolean {
-  return items.some((item) => typeof item === 'string' && item.includes(path));
+  // Token equality, not substring containment. A substring test fails OPEN on
+  // the one case that matters: `_brain/learnings/x.md` is a substring of
+  // `_brain/learnings/x.md.bak`, so an acceptance naming a backup, a draft, or
+  // any longer sibling would waive the removal of the real record. Items are
+  // human-written prose, so the path is matched as a whole token with its
+  // trailing sentence punctuation stripped.
+  return items.some((item) => {
+    if (typeof item !== 'string') return false;
+    return item
+      .split(/[\s`,;()[\]]+/)
+      .map((token) => token.replace(/[.,;:]+$/, ''))
+      .includes(path);
+  });
 }
 
 // ---------------------------------------------------------------------------
