@@ -19,6 +19,7 @@ const CHECKS = [
   'verify-deferred.mjs',
   'verify-test-task-coverage.mjs',
   'verify-gates-wired.mjs',
+  'verify-pack-drift.mjs',
 ];
 
 const root = targetRoot();
