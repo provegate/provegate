@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | pack-vs-repo drift check; test-hygiene fix (see Deferrals) |
+| Next candidates | pack-vs-repo drift check (see Deferrals) |
 
 ## Deferrals
 
@@ -30,11 +30,11 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Topic | Item | Owner | Due (YYYY-MM-DD) | Renewals | Note |
 |-------|------|-------|------------------|----------|------|
-| test hygiene | the provegate suite writes the repo's real `_state/prds.json` when run in full (parallel) — a fixture's root discovery escapes to the developer's checkout; reproduces only in the full run, never file-by-file | owner | 2026-08-15 | 0 | found while landing the operator-row fix; harmless today (a `generatedAt` bump) but it means a fixture can reach the live tree |
 | pack drift | no check that `packages/provegate/practices/**` still matches this repo's live layer — the pack can silently rot | owner | 2026-08-22 | 0 | accepted at PRD-016 v1 (readiness §3); recorded so it cannot become "never" |
 
 ## Recent activity
 
+- 2026-07-25 — test-sandbox fix landed (`43eb33e`): the NO_COLOR spawns ran with no cwd and rewrote the live `_state/prds.json`; they now run in a fixture repo with a slug guard, deferral closed
 - 2026-07-25 — operator-row count fix landed (`ddceaa4`): `countOperatorHandoff` now counts checkbox rows, so a mis-formatted operator row arms the gate instead of disarming it; mutation-checked regression cover, deferral closed
 - 2026-07-25 — PRD-016 practices-pack **Ship Verified**: owner acceptance recorded, `gate land` merged to local main (unpushed). Close found the operator gate reporting 0 rows because the row was a checkbox bullet — fixed, captured as a `_brain` learning, parser hardening deferred
 - 2026-07-25 — both tooling deferrals resolved (guard/scanner hardenings upstreamed; verify gates wired into CI for `gate check --wiring`); PRD-016 quorum 3/3 pass, awaiting operator acceptance
