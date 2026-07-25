@@ -719,3 +719,54 @@ describe('phase 6 round 6 regressions', () => {
     expect(store.issues).toEqual([]);
   });
 });
+
+describe('phase 6 round 7 self-attack (before the independent round returned)', () => {
+  it('a horizontal rule under a bullet does not truncate the section', () => {
+    // The setext stop must not fire on a thematic break. A section whose last
+    // bullet is followed by `---` is an ordinary PRD shape, and cutting it there
+    // would drop a real declaration — fail-closed, but still wrong.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/first.md` — declared.',
+      '- learning: `_brain/learnings/last.md` — also declared.',
+      '---',
+      '',
+      '## Conflict Surface',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/first.md',
+      '_brain/learnings/last.md',
+    ]);
+  });
+
+  it('a table separator does not read as a heading underline', () => {
+    const doc = [
+      '## Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
+      '',
+    ].join('\n');
+    expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(true);
+  });
+
+  it('but a real setext heading still terminates the section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      'Other',
+      '-----',
+      '',
+      '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/real.md',
+    ]);
+  });
+});

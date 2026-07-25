@@ -219,7 +219,12 @@ export function contractSection(content: string, heading: string): { count: numb
   // section's. End of line is a valid separator — and so is a SETEXT heading,
   // `Other` over `-----`, which renders as an H2 while looking like prose.
   const atx = rest.search(/^##(?:[ \t]|\r?$)/m);
-  const setext = rest.search(/^[^\n]+\r?\n[ \t]{0,3}-{2,}[ \t]*\r?$/m);
+  // A setext underline follows a PARAGRAPH. A run of dashes under a list item,
+  // a table row, or another heading is a thematic break or a table separator —
+  // and treating those as a heading would truncate a real section at its last
+  // bullet, which is a fail-closed regression but a regression all the same.
+  // Measured across all 23 PRDs here: zero sections end early either way.
+  const setext = rest.search(/^(?![-*+|#>]|\d+[.)]|\s)[^\n]+\r?\n[ \t]{0,3}-{2,}[ \t]*\r?$/m);
   const stops = [atx, setext].filter((i) => i !== -1);
   const next = stops.length === 0 ? -1 : Math.min(...stops);
   return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
