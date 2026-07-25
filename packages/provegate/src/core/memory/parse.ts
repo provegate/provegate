@@ -16,10 +16,13 @@ import { containedPath } from '../run/init.js';
 export const LEARNING_TYPES = ['gotcha', 'convention', 'reference', 'decision'] as const;
 export const SCOPES = ['workflow', 'project'] as const;
 export const STATUSES = ['active', 'superseded'] as const;
+/** ADRs carry a decision lifecycle, learnings a validity one — two vocabularies
+ * that predate this parser and must not be silently merged into one. */
+export const ADR_STATUSES = ['proposed', 'accepted', 'superseded'] as const;
 
 export type LearningType = (typeof LEARNING_TYPES)[number];
 export type Scope = (typeof SCOPES)[number];
-export type Status = (typeof STATUSES)[number];
+export type Status = (typeof STATUSES)[number] | (typeof ADR_STATUSES)[number];
 
 /** A problem with one record, tagged `<file>:<field>` so it can be repaired. */
 export interface RecordIssue {
@@ -251,8 +254,12 @@ export function validateRecord(
   if (scope !== null && !SCOPES.includes(scope as Scope)) {
     issues.push({ path: at('scope'), message: `'${scope}' is not one of ${SCOPES.join('|')}` });
   }
-  if (status !== null && !STATUSES.includes(status as Status)) {
-    issues.push({ path: at('status'), message: `'${status}' is not one of ${STATUSES.join('|')}` });
+  const allowedStatuses: readonly string[] = isAdr ? ADR_STATUSES : STATUSES;
+  if (status !== null && !allowedStatuses.includes(status)) {
+    issues.push({
+      path: at('status'),
+      message: `'${status}' is not one of ${allowedStatuses.join('|')}`,
+    });
   }
 
   const supersededBy = asString(values.get('superseded-by'));

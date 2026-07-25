@@ -163,37 +163,37 @@ and commands it names still exist **before** the dependent task starts (task 0.2
         positive shapes; the deny cases come from the shared corpus in 4.2 so they cannot
         drift from the standalone verifier's.
 
-- [ ] 4.0 FR-4 — Standalone verifier and the two-parser contract (W12)
-  - [ ] 4.1 W12 — write the corpus coverage matrix into
+- [x] 4.0 FR-4 — Standalone verifier and the two-parser contract (W12)
+  - [x] 4.1 W12 — write the corpus coverage matrix into
         `packages/provegate/test/fixtures/memory-record-cases.json` as a documented header
         block first: every validated field × every failure mode it can exhibit
         (missing, empty, wrong type, placeholder, out-of-set, unsupported YAML, containment
         escape, duplicate, broken supersession), plus the positive baseline. The matrix is
         the contract; the cases implement it.
-  - [ ] 4.2 Populate the corpus per that matrix. Each case carries an id, the record
+  - [x] 4.2 Populate the corpus per that matrix. Each case carries an id, the record
         bytes, and the expected outcome — never a per-parser expectation.
-  - [ ] 4.3 Upgrade `scripts/verify/lib.mjs` and `scripts/verify/verify-brain.mjs` to the
+  - [x] 4.3 Upgrade `scripts/verify/lib.mjs` and `scripts/verify/verify-brain.mjs` to the
         same schema: real folded-scalar reading, meaningful description, body sections,
         ADR sections and type, status/supersession, tags/watch containment, exactly one
         INDEX pointer per public record, unique names, and no public pointer resolving
         under `private/`.
-  - [ ] 4.4 W10 — implement the 120-character INDEX hook limit in
+  - [x] 4.4 W10 — implement the 120-character INDEX hook limit in
         `scripts/verify/verify-brain.mjs` as a **forward-only constraint** measured over
         hook text after the Markdown link. Do not shorten any existing hook: the measured
         baseline is zero violations (longest 102). If 0.4 reported a non-zero count, stop
         and reconcile with **Deferrals & Decisions** before editing a record.
-  - [ ] 4.5 Mirror 4.3 and 4.4 into
+  - [x] 4.5 Mirror 4.3 and 4.4 into
         `packages/provegate/practices/verify/{lib,verify-brain}.mjs`; the shipped copy is
         genericized, so port behavior, not repo-specific wording.
-  - [ ] 4.6 Run the same corpus against the TypeScript parser in
+  - [x] 4.6 Run the same corpus against the TypeScript parser in
         `packages/provegate/test/memory.test.ts` and against the spawned standalone
         verifier in `packages/provegate/test/practices-pack.test.ts`; a case whose two
         outcomes disagree fails both suites.
-  - [ ] 4.7 W10 mutation cover in `packages/provegate/test/practices-pack.test.ts`: a
+  - [x] 4.7 W10 mutation cover in `packages/provegate/test/practices-pack.test.ts`: a
         121-character hook turns the validator red, a `gotcha` record with no `**Why:**`
         turns it red, and an empty `description: >-` turns it red — each proven by
         mutation, not by asserting today's green.
-  - [ ] 4.8 Declare the corpus and any out-of-package path the new tests read as explicit
+  - [x] 4.8 Declare the corpus and any out-of-package path the new tests read as explicit
         turbo inputs for the package test task; a fixture read from outside declared
         inputs replays a cached green (`turbo-cache-masks-out-of-input-reads`). Verify by
         re-running the affected suite with the cache busted.
@@ -318,6 +318,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   readiness iteration 3 found 0 INDEX hooks over 120 (longest 102) and 23/23 records
   already carrying `**Why:**`, `**How to apply:**`, and `provenance`. Task 0.4 re-measures
   before any editing decision.
+- 4.8 — the plan said to declare external reads as explicit turbo inputs. That instruction predates the cache-key fix that landed before Phase 4: `inputs` narrows a task's hash, so declaring any is now a `verify:turbo-inputs` failure. The property still holds by a better route — the corpus and the spawned validator are both inside the package, so the test task already hashes them.
 - 2.4 (W13) — the dead-config window is ACCEPTED and documented, not hidden: `memory.verifyCommand` and `memory.retroAfterCompleted` are validated by this PRD and consumed by PRD-018/019, so a released version may carry validated fields nothing reads. The alternative — landing the runner and its configuration together — is precisely the whole-repo change the three-PRD split exists to avoid. The reason is written where a reader meets the fields, in the `MemoryConfig` doc comments, rather than only here.
 - 1.4 — the frozen-snapshot digest lives in `content-prompts.test.ts` as the PRD says, not in a `scripts/verify/` gate. A verify script would be cache-immune, but adding one means touching `verify-workflow.mjs` and `package.json`, neither of which is in this PRD's Conflict Surface (and `verify-workflow.mjs` is claimed by PRD-021). Residual risk: a docs-only snapshot edit could replay a cached local pass; CI checks out fresh with no restored turbo cache, so the gate is real there. Recorded rather than hidden.
 - (none deferred yet)
@@ -328,6 +329,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task | Notes |
 | ---------- | ---- | ----- |
+| 2026-07-25 | 4.0 | FR-4 landed: 42-case conformance corpus, both implementations, mutation cover. Writing the corpus is what found the schema bug — ADRs use `proposed/accepted/superseded` and learnings `active/superseded`, two vocabularies the first draft had merged into one, which would have rejected every valid ADR PRD-018 writes. That is exactly the "thin corpus proves nothing" failure W12 names, caught by broadening the matrix rather than by review. The standalone validator is spawned, not imported: it is untyped `.mjs` because it must run where no TypeScript and no package exist, so the test exercises it the way an adopter does. The shipped copy under `practices/` is the one under test — an adopter runs that file, and the drift ledger keeps the repository's copy reconciled with it. 4.8 resolved differently than planned: the corpus and the spawned validator both live INSIDE the package, so they are already in the test task's hash, and declaring turbo `inputs` is now forbidden by `verify:turbo-inputs`. 543 tests green. |
 | 2026-07-25 | 3.0 | FR-3 parser landed. The subset was derived from the corpus, not guessed: an inventory of all 44 records and templates found exactly four frontmatter forms (scalar, folded `>-` with continuations, inline list, `#` comment) and nothing else, so everything outside them fails loud. Two design calls came out of the tests. A `#` opens a comment only when whitespace precedes it — YAML's rule, borrowed rather than invented, because two implementations must agree on where a value ends. And an ADR is exempt from `**Why:**`/`**How to apply:**`: its four required sections ARE its rationale, so demanding both shapes would make every ADR argue twice. The parser accepts all 44 live records with zero issues, which is task 5.3's assertion arriving early. 2.2 closed here — `containedPath` is imported from the init module rather than reimplemented; only its message is re-tagged, since the risk in duplication is the algorithm drifting, not the wording. 538 tests green. |
 | 2026-07-25 | 2.0 | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates. |
 | 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red. |

@@ -1,0 +1,379 @@
+{
+  "_readme": [
+    "Conformance corpus for the memory record schema (PRD-017 FR-3/FR-4, watch item W12).",
+    "",
+    "The TypeScript parser and the stdlib validator cannot import each other: the validator",
+    "runs in repositories where the package is not installed. This file is their entire",
+    "contract. Every case is executed against BOTH, and against the shipped practices copy;",
+    "a case whose outcomes disagree fails the suite.",
+    "",
+    "The expectation is deliberately implementation-neutral: `valid`, plus for an invalid",
+    "case the FIELD names expected to be flagged. Messages are free to differ; agreement on",
+    "what is wrong is the contract, agreement on wording is not.",
+    "",
+    "`structure` is the field name for a problem that belongs to no single key (a missing",
+    "fence, an unparseable line, a block list).",
+    "",
+    "Coverage matrix — every field crossed with every failure mode it can exhibit. Adding a",
+    "validated field means adding its row; a thin corpus is how two parsers 'agree' while",
+    "proving nothing."
+  ],
+  "_matrix": {
+    "structure": [
+      "missing fence",
+      "duplicate key",
+      "unknown key",
+      "block list",
+      "literal block",
+      "nested map",
+      "unparseable line"
+    ],
+    "name": ["missing", "slug mismatch", "not kebab-case", "ADR pattern"],
+    "description": ["missing", "empty fold", "placeholder"],
+    "type": ["missing", "out of set", "ADR must be decision"],
+    "scope": ["out of set"],
+    "status": ["out of set", "superseded without target", "ADR vocabulary vs learning vocabulary"],
+    "superseded-by": ["missing when superseded", "present when not superseded"],
+    "links": ["invalid slug", "empty is legal"],
+    "tags": ["empty when present"],
+    "watch": ["empty when present", "escapes workspace", "absolute"],
+    "body": [
+      "missing Why",
+      "missing How to apply",
+      "ADR missing a required section",
+      "reference exempt"
+    ]
+  },
+  "cases": [
+    {
+      "id": "valid-minimal",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-folded-description",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: >-\n  folded first line\n  folded second line\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-links-empty",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks: []\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "an empty links list is meaningful: a record with no relations"
+    },
+    {
+      "id": "valid-tags-and-watch",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ntags: [parsing, gates]\nwatch: [packages/provegate/src/**]\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-provenance",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nprovenance: workflow-seed\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-reference-without-rationale",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a pointer to a dashboard\ntype: reference\nscope: project\nstatus: active\n---\n\nSee the dashboard.\n",
+      "note": "reference records carry no Why/How"
+    },
+    {
+      "id": "valid-superseded",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\nsuperseded-by: newer-slug\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-adr",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": true,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "note": "an ADR's four sections are its rationale; Why/How are not required"
+    },
+    {
+      "id": "valid-comment-line",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\n# a leading comment\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-hash-inside-value",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "content": "---\nname: sample\ndescription: token#fragment stays  # this is a comment\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "no-frontmatter-fence",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "no fence here\n",
+      "fields": ["structure"]
+    },
+    {
+      "id": "duplicate-key",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ndescription: a second description\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["description"]
+    },
+    {
+      "id": "unknown-key",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nprovanance: workflow-seed\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["provanance"]
+    },
+    {
+      "id": "block-list-not-supported",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks:\n  - a-slug\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["structure"]
+    },
+    {
+      "id": "literal-block-not-supported",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: |\n  literal\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["watch"]
+    },
+    {
+      "id": "nested-map-not-supported",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nnested:\n  key: value\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["nested"]
+    },
+    {
+      "id": "unparseable-line",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nnot a mapping line\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["structure"]
+    },
+    {
+      "id": "name-missing",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["name"]
+    },
+    {
+      "id": "name-slug-mismatch",
+      "slug": "different-slug",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["name"]
+    },
+    {
+      "id": "slug-not-kebab-case",
+      "slug": "Sample_Record",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: Sample_Record\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["name"]
+    },
+    {
+      "id": "description-empty-fold",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: >-\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["description"],
+      "note": "the exact record the pre-PRD-017 validator accepted"
+    },
+    {
+      "id": "description-placeholder",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: <one line: what the trap is>\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["description"]
+    },
+    {
+      "id": "type-missing",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["type"]
+    },
+    {
+      "id": "type-out-of-set",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: anecdote\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["type"]
+    },
+    {
+      "id": "scope-out-of-set",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: team\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["scope"]
+    },
+    {
+      "id": "status-out-of-set",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: draft\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["status"]
+    },
+    {
+      "id": "superseded-without-target",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["superseded-by"]
+    },
+    {
+      "id": "superseded-by-without-status",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nsuperseded-by: newer-slug\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["superseded-by"]
+    },
+    {
+      "id": "tags-empty",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ntags: []\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["tags"]
+    },
+    {
+      "id": "watch-empty",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: []\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["watch"]
+    },
+    {
+      "id": "watch-escapes-workspace",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [../outside/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["watch"]
+    },
+    {
+      "id": "watch-absolute",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [/etc/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["watch"]
+    },
+    {
+      "id": "links-invalid-slug",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks: [Not A Slug]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "fields": ["links"]
+    },
+    {
+      "id": "body-missing-why",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**How to apply:** h\n",
+      "fields": ["body"]
+    },
+    {
+      "id": "body-missing-how",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n",
+      "fields": ["body"]
+    },
+    {
+      "id": "adr-wrong-type",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "fields": ["type"]
+    },
+    {
+      "id": "adr-missing-section",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: active\n---\n\n## Context\nc\n## Decision\nd\n",
+      "fields": ["body"]
+    },
+    {
+      "id": "adr-bad-name",
+      "slug": "adr-one",
+      "isAdr": true,
+      "valid": false,
+      "content": "---\nname: adr-one\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: active\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "fields": ["name"]
+    },
+    {
+      "id": "valid-adr-status-accepted",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": true,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "note": "ADRs use proposed|accepted|superseded, not the learning vocabulary"
+    },
+    {
+      "id": "valid-adr-status-proposed",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": true,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: proposed\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "adr-status-from-learning-vocabulary",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["status"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: active\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
+      "note": "`active` is a learning status; an ADR must not borrow it"
+    },
+    {
+      "id": "learning-status-from-adr-vocabulary",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["status"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: accepted\n---\n\n**Why:** w\n**How to apply:** h\n"
+    }
+  ]
+}

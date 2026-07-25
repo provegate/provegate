@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_CONFIG,
@@ -7,6 +11,8 @@ import {
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
 import { validateRecord } from '../src/core/memory/index.js';
+
+const fixturesDir = fileURLToPath(new URL('./fixtures', import.meta.url));
 
 /**
  * PRD-017 FR-2: the memory configuration surface. Two properties carry the
@@ -287,7 +293,8 @@ describe('record schema (FR-3)', () => {
       'description: a real description',
       'type: decision',
       'scope: workflow',
-      'status: active',
+      // ADRs carry the decision lifecycle, not the learning one.
+      'status: accepted',
     ];
     expect(
       validateRecord(fm(adrLines, adrBody), 'x.md', 'ADR-0001-a-decision', { isAdr: true }).issues,
@@ -323,5 +330,117 @@ describe('record schema (FR-3)', () => {
         root: process.cwd(),
       }).issues,
     ).toEqual([]);
+  });
+});
+
+/**
+ * PRD-017 FR-4, watch item W12: the conformance corpus. The typed parser and the
+ * standalone validator cannot import each other — the validator runs where this
+ * package is not installed — so this corpus is their entire contract. Both are
+ * executed against every case, and the assertion is deliberately
+ * implementation-neutral: they must agree on WHETHER a record is valid and on
+ * WHICH field is at fault, never on wording.
+ *
+ * The standalone side under test is the SHIPPED copy under `practices/`, not the
+ * repository's own: an adopter runs that file, and `verify:pack-drift` is what
+ * keeps the repository's copy reconciled with it.
+ */
+describe('record conformance corpus (FR-4, W12)', () => {
+  const corpus = JSON.parse(
+    readFileSync(join(fixturesDir, 'memory-record-cases.json'), 'utf8'),
+  ) as {
+    _matrix: Record<string, string[]>;
+    cases: {
+      id: string;
+      slug: string;
+      isAdr: boolean;
+      valid: boolean;
+      fields?: string[];
+      content: string;
+    }[];
+  };
+
+  /** `<file>:<field>` → field; a line-tagged issue belongs to no single key. */
+  const tsField = (path: string): string => {
+    const at = path.indexOf(':');
+    if (at === -1) return 'structure';
+    const field = path.slice(at + 1);
+    return field.startsWith('line ') ? 'structure' : field;
+  };
+
+  it('covers every validated field in the documented matrix', () => {
+    // A corpus that drifts behind the schema is how two parsers "agree" while
+    // proving nothing — the matrix is the contract, so it must not go stale.
+    for (const field of Object.keys(corpus._matrix)) {
+      expect(corpus._matrix[field]!.length, field).toBeGreaterThan(0);
+    }
+    expect(corpus.cases.filter((c) => c.valid).length).toBeGreaterThan(5);
+    expect(corpus.cases.filter((c) => !c.valid).length).toBeGreaterThan(20);
+  });
+
+  it('the typed parser reaches the expected verdict on every case', () => {
+    for (const c of corpus.cases) {
+      const issues = validateRecord(c.content, 'x.md', c.slug, {
+        isAdr: c.isAdr,
+        root: process.cwd(),
+      }).issues;
+      const fields = [...new Set(issues.map((i) => tsField(i.path)))];
+      if (c.valid) expect(fields, c.id).toEqual([]);
+      else for (const field of c.fields ?? []) expect(fields, c.id).toContain(field);
+    }
+  });
+
+  it('the shipped standalone validator reaches the SAME verdict on every case', () => {
+    // Spawned rather than imported: the validator is untyped `.mjs` on purpose —
+    // it must run in a repository with no TypeScript and no package installed —
+    // so the test exercises it the way an adopter does, as a real module.
+    const libPath = join(fixturesDir, '..', '..', 'practices', 'verify', 'lib.mjs');
+    const corpusPath = join(fixturesDir, 'memory-record-cases.json');
+    const script = [
+      `import { validateMemoryRecord } from ${JSON.stringify(libPath)};`,
+      `import { readFileSync } from 'node:fs';`,
+      `const corpus = JSON.parse(readFileSync(${JSON.stringify(corpusPath)}, 'utf8'));`,
+      `const out = corpus.cases.map((c) => ({`,
+      `  id: c.id,`,
+      `  fields: [`,
+      `    ...new Set(`,
+      `      validateMemoryRecord(c.content, { slug: c.slug, isAdr: c.isAdr }).issues.map(`,
+      `        (i) => i.field,`,
+      `      ),`,
+      `    ),`,
+      `  ].sort(),`,
+      `}));`,
+      `process.stdout.write(JSON.stringify(out));`,
+    ].join('\n');
+    const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+    const standalone = new Map(
+      (JSON.parse(stdout) as { id: string; fields: string[] }[]).map((r) => [r.id, r.fields]),
+    );
+
+    for (const c of corpus.cases) {
+      const ts = [
+        ...new Set(
+          validateRecord(c.content, 'x.md', c.slug, {
+            isAdr: c.isAdr,
+            root: process.cwd(),
+          }).issues.map((i) => tsField(i.path)),
+        ),
+      ].sort();
+      expect(standalone.get(c.id), `${c.id}: the two implementations disagree`).toEqual(ts);
+    }
+  });
+
+  it('keeps the two status vocabularies apart', () => {
+    // An ADR carries a decision lifecycle, a learning a validity one. Merging
+    // them would quietly accept `status: active` on an ADR.
+    const adrActive = corpus.cases.find((c) => c.id === 'adr-status-from-learning-vocabulary');
+    const learningAccepted = corpus.cases.find(
+      (c) => c.id === 'learning-status-from-adr-vocabulary',
+    );
+    expect(adrActive?.valid).toBe(false);
+    expect(learningAccepted?.valid).toBe(false);
   });
 });

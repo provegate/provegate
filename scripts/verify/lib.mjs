@@ -10,24 +10,244 @@ export function targetRoot() {
   return arg ?? process.cwd();
 }
 
-/** Minimal frontmatter parser: `--- ... ---` fence, scalar keys + `key: [a, b]` lists. */
-export function parseFrontmatter(content) {
-  const m = /^---\n([\s\S]*?)\n---/.exec(content);
-  if (!m) return null;
-  const out = {};
-  for (const line of m[1].split('\n')) {
-    const kv = /^([A-Za-z-]+):\s*(.*)$/.exec(line);
-    if (!kv) continue; // continuation line of a folded scalar (>-)
-    const [, key, raw] = kv;
-    const list = /^\[(.*)\]$/.exec(raw.trim());
-    out[key] = list
-      ? list[1]
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : raw.replace(/\s+#.*$/, '').trim();
+/**
+ * The supported record frontmatter subset (source addendum A1 §10.6). Four forms
+ * exist and no others — scalar, folded scalar, inline list, comment — so anything
+ * else produces an issue instead of being guessed.
+ *
+ * This file and the package's TypeScript parser cannot import each other: this one
+ * runs where the package is not installed. A shared conformance corpus is their
+ * only contract, which is why guessing is forbidden on both sides — a tolerant
+ * parser and a strict one disagreeing about the same file is the failure mode.
+ */
+export function parseRecordFrontmatter(content) {
+  const issues = [];
+  const values = new Map();
+  const fence = /^---\n([\s\S]*?)\n---\n?/.exec(content);
+  if (!fence) {
+    issues.push({ field: 'structure', message: 'missing frontmatter fence' });
+    return { values, body: content, issues };
   }
-  return out;
+  const body = content.slice(fence[0].length);
+  const lines = (fence[1] ?? '').split('\n');
+
+  let fold = null;
+  const flush = () => {
+    if (fold === null) return;
+    values.set(fold.key, fold.parts.join(' ').trim());
+    fold = null;
+  };
+
+  lines.forEach((line, i) => {
+    const where = `line ${i + 1}`;
+    if (line.trim().length === 0) return flush();
+    if (/^\s*#/.test(line)) return;
+    if (/^\s/.test(line)) {
+      if (fold === null) {
+        issues.push({
+          field: 'structure',
+          message: `${where}: indented line outside a folded scalar — nested maps and block lists are not supported`,
+        });
+        return;
+      }
+      fold.parts.push(line.trim());
+      return;
+    }
+    flush();
+    if (line.startsWith('- ')) {
+      issues.push({
+        field: 'structure',
+        message: `${where}: block list is not supported — use an inline list \`key: [a, b]\``,
+      });
+      return;
+    }
+    const kv = /^([A-Za-z][A-Za-z0-9-]*):(.*)$/.exec(line);
+    if (!kv) {
+      issues.push({ field: 'structure', message: `${where}: unparseable frontmatter line` });
+      return;
+    }
+    const key = kv[1];
+    const raw = kv[2].trim();
+    if (values.has(key)) {
+      issues.push({ field: key, message: 'duplicate key' });
+      return;
+    }
+    if (!KNOWN_KEYS.has(key)) {
+      issues.push({ field: key, message: 'unknown key' });
+      return;
+    }
+    if (raw === '>-' || raw === '>') {
+      fold = { key, parts: [] };
+      return;
+    }
+    if (raw === '|' || raw === '|-') {
+      issues.push({
+        field: key,
+        message: 'literal block scalar (`|`) is not supported — use a folded scalar (`>-`)',
+      });
+      return;
+    }
+    const list = /^\[(.*)\]$/.exec(raw);
+    if (list) {
+      values.set(
+        key,
+        list[1]
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean),
+      );
+      return;
+    }
+    // YAML's comment rule: a `#` opens a comment only when whitespace precedes it.
+    values.set(key, raw.replace(/\s+#.*$/, '').trim());
+  });
+  flush();
+  return { values, body, issues };
+}
+
+/** Back-compat shape for callers that just want the key/value bag. */
+export function parseFrontmatter(content) {
+  const { values, issues } = parseRecordFrontmatter(content);
+  if (issues.some((i) => i.message === 'missing frontmatter fence')) return null;
+  return Object.fromEntries(values);
+}
+
+const KNOWN_KEYS = new Set([
+  'name',
+  'description',
+  'type',
+  'scope',
+  'status',
+  'links',
+  'provenance',
+  'superseded-by',
+  'tags',
+  'watch',
+]);
+const LEARNING_TYPES = new Set(['gotcha', 'convention', 'reference', 'decision']);
+const SCOPES = new Set(['workflow', 'project']);
+const STATUSES = new Set(['active', 'superseded']);
+// ADRs carry a decision lifecycle, learnings a validity one — two vocabularies
+// that predate this validator and must not be silently merged into one.
+const ADR_STATUSES = new Set(['proposed', 'accepted', 'superseded']);
+const SLUG_RE = /^[a-z0-9-]+$/;
+const ADR_RE = /^ADR-\d{4}-[a-z0-9-]+$/;
+const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
+
+/** A watch glob's literal prefix must stay inside the workspace. */
+function watchEscapes(glob) {
+  const literal = glob.split(/[*?[]/)[0] ?? '';
+  const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
+  if (probe.length === 0) return false;
+  if (probe.startsWith('~')) return true;
+  if (/^[/\\]/.test(probe) || /^[A-Za-z]:[/\\]/.test(probe)) return true;
+  return probe.split(/[/\\]/).includes('..');
+}
+
+/**
+ * Validate one record against the schema in the source addendum. Returns issues
+ * tagged by FIELD, not by message text: the corpus asserts that both
+ * implementations agree on what is wrong, and leaves them free to word it
+ * differently.
+ */
+export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
+  const { values, body, issues } = parseRecordFrontmatter(content);
+  const str = (k) => (typeof values.get(k) === 'string' ? values.get(k) : null);
+  const list = (k) => (Array.isArray(values.get(k)) ? values.get(k) : null);
+
+  const name = str('name');
+  const type = str('type');
+  const status = str('status');
+
+  for (const key of ['name', 'description', 'type', 'scope', 'status']) {
+    const value = str(key);
+    if (value === null || value.length === 0) {
+      issues.push({ field: key, message: 'missing or empty' });
+    } else if (PLACEHOLDER_RE.test(value)) {
+      issues.push({ field: key, message: `placeholder text is not a value: ${value}` });
+    }
+  }
+
+  if (name !== null && slug !== undefined && name !== slug) {
+    issues.push({ field: 'name', message: `'${name}' does not match the filename slug '${slug}'` });
+  }
+  if (isAdr) {
+    if (slug !== undefined && !ADR_RE.test(slug)) {
+      issues.push({ field: 'name', message: 'ADR filename must match ADR-NNNN-<slug>' });
+    }
+    if (type !== null && type !== 'decision') {
+      issues.push({ field: 'type', message: `an ADR must be type: decision, not '${type}'` });
+    }
+  } else if (slug !== undefined && !SLUG_RE.test(slug)) {
+    issues.push({ field: 'name', message: 'filename slug must be kebab-case' });
+  }
+
+  if (type !== null && !LEARNING_TYPES.has(type)) {
+    issues.push({ field: 'type', message: `'${type}' is not a known type` });
+  }
+  const scope = str('scope');
+  if (scope !== null && !SCOPES.has(scope)) {
+    issues.push({ field: 'scope', message: `'${scope}' is not a known scope` });
+  }
+  const allowedStatuses = isAdr ? ADR_STATUSES : STATUSES;
+  if (status !== null && !allowedStatuses.has(status)) {
+    issues.push({ field: 'status', message: `'${status}' is not a known status` });
+  }
+
+  const supersededBy = str('superseded-by');
+  if (status === 'superseded' && (supersededBy === null || supersededBy.length === 0)) {
+    issues.push({ field: 'superseded-by', message: 'required when status is superseded' });
+  }
+  if (supersededBy !== null && supersededBy.length > 0 && status !== 'superseded') {
+    issues.push({ field: 'superseded-by', message: 'set, but status is not superseded' });
+  }
+
+  for (const key of ['links', 'tags', 'watch']) {
+    if (!values.has(key)) continue;
+    const entries = list(key);
+    if (entries === null) {
+      issues.push({ field: key, message: 'must be an inline list `[a, b]`' });
+      continue;
+    }
+    if (key !== 'links' && entries.length === 0) {
+      issues.push({ field: key, message: 'must not be empty when present' });
+    }
+    if (key === 'watch') {
+      for (const glob of entries) {
+        if (watchEscapes(glob)) {
+          issues.push({ field: 'watch', message: `'${glob}' escapes the workspace` });
+        }
+      }
+    } else {
+      for (const entry of entries) {
+        if (!SLUG_RE.test(entry) && !ADR_RE.test(entry)) {
+          issues.push({ field: key, message: `'${entry}' is not a valid record slug` });
+        }
+      }
+    }
+  }
+
+  // `reference` has no `why`; an ADR's four sections ARE its rationale.
+  if (type !== null && type !== 'reference' && !isAdr) {
+    if (!/\*\*Why:\*\*/.test(body)) {
+      issues.push({ field: 'body', message: `type '${type}' requires a **Why:** section` });
+    }
+    if (!/\*\*How to apply:\*\*/.test(body)) {
+      issues.push({
+        field: 'body',
+        message: `type '${type}' requires a **How to apply:** section`,
+      });
+    }
+  }
+  if (isAdr) {
+    for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
+      if (!new RegExp(`^##\\s+${heading}`, 'mi').test(body)) {
+        issues.push({ field: 'body', message: `ADR requires a '## ${heading}' section` });
+      }
+    }
+  }
+
+  return { issues, values, body };
 }
 
 /** Parse `> **Key:** value` blockquote metadata (review artifacts). */
