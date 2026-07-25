@@ -221,13 +221,16 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
     }
     const list = /^\[(.*)\]$/.exec(raw);
     if (list) {
-      values.set(
-        key,
-        list[1]!
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0),
-      );
+      const inner = list[1]!.trim();
+      const elements = inner.length === 0 ? [] : inner.split(',').map((s) => s.trim());
+      if (elements.some((e) => e.length === 0)) {
+        // `[,]` and `[,valid]` are malformed, not shorthand. Filtering the empty
+        // token turned a syntax error into a shorter list, which is exactly the
+        // guessing the supported subset forbids.
+        issues.push({ path: at(key), message: 'inline list has an empty element' });
+        continue;
+      }
+      values.set(key, elements);
       continue;
     }
     values.set(key, raw);

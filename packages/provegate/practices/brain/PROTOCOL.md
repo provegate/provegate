@@ -126,11 +126,12 @@ conformance corpus holds both to one behaviour.
   (marks something worth writing). Not an error.
 - **provenance** — optional; where a seeded record came from. The exact value
   `workflow-seed` is reserved for records that ship with the practices pack, so a
-  repo-local record must not borrow it: use any other value, or omit the key. Nothing in
-  this workspace enforces that — the gate that does lives in the repository that BUILDS
-  the pack, which is the only place with a packed copy to compare against. Here it is a
-  convention, and treating it as a checked rule would be believing a guarantee you do not
-  have.
+  repo-local record must not borrow it: use any other value, or omit the key. `verify:brain`
+  enforces half of that here — an ADR carrying the value is rejected outright, since the
+  pack ships no ADRs. For a LEARNING it cannot: deciding whether a packed counterpart
+  exists needs a pack, and the gate that compares them lives in the repository that BUILDS
+  one. So for learnings this is a convention, and treating it as checked would be believing
+  a guarantee you do not have.
 - **tags** — optional inline list of kebab-case slugs used for retrieval. Must not be empty
   when present: an empty selector claims a capability the record does not have.
 - **watch** — optional inline list of globs naming the paths whose change makes this record

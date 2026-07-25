@@ -94,13 +94,14 @@ export function parseRecordFrontmatter(content) {
     }
     const list = /^\[(.*)\]$/.exec(raw);
     if (list) {
-      values.set(
-        key,
-        list[1]
-          .split(',')
-          .map((x) => x.trim())
-          .filter(Boolean),
-      );
+      const inner = list[1].trim();
+      const elements = inner.length === 0 ? [] : inner.split(',').map((x) => x.trim());
+      if (elements.some((e) => e.length === 0)) {
+        // `[,]` and `[,valid]` are malformed, not shorthand.
+        issues.push({ field: key, message: 'inline list has an empty element' });
+        return;
+      }
+      values.set(key, elements);
       return;
     }
     values.set(key, raw);

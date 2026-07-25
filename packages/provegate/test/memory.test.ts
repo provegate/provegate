@@ -542,7 +542,13 @@ describe('default-off compatibility (task 6.2)', () => {
         }
         if (!entry.name.endsWith('.ts')) continue;
         const text = readFileSync(full, 'utf8');
-        if (/from '.*memory\/(parse|index)\.js'/.test(text)) offenders.push(full);
+        // By PATH or by SYMBOL: importing `validateRecord` from the core barrel
+        // makes memory behaviour reachable without naming the memory directory,
+        // so a path-only tripwire would stay green through exactly the change it
+        // exists to catch.
+        const byPath = /from ['"].*memory\/(parse|index)\.js['"]/.test(text);
+        const bySymbol = /\b(validateRecord|readRecord|validateMemoryRecord)\b/.test(text);
+        if (byPath || bySymbol) offenders.push(full);
       }
     };
     walk(src);

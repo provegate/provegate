@@ -274,6 +274,22 @@ describe('gate init --practices (real temp repos)', () => {
       );
       expect(() => brainCheck(), label).toThrow();
     }
+    // The wrapper and the shared helper must agree: `[[ slug ]]` is one
+    // reference written with spaces. Keeping the raw capture made the installed
+    // verifier reject what the helper accepted — a gate disagreeing with itself.
+    writeFileSync(
+      recordPath,
+      record(
+        'name: mutation-case\ndescription: a real description\ntype: gotcha\nscope: workflow\nstatus: active',
+        '\nsee [[ memory-index-vs-detail ]]\n\n**Why:** w\n**How to apply:** h\n',
+      ),
+    );
+    writeFileSync(
+      indexPath,
+      `${indexBefore}- [mutation case](learnings/mutation-case.md) — a hook\n`,
+    );
+    expect(() => brainCheck(), 'a spaced wikilink').not.toThrow();
+
     rmSync(recordPath);
     writeFileSync(indexPath, indexBefore);
     expect(() => brainCheck()).not.toThrow();

@@ -49,7 +49,10 @@ function checkRecord(file, isAdr) {
   for (const l of values.get('links') ?? []) referenced.add(l);
   const supersededBy = values.get('superseded-by');
   if (typeof supersededBy === 'string' && supersededBy.length > 0) referenced.add(supersededBy);
-  for (const m of content.matchAll(/\[\[([^\]]+)\]\]/g)) referenced.add(m[1]);
+  // Trimmed, matching the shared helper: `[[ slug ]]` is one reference written
+  // with spaces, and keeping the raw capture made the wrapper reject what the
+  // helper accepted — a disagreement between two halves of the same gate.
+  for (const m of content.matchAll(/\[\[([^\]]+)\]\]/g)) referenced.add(m[1].trim());
 }
 
 for (const f of learnings) checkRecord(f, false);

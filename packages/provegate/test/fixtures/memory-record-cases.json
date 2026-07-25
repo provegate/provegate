@@ -56,8 +56,8 @@
       "wrong form"
     ],
     "provenance": ["placeholder", "workflow-seed is for learnings", "wrong form"],
-    "links": ["ADR name is legal", "empty is legal", "invalid slug"],
-    "tags": ["ADR name is not a tag", "empty when present", "invalid slug"],
+    "links": ["ADR name is legal", "empty element", "empty is legal", "invalid slug"],
+    "tags": ["ADR name is not a tag", "empty element", "empty when present", "invalid slug"],
     "watch": [
       "UNC",
       "absolute",
@@ -767,6 +767,34 @@
       "valid": true,
       "matrix": [],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nprovenance: workflow-seed\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "inline-list-empty-element",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["links"],
+      "matrix": ["links:empty element"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks: [,]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "filtering the empty token turned a syntax error into a shorter list"
+    },
+    {
+      "id": "inline-list-leading-comma",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["tags"],
+      "matrix": ["tags:empty element"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ntags: [,valid-tag]\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-wikilink-spaced",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "matrix": [],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\nsee [[ memory-index-vs-detail ]]\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "one reference written with spaces; the helper and the wrapper must agree on it"
     }
   ]
 }
