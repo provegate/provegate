@@ -207,3 +207,50 @@ describe('quickstart command audit + execution (FR-3, FR-9, W4)', () => {
     expect(second.stdout).toMatch(/skipped/i);
   });
 });
+
+/**
+ * The package README is the npm listing — the one page an adopter reads before
+ * installing. QUICKSTART already had a subcommand audit; the README did not, and it
+ * spent eleven work items telling readers that shipped commands "exist but exit 1".
+ * These two checks close that gap from the CLI's own help screen: every shipped
+ * command must be documented, and none may be described as unbuilt.
+ */
+describe('package README command audit', () => {
+  const readme = () => read('packages/provegate/README.md');
+  /** The README's `## Commands` section, up to the next h2. */
+  const commandsSection = () => readme().split('## Commands')[1]?.split(/\n## /)[0] ?? '';
+
+  /** Command names from the help screen's COMMANDS block — the shipped surface. */
+  async function shippedCommands(): Promise<string[]> {
+    const usage = await run(process.execPath, [cliPath, '--help']).then(
+      (r) => r.stdout + r.stderr,
+      (e: { stdout?: string; stderr?: string }) => (e.stdout ?? '') + (e.stderr ?? ''),
+    );
+    const block = usage.split('COMMANDS')[1]?.split('OPTIONS')[0] ?? '';
+    return [...block.matchAll(/^ {2}([a-z-]+)\s{2,}/gm)].map((m) => m[1]!);
+  }
+
+  it('documents every command the CLI ships', async () => {
+    const commands = await shippedCommands();
+    expect(commands.length).toBeGreaterThan(0);
+    const section = commandsSection();
+    for (const cmd of commands) {
+      expect(
+        section,
+        `the CLI ships "gate ${cmd}" but README "## Commands" does not document it`,
+      ).toMatch(new RegExp(`\`gate ${cmd}[ \`]`));
+    }
+  });
+
+  it('never describes a shipped command as unimplemented', async () => {
+    const commands = await shippedCommands();
+    const unbuilt = /not implemented|not yet|coming soon|\bstub\b|roadmap phase/i;
+    // A stub line may name the commands bare (`init` / `new`), without the `gate ` prefix.
+    const namesACommand = (line: string) =>
+      commands.some((c) => line.includes(`gate ${c}`) || line.includes(`\`${c}\``));
+    const offenders = commandsSection()
+      .split('\n')
+      .filter((line) => unbuilt.test(line) && namesACommand(line));
+    expect(offenders, 'README calls a shipped command unimplemented').toEqual([]);
+  });
+});
