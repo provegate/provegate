@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | queue empty — owner tasks: push, org reservation, npm publish |
+| Next candidates | PRD-017 substrate — readiness PASS 8.425 (independent, iteration 3); awaiting owner Go for Phase 3. PRD-018/019 drafted, ordered behind it |
 
 ## Deferrals
 
@@ -30,9 +30,11 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Topic | Item | Owner | Due (YYYY-MM-DD) | Renewals | Note |
 |-------|------|-------|------------------|----------|------|
+| Memory effectiveness metrics | Candidate after 5 completed memory-contract PRDs | owner | 2026-09-01 | 0 | Former PRD-017 FR-9; review earlier if the evidence threshold is reached |
 
 ## Recent activity
 
+- 2026-07-25 — closed-loop memory program entered the pipeline as PRD-017/018/019 (substrate → contract+enforcement → adoption CLI). The original single 10-FR/72-task PRD was split after an independent review found a self-contradictory Memory Outputs grammar and a silent manifest-floor ambiguity; effectiveness metrics deferred. PRD-017 readiness **PASS 8.425** on an independent iteration-3 re-score (W10–W13 bind Phase 3), awaiting owner Go
 - 2026-07-25 — pack-drift gate landed (`8c95bc8`): `verify:pack-drift` reconciles the shipped practices pack against the live layer by hash ledger (49 pairs); one-sided edits now fail the bundle. Deferral board is EMPTY
 - 2026-07-25 — test-sandbox fix landed (`43eb33e`): the NO_COLOR spawns ran with no cwd and rewrote the live `_state/prds.json`; they now run in a fixture repo with a slug guard, deferral closed
 - 2026-07-25 — operator-row count fix landed (`ddceaa4`): `countOperatorHandoff` now counts checkbox rows, so a mis-formatted operator row arms the gate instead of disarming it; mutation-checked regression cover, deferral closed
