@@ -364,7 +364,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Blockers / Open Questions
 
-- (none)
+- Not blocked, but **not parallelizable with the memory program**: `gate queue` reports
+  that `scripts/verify/pack-drift-ledger.json` is claimed by PRD-017, PRD-018, and
+  PRD-019 as well. The ledger is modify-in-place, not append-only, so it is not
+  union-mergeable — this PRD runs alone with respect to those three, in whatever order
+  the owner picks.
 
 ---
 
