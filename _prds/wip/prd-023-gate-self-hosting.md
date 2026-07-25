@@ -260,19 +260,38 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    | ------- | ------------------------ | ------------- |
    | Manifest commands | no | **yes** |
    | CI workflow files | whole file, comments stripped | `run:` text only |
-   | `.githooks/*` | **yes** | no |
-   | The `verify-workflow.mjs` bundle body | **yes** | no |
-   | Every other `package.json` script body | **yes** | no |
+   | The git-hooks directory | **yes** — hardcoded `.githooks/` | no |
+   | The `verify-workflow.mjs` bundle body | **yes** — hardcoded path | no |
+   | `package.json` script bodies **not** matching the verify prefix | **yes** | no |
 
    Three surface kinds would leave with the deletion, so a check wired only through a git
    hook, only through bundle membership, or only through another script's body would
    newly report as "wired nowhere". **Measured impact today is zero** — no `.githooks/`
    file references a `verify:` script and every current check has its own CI step — which
    is exactly why this would pass Phase 6 unnoticed and surface later as a check that was
-   wired all along. Port the three into `auditWiring`'s surface set. Keep the CI reading
-   as `run:` text: that is a deliberate narrowing (a script named in a YAML comment is not
-   wired), and it is the one difference that makes the package stricter rather than
-   weaker, so it stays and is stated here rather than silently reconciled.
+   wired all along.
+
+   Port all three into `auditWiring`'s surface set, and **because this is shipped package
+   code rather than a repo script, both hardcoded paths become config** — the same rule
+   FR-4(a) already applies to the on-disk directory. `.githooks/` is this repository's
+   choice, set by `package.json`'s `prepare` script
+   (`git config core.hooksPath .githooks`); an adopter may use `.husky`, the default
+   `.git/hooks`, or none. A hooks directory that does not exist is simply not a surface,
+   not an error.
+
+   **The third row's exclusion is load-bearing and must be ported exactly.** The script
+   pushes only script bodies whose name does **not** match the verify prefix
+   (`verify-gates-wired.mjs`: `if (!name.startsWith('verify:'))`). Including verify-prefixed
+   bodies would let checks wire each other: a `verify:a` whose body invokes `verify:b`
+   would mark `verify:b` wired even if nothing invokes `verify:a`, and a bundle that names
+   every member would mark them all wired by existing. Use `config.verifyScriptPattern`
+   for the exclusion so it stays consistent with the direction-2 selector immediately
+   above it.
+
+   Keep the CI reading as `run:` text: that is a deliberate narrowing (a script named in a
+   YAML comment is not wired), and it is the one difference that makes the package
+   stricter rather than weaker, so it stays and is stated here rather than silently
+   reconciled.
 
    Then delete `scripts/verify/verify-gates-wired.mjs` and its `package.json` entry.
 
@@ -419,6 +438,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Given** a check named only inside a YAML **comment** in a CI workflow, **When** the
   audit runs, **Then** it still fails — the package reads `run:` text, and that narrowing
   is deliberate.
+- **Given** a repo whose configured hooks directory does not exist, **When** the audit
+  runs, **Then** it completes with that surface simply absent, not an error.
+- **Given** a bundle script whose body names every one of its members, **When** the audit
+  runs, **Then** those members are **not** thereby wired — verify-prefixed script bodies
+  are excluded from the surface set.
 - **Given** a Durable Artifacts section holding two real paths and one explicit `none`
   bullet — this PRD's own shape — **When** the declaration lint runs, **Then** it passes;
   **given** a section holding a bullet that is neither, **Then** it fails.
@@ -667,11 +691,19 @@ rationalize.
   to inherit.
 - DO NOT drop the on-disk→registered audit direction while deleting the script that is
   its only implementation.
-- DO NOT port only that direction. The script also counts `.githooks/*`, the
-  `verify-workflow.mjs` bundle body, and every other `package.json` script body as
+- DO NOT port only that direction. The script also counts the git-hooks directory, the
+  `verify-workflow.mjs` bundle body, and non-verify `package.json` script bodies as
   executing surfaces, and `auditWiring` counts none of them (FR-4(b)). Zero checks depend
   on those surfaces today, which is exactly why omitting them would survive Phase 6 and
   bite later — "no current occupant" is not "no guarantee".
+- DO NOT carry the script's hardcoded `.githooks/` and bundle paths into the package.
+  This repo sets `core.hooksPath` in its `prepare` script; an adopter may use `.husky` or
+  the git default. Both paths come from config, and an absent directory is not a surface
+  rather than an error.
+- DO NOT count verify-prefixed script bodies as executing surfaces when porting the third
+  row. The script excludes them deliberately: without that exclusion a bundle listing its
+  own members marks them all wired by existing, and two checks naming each other wire
+  themselves.
 - DO NOT widen the CI reading from `run:` text to the whole workflow file to close that
   gap. The narrower reading is correct: a check named in a YAML comment is not wired.
 - DO NOT let a `method-pending` ledger entry omit an owner or a `reviewBy` date, and DO

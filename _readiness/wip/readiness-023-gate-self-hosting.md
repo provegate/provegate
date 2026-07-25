@@ -1,42 +1,35 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
-> **W1–W8 were remediated in the PRD on 2026-07-25, by the same session that scored
-> iteration 1. The 7.95 ITERATE below therefore describes a PRD that has since changed,
-> and it deliberately still stands as the machine verdict: no independent round has
-> cleared the revision, so Phase 3 must stay shut.** The next round must be run by a
-> session that did not write the remediation. Summary of what moved: FR-4 became three
-> parts and now ports the three missing executing-surface kinds alongside the missing
-> direction, keeping the narrower `run:`-only CI reading as a deliberate strengthening;
-> FR-4(c) settles the exceptions store on `manifest.wiringExceptions` and deletes the
-> empty JSON file; the FR-3 corpus measurement is re-run as 14 tokens in three groups with
-> `lucide-react` dropped; FR-5 drops the "first `gate` invocation" claim to PRD-021 and
-> restates its contribution as the manifest-driven surface; FR-3 gained its own
-> `--durable-artifacts` flag, a stated acceptance shape for mixed sections, and the third
-> parser divergence; the overlap paragraph was rebuilt from `gate queue`. Value unchanged
-> at 4.25.
+> **Current state: iteration 2, 8.30/10, ITERATE — and the ITERATE is on independence,
+> not substance.** W1–W10 are all closed in the PRD, no hard cap trips, and
+> `gate check PRD-023` exits 0. But the same session wrote the remediation and scored it,
+> and `AGENT_BOOTSTRAP.md` forbids self-declaring a gate green — so `_state/prds.json`
+> keeps ITERATE and Phase 3 stays shut. **The next round must be run by a different model
+> or a human.** See §5 for iteration 2's measurements and the two items (W9, W10) it found
+> and fixed.
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-023-gate-self-hosting.md`       |
-| Score                  | 7.95/10                                        |
-| Verdict                | ITERATE                                        |
-| Iteration              | 1                                              |
-| Model Tier (Execution) | do not assign — score < 8; close W1 first      |
-| Model Tier (Audit)     | high (on re-score into the PASS band)          |
-| Scored by              | independent agent (Claude Opus 5, different model family from the PRD author), via owner |
-| Self-scored            | no — this session did not write or revise the PRD |
+| Score                  | 8.30/10                                        |
+| Verdict                | ITERATE — **on independence, not on substance.** The score is in the PASS band and no watch item is open; but this round was run by the session that wrote the W1–W10 remediation, and the critical rule forbids self-declaring a gate green |
+| Iteration              | 2                                              |
+| Model Tier (Execution) | high — assign on an independent PASS           |
+| Model Tier (Audit)     | high                                           |
+| Scored by              | Claude Opus 5 — **the same session that wrote the remediation** |
+| Self-scored            | **yes** — this session revised the PRD before scoring it |
 | Date                   | 2026-07-25                                     |
-| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-023` exit 0 |
+| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-023` exit 0 (re-run at iteration 2) |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
 
-This is a **narrow ITERATE**. One finding (W1) is substantive; the rest are corrections
-to statements that are wrong rather than to a design that is wrong. The architecture is
-the strongest in the wave and no part of it needs rework.
+At iteration 2 no PRD-side item is open. The architecture is the strongest in the wave,
+needed no rework across either round, and the remediation held up under re-measurement.
+The only thing standing between this and a PASS is who did the scoring.
 
 ---
 
@@ -232,11 +225,79 @@ belongs. Rollback itself is clean — restore three files from git history, re-a
 `package.json` entries, revert one manifest line; the package-side additions are inert if
 unreferenced and no state or artifact migration exists.
 
+### 5. Iteration-2 measurement — the remediated FR set (self-scored)
+
+**W1 is closed properly: FR-4 is now three parts and the comparison table is in the PRD,
+not only in this report.** The surface delta is stated as a table, the three lost kinds
+are ported, and the one difference that makes the package *stricter* — reading CI `run:`
+text rather than the whole file — is kept and labelled deliberate rather than silently
+reconciled. That last choice is the part a weaker remediation would have gotten wrong by
+"restoring parity".
+
+Checking the remediation against source produced two further findings, both since fixed.
+
+**W9 — FOUND AND FIXED THIS ROUND: two hardcoded paths were about to move into shipped
+package code.** The script's surface set names `.githooks/` and
+`scripts/verify/verify-workflow.mjs` as literals. `auditWiring` ships to adopters, and
+`.githooks/` is *this repository's* choice — `package.json`'s `prepare` script runs
+`git config core.hooksPath .githooks`, and an adopter may use `.husky`, the git default,
+or no hooks at all. FR-4(a) had already said the on-disk directory must be config-driven;
+FR-4(b) said only "port the three". Both paths are now config, and an absent hooks
+directory is specified as "not a surface" rather than an error, with a Gherkin row.
+
+**W10 — FOUND AND FIXED THIS ROUND: the third surface row dropped a load-bearing
+exclusion.** The row read "every other `package.json` script body". The script's actual
+loop is `for (const [name, body] of Object.entries(scripts)) if (!name.startsWith('verify:'))`
+— it pushes only **non**-verify-prefixed bodies, and that exclusion is what stops checks
+from wiring each other. Without it, `verify:workflow`'s body names every bundle member, so
+all of them would count as wired by the bundle merely existing, and two checks naming each
+other would wire the pair. The row now states the exclusion, FR-4(b) explains why it is
+load-bearing, `config.verifyScriptPattern` is named as the selector so it matches
+direction 2 immediately above, and both a Gherkin row and a DO NOT cover it.
+
+**W3's re-measurement was itself re-run rather than trusted.** Fourteen slash-less tokens
+across 23 PRDs, in the three groups the PRD now states, with `lucide-react` absent from
+every Durable Artifacts section — it is in PRD-014's Non-Goals and Technical
+Considerations. The predicate accepts both real claims and rejects all eight prose tokens.
+
+**W2's resolution was checked for a false premise, and had one.** The remediation asserts
+that PRD-021 does not claim `scripts/verify/gates-wired-exceptions.json`; `gate queue`
+reports no such overlap and PRD-021's Conflict Surface does not list it. That corrects the
+original PRD text, which named the file as PRD-021's. Deleting an empty array file whose
+only reader is the script being deleted is the right call.
+
+**What this round cannot do.** Every finding above came from the session that wrote the
+text. W9 and W10 were catchable only because they were checkable against source; a wrong
+judgement in the same prose would have read as correct.
+
 ---
 
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+**Iteration 2 — scores the remediated FR set. Self-scored; see the Verdict.**
+
+| #         | Dimension                | Weight | Score      | Notes |
+| --------- | ------------------------ | ------ | ---------- | ----- |
+| 1         | Clarity                  | 15%    | 8.5/10     | Both sweep flags are now named (`--review-artifacts`, `--durable-artifacts`), the declaration lint's acceptance shape is stated using this PRD's own mixed section, the third parser divergence is named, and FR-4's surface delta is a table rather than a sentence. |
+| 2         | Completeness             | 20%    | 8.0/10     | W1's surface set ported with its config and exclusion corrections (W9, W10); the exceptions store settled; the corpus measurement regrouped. Not higher because FR-4 now carries three parts plus two sub-rules, and the Phase 3 plan will have to decompose it carefully. |
+| 3         | Technical Depth          | 20%    | 8.5/10     | Unchanged and still the strongest dimension: every measurable claim re-derived from source across two rounds, and the remediation caught the `startsWith('verify:')` exclusion that a parity-restoring fix would have dropped. |
+| 4         | Multi-Tenancy & Security | 10%    | 8.5/10     | Unchanged: no protected surface, no dependency, no network, no push path. Net effect is three fewer scripts and one manifest-driven CLI invocation. |
+| 5         | Scope & Testability      | 15%    | 8.5/10     | Three Gherkin rows added for the ported surfaces, one for the absent hooks directory, one for the bundle self-wiring case; the stale-by-dependency metric is now measured-at-implementation; deny test unchanged and still names two cases. |
+| 6         | Migration & Rollback     | 20%    | 8.0/10     | The surface narrowing is now inside the plan rather than absent from it, the "first `gate` invocation" claim is handed to PRD-021, and the overlap paragraph is rebuilt from `gate queue` with a false PRD-021 claim removed. The five-way dependency chain was correct from the start. |
+| **Total** | **Weighted**             |        | **8.30/10** | **ITERATE — on independence** |
+
+Weighted sum:
+`0.15×8.5 + 0.20×8.0 + 0.20×8.5 + 0.10×8.5 + 0.15×8.5 + 0.20×8.0`
+= `1.275 + 1.600 + 1.700 + 0.850 + 1.275 + 1.600 = 8.30`.
+
+Hard caps checked (iteration 2): security not tripped, contract not tripped, lint exit 0,
+no runtime dependency and no push path. **No cap forces the ITERATE** — the independence
+rule does.
+
+<details>
+<summary>Superseded — iteration-1 scorecard (pre-remediation, 7.95 ITERATE)</summary>
 
 | #         | Dimension                | Weight | Score      | Notes |
 | --------- | ------------------------ | ------ | ---------- | ----- |
@@ -261,6 +322,8 @@ Hard caps checked:
 - **ProveGate method caps:** no runtime dependency, no push path. **Method-content note:**
   FR-3 changes `declaredArtifacts`, which is package behavior rather than shipped
   prompt/template/schema content, so critical rule 4 is not engaged.
+
+</details>
 
 ---
 
@@ -296,12 +359,31 @@ Hard caps checked:
    names three, omitting `.github/workflows/ci.yml` and
    `packages/provegate/src/core/config/types.ts`.
 
+### Iteration-2 status
+
+**W1–W8: all RESOLVED in the PRD** (see §5 and the 2026-07-25 changelog row).
+
+9. **W9 — RESOLVED, found and fixed this round.** FR-4(b) was about to move two hardcoded
+   paths into shipped package code: `.githooks/` (this repo's `core.hooksPath`, set by the
+   `prepare` script — an adopter may use `.husky` or the git default) and the
+   `verify-workflow.mjs` bundle path. Both are config now, with an absent hooks directory
+   specified as "not a surface, not an error" and covered by a Gherkin row.
+10. **W10 — RESOLVED, found and fixed this round.** The third surface row read "every
+    other `package.json` script body"; the script's loop excludes verify-prefixed names,
+    and that exclusion is what stops a bundle from wiring its own members and two checks
+    from wiring each other. FR-4(b) now states it, names `config.verifyScriptPattern` as
+    the selector, and carries a Gherkin row and a DO NOT.
+
+**Open for the next round, and it is not a PRD defect:** an independent scorer. See the
+Verdict.
+
 ---
 
 ## Iteration History
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 2   | 2026-07-25 | 8.30  | ITERATE | **Self-scored — the ITERATE is on independence, not substance.** W1–W8 all resolved: FR-4 became three parts with the surface-delta table inline, keeping the package's narrower CI `run:` reading as a deliberate strengthening rather than restoring parity; FR-4(c) settled the exceptions store on `manifest.wiringExceptions` and deleted the empty JSON file, correcting a false claim that PRD-021 owned it; the corpus measurement regrouped to 14 tokens in three groups with `lucide-react` dropped; FR-5 handed the "first `gate` invocation" claim to PRD-021 FR-8; FR-3 gained its own `--durable-artifacts` flag, a stated acceptance shape for mixed sections, and the third parser divergence. Two new items caught by checking the remediation against source and both fixed: **W9**, FR-4(b) was about to move `.githooks/` and the bundle path into shipped package code as literals when this repo's hooks path comes from its own `prepare` script; and **W10**, the third surface row dropped the `startsWith('verify:')` exclusion that stops a bundle from wiring its own members. No hard cap trips and the lint exits 0; the verdict is held solely by the rule that a gate may not be self-declared green. |
 | 1   | 2026-07-25 | 7.95  | ITERATE | First independent assessment. Every measurable claim re-derived from source and found exact: six line counts, both named parser divergences, the `parseVerificationCommands` whole-line match (with a live instance in PRD-021's own §11 Notes cell), the `lintPrd` `deferred` filter, `auditWiring`'s two directions, and the six-checks-after-deletion arithmetic across the PRD-021 dependency. Verdict rests on W1: `auditWiring`'s executing-surface set is narrower than the script FR-4 deletes by three surface kinds (git hooks, the bundle body, other `package.json` script bodies), unported and unmentioned, against a Goal that promises no lost guarantee — zero measured impact today, but the same class the FR exists to prevent. Also W2–W8: the exceptions store changes shape without a migration, the FR-3 corpus measurement reports 11 where 14 exist and names a token that is not there, the "first `gate` invocation" claim is taken by a declared prerequisite, one sweep flag carries two unrelated rules, the declaration lint's mixed-section shape is unstated, a third parser divergence is unnamed, and the overlap prose lists three of five `gate queue`-reported PRD-021 files. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
@@ -349,6 +431,46 @@ Hard caps checked:
 
 ## Verdict
 
+**ITERATE — 8.30/10, iteration 2. The score is in the PASS band and the verdict is not,
+and the gap is entirely the scorer.**
+
+Substantively this PRD is ready, and it was the strongest in the wave before the
+remediation. W1–W10 are closed, no hard cap trips, and `gate check PRD-023` exits 0. The
+remediation also passed the test a weaker one would have failed: FR-4(b) keeps the
+package's narrower CI reading instead of restoring parity with the script, and W10 caught
+the `startsWith('verify:')` exclusion that a "port the surfaces" instruction would
+otherwise have dropped — losing it would have let a bundle wire its own members and
+quietly inverted the meta-gate.
+
+What blocks it is `AGENT_BOOTSTRAP.md`'s critical rule: *a gate passes only when its check
+returns 0 or an independent reviewer — different model or human, never the author — says
+`pass`.* This session wrote the W1–W10 remediation and then scored it. Both of this
+round's findings were caught only because they were **checkable against source**; a wrong
+judgement in the same prose would have read as correct to the session that wrote it.
+
+`_state/prds.json` therefore keeps `ITERATE`, and Phase 3 stays shut.
+
+**What an independent round needs to do:**
+
+1. Confirm the FR-4(b) surface table against `verify-gates-wired.mjs` and `wiring.ts`, and
+   judge whether keeping CI at `run:`-only is right or whether the whole-file reading
+   should have been ported too.
+2. Judge FR-4(c)'s deletion of `gates-wired-exceptions.json` — the file is empty and its
+   only reader is the script being deleted, but deletion is irreversible in a way the
+   other two ports are not.
+3. Re-run the FR-3 corpus measurement (14 tokens, three groups) and confirm no wip PRD is
+   affected.
+4. Judge whether FR-4 is now too large for one FR and should split before Phase 3
+   decomposes it.
+5. Confirm ADR-0002's precondition status — it is still unwritten, and `_brain/**` is
+   under the PRD-017 lease.
+
+On an independent PASS, assign high tier for both Phase 4 and Phase 6: three relocations
+and three deletions whose failure mode is silent capability loss.
+
+<details>
+<summary>Superseded — iteration-1 verdict (pre-remediation, 7.95 ITERATE)</summary>
+
 **ITERATE — 7.95/10, iteration 1.** The lint passes and no hard cap applies. This is a
 narrow miss, and it should be read as one: the architecture needs no rework, the
 dependency chain is complete and correct, and every behavioral claim the PRD makes about
@@ -395,3 +517,5 @@ The author's draft self-score of `4.25 (MF/UI/TL/AR/RM: 5/4/4/5/3)` recomputes c
 under the default weights and this round does not move it: the relocation-and-ledger scope
 is unchanged by the findings above, and W1 is an omission in the plan rather than a change
 in the item's value.
+
+</details>

@@ -258,8 +258,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    whitespace; `Value` with optional surrounding `**`; a colon that may sit inside or
    outside the bold run; the total; any non-`(` filler; then
    `(MF/UI/TL/AR/RM: a/b/c/d/e)` with each dim a single digit. Following the snapshot, do
-   **not** anchor on the closing paren — trailing prose after the dims is legal. If more
-   than one line matches, that is an error rather than a first-match-wins race.
+   **not** anchor on the closing paren — trailing prose after the dims is legal.
+
+   **Search only the metadata block — the text before the first `---` — and take the
+   first match.** A draft of this FR instead declared that more than one matching line is
+   an error, and measurement killed it: the fenced example three paragraphs above is
+   itself a matching line, so this PRD carries two and would have been rejected by its own
+   rule. Any PRD that documents the header format has the same problem. The snapshot does
+   not have this failure mode because `validateVScore` runs a single `.exec(content)` and
+   takes the first hit; scoping to the metadata block is the same answer made structural,
+   since that is where the template puts the header and no example ever appears there. A
+   PRD body quoting the header in prose, in a fence, or in a §6 row is documentation, not
+   a second declaration.
 
    **The declared total's own decimal form is specified, not inferred.** Parse it
    lexically into integer hundredths: it must carry one or two decimal places
@@ -279,11 +289,23 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    The id is a **parameter, not a re-parse**. `lintPrd(config, manifest, content)` gains a
    fourth argument carrying the record's `number`; `runCheck` already resolved the record
-   via `findRecord` and has it. Deriving the id from the `# PRD-NNN:` heading inside the
-   body would make the cutoff depend on a title string the lint does not otherwise trust.
-   Existing callers that have no id pass `null`, which **skips the cutoff comparison and
-   enforces the arithmetic unconditionally** — absence of an id must not become absence of
-   a check.
+   via `findRecord` and has it (`cli.ts:476`, `cli.ts:482`). Deriving the id from the
+   `# PRD-NNN:` heading inside the body would make the cutoff depend on a title string the
+   lint does not otherwise trust. Existing callers that have no id pass `null`, which
+   **skips the cutoff comparison and enforces the arithmetic unconditionally** — absence
+   of an id must not become absence of a check.
+
+   **State the exact residual: a `null` id skips the *presence* requirement even where a
+   cutoff is configured**, because presence is defined by id and there is no id. The
+   arithmetic still runs, so a wrong header never escapes; only "you must have one" does.
+   That is the correct trade and it is load-bearing rather than theoretical:
+   `packages/provegate/test/content-templates.test.ts:80` lints the **shipped PRD
+   template** through `lintPrd` and asserts `issues` is empty, and that template has no
+   `Value:` header. It passes today because the caller supplies no id, and it must keep
+   passing — which is also the cleanest mechanical proof of why FR-1 refuses an
+   id-based default: with `enforceFrom: 1` baked into `DEFAULT_CONFIG`, any caller that
+   ever supplied an id would turn this existing green test red on the shipped artifact.
+   Do not "fix" that by exempting the template inside the gate; keep the null-id path.
    - **Targets:** `packages/provegate/src/core/gates/value-score.ts` (new),
      `packages/provegate/src/core/gates/index.ts`,
      `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`
