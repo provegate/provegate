@@ -73,6 +73,75 @@ describe('countTaskChecks / countOperatorHandoff', () => {
     ].join('\n');
     expect(countOperatorHandoff(content)).toBe(2);
   });
+
+  // Fail-closed direction: this count IS the merge gate's precondition, so a row
+  // the parser cannot read as a table row must still arm the gate. PRD-016 wrote
+  // its operator row as a checkbox bullet and the close reported `operator rows: 0`.
+  it('counts a checkbox-bullet operator row', () => {
+    const content = [
+      '## Operator Handoff',
+      '',
+      '> Autonomous Close is operator-gated — the rows below need a human.',
+      '',
+      '- [ ] 9.0 Operator acceptance of autonomous close: owner signs off',
+      '- [x] 9.1 Staging smoke run',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(content)).toBe(2);
+  });
+
+  it('sums table rows and checkbox rows in a mixed section', () => {
+    const content = [
+      '## Operator Handoff',
+      '',
+      '| Task | Category | Owner | Required Check | Status | Notes |',
+      '| ---- | -------- | ----- | -------------- | ------ | ----- |',
+      '| 9.1 | external | owner | review | pending | |',
+      '',
+      '- [ ] 9.2 owner signs off',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(content)).toBe(2);
+  });
+
+  it('counts an explicitly empty section as zero rows', () => {
+    // Three legitimate spellings of "no operator work": the `- (none)` bullet
+    // (a bullet, not a checkbox), the template's all-empty table row, and a
+    // section with prose only. None may fabricate an operator row.
+    const none = ['## Operator Handoff', '', '> None — every gate is machine-checkable.', ''];
+    expect(countOperatorHandoff([...none, '- (none)', ''].join('\n'))).toBe(0);
+    expect(
+      countOperatorHandoff(
+        [
+          ...none,
+          '| Task | Category | Owner | Required Check | Status | Notes |',
+          '| ---- | -------- | ----- | -------------- | ------ | ----- |',
+          '|      |          |       |                |        |       |',
+          '',
+        ].join('\n'),
+      ),
+    ).toBe(0);
+    expect(countOperatorHandoff(none.join('\n'))).toBe(0);
+  });
+
+  it('ignores task checkboxes outside the Operator Handoff section', () => {
+    const content = [
+      '## Tasks',
+      '',
+      '- [ ] 1.1 implement',
+      '- [x] 1.2 test',
+      '',
+      '## Operator Handoff',
+      '',
+      '- (none)',
+      '',
+      '## Progress Log',
+      '',
+      '- [ ] not an operator row either',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(content)).toBe(0);
+  });
 });
 
 describe('findMarkdownTable', () => {
