@@ -55,6 +55,24 @@ jobs:
       - name: verify-workflow
         run: pnpm verify:workflow
 
+      # Explicit per-check steps so `gate check --wiring` sees each gate in an
+      # executing CI surface (the bundle above runs them too — the seconds of
+      # duplication buy an honest wire-or-delete audit).
+      - name: verify-brain
+        run: pnpm verify:brain
+
+      - name: verify-review-artifact
+        run: pnpm verify:review-artifact
+
+      - name: verify-durable-artifacts
+        run: pnpm verify:durable-artifacts
+
+      - name: verify-deferred
+        run: pnpm verify:deferred
+
+      - name: verify-test-task-coverage
+        run: pnpm verify:test-task-coverage
+
       - name: verify-gates-wired
         run: pnpm verify:gates-wired
 
