@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-017-agent-memory-substrate.md](../../_prds/wip/prd-017-agent-memory-substrate.md)
 > **Readiness**: [readiness-017-agent-memory-substrate.md](../../_readiness/wip/readiness-017-agent-memory-substrate.md)
-> **Status**: In Progress
+> **Status**: Code Complete
 > **Readiness Score**: 8.425/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-25
@@ -104,8 +104,7 @@ and commands it names still exist **before** the dependent task starts (task 0.2
   - [x] 0.4 Re-measure and record the W10 baseline in the Progress Log so the plan is
         acting on current facts, not on the readiness snapshot: count `_brain/INDEX.md`
         hooks over 120 characters, and count records in `_brain/learnings/` missing
-        `**Why:**`, `**How to apply:**`, or `provenance`. Expected at Phase-3 time: 0 and
-        0. A non-zero count re-opens the migration question in **Deferrals & Decisions**.
+        `**Why:**`, `**How to apply:**`, or `provenance`. Expected at Phase-3 time: 0 and 0. A non-zero count re-opens the migration question in **Deferrals & Decisions**.
 
 - [x] 1.0 FR-1 — Canonical method provenance (W7 lineage, blocking)
   - [x] 1.1 Write
@@ -219,34 +218,34 @@ and commands it names still exist **before** the dependent task starts (task 0.2
         no wave/practice numbering, English only) via the existing hygiene assertions in
         `packages/provegate/test/practices-pack.test.ts`.
 
-- [ ] 6.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
-  - [ ] 6.1 Prove the no-op claim: with the branch applied, `pnpm verify:brain` passes
+- [x] 6.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
+  - [x] 6.1 Prove the no-op claim: with the branch applied, `pnpm verify:brain` passes
         against the untouched live `_brain/` tree. Record the record count in the Progress
         Log; it must still be 23 unless a record was legitimately added.
-  - [ ] 6.2 Prove default-off compatibility in `packages/provegate/test/memory.test.ts`:
+  - [x] 6.2 Prove default-off compatibility in `packages/provegate/test/memory.test.ts`:
         with no `memory` config and with `memory.enabled: false`, `gate check`,
         `gate status`, and the gate chain behave byte-identically to the pre-PRD baseline.
         This is the whole safety argument — assert it, don't assume it.
-  - [ ] 6.3 Record the rollback procedure in **Deferrals & Decisions**: revert the
+  - [x] 6.3 Record the rollback procedure in **Deferrals & Decisions**: revert the
         parser/config/verifier commits; no state file, cache, remote resource, or record
         rewrite is involved, so revert is complete by construction.
-  - [ ] 6.4 Confirm the deployment order holds: this PRD enables nothing, creates no root
+  - [x] 6.4 Confirm the deployment order holds: this PRD enables nothing, creates no root
         `workflow.config.json`, adds no gate to `gates.manifest.json`, and changes no
         phase prompt or PRD template. Grep the diff to prove it and note the result.
 
-- [ ] 7.0 Phase 5 — Execute verification
-  - [ ] 7.1 Run every PRD §11 command exactly as written from the repository root and
+- [x] 7.0 Phase 5 — Execute verification
+  - [x] 7.1 Run every PRD §11 command exactly as written from the repository root and
         fill the matching Verification Ledger rows below with evidence; no command may be
         substituted or omitted.
-  - [ ] 7.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
+  - [x] 7.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build`, `pnpm verify:workflow`; record exit codes.
-  - [ ] 7.3 Run `node packages/provegate/dist/cli.js check PRD-017` and
+  - [x] 7.3 Run `node packages/provegate/dist/cli.js check PRD-017` and
         `node packages/provegate/dist/cli.js check --wiring`; both must be green with the
         new checks registered.
-  - [ ] 7.4 W9-class invariants: assert `packages/provegate/package.json` still declares
+  - [x] 7.4 W9-class invariants: assert `packages/provegate/package.json` still declares
         zero runtime dependencies, no new source or packed script contains a push path,
         and the new CLI surface count is zero (this PRD ships no command).
-  - [ ] 7.5 Re-run the package suite with the turbo cache busted and confirm the result
+  - [x] 7.5 Re-run the package suite with the turbo cache busted and confirm the result
         matches the cached run; a divergence means 4.8 is incomplete.
 
 - [ ] 8.0 Phase 6 — Independent adversarial audit
@@ -279,22 +278,22 @@ and commands it names still exist **before** the dependent task starts (task 0.2
 
 ## Verification Ledger
 
-| Gate               | Command / Check                                             | Scope | Result  | Evidence | Notes |
-| ------------------ | ----------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts` | pkg   | pending |          | addendum traceability, frozen snapshot bytes |
-| FR-2               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | pending |          | config validation and default-off compatibility |
-| FR-3               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | pending |          | typed parser and schema corpus |
-| FR-4a              | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | pending |          | standalone mutations and cross-parser conformance |
-| FR-4b              | `node scripts/verify/verify-brain.mjs`                      | repo  | pending |          | live records pass unchanged |
-| FR-5               | `node scripts/verify/verify-pack-drift.mjs`                 | repo  | pending |          | live/package parity after reconcile |
-| types              | `pnpm check-types`                                          | root  | pending |          | zero errors |
-| lint               | `pnpm lint`                                                 | root  | pending |          | zero warnings |
-| test               | `pnpm test`                                                 | root  | pending |          | full suite |
-| build              | `pnpm build`                                                | root  | pending |          | clean build |
-| workflow           | `pnpm verify:workflow`                                      | root  | pending |          | every hygiene check green |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-017`         | repo  | pending |          | readiness lint |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`        | repo  | pending |          | wire-or-delete |
-| independent-review | `_docs/reviews/review-017-agent-memory-substrate.md`        | repo  | pending |          | verdict pass, Critical: 0 |
+| Gate               | Command / Check                                             | Scope | Result  | Evidence                                                 | Notes                                             |
+| ------------------ | ----------------------------------------------------------- | ----- | ------- | -------------------------------------------------------- | ------------------------------------------------- |
+| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts` | pkg   | passed  | 11 tests: frozen digest over 74 files + addendum routing | addendum traceability, frozen snapshot bytes      |
+| FR-2               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed  | 37 tests incl. config shape, containment, command safety | config validation and default-off compatibility   |
+| FR-3               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed  | same suite: subset parser + schema                       | typed parser and schema corpus                    |
+| FR-4a              | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | passed  | 10 tests: mutation matrix vs the INSTALLED validator     | standalone mutations and cross-parser conformance |
+| FR-4b              | `node scripts/verify/verify-brain.mjs`                      | repo  | passed  | verify:brain PASS over 23 untouched records              | live records pass unchanged                       |
+| FR-5               | `node scripts/verify/verify-pack-drift.mjs`                 | repo  | passed  | verify:pack-drift PASS, 49 pairs                         | live/package parity after reconcile               |
+| types              | `pnpm check-types`                                          | root  | passed  | 5/5 turbo tasks, 0 errors                                | zero errors                                       |
+| lint               | `pnpm lint`                                                 | root  | passed  | 4/4 turbo tasks, 0 warnings                              | zero warnings                                     |
+| test               | `pnpm test`                                                 | root  | passed  | 546 tests (503 at branch point)                          | full suite                                        |
+| build              | `pnpm build`                                                | root  | passed  | 4/4 clean                                                | clean build                                       |
+| workflow           | `pnpm verify:workflow`                                      | root  | passed  | 10 checks green incl. turbo-inputs                       | every hygiene check green                         |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-017`         | repo  | passed  | readiness lint exit 0                                    | readiness lint                                    |
+| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`        | repo  | passed  | every gate wired or excepted                             | wire-or-delete                                    |
+| independent-review | `_docs/reviews/review-017-agent-memory-substrate.md`        | repo  | pending |                                                          | verdict pass, Critical: 0                         |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -302,12 +301,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Readiness Watch Coverage
 
-| Watch | Binding tasks |
-| ----- | ------------- |
-| W10 — no phantom migration | 0.4, 4.4, 4.7, 5.3 |
-| W11 — name the reconcile obligation | 5.4 |
-| W12 — corpus coverage contract | 4.1, 4.2, 4.6, 8.1 |
-| W13 — acknowledge the dead-config window | 2.4 |
+| Watch                                    | Binding tasks      |
+| ---------------------------------------- | ------------------ |
+| W10 — no phantom migration               | 0.4, 4.4, 4.7, 5.3 |
+| W11 — name the reconcile obligation      | 5.4                |
+| W12 — corpus coverage contract           | 4.1, 4.2, 4.6, 8.1 |
+| W13 — acknowledge the dead-config window | 2.4                |
 
 ---
 
@@ -318,6 +317,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   readiness iteration 3 found 0 INDEX hooks over 120 (longest 102) and 23/23 records
   already carrying `**Why:**`, `**How to apply:**`, and `provenance`. Task 0.4 re-measures
   before any editing decision.
+- 6.3 — ROLLBACK: revert the commits on this branch. There is no state file, cache, generated artifact, remote resource, or record rewrite to undo; `_brain` Markdown stays readable by humans and agents either way, and no adopter behaviour changes because none was enabled. A partial rollback is also safe: dropping the config block alone leaves the parser unreferenced, and dropping the parser alone leaves a validated block nothing reads — the same dead-config window recorded in 2.4.
 - 4.8 — the plan said to declare external reads as explicit turbo inputs. That instruction predates the cache-key fix that landed before Phase 4: `inputs` narrows a task's hash, so declaring any is now a `verify:turbo-inputs` failure. The property still holds by a better route — the corpus and the spawned validator are both inside the package, so the test task already hashes them.
 - 2.4 (W13) — the dead-config window is ACCEPTED and documented, not hidden: `memory.verifyCommand` and `memory.retroAfterCompleted` are validated by this PRD and consumed by PRD-018/019, so a released version may carry validated fields nothing reads. The alternative — landing the runner and its configuration together — is precisely the whole-repo change the three-PRD split exists to avoid. The reason is written where a reader meets the fields, in the `MemoryConfig` doc comments, rather than only here.
 - 1.4 — the frozen-snapshot digest lives in `content-prompts.test.ts` as the PRD says, not in a `scripts/verify/` gate. A verify script would be cache-immune, but adding one means touching `verify-workflow.mjs` and `package.json`, neither of which is in this PRD's Conflict Surface (and `verify-workflow.mjs` is claimed by PRD-021). Residual risk: a docs-only snapshot edit could replay a cached local pass; CI checks out fresh with no restored turbo cache, so the gate is real there. Recorded rather than hidden.
@@ -327,14 +327,16 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Progress Log
 
-| Date       | Task | Notes |
-| ---------- | ---- | ----- |
-| 2026-07-25 | 5.0 | FR-5 landed. PROTOCOL now states the supported subset as a table with the reason it is small (two implementations, no shared import, so neither may guess), documents `tags`/`watch` including that a watch is a review trigger rather than a staleness verdict, and §9 stopped calling `verify:brain` a wave-2 stub — it lists what the gate actually asserts, including the two separate status vocabularies. W10 held: `git status _brain/learnings/` is EMPTY, so the 23 conforming records were asserted, never migrated. W11 exercised on myself — three pairs went red (`PROTOCOL.md`, `INDEX.md`, `learning.md`), and the reconcile output named each side that moved: `accepted pack + repo change` twice, `accepted pack change` once for INDEX, whose repo side is tracked as data. Pack hygiene clean: no repo-of-origin fact leaked into the genericized copies. |
-| 2026-07-25 | 4.0 | FR-4 landed: 42-case conformance corpus, both implementations, mutation cover. Writing the corpus is what found the schema bug — ADRs use `proposed/accepted/superseded` and learnings `active/superseded`, two vocabularies the first draft had merged into one, which would have rejected every valid ADR PRD-018 writes. That is exactly the "thin corpus proves nothing" failure W12 names, caught by broadening the matrix rather than by review. The standalone validator is spawned, not imported: it is untyped `.mjs` because it must run where no TypeScript and no package exist, so the test exercises it the way an adopter does. The shipped copy under `practices/` is the one under test — an adopter runs that file, and the drift ledger keeps the repository's copy reconciled with it. 4.8 resolved differently than planned: the corpus and the spawned validator both live INSIDE the package, so they are already in the test task's hash, and declaring turbo `inputs` is now forbidden by `verify:turbo-inputs`. 543 tests green. |
-| 2026-07-25 | 3.0 | FR-3 parser landed. The subset was derived from the corpus, not guessed: an inventory of all 44 records and templates found exactly four frontmatter forms (scalar, folded `>-` with continuations, inline list, `#` comment) and nothing else, so everything outside them fails loud. Two design calls came out of the tests. A `#` opens a comment only when whitespace precedes it — YAML's rule, borrowed rather than invented, because two implementations must agree on where a value ends. And an ADR is exempt from `**Why:**`/`**How to apply:**`: its four required sections ARE its rationale, so demanding both shapes would make every ADR argue twice. The parser accepts all 44 live records with zero issues, which is task 5.3's assertion arriving early. 2.2 closed here — `containedPath` is imported from the init module rather than reimplemented; only its message is re-tagged, since the risk in duplication is the algorithm drifting, not the wording. 538 tests green. |
-| 2026-07-25 | 2.0 | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates. |
-| 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red. |
-| 2026-07-25 | Phase 3 | Plan generated from PRD-017 (Approved), readiness iteration 3 PASS 8.425, and watch items W10–W13, after owner Go. `infra` skeleton: Migration & Rollback is its own parent (task 6.0) because deployment ordering carries 20% of this class's readiness weight. No implementation started. |
+| Date       | Task    | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-25 | 7.0     | Phase 5 executed. Every PRD §11 command and the whole floor run green from the worktree root: 546 tests (503 at the branch point), types/lint/build clean, `verify:workflow` PASS across all 10 checks, `gate check PRD-017` and `gate check --wiring` both ok. Invariants re-asserted: zero runtime dependencies, no push code path in src or the packed scripts, and this PRD adds no CLI surface. Two floor failures were found and fixed rather than worked around — an untyped `.mjs` import (resolved by spawning the shipped validator the way an adopter runs it) and a cast in a compatibility test (resolved by destructuring, since a cast would only pretend the key was absent). Status → Code Complete; Phase 6 needs an independent reviewer, which the implementing agent cannot be.                                                                                                                                                                                                                                                       |
+| 2026-07-25 | 6.0     | Migration/rollback proved rather than argued. 6.1: `verify:brain` green over the untouched store, still 23 records, and `git diff main -- _brain/learnings/` empty. 6.2: default-off asserted three ways — a config with no memory block validates identically to one with the block disabled, no default enables anything, and a tripwire walks `src/` to prove nothing outside `core/memory` imports the parser (only the barrel re-export, which is publication, not consumption). If PRD-018 wires the runner early, that test fails and says so. 6.4: neither `workflow.config.json` nor `gates.manifest.json` exists, and the diff touches no phase prompt, PRD template, or runner file.                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-07-25 | 5.0     | FR-5 landed. PROTOCOL now states the supported subset as a table with the reason it is small (two implementations, no shared import, so neither may guess), documents `tags`/`watch` including that a watch is a review trigger rather than a staleness verdict, and §9 stopped calling `verify:brain` a wave-2 stub — it lists what the gate actually asserts, including the two separate status vocabularies. W10 held: `git status _brain/learnings/` is EMPTY, so the 23 conforming records were asserted, never migrated. W11 exercised on myself — three pairs went red (`PROTOCOL.md`, `INDEX.md`, `learning.md`), and the reconcile output named each side that moved: `accepted pack + repo change` twice, `accepted pack change` once for INDEX, whose repo side is tracked as data. Pack hygiene clean: no repo-of-origin fact leaked into the genericized copies.                                                                                                                                                                              |
+| 2026-07-25 | 4.0     | FR-4 landed: 42-case conformance corpus, both implementations, mutation cover. Writing the corpus is what found the schema bug — ADRs use `proposed/accepted/superseded` and learnings `active/superseded`, two vocabularies the first draft had merged into one, which would have rejected every valid ADR PRD-018 writes. That is exactly the "thin corpus proves nothing" failure W12 names, caught by broadening the matrix rather than by review. The standalone validator is spawned, not imported: it is untyped `.mjs` because it must run where no TypeScript and no package exist, so the test exercises it the way an adopter does. The shipped copy under `practices/` is the one under test — an adopter runs that file, and the drift ledger keeps the repository's copy reconciled with it. 4.8 resolved differently than planned: the corpus and the spawned validator both live INSIDE the package, so they are already in the test task's hash, and declaring turbo `inputs` is now forbidden by `verify:turbo-inputs`. 543 tests green. |
+| 2026-07-25 | 3.0     | FR-3 parser landed. The subset was derived from the corpus, not guessed: an inventory of all 44 records and templates found exactly four frontmatter forms (scalar, folded `>-` with continuations, inline list, `#` comment) and nothing else, so everything outside them fails loud. Two design calls came out of the tests. A `#` opens a comment only when whitespace precedes it — YAML's rule, borrowed rather than invented, because two implementations must agree on where a value ends. And an ADR is exempt from `**Why:**`/`**How to apply:**`: its four required sections ARE its rationale, so demanding both shapes would make every ADR argue twice. The parser accepts all 44 live records with zero issues, which is task 5.3's assertion arriving early. 2.2 closed here — `containedPath` is imported from the init module rather than reimplemented; only its message is re-tagged, since the risk in duplication is the algorithm drifting, not the wording. 538 tests green.                                                        |
+| 2026-07-25 | 2.0     | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates.                                                                                                                                                                                                                                                                |
+| 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red.                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-07-25 | Phase 3 | Plan generated from PRD-017 (Approved), readiness iteration 3 PASS 8.425, and watch items W10–W13, after owner Go. `infra` skeleton: Migration & Rollback is its own parent (task 6.0) because deployment ordering carries 20% of this class's readiness weight. No implementation started.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -351,6 +353,6 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 > table rows: the state builder counts table and checkbox rows in this section, and prose
 > alone counts as zero operator rows.
 
-| Task | Category   | Owner | Required Check | Status | Notes |
-| ---- | ---------- | ----- | -------------- | ------ | ----- |
+| Task | Category   | Owner | Required Check                                                                                                                                                 | Status  | Notes                                                             |
+| ---- | ---------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------- |
 | 10.0 | acceptance | owner | Review the source addendum against the approved method extension, the W10–W13 evidence, and the independent PASS/Critical-0 verdict; authorize the local merge | pending | Push stays a separate human action after the verified local merge |

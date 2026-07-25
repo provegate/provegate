@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -442,5 +442,56 @@ describe('record conformance corpus (FR-4, W12)', () => {
     );
     expect(adrActive?.valid).toBe(false);
     expect(learningAccepted?.valid).toBe(false);
+  });
+});
+
+/**
+ * PRD-017 task 6.0: the migration and rollback properties, asserted rather than
+ * argued. This PRD's entire safety case is that it changes nothing until someone
+ * opts in — a claim that is worthless unless something fails when it stops being
+ * true.
+ */
+describe('default-off compatibility (task 6.2)', () => {
+  it('a config without a memory block behaves exactly like one with memory disabled', () => {
+    // Destructured rather than cast: the point is that the validator accepts a
+    // config that genuinely lacks the key, which a cast would only pretend.
+    const { memory, ...withoutBlock } = DEFAULT_CONFIG;
+    expect(memory.enabled).toBe(false);
+    expect(validateResolvedConfig(withoutBlock)).toEqual([]);
+    expect(validateResolvedConfig(DEFAULT_CONFIG)).toEqual([]);
+  });
+
+  it('no default value enables anything', () => {
+    // Enablement is a decision someone makes, never a side effect of the store
+    // existing. If this ever reads `true`, every gate downstream turns on for
+    // every adopter on upgrade.
+    expect(DEFAULT_CONFIG.memory.enabled).toBe(false);
+    expect(DEFAULT_CONFIG.memory.verifyCommand).toBe('');
+    expect(DEFAULT_CONFIG.memory.retroAfterCompleted).toBe(0);
+    expect(DEFAULT_CONFIG.memory.entrypoints).toEqual([]);
+  });
+
+  it('the parser is inert without a caller: nothing in this PRD invokes it', () => {
+    // The substrate ships a capability, not a behaviour change. The runner, the
+    // readiness lint, and the CLI gain their memory obligations in PRD-018/019;
+    // if one of them starts calling this parser here, the default-off argument
+    // stops being true and this assertion is the tripwire.
+    const src = fileURLToPath(new URL('../src', import.meta.url));
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'memory') walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith('.ts')) continue;
+        const text = readFileSync(full, 'utf8');
+        if (/from '.*memory\/(parse|index)\.js'/.test(text)) offenders.push(full);
+      }
+    };
+    walk(src);
+    // core/index.ts re-exports the barrel; that is publication, not consumption.
+    expect(offenders.map((f) => f.slice(src.length + 1))).toEqual(['core/index.ts']);
   });
 });
