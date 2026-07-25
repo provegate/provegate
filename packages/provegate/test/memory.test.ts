@@ -204,8 +204,13 @@ describe('frontmatter subset parser (FR-3)', () => {
     expect(messages([...base, 'links:', '  - a-slug']).join('|')).toContain('block list');
     expect(messages([...base, 'description2: |', '  literal']).join('|')).toContain('unknown key');
     expect(messages([...base, 'watch: |', '  literal']).join('|')).toContain(
-      'literal block scalar',
+      "block scalar form '|'",
     );
+    // Modifiers are block scalars too: `>+` and `>2` used to fall through as
+    // ordinary strings, which is the guessing the subset exists to forbid.
+    expect(
+      messages([...base.slice(0, 1), 'description: >+', '  x', ...base.slice(2)]).join('|'),
+    ).toContain("block scalar form '>+'");
     expect(messages(['nested:', '  key: value', ...base]).join('|')).toContain('unknown key');
     expect(messages([...base, 'not a mapping line']).join('|')).toContain('unparseable');
   });

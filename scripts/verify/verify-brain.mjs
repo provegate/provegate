@@ -91,13 +91,21 @@ if (!existsSync(indexPath)) {
   ];
   for (const raw of linkTargets) {
     let target = raw.trim().replace(/^<|>$/g, '').split(/\s+/)[0];
+    // CommonMark decodes character references in a link destination, so
+    // `&#112;rivate/secret.md` names the same file as `private/secret.md`.
+    target = target
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)));
     try {
       target = decodeURIComponent(target);
     } catch {
       /* a malformed escape stays as written — still worth checking */
     }
     if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')) continue; // external / anchor
-    if (target.split(/[/\\]/).includes('private')) {
+    // Case-insensitive: the default macOS and Windows filesystems resolve
+    // `PRIVATE/` to the same directory, so an exact-case check is a boundary
+    // that holds on the CI host and not on the developer's laptop.
+    if (target.split(/[/\\]/).some((seg) => seg.toLowerCase() === 'private')) {
       r.fail(`INDEX.md: link '${raw}' resolves under private/ — the public index must not list it`);
     }
   }

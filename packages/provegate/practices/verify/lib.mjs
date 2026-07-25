@@ -84,10 +84,10 @@ export function parseRecordFrontmatter(content) {
       fold = { key, parts: [] };
       return;
     }
-    if (raw === '|' || raw === '|-') {
+    if (/^[>|][+\-0-9]*$/.test(raw) && raw !== '>-' && raw !== '>') {
       issues.push({
         field: key,
-        message: 'literal block scalar (`|`) is not supported — use a folded scalar (`>-`)',
+        message: `block scalar form '${raw}' is not supported — use a folded scalar (\`>-\`)`,
       });
       return;
     }
@@ -144,7 +144,7 @@ const ADR_STATUSES = new Set(['proposed', 'accepted', 'superseded']);
 // Kebab-case means segments joined by single hyphens: `-`, `foo-`, and `--`
 // are not slugs, and a bare `[a-z0-9-]+` accepts all three.
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const ADR_RE = /^ADR-\d{4}-[a-z0-9-]+$/;
+const ADR_RE = /^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** A watch glob's literal prefix must stay inside the workspace. */
@@ -174,14 +174,17 @@ function watchEscapesRealpath(root, glob) {
         const real = realpathSync(target);
         return real !== rootReal && !real.startsWith(rootReal + sep);
       } catch (err) {
-        if (err.code !== 'ENOENT') return false;
+        // Only "missing" means keep walking. Anything else — ELOOP above all —
+        // means containment was NOT established, and treating that as contained
+        // is the one guess with a security consequence.
+        if (err.code !== 'ENOENT') return true;
         const parent = dirname(target);
         if (parent === target) return false;
         target = parent;
       }
     }
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -286,6 +289,14 @@ export function validateMemoryRecord(content, { slug, isAdr = false, root } = {}
           issues.push({ field: key, message: `'${entry}' is not a valid record slug` });
         }
       }
+    }
+  }
+
+  // Body wikilinks belong to the shared contract, not to the wrapper alone.
+  for (const match of body.matchAll(/\[\[([^\]]+)\]\]/g)) {
+    const target = match[1].trim();
+    if (!SLUG_RE.test(target) && !ADR_RE.test(target)) {
+      issues.push({ field: 'body', message: `wikilink '${target}' is not a valid record slug` });
     }
   }
 

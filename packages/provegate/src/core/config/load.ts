@@ -51,7 +51,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  */
 function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
   const memory = config.memory;
-  if (memory === undefined) return [];
+  // Only for an ENABLED store. Running this on the merged defaults meant a
+  // repository that never opted in — but whose `_brain` happens to be a symlink —
+  // failed every config load: a default-off violation introduced by the fix for
+  // the symlink hole itself. The lexical rules still apply while disabled; they
+  // are pure and cannot punish a filesystem someone else built.
+  if (memory === undefined || !memory.enabled) return [];
   const issues: ConfigIssue[] = [];
   let rootReal: string;
   try {

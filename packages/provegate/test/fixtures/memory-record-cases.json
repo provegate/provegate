@@ -28,9 +28,17 @@
       "literal block",
       "nested map",
       "unparseable line",
-      "comment before form"
+      "comment before form",
+      "block scalar modifier"
     ],
-    "name": ["missing", "slug mismatch", "not kebab-case", "ADR pattern", "boundary hyphen"],
+    "name": [
+      "missing",
+      "slug mismatch",
+      "not kebab-case",
+      "ADR pattern",
+      "boundary hyphen",
+      "ADR suffix kebab"
+    ],
     "description": ["missing", "empty fold", "placeholder"],
     "type": ["missing", "out of set", "ADR must be decision"],
     "scope": ["out of set"],
@@ -51,13 +59,15 @@
       "drive letter",
       "escapes without a root",
       "per-entry",
-      "symlink escape (needs a real root; covered by fixture tests)"
+      "symlink escape (needs a real root; covered by fixture tests)",
+      "realpath error fails closed (fixture-covered)"
     ],
     "body": [
       "missing Why",
       "missing How to apply",
       "ADR missing a required section",
-      "reference exempt"
+      "reference exempt",
+      "wikilink slug"
     ]
   },
   "cases": [
@@ -334,7 +344,8 @@
       "fields": ["watch"],
       "matrix": [
         "watch:escapes workspace",
-        "watch:symlink escape (needs a real root; covered by fixture tests)"
+        "watch:symlink escape (needs a real root; covered by fixture tests)",
+        "watch:realpath error fails closed (fixture-covered)"
       ]
     },
     {
@@ -541,6 +552,53 @@
       "matrix": ["superseded-by:invalid slug"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\nsuperseded-by: Not_A_Slug\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "verify-brain rejected this target in its referenced-slug pass while the helper accepted it"
+    },
+    {
+      "id": "wikilink-invalid-slug",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:wikilink slug"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\nsee [[Not_A_Slug]]\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "wikilinks were checked only in the standalone wrapper, so they never entered this corpus"
+    },
+    {
+      "id": "wikilink-boundary-hyphen",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:wikilink slug"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\nsee [[foo-]]\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "block-scalar-keep-modifier",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["description"],
+      "matrix": ["structure:block scalar modifier"],
+      "content": "---\nname: sample\ndescription: >+\n  folded with a keep modifier\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "`>+` and `>2` are YAML block-scalar forms outside the documented subset"
+    },
+    {
+      "id": "block-scalar-indent-modifier",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["description"],
+      "matrix": ["structure:block scalar modifier"],
+      "content": "---\nname: sample\ndescription: >2\n  folded with an indent modifier\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "adr-boundary-hyphen",
+      "slug": "ADR-0001-foo-",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["name"],
+      "matrix": ["name:ADR suffix kebab"],
+      "content": "---\nname: ADR-0001-foo-\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
     }
   ]
 }

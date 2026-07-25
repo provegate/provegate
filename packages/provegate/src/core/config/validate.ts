@@ -274,10 +274,20 @@ function validateMemory(
 
   // The index is the store's own entry point; one living outside the store
   // would be indexed by nothing and validated by nothing.
-  const root = memory.root.replace(/\/+$/, '');
+  // Compare normalized SEGMENTS, not raw strings: `./_brain` and `_brain` name
+  // one directory, and a string prefix says otherwise.
+  const segments = (value: string): string[] =>
+    value.split(/[/\\]/).filter((part) => part.length > 0 && part !== '.');
   if (unsafeRelPath(memory.root) === null && unsafeRelPath(memory.index) === null) {
-    if (!memory.index.startsWith(`${root}/`)) {
-      issues.push({ path: 'memory.index', message: `must live under memory.root (${root}/)` });
+    const rootParts = segments(memory.root);
+    const indexParts = segments(memory.index);
+    const under =
+      indexParts.length > rootParts.length && rootParts.every((part, i) => indexParts[i] === part);
+    if (!under) {
+      issues.push({
+        path: 'memory.index',
+        message: `must live under memory.root (${rootParts.join('/') || '.'})`,
+      });
     }
   }
 

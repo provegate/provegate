@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { containedPath } from '../run/init.js';
+import { readFileSync, realpathSync } from 'node:fs';
+import { dirname, resolve, sep } from 'node:path';
 
 /**
  * The supported record format (addendum A1 §10.6): an explicitly documented
@@ -55,6 +55,33 @@ export interface MemoryRecord {
  * Both implementations must agree on where a value ends, and borrowing the rule
  * everyone already knows is cheaper than inventing one they must learn.
  */
+/**
+ * Resolve `probe` under `root` and report whether it lands outside. Walks up to
+ * the nearest existing ancestor, so a not-yet-created path is judged by where it
+ * WOULD live. A resolution error that is not "missing" fails CLOSED: containment
+ * was not established, and an ELOOP symlink is exactly the case where guessing
+ * "contained" is worst.
+ */
+function escapesRealpath(root: string, probe: string): boolean {
+  try {
+    const rootReal = realpathSync(resolve(root));
+    let target = resolve(rootReal, probe);
+    for (;;) {
+      try {
+        const real = realpathSync(target);
+        return real !== rootReal && !real.startsWith(rootReal + sep);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return true;
+        const parent = dirname(target);
+        if (parent === target) return false;
+        target = parent;
+      }
+    }
+  } catch {
+    return true;
+  }
+}
+
 /** Host-independent: absolute, home-relative, drive-letter, UNC, or `..`. */
 function escapesLexically(probe: string): boolean {
   if (probe.startsWith('~')) return true;
@@ -71,7 +98,7 @@ function stripComment(rawValue: string): string {
 // Kebab-case means segments joined by single hyphens: `-`, `foo-`, and `--`
 // are not slugs, and a bare `[a-z0-9-]+` accepts all three.
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const ADR_NAME = /^ADR-\d{4}-[a-z0-9-]+$/;
+const ADR_NAME = /^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PLACEHOLDER = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** Frontmatter keys the subset knows. An unknown key is a typo, not an extension. */
@@ -177,10 +204,10 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
       pendingFold = { key, parts: [] };
       continue;
     }
-    if (raw === '|' || raw === '|-') {
+    if (/^[>|][+\-0-9]*$/.test(raw) && raw !== '>-' && raw !== '>') {
       issues.push({
         path: at(key),
-        message: 'literal block scalar (`|`) is not supported — use a folded scalar (`>-`)',
+        message: `block scalar form '${raw}' is not supported — use a folded scalar (\`>-\`)`,
       });
       continue;
     }
@@ -359,11 +386,25 @@ export function validateRecord(
         continue;
       }
       if (options.root === undefined) continue;
-      try {
-        containedPath(options.root, probe);
-      } catch {
+      // Resolve the probe ITSELF, not just its parent. `containedPath` walks up
+      // from the parent, so `watch: [link/**]` — probe exactly `link` — was
+      // contained here and escaping there. The walk below is deliberately the
+      // same shape as the standalone validator's: these two must agree by
+      // construction, and the only way to guarantee that is to do the same thing.
+      if (escapesRealpath(options.root, probe)) {
         issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
       }
+    }
+  }
+
+  // Body wikilinks are references like any other, so they belong to the shared
+  // contract: checking them only in the standalone wrapper made a record valid
+  // to one implementation and invalid to the other, and kept them out of the
+  // corpus entirely.
+  for (const match of body.matchAll(/\[\[([^\]]+)\]\]/g)) {
+    const target = match[1]!.trim();
+    if (!SLUG.test(target) && !ADR_NAME.test(target)) {
+      issues.push({ path: at('body'), message: `wikilink '${target}' is not a valid record slug` });
     }
   }
 
