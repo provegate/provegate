@@ -17,3 +17,6 @@ acting on it.
 At phase/PRD close, run the capture protocol (`_brain/PROTOCOL.md` §7): if you hit something
 not derivable from the code, write a `_brain/learnings/<slug>.md` and add its INDEX
 pointer. Store only non-derivable knowledge — never what the repo already records.
+
+When memory is enabled, a PRD also declares `## Memory Inputs` and `## Memory Outputs` —
+see AGENT_BOOTSTRAP.md, "Memory contract". `gate check` parses both.

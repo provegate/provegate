@@ -17,6 +17,7 @@
 - [notes column runs commands](learnings/notes-column-runs-commands.md) — a per-FR parser reading the whole row runs backtick commands in Notes too; scope to the Command column
 - [known-red ledger must expire](learnings/known-red-ledger-must-expire.md) — an acknowledged-failure allowlist must fail on stale/unknown entries or it becomes a permanent bypass
 - [unparseable command must fail loudly](learnings/unparseable-command-must-fail-loudly.md) — a runner must never silently drop a command it can't classify as runnable; report or fail
+- [adr section blank line reads empty](learnings/adr-section-blank-line-reads-empty.md) — `$` under `/m` ends the capture at the first newline, so a blank line after `## Context` reads as empty
 
 ## Orchestration & close gotchas
 
@@ -41,4 +42,4 @@
 
 ## ADRs
 
-<!-- - [ADR-0001 …](adr/ADR-0001-....md) — <one-line hook> -->
+- [ADR-0001 closed-loop agent memory](adr/ADR-0001-closed-loop-agent-memory.md) — declared PRD inputs, watch-triggered review, base-ref weakening proof, Phase 7 capture

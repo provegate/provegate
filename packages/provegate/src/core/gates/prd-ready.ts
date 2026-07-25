@@ -35,17 +35,40 @@ function frBlocks(content: string): FrBlock[] {
   return blocks;
 }
 
-/** Backticked target paths on `**Targets:**` lines of one FR body. */
+/**
+ * Backticked target paths of one FR body, read from the `**Targets:**` ENTRY —
+ * its opening line plus the wrapped continuation lines beneath it.
+ *
+ * Reading only the line carrying the marker was a silent under-count: a real FR
+ * wraps its target list across several lines, so everything after the first was
+ * invisible to both consumers. On this PRD that was 7 of ~30 paths. The hard-cap
+ * rules under-fired, and the memory watch gate — whose whole job is to notice an
+ * overlap with a declared target — could not see the targets it was matching
+ * against. A gate that reads part of its input reports a pass it did not earn.
+ *
+ * The entry ends where the next list bullet, the next numbered FR, or a blank
+ * line begins, so prose elsewhere in the FR body is still excluded.
+ */
 function frTargets(body: string): string[] {
   const targets: string[] = [];
-  for (const line of body.split('\n')) {
-    if (!/\*\*Targets:\*\*/.test(line)) continue;
-    for (const match of line.matchAll(/`([^`]+)`/g)) {
+  const lines = body.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!/\*\*Targets:\*\*/.test(lines[i]!)) continue;
+    const entry = [lines[i]!];
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const next = lines[j]!;
+      if (next.trim().length === 0) break;
+      if (/^\s*-\s/.test(next)) break;
+      if (/^\s*\d+\.\s/.test(next)) break;
+      entry.push(next);
+      i = j;
+    }
+    for (const match of entry.join('\n').matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
       if (value.includes('/')) targets.push(value);
     }
   }
-  return targets;
+  return [...new Set(targets)];
 }
 
 export interface PrdReadyReport {

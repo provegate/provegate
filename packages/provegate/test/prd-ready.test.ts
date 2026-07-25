@@ -116,11 +116,12 @@ describe('hard caps', () => {
   });
 });
 
+const roots: string[] = [];
+afterEach(() => {
+  while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+});
+
 describe('FR-2 memory readiness gate', () => {
-  const roots: string[] = [];
-  afterEach(() => {
-    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
-  });
 
   const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
 
@@ -384,5 +385,109 @@ describe('self-application (W4 dogfood)', () => {
     expect(prdPath, 'PRD-002 artifact not found in wip or completed').toBeDefined();
     const report = lintPrd(cfg, manifest, readFileSync(prdPath!, 'utf8'));
     expect(report.issues).toEqual([]);
+  });
+});
+
+describe('FR Targets are read as an entry, not as one line', () => {
+  // A real FR wraps its target list. Reading only the marker line hid every path
+  // after the first — measured at 7 of ~30 on PRD-018 — which silently narrowed
+  // both the hard-cap rules and the memory watch gate.
+  const WRAPPED = [
+    '## 4. Functional Requirements',
+    '',
+    '1. **FR-1 — Thing**: does a thing.',
+    '   - **Targets:** `packages/x/src/a.ts`,',
+    '     `packages/x/src/b.ts`,',
+    '     `packages/y/src/c.ts` (new)',
+    '   - **Note:** `packages/z/prose-only.ts` is discussed, not targeted.',
+    '',
+    '## 9. Open Questions',
+    '',
+    '- (none)',
+    '',
+    '## 11. Verification Commands',
+    '',
+    '| FR   | Command |',
+    '| ---- | ------- |',
+    '| FR-1 | `pnpm test test/a.test.ts` |',
+    '',
+    '## 12. DO NOT (Anti-Patterns)',
+    '',
+    '- DO NOT do bad things.',
+  ].join('\n');
+
+  const capFor = (glob: string): GatesManifest => ({
+    ...manifest,
+    hardCaps: [
+      {
+        id: 'cap',
+        when: { targetsMatch: [glob] },
+        requireLine: 'Deny test: `[^`]+`',
+        message: 'targets matched',
+      },
+    ],
+  });
+
+  it('a hard cap fires on a target from a continuation line', () => {
+    expect(lintPrd(cfg, capFor('packages/y/**'), WRAPPED).issues).toContainEqual(
+      expect.stringContaining('hard cap cap'),
+    );
+  });
+
+  it('and still fires on the first line', () => {
+    expect(lintPrd(cfg, capFor('packages/x/src/a.ts'), WRAPPED).issues).toContainEqual(
+      expect.stringContaining('hard cap cap'),
+    );
+  });
+
+  it('a path in a sibling bullet is prose, not a target', () => {
+    expect(lintPrd(cfg, capFor('packages/z/**'), WRAPPED).ok).toBe(true);
+  });
+
+  it('the watch gate sees continuation targets too', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-memory-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/learnings/watcher-record.md'),
+      [
+        '---',
+        'name: watcher-record',
+        'description: watches the wrapped target',
+        'type: gotcha',
+        'scope: workflow',
+        'status: active',
+        'watch: [packages/y/**]',
+        '---',
+        '',
+        'Body.',
+        '',
+        '**Why:** real.',
+        '',
+        '**How to apply:** safe.',
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# index\n\n- [watcher](learnings/watcher-record.md) — hook\n',
+    );
+    const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    const content = [
+      WRAPPED,
+      '',
+      '## Memory Inputs',
+      '',
+      '- none — nothing applied.',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — nothing durable expected.',
+      '',
+    ].join('\n');
+    expect(lintPrd(on, manifest, content, root).issues).toEqual([
+      "Memory Inputs: 'watcher-record' watches packages/y/src/c.ts — a declared target " +
+        'overlaps it, so it needs an input disposition',
+    ]);
   });
 });

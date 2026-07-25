@@ -30,3 +30,51 @@ own judgment.
 
 Phases 4–7 run autonomously. Humans own the spec, the readiness verdict, the task plan — and
 the push.
+
+## Closed-loop memory (opt-in)
+
+A durable-memory store answers "what did we already learn?", but a store alone cannot show
+that a known constraint was *considered*. With `memory.enabled` set in
+`workflow.config.json`, two parsed sections close that loop through artifacts the
+repository already commits — no database, no service, no second state store.
+
+| Section          | Grammar                                                          | Checked at |
+| ---------------- | ---------------------------------------------------------------- | ---------- |
+| `Memory Inputs`  | `applied` \| `reviewed` \| `not-applicable`: `` `<slug>` `` — why | Phase 2, Phase 7 |
+| `Memory Outputs` | `learning` \| `adr`: `` `<exact path>` `` — the durable fact      | Phase 2, Phase 7 |
+
+Either section may instead carry exactly one reasoned `none`. A rationale is required in
+every form: an unreasoned `none` is the ceremonial answer the contract exists to prevent,
+and a non-empty output set may not contain `none` at all — the two forms assert opposite
+things about the same set.
+
+Four rules do the work:
+
+- **Inputs resolve against the real store.** A slug must name an active, indexed record;
+  a superseded one, an unindexed file, or a record that fails validation is refused by
+  name at `gate check` time.
+- **A watch is a review trigger, not a staleness verdict.** When an active record's
+  `watch` glob overlaps a declared FR target — or a file in the closing diff — that record
+  needs an input disposition. It never needs to be edited. The opposite rule would make
+  declaring a watch expensive for its author and train agents to omit them.
+- **Outputs are proved against the diff.** Every declared output is an exact
+  repo-relative path that also appears in Durable Artifacts, and Phase 7 refuses a close
+  whose declared paths the merge diff does not contain. A declaration is not a capture.
+- **Weakening is proved against the base ref.** The baseline is the work item as
+  committed on the base branch — the one version an agent editing its own spec cannot
+  rewrite. Appending an output discovered during implementation is always allowed;
+  removing one, changing its type or path, or replacing it with `none` is refused outright
+  for an autonomously-closeable item, and needs owner acceptance otherwise.
+
+### Manifest safety
+
+A generated practices manifest **omits** `phases.4` rather than writing `phases.4: []`.
+Manifest load deep-merges over the built-in floor, so an absent key inherits the four
+configured floor commands while an empty array erases them. Emptying the floor is the one
+manifest edit that silently removes gates instead of adding them.
+
+Turning the contract on is `gate land`-gated: the merge runs inside the same workspace
+mutex that guards lease claims and refuses while another work item holds an active lease,
+so gate policy never changes under a running agent's feet. That is a `gate land`
+precondition and not a git-level invariant — a direct `git merge` bypasses it, as it
+bypasses every gate here.

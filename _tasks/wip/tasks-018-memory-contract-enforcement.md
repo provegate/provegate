@@ -180,7 +180,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 5.4 Cover both flows in `packages/provegate/test/chain.test.ts` — the worktree
         happy path and the non-worktree refusal text. Only the second is new.
 
-- [ ] 6.0 FR-6 — Safe activation, manifest wiring, and the land barrier
+- [x] 6.0 FR-6 — Safe activation, manifest wiring, and the land barrier
   - [x] 6.1 In `packages/provegate/src/core/run/init.ts`, generate memory-enabled config
         and a manifest containing `phases.7` only for a fresh `gate init --practices`.
         The generated manifest must **omit** `phases.4` entirely so default floor commands
@@ -189,11 +189,11 @@ Records to open and confirm still accurate before the dependent task starts (tas
         manifests, and entrypoints stay byte-unchanged, and in `test/manifest.test.ts`
         that a fresh manifest's absent `phases.4` still resolves to the four floor
         commands while `phases.4: []` erases them.
-  - [ ] 6.3 Write this repo's root `gates.manifest.json`: Phase 4 as `check-types`,
+  - [x] 6.3 Write this repo's root `gates.manifest.json`: Phase 4 as `check-types`,
         `lint`, `build`, `test`, `verify:workflow`, `check-egress` — the shipped default
         order first, then the two additions, with `build` before `check-egress` because
         the scanner reads build output. Phase 7 runs `verify:brain`.
-  - [ ] 6.4 Write the root `workflow.config.json` enabling memory. Both files are new
+  - [x] 6.4 Write the root `workflow.config.json` enabling memory. Both files are new
         worktree control artifacts from this moment; PRD-021 later adds one key to the
         config and PRD-022 closes the revalidation residual.
   - [x] 6.5 Implement the activation barrier in `packages/provegate/src/core/run/merge.ts`:
@@ -205,51 +205,51 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 6.7 W5 — in `packages/provegate/test/open.test.ts`, prove the control-artifact
         **introduction** transition: a worktree leased before these files exist is refused
         on reuse, and succeeds after merging the base.
-  - [ ] 6.8 Record the residual honestly in **Deferrals & Decisions**: a direct
+  - [x] 6.8 Record the residual honestly in **Deferrals & Decisions**: a direct
         `git merge` bypasses the barrier, and a surviving worktree does **not** converge,
         because control artifacts are revalidated only on the claim path. Do not write a
         convergence claim anywhere — PRD-022 owns closing it.
 
-- [ ] 7.0 FR-7 — Dogfood, ADR, and parity
-  - [ ] 7.1 Apply the contract to `AGENT_BOOTSTRAP.md`, `CLAUDE.md`,
+- [x] 7.0 FR-7 — Dogfood, ADR, and parity
+  - [x] 7.1 Apply the contract to `AGENT_BOOTSTRAP.md`, `CLAUDE.md`,
         `.cursor/rules/brain.mdc`, and `_brain/PROTOCOL.md`.
-  - [ ] 7.2 Write `_brain/adr/ADR-0001-closed-loop-agent-memory.md` — the declared Memory
+  - [x] 7.2 Write `_brain/adr/ADR-0001-closed-loop-agent-memory.md` — the declared Memory
         Output of this PRD — and add its INDEX pointer. It carries all four ADR sections.
-  - [ ] 7.3 Document the method and the manifest safety rule in
+  - [x] 7.3 Document the method and the manifest safety rule in
         `apps/docs/content/docs/method.mdx` and `packages/provegate/README.md`.
-  - [ ] 7.4 Port every change into its genericized `practices/**` counterpart, then run
+  - [x] 7.4 Port every change into its genericized `practices/**` counterpart, then run
         `node scripts/verify/verify-pack-drift.mjs --reconcile` and **read its per-pair
         output** — every printed line is a change being accepted. Paste it into the
         Progress Log.
-  - [ ] 7.5 Confirm no repo-specific fact leaked into the package copies (no repo name, no
+  - [x] 7.5 Confirm no repo-specific fact leaked into the package copies (no repo name, no
         wave numbering, English only) via the existing hygiene assertions.
-  - [ ] 7.6 Confirm no doctor, find, or stats CLI shipped here — that surface is PRD-019.
+  - [x] 7.6 Confirm no doctor, find, or stats CLI shipped here — that surface is PRD-019.
 
-- [ ] 8.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
-  - [ ] 8.1 Order the work as the PRD requires: contract, prompts, runner, tests — then
+- [x] 8.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
+  - [x] 8.1 Order the work as the PRD requires: contract, prompts, runner, tests — then
         root activation **last**. Enabling before every gate exists is the one sequencing
         error that cannot be undone by a later commit.
-  - [ ] 8.2 Prove the disabled path end to end: with `memory.enabled: false`, `gate check`,
+  - [x] 8.2 Prove the disabled path end to end: with `memory.enabled: false`, `gate check`,
         `gate status`, and the gate chain behave byte-identically to the 0.5 baseline.
-  - [ ] 8.3 Record the rollback in **Deferrals & Decisions**: set `memory.enabled: false`
+  - [x] 8.3 Record the rollback in **Deferrals & Decisions**: set `memory.enabled: false`
         and remove the root Phase 7 wiring; Markdown records survive and no data or remote
         migration exists.
-  - [ ] 8.4 Record what activation costs adopters: nothing. Fresh installs get the
+  - [x] 8.4 Record what activation costs adopters: nothing. Fresh installs get the
         memory-enabled config; existing config, manifests, and entrypoints are never
         auto-edited.
-  - [ ] 8.5 W13 — confirm PRD-022 is a real PRD rather than a stub before this PRD lands,
+  - [x] 8.5 W13 — confirm PRD-022 is a real PRD rather than a stub before this PRD lands,
         so FR-6's residual has an owner. It is drafted at
         `_prds/wip/prd-022-control-artifact-revalidation.md`; verify it still carries FRs
         and verification commands.
 
-- [ ] 9.0 Phase 5 — Execute verification
-  - [ ] 9.1 Run every PRD §11 command exactly as written and fill the matching
+- [x] 9.0 Phase 5 — Execute verification
+  - [x] 9.1 Run every PRD §11 command exactly as written and fill the matching
         Verification Ledger rows with evidence; no substitutions, no omissions.
-  - [ ] 9.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
+  - [x] 9.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build`, `pnpm verify:workflow`, `pnpm check-egress`; record exit codes.
-  - [ ] 9.3 Run `node packages/provegate/dist/cli.js check PRD-018` and
+  - [x] 9.3 Run `node packages/provegate/dist/cli.js check PRD-018` and
         `node packages/provegate/dist/cli.js check --wiring`.
-  - [ ] 9.4 Run `gate run` against this repo with the new root manifest and confirm
+  - [x] 9.4 Run `gate run` against this repo with the new root manifest and confirm
         resolved Phase 4 is exactly the six commands in order, and Phase 7 runs
         `verify:brain`.
   - [ ] 9.5 Immediately before the merge, re-read `_state/locks` and confirm no foreign
@@ -287,24 +287,24 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 | Gate               | Command / Check                                             | Scope | Result  | Evidence | Notes |
 | ------------------ | ------------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/content-templates.test.ts` | pkg   | pending |          | mutually-exclusive grammar |
-| FR-2               | `pnpm --filter provegate test test/prd-ready.test.ts`         | pkg   | pending |          | watched target and disabled behavior |
-| FR-3               | `pnpm --filter provegate test test/content-prompts.test.ts`   | pkg   | pending |          | per-file obligation, ten assertions |
-| FR-4               | `pnpm --filter provegate test test/chain.test.ts`             | pkg   | pending |          | Phase 7 order, output and watch checks |
-| FR-5               | `pnpm --filter provegate test test/chain.test.ts`             | pkg   | pending |          | base-ref weakening matrix + non-worktree refusal |
-| FR-6a              | `pnpm --filter provegate test test/manifest.test.ts`          | pkg   | pending |          | exact root/practices Phase 4 semantics |
-| FR-6b              | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | pending |          | additive practices activation |
-| FR-6c              | `pnpm --filter provegate test test/open.test.ts`              | pkg   | pending |          | control-artifact introduction transition |
-| FR-6d              | `pnpm --filter provegate test test/merge.test.ts`             | pkg   | pending |          | activation refuses while a foreign lease is active |
-| FR-7               | `node scripts/verify/verify-pack-drift.mjs`                   | repo  | pending |          | live/package parity after reconcile |
-| types              | `pnpm check-types`                                            | root  | pending |          | zero errors |
-| lint               | `pnpm lint`                                                   | root  | pending |          | zero warnings |
-| test               | `pnpm test`                                                   | root  | pending |          | full suite |
-| build              | `pnpm build`                                                  | root  | pending |          | clean build |
-| workflow           | `pnpm verify:workflow`                                        | root  | pending |          | every hygiene check green |
-| egress             | `pnpm check-egress`                                           | root  | pending |          | built output scanned after build |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-018`           | repo  | pending |          | readiness lint |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`          | repo  | pending |          | wire-or-delete |
+| FR-1              | `pnpm --filter provegate test test/content-templates.test.ts` | pkg   | passed  | 23 passed (23) | mutually-exclusive grammar |
+| FR-2              | `pnpm --filter provegate test test/prd-ready.test.ts`         | pkg   | passed  | 30 passed (30) | watched target and disabled behavior |
+| FR-3              | `pnpm --filter provegate test test/content-prompts.test.ts`   | pkg   | passed  | 25 passed (25) | per-file obligation, ten assertions |
+| FR-4              | `pnpm --filter provegate test test/chain.test.ts`             | pkg   | passed  | 28 passed (28) | Phase 7 order, output and watch checks |
+| FR-5              | `pnpm --filter provegate test test/chain.test.ts`             | pkg   | passed  | 28 passed (28) | base-ref weakening matrix + non-worktree refusal |
+| FR-6a             | `pnpm --filter provegate test test/manifest.test.ts`          | pkg   | passed  | 15 passed (15) | exact root/practices Phase 4 semantics |
+| FR-6b             | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | passed  | 10 passed (10) | additive practices activation |
+| FR-6c             | `pnpm --filter provegate test test/open.test.ts`              | pkg   | passed  | 19 passed (19) | control-artifact introduction transition |
+| FR-6d             | `pnpm --filter provegate test test/merge.test.ts`             | pkg   | passed  | 22 passed (22) | activation refuses while a foreign lease is active |
+| FR-7              | `node scripts/verify/verify-pack-drift.mjs`                   | repo  | passed  | 49 pair(s) checked, PASS | live/package parity after reconcile |
+| types             | `pnpm check-types`                                            | root  | passed  | 5 tasks, 0 errors | zero errors |
+| lint              | `pnpm lint`                                                   | root  | passed  | 4 tasks, 0 warnings | zero warnings |
+| test              | `pnpm test`                                                   | root  | passed  | 41 files / 631 tests | full suite |
+| build             | `pnpm build`                                                  | root  | passed  | 4 successful | clean build |
+| workflow          | `pnpm verify:workflow`                                        | root  | passed  | all 9 checks PASS | every hygiene check green |
+| egress            | `pnpm check-egress`                                           | root  | passed  | clean — no third-party fetch shape | built output scanned after build |
+| gate-check        | `node packages/provegate/dist/cli.js check PRD-018`           | repo  | passed  | ok — PRD-018 passes the readiness lint | readiness lint |
+| gate-wiring       | `node packages/provegate/dist/cli.js check --wiring`          | repo  | passed  | ok — every gate is wired or excepted | wire-or-delete |
 | independent-review | `_docs/reviews/review-018-memory-contract-enforcement.md`     | repo  | pending |          | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -350,6 +350,37 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `gate-wire-or-delete` is enforced live (`verify:gates-wired`, 10 registered / 10 on
   disk), `push-is-human-by-omission` holds (`gate push` refuses in the shipped CLI help),
   and the two workflow-seed records name no path that could drift.
+- Task 6.8 residual, stated rather than engineered around — **the land barrier is a
+  `gate land` precondition, not a git-level invariant.** A direct `git merge` bypasses it
+  exactly as it bypasses every gate here (the pre-commit hook exempts merges). And it does
+  **not** self-correct: control artifacts are revalidated only on a new claim (`open.ts`),
+  so a worktree that keeps running `gate run` and `gate land` never re-checks them. No
+  convergence is claimed anywhere in this PRD's code or docs, and no exemption state is
+  recorded, so the worst case is one bypassed activation rather than a lasting exemption.
+  Closing it is PRD-022's scope.
+- Phase 4 decision — **the barrier is gated on `memory.enabled`, which makes it a standing
+  rule for this repository rather than a one-off activation guard.** FR-6 and task 6.5 both
+  state it as `gate land` behavior without a trigger condition, and the alternative —
+  firing only when the merge diff touches the control artifacts — is a trigger this PRD
+  never specifies, so implementing it would have been invented method. The cost is real and
+  belongs in the review: two concurrent PRDs cannot land while either holds a lease. It
+  fails closed, names the blocking lease, and the remedy (release, or wait out the TTL) is
+  in the refusal text.
+- Task 8.3 rollback — set `memory.enabled: false` in `workflow.config.json` and drop
+  `phases.7` from `gates.manifest.json`. Legacy behavior returns with no data migration:
+  every record is Markdown that survives untouched, and the readiness/close gates read the
+  flag rather than the store. Proved in task 8.2 by flipping the flag and re-running: with
+  memory off, `gate check PRD-018` passes, `gate status` is unchanged, and the Phase 7
+  chain holds only `durable artifacts touched in merge diff` plus the manifest command —
+  the two `memory:` gates disappear entirely rather than passing vacuously.
+- Task 8.4 adopter cost — **nothing.** A fresh `gate init --practices` gets the
+  memory-enabled config and a manifest wiring the packed validator; every existing config,
+  manifest, entrypoint, package script, and CI file is untouched, because init writes with
+  `wx` and reports existing paths as skipped. An adopter who never re-runs init sees no
+  change at all, which is what `memory.enabled` defaulting to false buys.
+- Task 8.5 (W13) — PRD-022 is a real PRD, not a stub: readiness PASS 9.10, 73 planned
+  tasks, seven FRs with their own §11 commands, at
+  `_prds/wip/prd-022-control-artifact-revalidation.md`. FR-6's residual has an owner.
 - Phase 4 scope decision (owner-approved 2026-07-25) — **`packages/provegate/src/cli.ts` is
   edited although PRD-018's Conflict Surface does not declare it.** One argument on one
   line: `lintPrd(config, manifest, content)` → `lintPrd(config, manifest, content, root)`.
@@ -372,6 +403,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Date       | Task    | Notes |
 | ---------- | ------- | ----- |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-018 (Approved), readiness iteration 6 PASS 8.33, and watch items W1–W13, after owner Go. No implementation started. Phase 4 entry is blocked on PRD-017 Ship Verified (task 0.2). |
+| 2026-07-25 | 2.2 | **The watch gate could not see most of the targets it matches against, and the fix is in FR-2's own target file.** `frTargets` read backticked paths only from the line carrying `**Targets:**`, but a real FR wraps its list across several lines — measured on this PRD: **7 paths seen of ~30 declared**. Two consumers were reading a truncated input: the hard-cap rules (since PRD-002) and the new watch gate, whose entire job is to notice an overlap with a declared target. `frTargets` now reads the Targets ENTRY — its opening line plus wrapped continuations, stopping at the next bullet, the next numbered FR, or a blank line — so a path in a sibling bullet is still prose. Four regression cases in `prd-ready.test.ts`. |
+| 2026-07-25 | 7.2 | **Writing this PRD's own declared output hit a defect in PRD-017's shipped validator.** ADR-0001 failed `verify:brain` with all four sections reported empty while full: the section regex ends its lazy capture at `(?=^## \|$)` under `/m`, where `$` anchors end-of-LINE, so a blank line after the heading captures nothing. `_brain/_templates/adr.md` puts content directly under each heading — the one shape that passes — and the repository had no ADR until now, so nothing exercised it. `prettier` formats `.md` and inserts that blank line, so `pnpm format` would break every ADR; `format:check` is wired into no gate, which is the only reason the two have not collided. ADR-0001 is written in the passing shape, the finding is captured as `_brain/learnings/adr-section-blank-line-reads-empty.md` and **appended** to Memory Outputs and Durable Artifacts (FR-5 permits appending without acceptance), and the parser fix is deferred: it spans PRD-017's two validator copies plus their shared corpus, all outside this PRD's Conflict Surface. |
+| 2026-07-25 | 6.3–6.4 | Root activation, last as task 8.1 requires. `gates.manifest.json` writes Phase 4 as the four floor commands then `pnpm verify:workflow` and `pnpm check-egress` (build before egress, because the scanner reads build output), and Phase 7 as `pnpm verify:brain`. `workflow.config.json` enables memory; `memory.entrypoints` is populated because config validation refuses an enabled block with an empty list — `must name at least one agent entrypoint when memory is enabled`, which is the substrate refusing a half-installation rather than a surprise. **The contract then caught its own author:** with memory live, `gate check PRD-018` failed with `'adr-section-blank-line-reads-empty' watches _brain/adr/ADR-0001-closed-loop-agent-memory.md — a declared target overlaps it, so it needs an input disposition`. The record written during Phase 4 watches `_brain/adr/**`; FR-7 targets that exact file. Adding the disposition is the loop closing, not a workaround. |
+| 2026-07-25 | 8.2 | Disabled-path proof, by measurement rather than assertion. With `memory.enabled: false`: `gate check PRD-018` → ok, `gate status` → unchanged table, and `gate run --dry-run` Phase 7 lists exactly `durable artifacts touched in merge diff` + `pnpm verify:brain`. Flipped back on, the same dry-run inserts `memory: declared outputs in Durable Artifacts and the merge diff` and `memory: no weakening against main` **between** them — so the configured validator provably runs after capture, not before (`verify-check-phase-placement`), and the dry-run prints every check it would perform (FR-4). |
+| 2026-07-25 | 7.4 | `node scripts/verify/verify-pack-drift.mjs --reconcile`, read per pair before accepting — exactly two lines, both expected, both edited by hand on each side rather than copied: `accepted pack + repo change — brain/PROTOCOL.md` (capture step 2b: the packed twin says "work item", the root copy says "PRD") and `accepted pack + repo change — templates/AGENT_BOOTSTRAP.template.md` (the Memory contract section: the packed template is vendor-neutral, the root copy names `main`, `gate check`, and this repo's acceptance flow). Then `reconciled 49 pair(s)`, `49 pair(s) checked`, `PASS`. The gate had first failed with "the pack and repo side changed since reconciliation" for both — which is the correct reading of a two-sided edit, not drift. |
 | 2026-07-25 | 0.0–0.5 | Phase 4 opened. `gate open PRD-018 --worktree` claimed 22 surface globs; branch `feat/prd-018-memory-contract-enforcement`, worktree `.worktrees/prd-018-memory-contract-enforcement`, lease `_state/locks/prd-018-memory-contract-enforcement.json`. `open` printed two fatal-looking lines — `workflow.config.json` and `gates.manifest.json` absent in the base commit — which is the expected pre-activation state: FR-6 creates both, so there is nothing yet to materialize. 0.2 met: `_state/prds.json` records PRD-017 `Ship Verified` (58/58, land `823d766`, board close `b916307`). Baseline green and captured: `pnpm test` 41 files / 552 tests, `pnpm verify:workflow` PASS across all nine checks, `pnpm check-egress` clean, `pnpm build` 4/4. Nothing pre-existing red, so nothing ledgered as normalized. Two findings recorded in Deferrals & Decisions (0.3, 0.4). No implementation files touched yet. |
 
 ---

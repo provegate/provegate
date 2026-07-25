@@ -96,6 +96,36 @@ types fail loud with path-tagged errors.
 | `worktree.dir`     | `.worktrees`                                           | linked-worktree location                 |
 | `executionPhases`  | `["Phase 2b", "Phase 3", "Phase 4", "Maintenance"]`    | which phases claim conflict surfaces     |
 | `sharedAppendOnly` | `package.json`, `pnpm-lock.yaml`, …                    | manifests exempt from ownership overlap  |
+| `memory`           | `{ "enabled": false }` + `_brain` paths                | closed-loop memory contract (opt-in)     |
+
+### Closed-loop memory (`memory.enabled`)
+
+Off by default, and nothing infers it: a `_brain` directory that exists changes no
+behavior. Turned on, every PRD carries two parsed sections —
+
+```
+## Memory Inputs
+- applied|reviewed|not-applicable: `<record-slug>` — <rationale>
+- none — <why no active record is relevant>
+
+## Memory Outputs
+- learning|adr: `<exact repo-relative path>` — <the durable fact expected>
+- none — <why no non-derivable output is expected>
+```
+
+— and four rules are enforced. Inputs must name **active, indexed** records. An active
+record whose `watch` glob overlaps a declared FR target, or a file in the closing diff,
+must appear as an input: a watch is a review trigger, never an instruction to edit the
+record. Declared outputs are exact paths that also appear in Durable Artifacts, and Phase
+7 refuses a close whose declared paths are missing from the merge diff. Weakening —
+removing an output, changing its type or path, replacing it with `none` — is measured
+against the PRD **as committed on the base branch**, so an agent cannot edit away its own
+promise and then verify the edit as compliant.
+
+`gate init --practices` writes the opt-in and a manifest wiring the packed validator into
+Phase 7. That manifest **omits** `phases.4` deliberately: manifest load deep-merges over
+the built-in floor, so an absent key inherits the four configured floor commands while
+`phases.4: []` would erase them.
 
 ## The method assets
 

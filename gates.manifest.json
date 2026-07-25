@@ -1,0 +1,13 @@
+{
+  "phases": {
+    "4": [
+      "pnpm check-types",
+      "pnpm lint",
+      "pnpm build",
+      "pnpm test",
+      "pnpm verify:workflow",
+      "pnpm check-egress"
+    ],
+    "7": ["pnpm verify:brain"]
+  }
+}
