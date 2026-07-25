@@ -35,6 +35,7 @@
     "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
     "verify:gates-wired": "node scripts/verify/verify-gates-wired.mjs",
     "verify:pack-drift": "node scripts/verify/verify-pack-drift.mjs",
+    "verify:turbo-inputs": "node scripts/verify/verify-turbo-inputs.mjs",
     "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
     "verify:workflow": "node scripts/verify/verify-workflow.mjs",
     "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green — ready to push; run git push yourself (push is always human)')\""
