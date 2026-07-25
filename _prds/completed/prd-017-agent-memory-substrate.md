@@ -1,6 +1,6 @@
 # PRD-017: Agent Memory Substrate
 
-> **Status**: Approved
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25

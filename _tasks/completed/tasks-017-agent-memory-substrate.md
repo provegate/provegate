@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-017-agent-memory-substrate.md](../../_prds/wip/prd-017-agent-memory-substrate.md)
 > **Readiness**: [readiness-017-agent-memory-substrate.md](../../_readiness/wip/readiness-017-agent-memory-substrate.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.425/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-25
@@ -270,7 +270,7 @@ and commands it names still exist **before** the dependent task starts (task 0.2
   - [x] 9.3 Prepare the owner handoff: addendum fidelity, W10–W13 evidence, the
         independent verdict, the measured no-op proof from 6.1, and the local merge plan.
         Leave the operator row pending.
-  - [ ] 9.4 After owner acceptance only, run `gate land PRD-017`; verify the post-merge
+  - [x] 9.4 After owner acceptance only, run `gate land PRD-017`; verify the post-merge
         gates and worktree cleanup. Never push — the handoff ends with the human push
         instruction.
 
