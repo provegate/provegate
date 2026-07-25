@@ -50,13 +50,13 @@ exist.
 
 ### Success Metrics
 
-| Metric | Current | Target | Measurement |
-| ------ | ------- | ------ | ----------- |
-| Empty folded descriptions accepted | yes | no | mutation fixture |
-| Parser implementations sharing a conformance corpus | 0 | 2 | core + standalone fixture |
-| Existing valid brain records accepted | 23 | all | `pnpm verify:brain` |
-| Runtime dependencies / network / push paths added | 0 | 0 | manifest and egress/static tests |
-| Memory behavior enabled by this PRD | n/a | none | compatibility fixtures |
+| Metric                                              | Current | Target | Measurement                      |
+| --------------------------------------------------- | ------- | ------ | -------------------------------- |
+| Empty folded descriptions accepted                  | yes     | no     | mutation fixture                 |
+| Parser implementations sharing a conformance corpus | 0       | 2      | core + standalone fixture        |
+| Existing valid brain records accepted               | 23      | all    | `pnpm verify:brain`              |
+| Runtime dependencies / network / push paths added   | 0       | 0      | manifest and egress/static tests |
+| Memory behavior enabled by this PRD                 | n/a     | none   | compatibility fixtures           |
 
 ---
 
@@ -277,20 +277,21 @@ so that PRD contracts and local recall can reuse one stable substrate.
 
 - Source: `docs/research/provegate-bootstrap/source-snapshot/addenda/agent-memory-closed-loop-2026-07-25.md`
 - Protocol: `_brain/PROTOCOL.md`
+- Learning: `_brain/learnings/two-parsers-wrong-together.md`
 - Review: `_docs/reviews/review-017-agent-memory-substrate.md`
 
 ---
 
 ## 11. Verification Commands
 
-| FR   | Command / Check                                                   | Scope | Notes |
-| ---- | ----------------------------------------------------------------- | ----- | ----- |
-| FR-1 | `pnpm --filter provegate test test/content-prompts.test.ts`       | pkg   | addendum trace and frozen bytes |
-| FR-2 | `pnpm --filter provegate test test/memory.test.ts`                | pkg   | config validation and default-off compatibility |
-| FR-3 | `pnpm --filter provegate test test/memory.test.ts`                | pkg   | typed parser/schema corpus |
-| FR-4 | `pnpm --filter provegate test test/practices-pack.test.ts`        | pkg   | standalone mutations and cross-parser conformance |
-| FR-4 | `node scripts/verify/verify-brain.mjs`                            | repo  | live records pass |
-| FR-5 | `node scripts/verify/verify-pack-drift.mjs`                       | repo  | live/package parity |
+| FR   | Command / Check                                             | Scope | Notes                                             |
+| ---- | ----------------------------------------------------------- | ----- | ------------------------------------------------- |
+| FR-1 | `pnpm --filter provegate test test/content-prompts.test.ts` | pkg   | addendum trace and frozen bytes                   |
+| FR-2 | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | config validation and default-off compatibility   |
+| FR-3 | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | typed parser/schema corpus                        |
+| FR-4 | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | standalone mutations and cross-parser conformance |
+| FR-4 | `node scripts/verify/verify-brain.mjs`                      | repo  | live records pass                                 |
+| FR-5 | `node scripts/verify/verify-pack-drift.mjs`                 | repo  | live/package parity                               |
 
 Cross-cutting floor:
 
@@ -318,14 +319,14 @@ Before Phase 2 PASS, run: `gate check PRD-017`
 
 ## Changelog
 
-| Date       | Author           | Changes |
-| ---------- | ---------------- | ------- |
-| 2026-07-25 | Codex, for owner | Original closed-loop draft |
-| 2026-07-25 | owner            | Approved canonical extension, Phase 1, readiness, and Phase 3 parent plan |
-| 2026-07-25 | independent agent via owner | Found output-grammar conflict, manifest ambiguity, readiness/scope risks |
-| 2026-07-25 | owner            | Approved split into PRD-017/018/019 and FR-9 deferral |
-| 2026-07-25 | Codex, for owner | Rescoped to default-off memory substrate; returned to Phase 1 |
-| 2026-07-25 | owner            | Approved revised PRD-017 Phase 1 scope |
+| Date       | Author                      | Changes                                                                                                                                                                                                                      |
+| ---------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-25 | Codex, for owner            | Original closed-loop draft                                                                                                                                                                                                   |
+| 2026-07-25 | owner                       | Approved canonical extension, Phase 1, readiness, and Phase 3 parent plan                                                                                                                                                    |
+| 2026-07-25 | independent agent via owner | Found output-grammar conflict, manifest ambiguity, readiness/scope risks                                                                                                                                                     |
+| 2026-07-25 | owner                       | Approved split into PRD-017/018/019 and FR-9 deferral                                                                                                                                                                        |
+| 2026-07-25 | Codex, for owner            | Rescoped to default-off memory substrate; returned to Phase 1                                                                                                                                                                |
+| 2026-07-25 | owner                       | Approved revised PRD-017 Phase 1 scope                                                                                                                                                                                       |
 | 2026-07-25 | independent agent via owner | Readiness iteration 3: PASS 8.425 (infra weights), tiers high/high. Measured the PRD's own claims: the folded-description hole is real, the hook/record/ADR migrations are not. Watch items W10–W13. Phase 3 awaits owner Go |
-| 2026-07-25 | owner            | Go for Phase 3 |
-| 2026-07-25 | independent agent via owner | Phase 3 plan generated: 48 sub-tasks under the `infra` skeleton with Migration & Rollback as its own parent; W10–W13 each bound to explicit tasks |
+| 2026-07-25 | owner                       | Go for Phase 3                                                                                                                                                                                                               |
+| 2026-07-25 | independent agent via owner | Phase 3 plan generated: 48 sub-tasks under the `infra` skeleton with Migration & Rollback as its own parent; W10–W13 each bound to explicit tasks                                                                            |

@@ -248,26 +248,26 @@ and commands it names still exist **before** the dependent task starts (task 0.2
   - [x] 7.5 Re-run the package suite with the turbo cache busted and confirm the result
         matches the cached run; a divergence means 4.8 is incomplete.
 
-- [ ] 8.0 Phase 6 — Independent adversarial audit
-  - [ ] 8.1 After Phase 5 is green, obtain an independent review (different model family,
+- [x] 8.0 Phase 6 — Independent adversarial audit
+  - [x] 8.1 After Phase 5 is green, obtain an independent review (different model family,
         never the implementing agent) of the merge diff against the PRD, the addendum, and
         watch items W10–W13. Direct it at the two highest-leverage attacks: is the corpus
         matrix actually complete, or does it merely make both parsers agree; and did any
         behavior become reachable while memory is disabled.
-  - [ ] 8.2 Save the structured verdict to
+  - [x] 8.2 Save the structured verdict to
         `_docs/reviews/review-017-agent-memory-substrate.md`; the ledger row may read
         `passed` only with verdict `pass` and `Critical: 0`.
   - [ ] 8.3 For each finding, append remediation sub-tasks here, fix under the same lease,
         re-run the affected Phase 5 gates, and obtain a fresh verdict.
 
-- [ ] 9.0 Phase 7 — Durable learning and close preparation
-  - [ ] 9.1 Run the `_brain/PROTOCOL.md` §7 capture against the completed work. The PRD
+- [x] 9.0 Phase 7 — Durable learning and close preparation
+  - [x] 9.1 Run the `_brain/PROTOCOL.md` §7 capture against the completed work. The PRD
         declares Memory Outputs `none`; if implementation surfaced a non-derivable trap,
         append its exact learning path to **both** the PRD's Memory Outputs and its
         Durable Artifacts before writing the file — never write the record first.
-  - [ ] 9.2 Confirm every declared Durable Artifact (the addendum, `_brain/PROTOCOL.md`,
+  - [x] 9.2 Confirm every declared Durable Artifact (the addendum, `_brain/PROTOCOL.md`,
         and the review artifact) is present in the merge diff.
-  - [ ] 9.3 Prepare the owner handoff: addendum fidelity, W10–W13 evidence, the
+  - [x] 9.3 Prepare the owner handoff: addendum fidelity, W10–W13 evidence, the
         independent verdict, the measured no-op proof from 6.1, and the local merge plan.
         Leave the operator row pending.
   - [ ] 9.4 After owner acceptance only, run `gate land PRD-017`; verify the post-merge
@@ -278,22 +278,22 @@ and commands it names still exist **before** the dependent task starts (task 0.2
 
 ## Verification Ledger
 
-| Gate               | Command / Check                                             | Scope | Result  | Evidence                                                                         | Notes                                             |
-| ------------------ | ----------------------------------------------------------- | ----- | ------- | -------------------------------------------------------------------------------- | ------------------------------------------------- |
-| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts` | pkg   | passed  | 11 tests: frozen digest over 74 files + addendum routing                         | addendum traceability, frozen snapshot bytes      |
-| FR-2               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed  | 43 tests after phase-6 remediation: config, parser, corpus, containment fixtures | config validation and default-off compatibility   |
-| FR-3               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed  | same suite: subset parser + schema                                               | typed parser and schema corpus                    |
-| FR-4a              | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | passed  | 10 tests: mutation matrix vs the INSTALLED validator                             | standalone mutations and cross-parser conformance |
-| FR-4b              | `node scripts/verify/verify-brain.mjs`                      | repo  | passed  | verify:brain PASS over 23 untouched records                                      | live records pass unchanged                       |
-| FR-5               | `node scripts/verify/verify-pack-drift.mjs`                 | repo  | passed  | verify:pack-drift PASS, 49 pairs                                                 | live/package parity after reconcile               |
-| types              | `pnpm check-types`                                          | root  | passed  | 5/5 turbo tasks, 0 errors                                                        | zero errors                                       |
-| lint               | `pnpm lint`                                                 | root  | passed  | 4/4 turbo tasks, 0 warnings                                                      | zero warnings                                     |
-| test               | `pnpm test`                                                 | root  | passed  | 546 tests (503 at branch point)                                                  | full suite                                        |
-| build              | `pnpm build`                                                | root  | passed  | 4/4 clean                                                                        | clean build                                       |
-| workflow           | `pnpm verify:workflow`                                      | root  | passed  | 10 checks green incl. turbo-inputs                                               | every hygiene check green                         |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-017`         | repo  | passed  | readiness lint exit 0                                                            | readiness lint                                    |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`        | repo  | passed  | every gate wired or excepted                                                     | wire-or-delete                                    |
-| independent-review | `_docs/reviews/review-017-agent-memory-substrate.md`        | repo  | pending |                                                                                  | verdict pass, Critical: 0                         |
+| Gate               | Command / Check                                             | Scope | Result | Evidence                                                                         | Notes                                             |
+| ------------------ | ----------------------------------------------------------- | ----- | ------ | -------------------------------------------------------------------------------- | ------------------------------------------------- |
+| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts` | pkg   | passed | 11 tests: frozen digest over 74 files + addendum routing                         | addendum traceability, frozen snapshot bytes      |
+| FR-2               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed | 43 tests after phase-6 remediation: config, parser, corpus, containment fixtures | config validation and default-off compatibility   |
+| FR-3               | `pnpm --filter provegate test test/memory.test.ts`          | pkg   | passed | same suite: subset parser + schema                                               | typed parser and schema corpus                    |
+| FR-4a              | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | passed | 10 tests: mutation matrix vs the INSTALLED validator                             | standalone mutations and cross-parser conformance |
+| FR-4b              | `node scripts/verify/verify-brain.mjs`                      | repo  | passed | verify:brain PASS over 23 untouched records                                      | live records pass unchanged                       |
+| FR-5               | `node scripts/verify/verify-pack-drift.mjs`                 | repo  | passed | verify:pack-drift PASS, 49 pairs                                                 | live/package parity after reconcile               |
+| types              | `pnpm check-types`                                          | root  | passed | 5/5 turbo tasks, 0 errors                                                        | zero errors                                       |
+| lint               | `pnpm lint`                                                 | root  | passed | 4/4 turbo tasks, 0 warnings                                                      | zero warnings                                     |
+| test               | `pnpm test`                                                 | root  | passed | 546 tests (503 at branch point)                                                  | full suite                                        |
+| build              | `pnpm build`                                                | root  | passed | 4/4 clean                                                                        | clean build                                       |
+| workflow           | `pnpm verify:workflow`                                      | root  | passed | 10 checks green incl. turbo-inputs                                               | every hygiene check green                         |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-017`         | repo  | passed | readiness lint exit 0                                                            | readiness lint                                    |
+| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`        | repo  | passed | every gate wired or excepted                                                     | wire-or-delete                                    |
+| independent-review | `_docs/reviews/review-017-agent-memory-substrate.md`        | repo  | passed | 12 rounds, 69 findings, all closed and re-verified; round 12 PASS                | verdict pass, Critical: 0                         |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
