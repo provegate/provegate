@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies |
+| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies. PRD-020 (3.90) and PRD-021 (3.55) are Phase 1 drafts awaiting owner answers on their Open Questions |
 
 ## Deferrals
 
@@ -34,6 +34,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-25 — the vision gap analysis was triaged into the pipeline: its P0 memory items were already PRD-017/018/019 and its README drift was already closed by release prep, so only two candidates were new — **PRD-020** adopter enablement (manifest cookbook, brownfield playbook, `--practices` first-class in the published docs, which name the flag on zero pages today) and **PRD-021** governance truth-up (the value-score recompute gate that never shipped, plus three "lands in wave 2" claims about gates that already run). Both Draft; PRD-020 overlaps PRD-019 on `apps/docs` CLI pages and should follow it
 - 2026-07-25 — release prep landed for the first npm publish: the package README now documents the shipped lifecycle commands (it still called `init`/`new`/`open` unimplemented stubs, eleven items after they shipped) and is gated against that drift from the CLI's own help screen; the surface since PRD-005 is versioned as **0.2.0** (0.1.0 was an internal milestone, never published). Publish remains the owner's: repo public + `NPM_TOKEN` (provenance needs a public repo), the push, and the red `verify:dependency-audit` advisory
 - 2026-07-25 — turbo cache-key fix landed: `build` and `generate-tokens` no longer narrow their `inputs`, so no gate can read a stale cached artifact (`web#build` hashed ONE file; `apps/web/app/**` was outside the key, and `check-egress` reads build output). New `verify:turbo-inputs` keeps the policy enforced — closes PRD-018 readiness W1
 - 2026-07-25 — closed-loop memory program entered the pipeline as PRD-017/018/019 (substrate → contract+enforcement → adoption CLI). The original single 10-FR/72-task PRD was split after an independent review found a self-contradictory Memory Outputs grammar and a silent manifest-floor ambiguity; effectiveness metrics deferred. PRD-017 readiness **PASS 8.425** on an independent iteration-3 re-score (W10–W13 bind Phase 3), awaiting owner Go
