@@ -265,7 +265,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 10.2 Save the verdict to
         `_docs/reviews/review-018-memory-contract-enforcement.md`; the ledger row may read
         `passed` only with verdict `pass` and `Critical: 0`.
-  - [ ] 10.3 For each finding, append remediation sub-tasks here, fix under the same
+  - [x] 10.3 For each finding, append remediation sub-tasks here, fix under the same
         lease, re-run the affected Phase 5 gates, and obtain a fresh verdict.
     - [x] 10.3.1 [P1-1] `outputWeakenings` treats a malformed or section-less baseline as
           "nothing was promised". Fail closed on a baseline whose Memory Outputs section is
@@ -285,7 +285,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
           `memory.enabled` branch, so a memory-disabled repository's behavior changed.
           Scope the entry-aware parse to the memory gate and leave hard caps on the legacy
           target set, with the migration recorded as a deferral.
-    - [ ] 10.3.6 [P1-6] `prompts/phase-5-testing.md` carries a memory obligation that
+    - [x] 10.3.6 [P1-6] `prompts/phase-5-testing.md` carries a memory obligation that
           addendum §8 explicitly denies phase 5. The PRD's FR-3 table contradicts the
           addendum, and the addendum is law. **Owner decision required** — remove the
           obligation, or approve a new addendum entry.
@@ -295,7 +295,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
     - [x] 10.3.8 [P2-8] `pathProblem` accepts a directory (`_brain/learnings`) that the
           close gate later rejects. Require a `.md` record path so readiness and Phase 7
           agree.
-    - [ ] 10.3.9 [P2-9] The provenance test asserts that addendum phrases exist, not that
+    - [x] 10.3.9 [P2-9] The provenance test asserts that addendum phrases exist, not that
           each shipped prompt addition traces to its own obligation — it is the test that
           should have caught [P1-6]. Bind per prompt. Depends on 10.3.6.
     - [x] 10.3.10 [P2-10] The mutex fixture proves acquisition, not retention. Prove the

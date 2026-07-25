@@ -32,11 +32,6 @@ opposite — **assume the implementation is wrong and try to prove it.**
    `operator` result requires an explicit `Operator Acceptance` meta on the PRD).
 4. **Contract round-trips.** Where the PRD introduced a client→server payload, run the
    named round-trip contract test against the real schema.
-5. **Name the memory-derived constraints.** Where a Memory Input shaped a verification
-   result — the command chosen, the fixture built, the environment used — record that in
-   the ledger's Notes column. This phase adds no memory obligation of its own:
-   verification is verification, and the note exists so Phase 6 can audit whether the
-   input was actually applied.
 
 ---
 

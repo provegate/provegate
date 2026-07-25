@@ -179,10 +179,6 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
       ],
     },
     {
-      file: 'phase-5-testing.md',
-      anchors: ['Name the memory-derived constraints', "ledger's Notes column"],
-    },
-    {
       file: 'phase-6-final-auditing.md',
       anchors: [
         'Audit the memory contract',
@@ -213,9 +209,11 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
   ];
 
   it('covers every file the obligation table names, and no more', () => {
+    // phase-5 is absent BY THE ADDENDUM: §8 grants it no obligation, so there is
+    // nothing for this table to assert about it.
     expect(OBLIGATIONS.map((o) => o.file).sort()).toEqual(
       [...PHASE_PROMPTS, 'knowledge-ingest.md', 'knowledge-lint.md', 'orchestration-runner.md']
-        .slice()
+        .filter((f) => f !== 'phase-5-testing.md')
         .sort(),
     );
   });
@@ -236,31 +234,70 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     }
   });
 
-  it('every obligation traces to the addendum, not to this PRD', () => {
-    // Method content may only come from the frozen snapshot or an owner-approved
-    // addendum. §8 is where these ten obligations come from, so the prompts are
-    // checked against IT rather than against the PRD that transcribed it.
-    const addendum = flat(
-      readFileSync(
-        join(
-          pkgRoot,
-          '../../docs/research/provegate-bootstrap/source-snapshot',
-          'addenda/agent-memory-closed-loop-2026-07-25.md',
-        ),
-        'utf8',
+  /** The addendum's §8 row for each phase — the ONLY source a phase prompt's
+   * memory obligation may trace to. `null` means the row grants none. */
+  const ADDENDUM_SOURCE: Array<{ file: string; source: string | null }> = [
+    {
+      file: 'phase-1-prd-generator.md',
+      source: 'select relevant records, write Memory Inputs with dispositions and rationales',
+    },
+    { file: 'phase-2-readiness-scorer.md', source: 'challenge an unreasoned `none`' },
+    {
+      file: 'phase-3-task-generator.md',
+      source: 'Carry the selected slugs into executable task context',
+    },
+    {
+      file: 'phase-4-implementation.md',
+      source: 'confirm the paths and commands it names still exist before relying on it',
+    },
+    { file: 'phase-5-testing.md', source: null },
+    {
+      file: 'phase-6-final-auditing.md',
+      source: 'Audit whether the selected records were actually applied',
+    },
+    {
+      file: 'phase-7-learning.md',
+      source: 'Capture the actual outputs at their exact declared paths',
+    },
+  ];
+
+  const addendumText = (): string =>
+    readFileSync(
+      join(
+        pkgRoot,
+        '../../docs/research/provegate-bootstrap/source-snapshot',
+        'addenda/agent-memory-closed-loop-2026-07-25.md',
       ),
+      'utf8',
     );
-    for (const source of [
-      'select relevant records, write Memory Inputs with dispositions and rationales',
-      'challenge an unreasoned `none`',
-      'Carry the selected slugs into executable task context',
-      'confirm the paths and commands it names still exist before relying on it',
-      'No memory obligation. Verification is verification.',
-      'Audit whether the selected records were actually applied',
-      'Capture the actual outputs at their exact declared paths',
-      'run the configured validator after capture — not before',
-    ]) {
+
+  it('each phase obligation traces to its own §8 row, and §8 is quoted exactly', () => {
+    // Asserting that some addendum phrases exist proves nothing about the file
+    // that carries them: the previous version of this test passed while
+    // `phase-5-testing.md` shipped an obligation §8 explicitly denies. Bind per
+    // file, and hold the source row to the phase it belongs to.
+    const addendum = flat(addendumText());
+    for (const { source } of ADDENDUM_SOURCE) {
+      if (source === null) continue;
       expect(addendum, source).toContain(flat(source));
+    }
+    expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
+  });
+
+  it('phase 5 carries NO memory instruction — §8 denies it one', () => {
+    // The row is a stated position, not an omission: "Verification is
+    // verification." A prompt that adds an instruction §8 does not name is out
+    // of scope for the addendum, which makes it fabricated method content.
+    const phase5 = prompt('phase-5-testing.md');
+    expect(/Memory Input|Memory Output|memory-derived/i.test(phase5)).toBe(false);
+  });
+
+  it('no phase prompt carries a memory instruction its §8 row does not grant', () => {
+    for (const { file, source } of ADDENDUM_SOURCE) {
+      const mentionsMemory = /Memory Input|Memory Output|memory-derived|selected record/i.test(
+        prompt(file),
+      );
+      expect(mentionsMemory, `${file} vs addendum §8`).toBe(source !== null);
     }
   });
 

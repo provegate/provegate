@@ -126,7 +126,7 @@ so that learning capture cannot be ceremonial or silently weakened.
    | `phase-2-readiness-scorer.md` | Challenge each input's relevance and score a ceremonial or unexamined `none` down rather than accepting it |
    | `phase-3-task-generator.md` | Carry the selected slugs into a Memory Context section and bind a task to re-opening each before its dependent work |
    | `phase-4-implementation.md` | Open each detail file and confirm the paths and commands it names still exist before acting on it |
-   | `phase-5-testing.md` | Record memory-derived constraints that shaped a verification result in the ledger notes |
+   | `phase-5-testing.md` | **None.** Addendum §8 states "No memory obligation. Verification is verification," and §8 forbids any prompt obligation it does not name. Removed at the Phase 6 close by owner decision; the file is asserted to carry no memory instruction |
    | `phase-6-final-auditing.md` | Independently audit whether each input was actually applied, and challenge every `none` — an unexamined `none` is a finding |
    | `phase-7-learning.md` | Capture exact output paths into both Memory Outputs and Durable Artifacts before writing the record |
    | `knowledge-ingest.md` | Write the record only after the PRD declares its exact path |
