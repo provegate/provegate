@@ -1,5 +1,13 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
+> **Iteration 4 (Codex, independent) scored the remediated PRD at 7.19 — up from 6.65.**
+> Five of six prior findings closed; the sixth (the packed duplicates) is only partially
+> closed, because `gate init` is additive-only and therefore cannot migrate an adopter who
+> already installed the scripts. Three new [P1]s, all on the expansion's edges rather than
+> its substance. See §7.
+>
+> <details><summary>Iteration 3 remediation note (superseded)</summary>
+>
 > **All four [P1]s were remediated in the PRD on 2026-07-25, on owner direction. The 6.65
 > ITERATE below still stands as the machine verdict** — the fix was written by the session
 > that recorded the round, so Phase 3 stays shut until an independent round clears it.
@@ -16,37 +24,43 @@
 > becomes a prerequisite and the 020 ∥ 023 parallelism claim recorded across four PRDs is
 > void. Corrected in all of them.
 >
-> **Current state: iteration 3, 6.65/10, ITERATE — scored independently by Codex
-> (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 2's
-> self-scored 8.30 does not stand. The independent round found four [P1] items, and the
-> first is blocking in a way neither self-scored round came close to: **the three scripts
+> </details>
+>
+> <details><summary>Iteration 3 (6.65 ITERATE) — the round that found the pack scope error</summary>
+>
+> **Iteration 3, 6.65/10, ITERATE — scored independently by Codex
+> (gpt-5.x, different model family), and the ITERATE was on substance.** Iteration 2's
+> self-scored 8.30 did not stand. That round found four [P1] items, and the
+> first was blocking in a way neither self-scored round came close to: **the three scripts
 > this PRD deletes are also shipped in the practices pack, installed by
 > `gate init --practices`, run by the packed bundle, and protected by a pack-drift rule
 > that fails when a mapped repo destination disappears.** The deletion as specified would
 > red `pnpm verify:pack-drift`, which this PRD's own floor requires green. See §6.
+>
+> </details>
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-023-gate-self-hosting.md`       |
-| Score                  | 6.65/10                                        |
-| Verdict                | ITERATE — four [P1] items open (§6). The self-scored 8.30 at iteration 2 is superseded |
-| Iteration              | 3                                              |
+| Score                  | 7.19/10                                        |
+| Verdict                | ITERATE — three new [P1] items (§7); the scope expansion itself was right and five of six prior findings closed. The 6.65 at iteration 3 is superseded |
+| Iteration              | 4                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
 | Self-scored            | **no**                                         |
 | Date                   | 2026-07-25                                     |
-| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-023` exit 0 (re-run at iteration 3) |
+| PRD Lint               | passed — `lintPrd` green (Codex ran the exported function; its sandbox is read-only) |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
 
-At iteration 3 four [P1] items are open. The architecture is still the strongest in the
-wave and still needs no rework — but the PRD's **scope** is wrong: it treats three scripts
-as repo-local when the package publishes and installs copies of all three.
+At iteration 4 three [P1] items are open and the score is rising. The scope expansion was
+the right call and landed coherently; what remains sits on its edges — existing adopters,
+a matching predicate, and rollback symmetry.
 
 ---
 
@@ -363,9 +377,93 @@ no, in a way one `ls packages/provegate/practices/verify/` would have shown.
 
 ---
 
+### 7. Iteration-4 independent measurement — Codex, on the remediated PRD
+
+Same session resumed, told to hunt for defects the remediation **introduced**. Every
+finding re-verified against source here.
+
+**Closed:** FR-4's config contract (all three keys, defaults, validation, targets, tests);
+FR-3's predicate binding (PRD-021 now exports `isRootRelativeFilename` and this PRD imports
+it); the class rationale and the FR-9 changeset; both stale sentences. The ADR contract is
+closed *as a contract* — its precondition is still unmet, since `_brain/adr/` holds only
+`.gitkeep` and PRD-017's lease still owns `_brain/**`.
+
+**[P1] H — `gate init` is additive-only, so deleting files from the pack migrates nobody
+who already installed them.** FR-8 claims adopters move onto the stronger checks. But
+`core/run/init.ts` declares itself **"ADDITIVE-ONLY, always: nothing is ever overwritten or
+deleted; existing paths are reported as skipped"**, and writes with the `wx` flag so
+create-vs-skip is atomic. `practices/NEXT_STEPS.md` says the same thing to adopters. An
+adopter who upgrades therefore keeps all three old scripts, their `package.json` entries,
+their bundle membership, and the old exceptions file — while the pack stops shipping them.
+FR-8's claim is true only of a *fresh* install. Specify the existing-install migration
+exactly (which files, which package scripts, which bundle entries to remove; which flags to
+add), put it in the changeset rather than only in a pack file, and prove it with an upgrade
+fixture seeded from the old pack.
+
+**[P1] I — FR-4 ported the surfaces and missed the matching predicate, again.** The deleted
+script counts a check as wired when **either** its `package.json` script name **or** its
+`.mjs` basename appears in a surface (`verify-gates-wired.mjs:47-53`). The survivor's
+`wiredIn` (`wiring.ts:189`) matches the script name only. Appending hook and bundle bodies
+to `wiringText` therefore still will not recognize the normal forms — a hook that runs
+`node scripts/verify/verify-foo.mjs`, or a bundle listing `verify-foo.mjs`. `auditWiring`
+must map each registered script to its basename via `wiring.scriptsDir` and match either.
+Add filename-only hook and bundle fixtures, and correct the FR-4(b) table.
+
+This is the same shape as the earlier `startsWith('verify:')` miss: the surface *set* was
+ported carefully and the *predicate* that reads it was not. Twice now.
+
+**[P1] J — the expansion grew the deletion but not the rollback.** §7 Rollback restores
+three root scripts and their `package.json` entries and says "no state or artifact migration
+exists". After FR-8 that is false: it omits four packed files, four `PACK_MAP` entries, the
+packed `CHECKS`, the ledger pairs including the `track: "pack"` exceptions pair, the pack
+manifest and its test, and `NEXT_STEPS.md`. Specify the complete reverse operation and the
+release behavior for adopters who already performed the manual migration.
+
+**[P2] K — the `lucide-react` correction was itself wrong.** The PRD now says the token
+"appears in PRD-014's Non-Goals and Technical Considerations, not in any Durable Artifacts
+section". It *is* in PRD-014's Durable Artifacts section — on a bullet **continuation**
+line, which the bullet-start extraction in `durable.ts:14-17` does not read. The 14-token
+measurement stands; the explanation for why `lucide-react` is absent from it does not. Say
+"inside the section but not on a bullet-start line".
+
+**[P2] L — the overlap sentence says five files where the queue now reports eight.** Third
+occurrence of a stale count in this wave. The Conflict Surface itself lists them, so locking
+is unaffected.
+
+**[P2] M — FR-4 is oversized for one Phase-3 task but should stay one FR.** It now carries a
+new audit direction, three surfaces, a config schema, matching semantics, two deletions, and
+an exceptions migration. Phase 3 should decompose it into ordered tasks — direction,
+matching/surfaces, config, exceptions, then deletion — because the deletion must wait for
+every predecessor. The FR stays atomic because its acceptance is atomic.
+
+**What Codex confirmed.** FR-8 names every pack-drift half it needs: all four `PACK_MAP`
+pairs and ledger entries, with `packOnly[]` unaffected and the learnings directory scan
+unrelated. Any one-sided intermediate deletion is red, and the PRD correctly requires one
+commit. Deleting the empty root exceptions file is sound, and the non-empty packed one is
+accounted for. Keeping CI at `run:` text is right.
+
+---
+
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+**Iteration 4 — independent (Codex), on the remediated PRD. Supersedes iteration 3.**
+
+| #         | Dimension                | Weight | Score      | Notes |
+| --------- | ------------------------ | ------ | ---------- | ----- |
+| 1         | Clarity                  | 15%    | 8.0/10     | FRs, targets, commands, and decisions are explicit; FR-4 is oversized and two measured statements remain stale. |
+| 2         | Completeness             | 20%    | 7.2/10     | Fresh-pack deletion is coherent; existing adopters and full rollback are not covered. |
+| 3         | Technical Depth          | 20%    | 7.5/10     | Surface and pack analysis is detailed, but the script-name/file-basename matching delta was missed. |
+| 4         | Multi-Tenancy & Security | 10%    | 8.5/10     | Configured paths are constrained to repo-relative lexical paths; no client/server boundary changes. |
+| 5         | Scope & Testability      | 15%    | 8.0/10     | Most capabilities have semantic and deny tests; no upgrade-from-old-pack contract test exists. |
+| 6         | Migration & Rollback     | 20%    | 5.0/10     | Additive-only installation defeats the stated adopter migration, and rollback restores only the root half. |
+| **Total** | **Weighted**             |        | **7.19/10** | **ITERATE** |
+
+Hard caps: none tripped. `lintPrd` green.
+
+<details>
+<summary>Superseded — iteration-3 scorecard (Codex, pre-remediation, 6.65 ITERATE)</summary>
 
 **Iteration 3 — independent (Codex). Supersedes the self-scored iteration 2 below.**
 
@@ -380,6 +478,8 @@ Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.
 | **Total** | **Weighted**             |        | **6.65/10** | **ITERATE** |
 
 Hard caps: none tripped. Lint exits 0.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-2 scorecard (self-scored, 8.30 ITERATE)</summary>
@@ -491,6 +591,7 @@ Verdict.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 4   | 2026-07-25 | 7.19  | ITERATE | **Independent — Codex, same session resumed and told to hunt for defects the remediation introduced.** Five of six prior findings CLOSED (config contract, predicate binding, class rationale + changeset, both stale sentences, ADR contract); the packed-duplicates finding only PARTIALLY, and that is finding H. Three new [P1]s, all re-verified: **(H)** `gate init` is **additive-only** by explicit design — `init.ts` says "nothing is ever overwritten or deleted" and writes with `wx` — so removing files from the pack migrates nobody who already installed them; FR-8's "adopters move with us" holds only for fresh installs, and an existing adopter keeps all three scripts, their package scripts, and the old bundle membership. **(I)** FR-4 ported the surface set and missed the *matching predicate*: the deleted script counts a check wired when its script name **or** its `.mjs` basename appears in a surface, while the survivor's `wiredIn` matches the name only — so a hook running `node scripts/verify/verify-foo.mjs` still would not register. Same shape as the earlier `startsWith('verify:')` miss, twice now. **(J)** the expansion grew the deletion but not the rollback, which still restores only the root half and claims "no state or artifact migration exists". P2s: the `lucide-react` correction was itself wrong — it *is* in PRD-014's Durable Artifacts section, on a bullet continuation line the bullet-start parser does not read; the overlap sentence says five files where the queue reports eight; FR-4 is oversized for one Phase-3 task though it should stay one FR. Codex confirmed FR-8 names every pack-drift half it needs, that any one-sided intermediate deletion is red, and that keeping CI at `run:` text is right. |
 | 3   | 2026-07-25 | 6.65  | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort. Supersedes the self-scored 8.30.** Four [P1]s, all re-verified against source before recording. The blocking one is scope, not detail: the three scripts this PRD deletes are **shipped in the practices pack**, installed into adopter repos by `gate init --practices` (`core/run/init.ts`), run by the packed `verify-workflow.mjs` bundle, and protected by `verify-pack-drift.mjs`, which fails with "pack ships 'X' but this repo has no 'Y' — the live layer lost its copy" when a mapped destination disappears. So the deletion reds `pnpm verify:pack-drift`, which §11's floor requires green — and the packed `gates-wired-exceptions.json` holds eight entries where the root copy this PRD inspected is `[]`, so FR-4(c)'s "the file is empty" is true of the wrong copy. Also: FR-4 makes three paths configurable without naming keys, defaults, validation, or the `defaults.ts`/`validate.ts` targets; FR-3 consumes a predicate PRD-021 never promises to export, so Phase 4 must duplicate it or edit out of scope; the class rationale claims "no new user-facing feature" while adding two public CLI flags and new config, with no changeset. Two revision leftovers: §9 Q2 still says eleven tokens after FR-3 was corrected to fourteen, and §7 Dependencies still claims PRD-021 edits `gates-wired-exceptions.json`, contradicting FR-4(c). Codex confirmed the FR-4(b) surface table, the `run:`-only CI narrowing, and the 14-token measurement. |
 | 2   | 2026-07-25 | 8.30  | ITERATE | **Self-scored — the ITERATE is on independence, not substance.** W1–W8 all resolved: FR-4 became three parts with the surface-delta table inline, keeping the package's narrower CI `run:` reading as a deliberate strengthening rather than restoring parity; FR-4(c) settled the exceptions store on `manifest.wiringExceptions` and deleted the empty JSON file, correcting a false claim that PRD-021 owned it; the corpus measurement regrouped to 14 tokens in three groups with `lucide-react` dropped; FR-5 handed the "first `gate` invocation" claim to PRD-021 FR-8; FR-3 gained its own `--durable-artifacts` flag, a stated acceptance shape for mixed sections, and the third parser divergence. Two new items caught by checking the remediation against source and both fixed: **W9**, FR-4(b) was about to move `.githooks/` and the bundle path into shipped package code as literals when this repo's hooks path comes from its own `prepare` script; and **W10**, the third surface row dropped the `startsWith('verify:')` exclusion that stops a bundle from wiring its own members. No hard cap trips and the lint exits 0; the verdict is held solely by the rule that a gate may not be self-declared green. |
 | 1   | 2026-07-25 | 7.95  | ITERATE | First independent assessment. Every measurable claim re-derived from source and found exact: six line counts, both named parser divergences, the `parseVerificationCommands` whole-line match (with a live instance in PRD-021's own §11 Notes cell), the `lintPrd` `deferred` filter, `auditWiring`'s two directions, and the six-checks-after-deletion arithmetic across the PRD-021 dependency. Verdict rests on W1: `auditWiring`'s executing-surface set is narrower than the script FR-4 deletes by three surface kinds (git hooks, the bundle body, other `package.json` script bodies), unported and unmentioned, against a Goal that promises no lost guarantee — zero measured impact today, but the same class the FR exists to prevent. Also W2–W8: the exceptions store changes shape without a migration, the FR-3 corpus measurement reports 11 where 14 exist and names a token that is not there, the "first `gate` invocation" claim is taken by a declared prerequisite, one sweep flag carries two unrelated rules, the declaration lint's mixed-section shape is unstated, a third parser divergence is unnamed, and the overlap prose lists three of five `gate queue`-reported PRD-021 files. |
@@ -540,6 +641,39 @@ Verdict.
 
 ## Verdict
 
+**ITERATE — 7.19/10, iteration 4, scored independently by Codex on the remediated PRD.**
+The scope expansion was the right call and it landed coherently: five of six prior findings
+are closed, and Codex confirmed FR-8 names every pack-drift half it needs, that any
+one-sided intermediate deletion is red, and that the `run:`-only CI narrowing is correct.
+The score rose, which is the opposite of PRD-021's trend and worth noting — expanding scope
+made this PRD *more* ready.
+
+Three [P1]s remain, all on the expansion's edges:
+
+**H is the one with a real design question behind it.** `gate init` is additive-only by
+explicit design — it never overwrites or deletes, and `NEXT_STEPS.md` tells adopters so. A
+package upgrade therefore removes files from the *pack*, not from an adopter's repo. FR-8's
+promise that "adopters move with us" is true of a fresh install and false of every existing
+one, who keeps all three old scripts and their wiring. That needs an explicit migration
+procedure in the changeset (not only in a pack file) and an upgrade fixture seeded from the
+old pack — or an honest narrowing of the claim.
+
+**I is a repeat of a shape this PRD has now missed twice.** FR-4 ported the executing-surface
+*set* and missed the *predicate that reads it*: the deleted script matches a script's name
+**or** its `.mjs` basename; the survivor matches the name only. The first time this shape
+appeared it was the dropped `startsWith('verify:')` exclusion. Both times the surfaces were
+handled carefully and the matcher was not. Whoever writes FR-4's tasks should treat
+"surface set" and "matching predicate" as two separate obligations.
+
+**J is bookkeeping with teeth:** the deletion grew and the rollback did not.
+
+The P2s are cheap — including one that corrects a correction: `lucide-react` *is* in
+PRD-014's Durable Artifacts section, on a bullet continuation line the parser does not read.
+The 14-token measurement stands; only its explanation was wrong.
+
+<details>
+<summary>Superseded — iteration-3 verdict (6.65 ITERATE)</summary>
+
 **ITERATE — 6.65/10, iteration 3, scored independently by Codex.** Four [P1] items are
 open. The self-scored 8.30 does not stand, and the gap is not judgement — it is a scope
 error that two rounds of careful source-checking never looked for.
@@ -569,6 +703,8 @@ needs a one-line commitment in PRD-021 (export the predicate) or one added targe
 Item 5 is two stale sentences.
 
 Whoever remediates must not also score the next round.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-2 verdict (self-scored, 8.30 ITERATE)</summary>

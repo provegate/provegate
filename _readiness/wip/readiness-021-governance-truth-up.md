@@ -1,5 +1,13 @@
 # Readiness Assessment: PRD-021 — Governance Truth-Up
 
+> **Iteration 10 (Codex, independent) scored the remediated PRD at 6.70 — down from 7.10.**
+> Four of the six prior findings closed, two partially; but the remediation introduced four
+> new [P1]s, three of them caused by the axis feature itself. See §13. The score moving
+> *down* after a good-faith remediation is the finding: configurable axes is a real config
+> feature with a corpus-migration problem nobody costed at decision time.
+>
+> <details><summary>Iteration 9 remediation note (superseded)</summary>
+>
 > **All four [P1]s were remediated in the PRD on 2026-07-25, on owner direction. The 7.10
 > ITERATE below still stands as the machine verdict** — the fix was written by the session
 > that recorded the round, so Phase 3 stays shut until an independent round clears it.
@@ -39,15 +47,15 @@
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 7.10/10 (infra weights) |
-| Verdict | ITERATE — four [P1] items open (§12). The self-scored 8.15 at iteration 8 is superseded |
-| Iteration | 9 |
+| Score | 6.70/10 (infra weights) |
+| Verdict | ITERATE — four **new** [P1] items opened by the remediation (§13); two prior findings only partially closed. The 7.10 at iteration 9 is superseded |
+| Iteration | 10 |
 | Model Tier (Execution) | do not assign — score < 8 |
 | Model Tier (Audit) | high (on a PASS) |
 | Scored by | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
 | Self-scored | **no** |
 | Date | 2026-07-25 |
-| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 9) |
+| PRD Lint | passed — `lintPrd` green (Codex ran it through the exported function; its sandbox is read-only and the CLI writes `_state/prds.json`) |
 | State Record | updated — `gate status` re-run after saving |
 
 ---
@@ -569,10 +577,99 @@ asserted four times in four artifacts. The independence rule is not ceremony.
 
 ---
 
+### 13. Iteration-10 independent measurement — Codex, on the remediated PRD
+
+Same session resumed, told explicitly to hunt for defects the remediation **introduced**
+rather than to confirm its own list. Every finding re-verified against source here.
+
+**Closed:** the FR-2/FR-6 null-id contradiction, the `[1-5]` dimension range, W9's changeset
+false-green, and the rollback's missing `lintPrd` call. **Partially closed:** the
+"every PRD writes the header" wording survives at one site; the axis surface exists but is
+not implementable as written (below).
+
+**[P1] A — the wholesale `axes`/`weights` replacement rule cannot work through the real
+loader, and the PRD does not target the file that would make it work.** FR-1 states the
+rule as *validation*. But `core/config/load.ts` runs
+`const merged = deepMerge(DEFAULT_CONFIG, parsed)` and only then
+`validateResolvedConfig(merged)`, and `deepMerge` recurses into plain objects — its own
+comment says "plain objects merge recursively; arrays and scalars replace wholesale". So
+`axes` (an array) does replace wholesale, while `weights` (a plain object) **merges**: a
+three-axis override arrives at validation carrying the five default weight keys and fails
+set equality. The rule as written makes every legal custom-axis config an error. FR-1 must
+target `load.ts` and specify replacement *before* the recursive merge, with a resolution
+test asserting a three-axis config resolves to exactly three weight keys.
+
+**[P1] B — duplicate and case-colliding axis identifiers are legal.** The charset and the
+2–10 count bound do not imply uniqueness. `["A","A"]` has length 2, collapses to one
+`Record` key, and makes the recompute apply one weight twice. The snapshot's regex carries
+`/i`; the revised FR-2 never pins case behavior for the *generated* pattern, so `A` and `a`
+are ambiguous too. Require uniqueness, pin case sensitivity explicitly, and add rejection
+fixtures for both.
+
+**[P1] C — "Adopter migration: none, by construction" is false once the axes change.** That
+claim was earned by presence-triggering, which protects a *header-less* PRD. It does not
+protect a **scored** corpus: FR-2 now says a header whose axis list disagrees with the
+config fails as malformed, so changing `axes` reds every previously scored PRD at once.
+Either require an atomic corpus rewrite with a preflight sweep, or version the axis schema
+so an old header is recognized rather than rejected. State the downgrade direction too.
+
+**[P1] D — FR-10's placeholder fix guarantees the failure it is fixing.** It requires
+registering `{{VALUE_AXES_TABLE}}` in `PLACEHOLDERS.md` **and** replacing the token with an
+inline table. `content-placeholders.test.ts` fails on *orphan declarations* — "declared but
+never used" — so registering a token that no template still contains turns the test red.
+Register-or-remove, not both. If the inline default table stays, pin it to `DEFAULT_CONFIG`;
+a hardcoded five-axis table inside a document about configurable axes is the duplication
+this PRD exists to remove.
+
+**[P2] E — the "one copy of the weight table" architecture claim is false again.** §7 says
+nothing but config holds a weight, while FR-9 deliberately keeps the root prose table and
+FR-10 now adds a second one to the practices template. The honest description is one
+authority and two projections — one mechanically pinned, one currently manual.
+
+**[P2] F — metadata scoping fixed the fenced-example problem but left "first match wins"
+unjustified.** Once the search is confined to the metadata block, a *second* `Value` line
+inside that block is a real duplicate declaration, not an example. Require at most one, with
+a negative fixture.
+
+**[P2] G — the PRD-021 ↔ PRD-023 overlap prose says five files; the queue now reports
+eight** (`cli.ts`, `prd-ready.ts`, `verify-workflow.mjs`, `pack-drift-ledger.json`,
+`ci.yml`, and all three config files). The Conflict Surface itself contains them, so locking
+is unaffected — only the sentence is stale, for the third time in this file.
+
+**What Codex confirmed.** The identifier charset genuinely is regex-interpolation safe: no
+character it admits changes the generated pattern's meaning. That was the part of the axis
+design most likely to be wrong, and it is right.
+
+**The trend is the finding.** 8.15 self-scored → 7.10 independent → 6.70 independent. The
+score fell *after* a good-faith remediation because the remediation added a real config
+feature, and the feature brought a corpus-migration problem that the axis decision did not
+cost at the time it was taken. Findings A–D are all consequences of configurable axes; none
+of them would exist under the alternative the owner rejected. That is not an argument to
+reverse the decision — it is the bill for it, now itemized.
+
+---
+
 ## Scorecard
 
 Class `infra` weights, per
 `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+**Iteration 10 — independent (Codex), on the remediated PRD. Supersedes iteration 9.**
+
+| # | Dimension | Weight | Score | Notes |
+| - | --------- | ------ | ----- | ----- |
+| 1 | Clarity | 15% | 7.0/10 | Structure passes lint, but merge semantics, case behavior, and migration contradict the stated outcomes. |
+| 2 | Completeness | 20% | 6.5/10 | Configurable axes are nominally specified; uniqueness, implementable replacement, and axis-set migration are missing. |
+| 3 | Technical Depth | 20% | 6.3/10 | Arithmetic and grammar stay detailed, but the design does not work with the actual config loader or the placeholder test. |
+| 4 | Multi-Tenancy & Security | 10% | 8.5/10 | The identifier charset is genuinely regex-interpolation safe; no tenant boundary is introduced. |
+| 5 | Scope & Testability | 15% | 7.2/10 | Strong command mapping; required negative cases and the placeholder contract are incomplete or self-contradictory. |
+| 6 | Migration & Rollback | 20% | 5.8/10 | Rollback was repaired, but changing configured axes strands every previously scored PRD. |
+| **Total** | **Weighted** | | **6.70/10** | **ITERATE** |
+
+Hard caps: none tripped. `lintPrd` green.
+
+<details>
+<summary>Superseded — iteration-9 scorecard (Codex, pre-remediation, 7.10 ITERATE)</summary>
 
 **Iteration 9 — independent (Codex). Supersedes the self-scored iteration 8 below.**
 
@@ -587,6 +684,10 @@ Class `infra` weights, per
 | **Total** | **Weighted** | | **7.10/10** | **ITERATE** |
 
 Hard caps: none tripped. Lint exits 0.
+
+</details>
+
+</details>
 
 <details>
 <summary>Superseded — iteration-8 scorecard (self-scored, 8.15 ITERATE)</summary>
@@ -769,6 +870,7 @@ Verdict.
 | 4 | 2026-07-25 | 7.60 | ITERATE | Independent re-score measured FR-13's five silently dropped root claims and confirmed PRD-018 owns root-config creation. FR-13 lacks an observable parse-failure contract and an enforcing-path test for an untracked root artifact; W10–W11 must be resolved. |
 | 5 | 2026-07-25 | 7.78 | ITERATE | W10 and W11 are resolved: diagnostics have named consumers and unmaterialized-glob union reaches mixed surfaces. W12 remains because the prose-like dotted-token rejection contradicts the stated acceptance predicate. |
 | 6 | 2026-07-25 | 8.43 | PASS | Literal named-file and dotfile regexes resolve W12; direct execution confirms every requested accept/reject case and the documented `Node.js` residual. W9 remains binding. |
+| 10 | 2026-07-25 | 6.70 | ITERATE | **Independent — Codex, same session resumed and told to hunt for defects the remediation introduced.** Four prior findings CLOSED (null-id contradiction, dimension range, W9 changeset, rollback), two partially. Four **new** [P1]s, three of them consequences of the axis feature itself, all re-verified against source: **(A)** the wholesale `axes`/`weights` replacement rule cannot work through the real loader — `load.ts` runs `deepMerge(DEFAULT_CONFIG, parsed)` and only then `validateResolvedConfig`, and `deepMerge` recurses into plain objects, so a three-axis override reaches validation carrying five default weight keys and fails set equality; FR-1 never targets `load.ts`. **(B)** duplicate and case-colliding axis identifiers are legal — `["A","A"]` passes the count bound, collapses to one Record key, and applies one weight twice. **(C)** "Adopter migration: none" is false once the axes change: presence-triggering protects a header-less PRD, not a scored corpus, and FR-2 now fails every header whose axis list disagrees with the config. **(D)** FR-10 requires registering `{{VALUE_AXES_TABLE}}` *and* removing it, but `content-placeholders.test.ts` fails on orphan declarations — the fix guarantees the failure. Plus P2s: the "one copy of the weight table" claim is false again, first-match-wins now permits a duplicate metadata declaration, and the PRD-023 overlap prose says five files where the queue reports eight. Codex confirmed the identifier charset is genuinely regex-interpolation safe. **The trend is the finding: 8.15 self → 7.10 → 6.70.** The score fell after a good-faith remediation because configurable axes is a real config feature whose corpus-migration cost was not priced at decision time. |
 | 9 | 2026-07-25 | 7.10 | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort. Supersedes the self-scored 8.15.** Four [P1]s, all re-verified against source before recording. The heaviest is a **false premise the self-scorer asserted four times across four artifacts**: `practices/templates/AGENT_BOOTSTRAP.template.md` does have a triage section (`## Triage — value scoring`, line 108) — the self-scored grep looked for the literal weight values and the token `Value`, and the section uses lowercase prose plus a `{{VALUE_AXES_TABLE}}` placeholder. The correction enlarges the hole: line 111 tells adopters to "define your own axes" while FR-1/FR-2 hardcode MF/UI/TL/AR/RM, so the shipped gate cannot score an adopter's own axes. Also: FR-2 and FR-6 now specify null-id behavior in opposite directions (FR-6 line 348 still says "null id with no header → fails" while FR-2's remediation says it passes, and `content-templates.test.ts` agrees with FR-2); the grammar's "each dim a single digit" (line 260) admits 0 and 6–9 so `9/9/9/9/9` passes; W9's two greps still false-green across two files; rollback calls `value-score.ts` "uncalled" while FR-2 wires it into `lintPrd`. Codex independently confirmed the snapshot reading, the FR-9 pin seam, the FR-13(b) scope-out, and the metadata-block grammar fix. |
 | 8 | 2026-07-25 | 8.15 | ITERATE | **Self-scored — the ITERATE is on independence, not substance.** W13–W21 all resolved. W13's fix came from precedent rather than preference: the source snapshot's `validateVScore` takes no PRD number and has no cutoff guard, because "only PRDs carrying a V-Skor line are checked, so pre-triage PRDs are never retro-failed", while its `ENFORCE_FROM_PRD = 248` guards four other checks and never this one — so `enforceFrom` now ships absent and 17 is this repo's opt-in. Two new items were caught by measuring the remediation instead of reading it, and both are fixed: **W22**, the new grammar's "multi-match is an error" rule returned two hits on PRD-021 itself (its header plus FR-2's own fenced example), now scoped to the metadata block with 0 of 23 PRDs multi-matching; and **W23**, the null-id path skips the presence requirement even with a cutoff set, which matters because `content-templates.test.ts:80` lints the shipped template through `lintPrd` and asserts zero issues — the mechanical proof that an id-based default would have reddened a shipped artifact. W9 remains binding from iteration 6. No hard cap trips and the lint exits 0; the verdict is held solely by `AGENT_BOOTSTRAP.md`'s rule that a gate may not be self-declared green. |
 | 7 | 2026-07-25 | 7.30 | ITERATE | First round against the **relocated** FR set; not comparable to iteration 6. Verified the relocation's core against source: `lintPrd` already takes the resolved config, `runCheck` already holds the record, the `--wiring` branch is the right model, `declaredGlobs` drops slash-less tokens, `findConflicts` falls back only at zero materialization, and a `.mjs`-less `verify:*` key still satisfies `verify-gates-wired`. Blocked on W13 — `enforceFrom: 1` ships an adopter-facing gate while `templates/prd-template.md` has no `Value:` line, so every adopter's first `gate check` fails on a header the method never emitted. Also W14 (the specified header grammar matches no file on disk), W15 (FR-9/FR-10 recreate the weight duplication the relocation claimed to remove), W16/W17 (`gate queue` reports a five-file PRD-023 overlap and the active PRD-017 lease collides on five surfaces, neither declared), W18 (`readyOverlaps` stays blind to glob-vs-file and to in-flight leases), W19–W21 (drifted cross-references, stale corpus/lease facts, a self-expiring DO NOT). All eight declared `Value:` headers recompute exactly, so the live corpus would sweep green. Value re-score recommended: 3.65 → **4.10** (5/4/4/4/3). |
@@ -849,6 +951,36 @@ Iteration 7 (relocated FR set):
 
 ## Verdict
 
+**ITERATE — 6.70/10, iteration 10, scored independently by Codex on the remediated PRD.**
+The iteration-9 remediation closed four of six findings and opened four new ones, three of
+which exist only because the axes became configurable.
+
+**The score fell, and that is the signal.** 8.15 self-scored → 7.10 → 6.70. A good-faith
+remediation made the PRD worse-scoring because it added a genuine config feature, and the
+feature carries a cost the decision did not price: **changing the axis set reds every
+previously scored PRD at once** (finding C). Presence-triggering was the answer to
+header-*less* PRDs; nothing yet answers header-*ed* PRDs under a changed schema.
+
+Findings A–D are all downstream of configurable axes. A is the sharpest: the wholesale
+`axes`/`weights` replacement is written as a validation rule, but `load.ts` deep-merges
+before it validates, and `deepMerge` recurses into plain objects — so every legal custom-axis
+config arrives at validation carrying the five default weight keys and fails. The rule as
+written makes the feature impossible, and FR-1 never targets the file that would fix it.
+
+**This is worth an owner decision rather than another remediation pass.** The alternative
+rejected on 2026-07-25 — rewrite the shipped template to canonical axes under a snapshot
+addendum — would have avoided A, B, C, and D entirely. The measured bill for configurability
+is now: a loader change, a uniqueness-and-case contract, a corpus-migration story, and a
+placeholder that must be either registered or removed but not both. That may still be worth
+paying; it should be paid knowingly.
+
+Three cheap fixes are independent of that decision and should land either way: F (at most
+one `Value` line in the metadata block), G (the eight-file overlap sentence), and E (describe
+one authority plus two projections rather than "one copy").
+
+<details>
+<summary>Superseded — iteration-9 verdict (7.10 ITERATE)</summary>
+
 **ITERATE — 7.10/10, iteration 9, scored independently by Codex.** Four [P1] items are
 open and they are substantive, not procedural. The self-scored 8.15 does not stand.
 
@@ -871,6 +1003,8 @@ Item 4 is the standing W9 work.
 Whoever remediates must not also score the next round. That is now demonstrated rather than
 asserted: two self-scored rounds returned 8.15 with zero [P1]s; one independent round
 returned 7.10 with four.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-8 verdict (self-scored, 8.15 ITERATE)</summary>
