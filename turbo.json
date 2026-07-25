@@ -2,12 +2,10 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "generate-tokens": {
-      "inputs": ["src/tokens.ts", "scripts/generate-tokens.ts"],
       "outputs": ["src/tokens/colors.css", "src/cli/theme.ts"]
     },
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "scripts/**", "tsup.config.ts", "package.json"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "check-types": {

@@ -140,8 +140,8 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "7e5cfd4e9eafcee9",
-      "repo": "f340d688e5add10d",
-      "note": "repo bundle runs verify-pack-drift; the packed bundle must not — an adopter has no pack to compare against"
+      "repo": "22b566161653ef08",
+      "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit"
     },
     "verify/gates-wired-exceptions.json": {
       "dest": "scripts/verify/gates-wired-exceptions.json",

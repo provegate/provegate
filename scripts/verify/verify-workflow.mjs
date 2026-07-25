@@ -20,6 +20,7 @@ const CHECKS = [
   'verify-test-task-coverage.mjs',
   'verify-gates-wired.mjs',
   'verify-pack-drift.mjs',
+  'verify-turbo-inputs.mjs',
 ];
 
 const root = targetRoot();
