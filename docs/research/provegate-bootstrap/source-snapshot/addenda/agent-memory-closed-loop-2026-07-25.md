@@ -123,6 +123,12 @@ re-reading.
 - Target matching strips an optional `::SymbolName` suffix before applying the repository's
   existing glob grammar, so a symbol-scoped target still matches a path-scoped watch.
 - `watch` is not an ownership claim. Two records may watch the same path.
+- A record may also carry `tags`: kebab-case slugs used for retrieval ranking.
+- **An optional selector list, present but empty, is invalid.** `tags: []` and
+  `watch: []` claim a capability the record does not have — a reader or a retrieval
+  command sees a record that declares it participates in tag or path selection, and it
+  does not. Omit the key instead. (`links: []` is different and remains legal: a record
+  with no relations is a fact about the record, not an unfulfilled claim.)
 
 ## 7. Weakening semantics
 

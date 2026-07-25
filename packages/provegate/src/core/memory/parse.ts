@@ -48,6 +48,26 @@ export interface MemoryRecord {
   body: string;
 }
 
+/**
+ * YAML's comment rule, not a house variant: a `#` opens a comment when
+ * whitespace precedes it or when it opens the value, so `token#fragment` stays
+ * part of the value while `>- # note` is a fold marker with a note after it.
+ * Both implementations must agree on where a value ends, and borrowing the rule
+ * everyone already knows is cheaper than inventing one they must learn.
+ */
+/** Host-independent: absolute, home-relative, drive-letter, UNC, or `..`. */
+function escapesLexically(probe: string): boolean {
+  if (probe.startsWith('~')) return true;
+  if (/^[/\\]/.test(probe) || /^[A-Za-z]:[/\\]/.test(probe)) return true;
+  return probe.split(/[/\\]/).includes('..');
+}
+
+function stripComment(rawValue: string): string {
+  const trimmed = rawValue.trim();
+  if (trimmed.startsWith('#')) return '';
+  return trimmed.replace(/\s+#.*$/, '').trim();
+}
+
 const SLUG = /^[a-z0-9-]+$/;
 const ADR_NAME = /^ADR-\d{4}-[a-z0-9-]+$/;
 const PLACEHOLDER = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
@@ -135,7 +155,11 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
       continue;
     }
     const key = kv[1]!;
-    const raw = kv[2]!.trim();
+    // Strip the comment BEFORE classifying the value's form. Doing it after
+    // meant a commented fold marker (`description: >-  # …`) read as a scalar
+    // and its continuation line then failed as an orphan indent — which is
+    // exactly the shape the shipped template hands an author to copy.
+    const raw = stripComment(kv[2]!);
 
     if (values.has(key)) {
       // Last-wins is the classic silent corruption: two descriptions, one read.
@@ -169,11 +193,7 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
       );
       continue;
     }
-    // YAML's comment rule, not a house variant: a `#` opens a comment only when
-    // whitespace precedes it, so `token#fragment` stays part of the value. Both
-    // implementations must agree on where a value ends, and borrowing the rule
-    // everyone already knows is cheaper than inventing one they must learn.
-    values.set(key, raw.replace(/\s+#.*$/, '').trim());
+    values.set(key, raw);
   }
   flush();
 
@@ -262,6 +282,21 @@ export function validateRecord(
     });
   }
 
+  const provenanceRaw = values.get('provenance');
+  if (provenanceRaw !== undefined) {
+    if (typeof provenanceRaw !== 'string' || provenanceRaw.length === 0) {
+      issues.push({ path: at('provenance'), message: 'must be a non-empty scalar' });
+    } else if (PLACEHOLDER.test(provenanceRaw)) {
+      issues.push({ path: at('provenance'), message: 'placeholder text is not a value' });
+    }
+  }
+
+  const supersededByRaw = values.get('superseded-by');
+  if (supersededByRaw !== undefined && typeof supersededByRaw !== 'string') {
+    // A list here was silently ignored: `asString` returned null and the
+    // superseded checks below then read it as absent.
+    issues.push({ path: at('superseded-by'), message: 'must be a scalar slug, not a list' });
+  }
   const supersededBy = asString(values.get('superseded-by'));
   if (status === 'superseded' && (supersededBy === null || supersededBy.length === 0)) {
     issues.push({ path: at('superseded-by'), message: 'required when status is superseded' });
@@ -292,14 +327,25 @@ export function validateRecord(
   }
 
   const watch = asList(values.get('watch'));
-  if (watch !== null && options.root !== undefined) {
+  if (watch !== null) {
     for (const glob of watch) {
       // A glob is not a path, but its non-magic prefix is: `../secrets/**` must
-      // be refused for the same reason a plain `../secrets` would be. The
-      // filesystem check catches the symlinked variant the lexical one cannot.
+      // be refused for the same reason a plain `../secrets` would be.
+      //
+      // The lexical check runs unconditionally and is host-independent. Making
+      // it conditional on `root` meant the default call accepted an escaping
+      // watch that the standalone validator rejected, and `isAbsolute` alone
+      // let `C:\…` through on POSIX — two ways for the same record to be valid
+      // here and invalid there. `root` now only buys the extra symlink check,
+      // which the lexical rule cannot see.
       const literal = glob.split(/[*?[]/)[0]!;
       const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
       if (probe.length === 0) continue;
+      if (escapesLexically(probe)) {
+        issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
+        continue;
+      }
+      if (options.root === undefined) continue;
       try {
         containedPath(options.root, probe);
       } catch {

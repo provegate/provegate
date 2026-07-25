@@ -78,10 +78,15 @@ if (!existsSync(indexPath)) {
   }
   // A public pointer into `private/` would publish what the store deliberately
   // gitignores — the one INDEX mistake with a consequence outside the repo.
-  for (const p of counts.keys()) {
-    if (p.split('/').includes('private')) {
+  // Scanned over EVERY local link, not over `counts`: that map only holds paths
+  // already filtered to `learnings/` or `adr/`, so a direct `private/secret.md`
+  // link could never appear in it and the check could never fire.
+  for (const m of indexText.matchAll(/\]\(([^)]+)\)/g)) {
+    const target = m[1];
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')) continue; // external / anchor
+    if (target.split(/[/\\]/).includes('private')) {
       r.fail(
-        `INDEX.md: pointer '${p}' resolves under private/ — the public index must not list it`,
+        `INDEX.md: link '${target}' resolves under private/ — the public index must not list it`,
       );
     }
   }

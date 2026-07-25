@@ -356,6 +356,7 @@ describe('record conformance corpus (FR-4, W12)', () => {
       isAdr: boolean;
       valid: boolean;
       fields?: string[];
+      matrix?: string[];
       content: string;
     }[];
   };
@@ -368,14 +369,19 @@ describe('record conformance corpus (FR-4, W12)', () => {
     return field.startsWith('line ') ? 'structure' : field;
   };
 
-  it('covers every validated field in the documented matrix', () => {
-    // A corpus that drifts behind the schema is how two parsers "agree" while
-    // proving nothing — the matrix is the contract, so it must not go stale.
-    for (const field of Object.keys(corpus._matrix)) {
-      expect(corpus._matrix[field]!.length, field).toBeGreaterThan(0);
-    }
-    expect(corpus.cases.filter((c) => c.valid).length).toBeGreaterThan(5);
-    expect(corpus.cases.filter((c) => !c.valid).length).toBeGreaterThan(20);
+  it('binds every matrix cell to at least one case', () => {
+    // Counting cases proves nothing: deleting every watch case while adding
+    // filler elsewhere would keep the totals up. Each case CLAIMS the cells it
+    // exercises, and every declared cell must be claimed by someone — so a new
+    // rule with no case, or a deleted case, fails here rather than silently
+    // shrinking what the two parsers are held to.
+    const claimed = new Set(corpus.cases.flatMap((c) => c.matrix ?? []));
+    const declared = Object.entries(corpus._matrix).flatMap(([field, modes]) =>
+      modes.map((mode) => `${field}:${mode}`),
+    );
+    expect(declared.filter((cell) => !claimed.has(cell))).toEqual([]);
+    // And no case may claim a cell the matrix does not declare.
+    expect([...claimed].filter((cell) => !declared.includes(cell))).toEqual([]);
   });
 
   it('the typed parser reaches the expected verdict on every case', () => {
@@ -402,13 +408,9 @@ describe('record conformance corpus (FR-4, W12)', () => {
       `const corpus = JSON.parse(readFileSync(${JSON.stringify(corpusPath)}, 'utf8'));`,
       `const out = corpus.cases.map((c) => ({`,
       `  id: c.id,`,
-      `  fields: [`,
-      `    ...new Set(`,
-      `      validateMemoryRecord(c.content, { slug: c.slug, isAdr: c.isAdr }).issues.map(`,
-      `        (i) => i.field,`,
-      `      ),`,
-      `    ),`,
-      `  ].sort(),`,
+      `  fields: validateMemoryRecord(c.content, { slug: c.slug, isAdr: c.isAdr })`,
+      `    .issues.map((i) => i.field)`,
+      `    .sort(),`,
       `}));`,
       `process.stdout.write(JSON.stringify(out));`,
     ].join('\n');
@@ -421,14 +423,15 @@ describe('record conformance corpus (FR-4, W12)', () => {
     );
 
     for (const c of corpus.cases) {
-      const ts = [
-        ...new Set(
-          validateRecord(c.content, 'x.md', c.slug, {
-            isAdr: c.isAdr,
-            root: process.cwd(),
-          }).issues.map((i) => tsField(i.path)),
-        ),
-      ].sort();
+      // Sorted WITH duplicates, not de-duped: a field Set hides a divergence
+      // inside a multi-entry field, where one side flags both bad globs and the
+      // other flags only the first. Same field, different semantics.
+      const ts = validateRecord(c.content, 'x.md', c.slug, {
+        isAdr: c.isAdr,
+        root: process.cwd(),
+      })
+        .issues.map((i) => tsField(i.path))
+        .sort();
       expect(standalone.get(c.id), `${c.id}: the two implementations disagree`).toEqual(ts);
     }
   });

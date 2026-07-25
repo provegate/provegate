@@ -67,7 +67,11 @@ export function parseRecordFrontmatter(content) {
       return;
     }
     const key = kv[1];
-    const raw = kv[2].trim();
+    // Strip the comment BEFORE classifying the value's form: a commented fold
+    // marker (`description: >-  # …`) would otherwise read as a scalar and its
+    // continuation line fail as an orphan indent — the exact shape the shipped
+    // template hands an author to copy.
+    const raw = stripComment(kv[2]);
     if (values.has(key)) {
       issues.push({ field: key, message: 'duplicate key' });
       return;
@@ -98,8 +102,7 @@ export function parseRecordFrontmatter(content) {
       );
       return;
     }
-    // YAML's comment rule: a `#` opens a comment only when whitespace precedes it.
-    values.set(key, raw.replace(/\s+#.*$/, '').trim());
+    values.set(key, raw);
   });
   flush();
   return { values, body, issues };
@@ -110,6 +113,14 @@ export function parseFrontmatter(content) {
   const { values, issues } = parseRecordFrontmatter(content);
   if (issues.some((i) => i.message === 'missing frontmatter fence')) return null;
   return Object.fromEntries(values);
+}
+
+// YAML's comment rule: a `#` opens a comment when whitespace precedes it or
+// when it opens the value, so `token#fragment` stays part of the value.
+function stripComment(rawValue) {
+  const trimmed = rawValue.trim();
+  if (trimmed.startsWith('#')) return '';
+  return trimmed.replace(/\s+#.*$/, '').trim();
 }
 
 const KNOWN_KEYS = new Set([
@@ -194,6 +205,19 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
     issues.push({ field: 'status', message: `'${status}' is not a known status` });
   }
 
+  const provenanceRaw = values.get('provenance');
+  if (provenanceRaw !== undefined) {
+    if (typeof provenanceRaw !== 'string' || provenanceRaw.length === 0) {
+      issues.push({ field: 'provenance', message: 'must be a non-empty scalar' });
+    } else if (PLACEHOLDER_RE.test(provenanceRaw)) {
+      issues.push({ field: 'provenance', message: 'placeholder text is not a value' });
+    }
+  }
+
+  const supersededByRaw = values.get('superseded-by');
+  if (supersededByRaw !== undefined && typeof supersededByRaw !== 'string') {
+    issues.push({ field: 'superseded-by', message: 'must be a scalar slug, not a list' });
+  }
   const supersededBy = str('superseded-by');
   if (status === 'superseded' && (supersededBy === null || supersededBy.length === 0)) {
     issues.push({ field: 'superseded-by', message: 'required when status is superseded' });
