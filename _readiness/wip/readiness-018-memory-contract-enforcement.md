@@ -5,16 +5,16 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-018-memory-contract-enforcement.md` |
-| Score                  | 8.43/10 |
+| Score                  | 8.33/10 |
 | Verdict                | PASS |
-| Iteration              | 2 |
+| Iteration              | 6 |
 | Model Tier (Execution) | high |
 | Model Tier (Audit)     | high |
 | Scored by              | independent agent (gpt-5.6, different model family from the PRD author), via owner |
 | Self-scored            | no |
 | Date                   | 2026-07-25 |
 | PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-018` exit 0 |
-| State Record           | pending — run `gate status` after save |
+| State Record           | pending — read-only re-score did not update state |
 | Dependency             | PRD-017 must be Ship Verified before Phase 4 |
 
 ---
@@ -23,8 +23,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | high | The implementation combines immutable git blobs, lease state, root-control-artifact activation, and repo-wide lint behavior. The two FR-6 watch items need deliberate runner and fixture design, not a mechanical content edit. |
-| Phase 6 (Audit)     | high | Audit must prove a pre-introduction worktree refuses then succeeds after rebase, and attack the grandfather boundary with malformed, future, and causally ambiguous timestamps. |
+| Phase 4 (Execution) | high | The barrier is concurrency-sensitive and activation-wide; implementation must preserve the stated single-bypass limit while using the existing mutex correctly. |
+| Phase 6 (Audit)     | high | Audit must inject a foreign lease, stale mutex marker, direct merge, and existing-worktree continuation; it must also confirm PRD-022 becomes a real scoped follow-on. |
 
 ---
 
@@ -46,10 +46,17 @@ The two load-bearing existing mechanisms match the PRD:
 - The immutable-base comparison for output weakening remains the correct model: a working
   PRD cannot rewrite the evidence against which it is compared.
 
-FR-6's policy statement is more precise than iteration 1, but its lease `startedAt`
-versus merge-commit boundary is time-based rather than causal. Git commit timestamps are
-not a trustworthy ordering source, and the PRD does not name the canonical persisted
-merge SHA/timestamp or the validation target that compares it. See W6.
+FR-6 correctly removes the unsound grandfather boundary rather than trying to repair it.
+The live PRD-017 lease demonstrates the rule is practical: it is active but TTL-bounded,
+so a compliant activation waits instead of carrying an exemption state. Using
+`withWorkspaceMutex(claimMutexPath(...))` is coherent: `gate open` claims and `gate
+release` already use that critical section, so the proposed land-time lock read cannot
+race a new claim. W9 is resolved in specification.
+
+The mutex intentionally fails closed on a stale marker: after 30 seconds with a dead PID,
+it requires explicit manual removal rather than breaking the lock automatically. Recording
+this as operator handoff is the correct trade: automatic breaking would reintroduce the
+race the mutex prevents. W11 is resolved as an accepted operational constraint.
 
 ### 2. Edge Cases & Failure Modes
 
@@ -66,14 +73,15 @@ Measured rather than accepted:
   FR-3 table. The table assigns exactly one distinct obligation to every one. Those
   obligations are not in the live prompt files yet—that is expected Phase 4 work, not a
   false current-state claim.
-- **W4 is resolved as policy.** FR-6 now explicitly grandfatheres a lease opened before
-  this PRD's merge and forbids a permanent exemption list. Its implementation proof
-  remains incomplete because the ordering evidence is underspecified (W6).
+- **W4 is resolved by removal.** There is no grandfather policy or permanent exemption
+  list to maintain; activation waits for the active-lease set to clear.
 - The current root has neither `workflow.config.json` nor `gates.manifest.json`, so this
   PRD is correctly specifying an introduction rather than pretending the files exist.
-  The worktree snapshot code supports refusal after that introduction, but FR-6 does not
-  name the existing worktree fixture file or a command that executes the claimed
-  pre-introduction/rebase sequence. See W5.
+  FR-6 now names `test/open.test.ts` and a runnable command. That file exists and already
+  contains a real-git-worktree lease test, making it a plausible fixture home. `merge.ts`
+  and `merge.test.ts` now target the activation refusal, but that occurs at `gate land`,
+  not the separately stated Phase 4 preflight immediately before committing root files.
+  W5 remains partly open.
 
 ### 3. Maintainability & DX
 
@@ -81,9 +89,17 @@ Measured rather than accepted:
   The per-file FR-3 table makes the intended content testable instead of relying on a
   directory-level assertion.
 - The root-control introduction is cohesive with this PRD, not PRD-021: the opening
-  snapshot behavior treats the files as a pair, while a later single-key edit is a
-  narrower follow-up. The scope is acceptable provided its transition fixture is named
-  and run (W5).
+  snapshot behavior treats the files as a pair, while a later single-key edit is narrower.
+- W6–W11 are resolved in this PRD: the impossible boundary is removed, the land barrier
+  shares the claim mutex, the direct-merge limit is explicit, and stale-mutex recovery is
+  a named operator responsibility.
+- `open.ts` alone revalidates control-artifact snapshots. `chain.ts` builds/runs phases
+  without that check, while `merge.ts` checks branch/base cleanliness only. FR-6 now states
+  this fact rather than claiming convergence, and correctly bounds the residual to a
+  bypassed activation with no recorded exemption state.
+- PRD-022 is cited as the follow-on for lifecycle revalidation, but it is currently an
+  unfilled template: it has placeholder FRs, targets, and scope. The residual is named,
+  but not yet actionable ownership. See W13.
 - The existing `content-prompts.test.ts` census currently proves file existence only; the
   proposed per-file assertions are clearly within FR-3's stated target and scope.
 
@@ -93,11 +109,12 @@ Measured rather than accepted:
   is needed. Fresh installs get a Phase-7-only manifest, while existing adopter artifacts
   remain byte-unchanged.
 - Root activation last and the PRD-017 Ship Verified precondition are appropriate
-  deployment ordering. The present lock record for PRD-017 contains a valid `startedAt`,
-  confirming one side of the new boundary exists in live state.
-- The other side is not “already recorded”: PRD-018 is not merged and the repository has
-  no persisted PRD-018 merge identifier. FR-6 must define a causally reliable persisted
-  merge boundary and prove behavior around it (W6).
+  deployment ordering. The current PRD-017 lease is exactly the situation governed: it
+  makes a compliant `gate land PRD-018` wait until release, TTL expiry, or stale-mutex
+  manual recovery.
+- “No exemption state” is true in data modeling and the revised FR no longer claims
+  convergence. A bypass can still let a pre-existing worktree complete once without the
+  new contract; that is a stated residual, not a permanent recorded exemption.
 
 ---
 
@@ -107,17 +124,17 @@ Class `infra` weights, per `prompts/phase-2-readiness-scorer.md`.
 
 | #         | Dimension                | Weight | Score       | Notes |
 | --------- | ------------------------ | ------ | ----------- | ----- |
-| 1         | Clarity                  | 15%    | 8.5/10      | W2 and W3 now specify the refusal/remedy and every prompt obligation. Docked because FR-6's preflight and introduction-transition proof lack a concrete runner/test target. |
-| 2         | Completeness             | 20%    | 8.5/10      | Stories, disabled compatibility, exact prompt obligations, and in-flight policy are covered. The root-introduction transition and its temporal boundary still need executable details. |
-| 3         | Technical Depth          | 20%    | 8.5/10      | Blob provenance, deep-merge semantics, and paired control snapshots match the code. A timestamp comparison is not causal merge proof without a canonical persisted boundary. |
+| 1         | Clarity                  | 15%    | 8.5/10      | The mutex, scoped land-only guarantee, Gherkin, DO NOT rules, and operator recovery are concrete. Docked because the cited follow-on is still an empty template. |
+| 2         | Completeness             | 20%    | 8.0/10      | The direct-merge and existing-worktree residual is accurately stated and bounded, but PRD-022 does not yet provide actionable ownership. |
+| 3         | Technical Depth          | 20%    | 8.5/10      | The mutex is the correct critical section; accurate scope replaces the false convergence mechanism. |
 | 4         | Multi-Tenancy & Security | 10%    | 8.5/10      | No tenant route/query surface. Command safety, human-only push, and owner acceptance remain in the design; no security hard cap applies. |
-| 5         | Scope & Testability      | 15%    | 8.0/10      | FR-6's expanded root ownership is cohesive, but its claimed before/after transition fixture is absent from Targets and Verification Commands. |
-| 6         | Migration & Rollback     | 20%    | 8.5/10      | Activation-last, fresh/adopter separation, rollback, and W4 policy are explicit. Docked for W6's non-deterministic temporal boundary. |
-| **Total** | **Weighted**             |        | **8.43/10** | **PASS** |
+| 5         | Scope & Testability      | 15%    | 8.0/10      | Tests name the introduction and land barrier. W5's preflight timing and W13's empty follow-on remain Phase 3 binding tasks. |
+| 6         | Migration & Rollback     | 20%    | 8.5/10      | The PRD-017 wait and operator stale-mutex recovery are workable; the one-bypass residual is explicitly accepted and has a named follow-on. |
+| **Total** | **Weighted**             |        | **8.33/10** | **PASS** |
 
 Weighted sum:
-`0.15×8.5 + 0.20×8.5 + 0.20×8.5 + 0.10×8.5 + 0.15×8.0 + 0.20×8.5`
-`= 1.275 + 1.70 + 1.70 + 0.85 + 1.20 + 1.70 = 8.425 → 8.43`.
+`0.15×8.5 + 0.20×8.0 + 0.20×8.5 + 0.10×8.5 + 0.15×8.0 + 0.20×8.5`
+`= 1.275 + 1.60 + 1.70 + 0.85 + 1.20 + 1.70 = 8.325 → 8.33`.
 
 Hard caps — none triggered:
 
@@ -149,15 +166,33 @@ Hard caps — none triggered:
 4. **W4 — activation blast radius. — RESOLVED 2026-07-25.** FR-6 states an activation-last,
    lease-`startedAt`/merge boundary, explicitly grandfathering leases already in flight and
    expiring that status with the leases.
-5. **W5 — name and run the root-control introduction transition fixture.** Add
-   `packages/provegate/test/worktree.test.ts` (or an equally concrete test path) to FR-6
-   Targets and a runnable FR-6 verification row that proves a pre-file lease refuses on
-   reuse, then succeeds after base merge/rebase. Also target the Phase 4 preflight code
-   that re-checks `_state/locks`.
-6. **W6 — make grandfathering causally deterministic.** Persist and identify the PRD-018
-   activation merge SHA/boundary, compare ancestry or a trusted merge event rather than
-   mutable git commit timestamps, and add boundary tests for leases immediately before,
-   immediately after, malformed, and future `startedAt` values.
+5. **W5 — introduction/preflight wiring. — PARTIALLY RESOLVED 2026-07-25.** FR-6 now
+   names `open.test.ts`, `merge.ts`, and `merge.test.ts`; the fixture homes are plausible.
+   The PRD still says Phase 4 preflight re-checks locks immediately before committing root
+   files, while the new target checks at `gate land`. Name and test the actual preflight,
+   or replace that requirement with the land-time rule.
+6. **W6 — causally deterministic grandfathering. — RESOLVED 2026-07-25.** The PRD
+   deletes grandfathering rather than persisting activation metadata; no ancestry boundary
+   remains to compute.
+7. **W7 — persist the lease base SHA. — RESOLVED 2026-07-25.** The activation policy no
+   longer depends on a lease base SHA.
+8. **W8 — self-referential activation SHA. — RESOLVED 2026-07-25.** The activation SHA
+   mechanism is removed; no merge commit must name itself.
+9. **W9 — make the lease barrier atomic. — RESOLVED 2026-07-25.** FR-6 now requires
+   `gate land` to read locks inside the same workspace mutex used by claim/release, so a
+   new claim cannot appear between its check and merge.
+10. **W10 — direct-merge scope. — RESOLVED 2026-07-25.** FR-6 now accurately scopes the
+    barrier to `gate land`, admits direct merge bypass, and makes no prevention or
+    convergence claim.
+11. **W11 — stale-mutex activation recovery. — RESOLVED 2026-07-25.** FR-6 names the
+    fail-closed manual owner recovery as operator handoff; this is the correct mutex trade.
+12. **W12 — continued-worktree revalidation. — DEFERRED TO PRD-022 2026-07-25.** FR-6
+    precisely states that `gate run`/`gate land` do not revalidate artifacts and accepts
+    one bypassed activation without recording an exemption. PRD-022 owns the prevention.
+13. **W13 — make PRD-022 actionable before Phase 3.** The cited
+    `_prds/wip/prd-022-control-artifact-revalidation.md` is still a template stub with
+    placeholder FRs, targets, scope, and verification commands. Draft and approve its
+    concrete revalidation contract before treating W12 as owned follow-on work.
 
 ---
 
@@ -167,6 +202,10 @@ Hard caps — none triggered:
 | - | ---------- | ----- | ------- | ----------- |
 | 1 | 2026-07-25 | 8.15  | PASS    | First independent scoring of the split contract/enforcement scope. Measured three PRD claims against the live repo: manifest deep-merge behavior confirmed, egress scanner confirmed fail-closed but cache-stale, base-ref baseline guaranteed only for worktree flows |
 | 2 | 2026-07-25 | 8.43 | PASS | Independent re-score: W1 cache guard re-confirmed; W2 refusal/remedy, W3 per-file table, and W4 in-flight policy resolved. Added W5 executable introduction-transition proof and W6 causal grandfather-boundary specification |
+| 3 | 2026-07-25 | 8.05 | PASS | W5 now names a plausible `open.test.ts` fixture but misses preflight wiring. W6 ancestry intent has no persisted lease base and proposes a circular merge-SHA record; added W7–W8 |
+| 4 | 2026-07-25 | 7.93 | ITERATE | W6–W8 resolved by deleting grandfathering; W5 remains timing-misaligned. Measured `merge.ts` as lock-free and direct merge as hook-exempt; added W9 atomicity and W10 bypass controls |
+| 5 | 2026-07-25 | 7.65 | ITERATE | W9 resolved by reusing the claim mutex; W10 scope is honest but convergence fails for continued existing worktrees. Added W11 stale-mutex recovery and W12 lifecycle revalidation |
+| 6 | 2026-07-25 | 8.33 | PASS | W10–W11 resolved by accurate scope and operator handoff; W12 deferred to PRD-022. The cited follow-on is a template stub, so W13 binds Phase 3 to make ownership actionable |
 
 ---
 
@@ -180,19 +219,24 @@ Hard caps — none triggered:
 - [x] Output grammar is mutually exclusive and enforced by test, not prose.
 - [x] W1 cache-key guard passed during this re-score.
 - [x] W2 refusal/remedy, W3 per-prompt obligations, and W4 in-flight policy measured as resolved.
-- [ ] W5 names and runs the root-control introduction/rebase fixture.
-- [ ] W6 persists and tests a causal activation boundary.
+- [ ] W5 aligns the stated Phase 4 preflight with its implementation/test target.
+- [x] W6–W8 resolved by removing grandfathering and its impossible metadata requirements.
+- [x] W9 uses the claim mutex for the activation barrier.
+- [x] W10 accurately scopes direct-merge bypass without claiming convergence.
+- [x] W11 records stale-mutex manual recovery as operator handoff.
+- [x] W12 is accurately deferred to PRD-022 without a false convergence claim.
+- [ ] W13 turns PRD-022 from a template into an actionable follow-on.
 - [ ] PRD-017 Ship Verified before Phase 4 entry.
 
 ---
 
 ## Verdict
 
-**PASS — 8.43/10.** Scored independently by a different model family from the PRD author.
+**PASS — 8.33/10.** Scored independently by a different model family from the PRD author.
 `node packages/provegate/dist/cli.js check PRD-018` exits 0, and no hard cap applies.
 
-W2, W3, and W4 are genuinely resolved by the revised PRD and live repository
-measurements. The new root-control introduction scope belongs with PRD-018 because it
-changes the paired worktree provenance contract, while PRD-021 can own the later
-single-key edit. Phase 3 may proceed, but its tasks must bind W5 and W6; Phase 4 still
-waits on PRD-017 Ship Verified.
+PRD-018 is internally honest and implementable: W6–W11 are resolved, and W12 is an
+accurately bounded follow-on rather than a hidden claim. The remaining Phase 3 bindings
+are W5's preflight/land timing decision and W13: PRD-022 must become a concrete approved
+PRD before its revalidation work can count as owned. Phase 4 still waits on PRD-017 Ship
+Verified.

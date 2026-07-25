@@ -7,7 +7,7 @@
 > **Author**: Codex, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `memory-adoption-cli`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task Generation)
 > **PRD Class**: infra
 > **Class Rationale**: This adds local workflow diagnostics and recall CLI over the
 > memory substrate; it does not change application runtime behavior.
