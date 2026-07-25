@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T13:15:28.720Z",
+  "generatedAt": "2026-07-25T13:28:36.856Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -636,32 +636,32 @@
       "number": 18,
       "slug": "memory-contract-enforcement",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-018-memory-contract-enforcement.md",
         "readiness": "_readiness/wip/readiness-018-memory-contract-enforcement.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-018-memory-contract-enforcement.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": 8.15,
+        "score": 8.33,
         "verdict": "PASS",
         "modelTierExecution": "high",
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 73,
+        "operatorHandoffCount": 2
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -673,32 +673,32 @@
       "number": 19,
       "slug": "memory-adoption-cli",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-019-memory-adoption-cli.md",
         "readiness": "_readiness/wip/readiness-019-memory-adoption-cli.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-019-memory-adoption-cli.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": 8.425,
+        "score": 8.985,
         "verdict": "PASS",
         "modelTierExecution": "high",
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 63,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -747,7 +747,7 @@
       "number": 21,
       "slug": "governance-truth-up",
       "status": "Approved",
-      "cyclePhase": "3 (Task Generation)",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -763,7 +763,44 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 8.43,
+        "score": 7.1,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Not Started",
+        "checkedCount": 0,
+        "uncheckedCount": 82,
+        "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-25"
+    },
+    {
+      "prd": "PRD-022",
+      "number": 22,
+      "slug": "control-artifact-revalidation",
+      "status": "Approved",
+      "cyclePhase": "3 (Task Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-022-control-artifact-revalidation.md",
+        "readiness": "_readiness/wip/readiness-022-control-artifact-revalidation.md",
+        "tasks": "_tasks/wip/tasks-022-control-artifact-revalidation.md",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 9.1,
         "verdict": "PASS",
         "modelTierExecution": "high",
         "modelTierAudit": "high"
@@ -773,6 +810,43 @@
         "checkedCount": 0,
         "uncheckedCount": 73,
         "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-25"
+    },
+    {
+      "prd": "PRD-023",
+      "number": 23,
+      "slug": "gate-self-hosting",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-023-gate-self-hosting.md",
+        "readiness": "_readiness/wip/readiness-023-gate-self-hosting.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 6.65,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
