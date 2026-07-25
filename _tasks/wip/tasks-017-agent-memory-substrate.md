@@ -127,7 +127,7 @@ and commands it names still exist **before** the dependent task starts (task 0.2
   - [x] 2.1 Add the optional `memory` block (`enabled`, `root`, `index`, `entrypoints`,
         `verifyCommand`, `retroAfterCompleted`) to
         `packages/provegate/src/core/config/types.ts`.
-  - [ ] 2.2 Add disabled-by-default values to
+  - [x] 2.2 Add disabled-by-default values to
         `packages/provegate/src/core/config/defaults.ts`; a repo with no config keeps
         exactly today's behavior.
   - [x] 2.3 Validate in `packages/provegate/src/core/config/validate.ts`: types, unknown
@@ -257,7 +257,7 @@ and commands it names still exist **before** the dependent task starts (task 0.2
   - [x] 8.2 Save the structured verdict to
         `_docs/reviews/review-017-agent-memory-substrate.md`; the ledger row may read
         `passed` only with verdict `pass` and `Critical: 0`.
-  - [ ] 8.3 For each finding, append remediation sub-tasks here, fix under the same lease,
+  - [x] 8.3 For each finding, append remediation sub-tasks here, fix under the same lease,
         re-run the affected Phase 5 gates, and obtain a fresh verdict.
 
 - [x] 9.0 Phase 7 — Durable learning and close preparation
