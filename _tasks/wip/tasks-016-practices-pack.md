@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-016-practices-pack.md](../../_prds/wip/prd-016-practices-pack.md)
 > **Readiness**: [readiness-016-practices-pack.md](../../_readiness/wip/readiness-016-practices-pack.md)
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 > **Readiness Score**: 8.15/10
 > **Model Tier (Execution)**: medium
 > **Created**: 2026-07-24
@@ -148,6 +148,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-24 | 7.0 | Phase 6 codex R1 FAIL (4 critical: origin terminology + narrow hygiene test; secret-scan shell injection via staged filename; guard missed deletions/rename sources; weak bare-init parity — plus 2 advisory). Fixed `d210348`. R2 FAIL (2 critical: `0:leak.txt` stage-syntax scan bypass; parsed-not-byte golden — plus advisory: no behavioral security tests). Fixed `e003a1b` (pathspec `:./` form, byte-literal goldens, adversarial-staging fixture vs INSTALLED scripts; mutation-checked). R3 **PASS** — Critical 0, no new findings. |
 | 2026-07-24 | 7.0b | Late-arriving parallel Sonnet verdicts: sonnet-A pass (4 medium), sonnet-B FAIL (1 critical: practice-NN/pattern-PN taxonomy leak in ~10 packed comments — W1 class both codex rounds missed). Fixed `1cbdb6a`: taxonomy stripped to self-contained descriptions, hygiene test bans the class, verify/ install moved into the explicit PACK_MAP, index.ts surface decision recorded. Codex R4 delta confirmation: pass, no new findings. |
 | 2026-07-24 | 8.0 | Phase 7: review artifact committed; Durable Artifacts learning resolved to `none` (every insight from this PRD is now encoded in code comments + regression tests — derivable, so `_brain` correctly rejects it). Awaiting operator acceptance (9.0) before `gate land`. |
+| 2026-07-25 | 9.0 | Owner recorded the acceptance on `main` (`b634e7c`); `main` merged into this branch so the merge gate reads it from THIS checkout (`operatorGateOk` resolves `_state/acceptances.json` against the run root, not the base checkout). Close-blocker found while resuming: this section's row was a checkbox bullet, so `countOperatorHandoff` returned 0 and the operator gate was a silent no-op (`gate land --dry-run` printed `operator rows: 0`) — row converted to a table row, learning captured, so Durable Artifacts is no longer `none`. |
 
 ---
 
@@ -160,8 +161,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 ## Operator Handoff
 
 > Autonomous Close is **operator-gated** — the rows below need a human; the merge
-> gate refuses until an owner-signed acceptance entry exists.
+> gate refuses until an owner-signed acceptance entry exists. Rows MUST be table
+> rows: the state builder counts only `|`-delimited rows in this section, so a
+> checkbox bullet here reports zero operator rows and the merge gate passes
+> without ever asking for the acceptance.
 
-- [ ] 9.0 Operator acceptance of autonomous close: owner reviews the Phase-6
-      verdict + the packed content (method-content sign-off) and records the
-      acceptance entry in `_state/acceptances.json`.
+| Task | Category   | Owner | Required Check                                                          | Status | Notes                                                                                                                   |
+| ---- | ---------- | ----- | ----------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 9.0  | acceptance | owner | Owner sign-off on autonomous close + packed method content (W1 fidelity) | passed | owner-signed entry in `_state/acceptances.json` (2026-07-25); reviewed the 3/3 quorum verdict — codex 4 rounds + 2 sonnet |

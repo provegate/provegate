@@ -1,6 +1,6 @@
 # PRD-016: Practices Pack — `gate init --practices`
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
@@ -251,9 +251,13 @@ against the merge diff). Never leave empty — write `none` explicitly. Narrow s
 only **this PRD's** durable knowledge.
 
 - Review artifact: `_docs/reviews/review-016-practices-pack.md`
-- Learning: none — resolved at Phase 7: every insight this PRD surfaced (pathspec
-  stage-syntax collision, umask-masked modes, byte-parity goldens) is encoded in code
-  comments and regression tests, i.e. derivable from the repo
+- Learning: `_brain/learnings/operator-row-must-be-a-table-row.md` — the close itself
+  surfaced it: this PRD wrote its operator row as a checkbox bullet, the state builder
+  counts only table rows, so the operator gate reported zero rows and would have merged
+  without ever consuming the acceptance. Not derivable — the format-to-gate coupling is
+  written down nowhere. (The Phase-4 insights — pathspec stage-syntax collision,
+  umask-masked modes, byte-parity goldens — remain non-durable: they are encoded in code
+  comments and regression tests.)
 
 ---
 

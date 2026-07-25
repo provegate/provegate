@@ -23,6 +23,7 @@
 - [conflict check independent of override](learnings/conflict-check-independent-of-override.md) — pre-start overlap check reads the item's declared surface, never a caller override
 - [no completed/done status alias](learnings/no-completed-done-status-alias.md) — "Completed"/"Done" self-declares the terminal state and inverts gate order; reject it
 - [operator acceptance no self-accept](learnings/operator-acceptance-no-self-accept.md) — an agent must never self-accept operator rows; TTY/--yes + owner allowlist
+- [operator row must be a table row](learnings/operator-row-must-be-a-table-row.md) — a checkbox-bullet operator row counts as 0 rows; the merge gate passes without the acceptance
 - [cleanup after verified merge](learnings/cleanup-after-verified-merge.md) — learning lands before merge; teardown only after the merge is verified
 
 ## Project gotchas
