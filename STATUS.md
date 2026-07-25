@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4 implementation. PRD-018/019 drafted, ordered behind it |
+| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies |
 
 ## Deferrals
 

@@ -1,13 +1,13 @@
 # PRD-019: Agent Memory Adoption CLI
 
-> **Status**: Draft
+> **Status**: Approved
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
 > **Author**: Codex, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `memory-adoption-cli`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 2 (Readiness)
 > **PRD Class**: infra
 > **Class Rationale**: This adds local workflow diagnostics and recall CLI over the
 > memory substrate; it does not change application runtime behavior.
@@ -332,3 +332,4 @@ Before Phase 2 PASS, run: `gate check PRD-019`
 | ---------- | ---------------- | ------- |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
 | 2026-07-25 | owner            | Approved PRD-019 Phase 1 scope; waits for PRD-017/018 dependencies |
+| 2026-07-25 | independent agent via owner | Readiness iteration 1: PASS 8.425 (infra weights), tiers high/high. Found two uncovered cases living in this repo already: the symlinked `AGENTS.md` entrypoint and the pack-reconcile obligation on shipped adoption files. Watch items W1–W4 |

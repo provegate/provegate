@@ -1,13 +1,13 @@
 # PRD-018: Closed-Loop Memory Contract and Enforcement
 
-> **Status**: Draft
+> **Status**: Approved
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
 > **Author**: Codex, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `memory-contract-enforcement`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 2 (Readiness)
 > **PRD Class**: infra
 > **Class Rationale**: This changes workflow artifacts, phase prompts, readiness lint,
 > and runner gates rather than an application feature.
@@ -356,3 +356,4 @@ Before Phase 2 PASS, run: `gate check PRD-018`
 | ---------- | ---------------- | ------- |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
 | 2026-07-25 | owner            | Approved PRD-018 Phase 1 scope; waits for PRD-017 dependency |
+| 2026-07-25 | independent agent via owner | Readiness iteration 1: PASS 8.15 (infra weights), tiers high/high. Verified the deep-merge floor rule and the egress scanner's fail-closed behavior; found the egress gate can scan cache-stale build output. Watch items W1–W4 |

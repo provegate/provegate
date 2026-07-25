@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T08:32:25.410Z",
+  "generatedAt": "2026-07-25T08:39:57.031Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -635,27 +635,27 @@
       "prd": "PRD-018",
       "number": 18,
       "slug": "memory-contract-enforcement",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-018-memory-contract-enforcement.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-018-memory-contract-enforcement.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.15,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
@@ -672,27 +672,27 @@
       "prd": "PRD-019",
       "number": 19,
       "slug": "memory-adoption-cli",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-019-memory-adoption-cli.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-019-memory-adoption-cli.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.425,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
