@@ -1,0 +1,5 @@
+#!/bin/sh
+# commitlint via the workspace devDependency; skips silently if deps not installed
+if [ -x "./node_modules/.bin/commitlint" ]; then
+  ./node_modules/.bin/commitlint --edit "$1"
+fi

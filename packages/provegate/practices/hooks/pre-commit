@@ -1,0 +1,4 @@
+#!/bin/sh
+# base-branch guard + secret scan; zero-dep node scripts
+node scripts/base-branch-guard.mjs || exit 1
+node scripts/secret-scan.mjs || exit 1

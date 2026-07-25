@@ -1,0 +1,10 @@
+[
+  "verify-brain.mjs",
+  "verify-review-artifact.mjs",
+  "verify-durable-artifacts.mjs",
+  "verify-deferred.mjs",
+  "verify-test-task-coverage.mjs",
+  "verify-gates-wired.mjs",
+  "verify-dependency-audit.mjs",
+  "verify-workflow.mjs"
+]

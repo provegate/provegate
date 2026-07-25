@@ -137,6 +137,32 @@ direct toolchain via `npx` is fine — `npx tsc --noEmit`, `npx eslint .`,
 or add the prefix to `commands.allowedPrefixes` in `workflow.config.json`.) Run
 `gate check --wiring` to confirm every gate is wired or honestly excepted.
 
+## The practices layer (optional, recommended)
+
+```sh
+gate init --practices
+```
+
+Installs the proven practice layer around the workflow tree, additively — **nothing is
+ever overwritten** (existing files are reported as skipped, byte-untouched):
+
+- `_brain/` — agent-agnostic memory: the canonical protocol, an indexed store of 21
+  seed learnings (workflow gotchas any gated project hits), record templates.
+- `AGENT_BOOTSTRAP.md` + `STATUS.md` — the canonical agent entrypoint template and the
+  cross-agent status board (fill the `{{PLACEHOLDER}}`s).
+- `.githooks/` + `scripts/` — a base-branch commit guard (base branches merge-only for
+  source), a pre-commit secret scanner, and a commitlint config (written only when
+  absent).
+- `scripts/verify/` — a zero-dependency check library (`verify-workflow` bundle,
+  known-red ledger, wire-or-delete meta-gate, review-artifact/durable-artifacts/
+  deferral checks) that exits green immediately on a fresh install.
+
+The pack never mutates state beyond creating files: no `git config`, no dependency
+install, no edits to an existing `package.json`, and it never creates or edits agent
+entrypoints (`CLAUDE.md`, `AGENTS.md`) — paste the shims from
+`node_modules/provegate/practices/shims/` yourself. The remaining manual wiring is
+printed after install (also in `practices/NEXT_STEPS.md`). `--dry-run` composes.
+
 ## Where to go next
 
 - `METHOD.md` — the method spec (classes, gates, locks, deferral governance)
