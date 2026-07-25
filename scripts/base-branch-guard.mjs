@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Base-branch commit guard — practice 02 (protected-branch commit flow).
+// Base-branch commit guard — protected branches are merge-only for source.
 // Policy SSOT: protected branches are merge-only for source. Docs/coordination
 // paths may commit in place. Exemptions: merge commits, ALLOW_BASE_COMMIT=1.
 // This script never pushes and must never gain the ability to.
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 export const PROTECTED = ['main'];
@@ -32,13 +32,11 @@ export const ALLOWED_ROOT_FILES = [
 ];
 
 export function isAllowed(path) {
-  return (
-    ALLOWED_DIR_PREFIXES.some((p) => path.startsWith(p)) ||
-    ALLOWED_ROOT_FILES.includes(path)
-  );
+  return ALLOWED_DIR_PREFIXES.some((p) => path.startsWith(p)) || ALLOWED_ROOT_FILES.includes(path);
 }
 
 const sh = (cmd) => execSync(cmd, { encoding: 'utf8' }).trim();
+// execFileSync for anything whose arguments could ever carry repo content.
 
 const branch = sh('git rev-parse --abbrev-ref HEAD');
 if (!PROTECTED.includes(branch)) process.exit(0);
@@ -47,13 +45,28 @@ const gitDir = sh('git rev-parse --git-dir');
 if (existsSync(`${gitDir}/MERGE_HEAD`)) process.exit(0); // merge commits are exempt
 
 if (process.env.ALLOW_BASE_COMMIT === '1') {
-  console.warn(`base-branch-guard: ALLOW_BASE_COMMIT=1 — committing source directly to '${branch}' (deliberate one-off).`);
+  console.warn(
+    `base-branch-guard: ALLOW_BASE_COMMIT=1 — committing source directly to '${branch}' (deliberate one-off).`,
+  );
   process.exit(0);
 }
 
-const staged = sh('git diff --cached --name-only --diff-filter=ACMR')
-  .split('\n')
-  .filter(Boolean);
+// NUL-delimited --name-status so deletions (D) are policed too — removing a
+// source file from a protected branch is as much a source change as editing
+// one — and renames/copies validate BOTH sides (a rename out of an allowed
+// path into source, or vice versa, must not slip through).
+const raw = execFileSync(
+  'git',
+  ['diff', '--cached', '--name-status', '-z', '--diff-filter=ACMRD'],
+  { encoding: 'utf8' },
+);
+const parts = raw.split('\0').filter(Boolean);
+const staged = [];
+for (let i = 0; i < parts.length;) {
+  const status = parts[i++];
+  staged.push(parts[i++]);
+  if (/^[RC]/.test(status)) staged.push(parts[i++]); // rename/copy: source AND destination
+}
 const violations = staged.filter((f) => !isAllowed(f));
 
 if (violations.length === 0) process.exit(0);
