@@ -479,7 +479,7 @@ function runCheck(args: string[]): number {
     return 1;
   }
   const content = readFileSync(resolve(root, found.record.artifacts.prd), 'utf8');
-  const report = lintPrd(config, manifest, content);
+  const report = lintPrd(config, manifest, content, root);
   if (!report.ok) {
     console.error(`[check] ${found.id} is not ready:`);
     for (const issue of report.issues) console.error(`  - ${issue}`);

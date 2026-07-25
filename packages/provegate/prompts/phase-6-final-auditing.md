@@ -23,6 +23,10 @@
    diff by an agent that did not write the code ({{REVIEW_TOOL}}, or a fresh session
    with no implementation context prompted to refute the diff). The implementing
    agent's own audit is necessary but not sufficient.
+6. **Audit the memory contract:** Independently audit whether each Memory Input was
+   actually applied — the declaration is a claim, and this phase is where claims are
+   tested against the diff. Challenge every `none` in both sections: an unexamined
+   `none` is a finding, not a pass.
 
 ---
 

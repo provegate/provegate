@@ -8,8 +8,15 @@ import { defaultManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gates/review.js';
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
+import {
+  normalizeTarget,
+  outputsMissingFromDurable,
+  parseMemoryDeclarations,
+  watchMatches,
+} from '../src/core/memory/artifacts.js';
 import { buildState } from '../src/core/state/build.js';
 import { statusPanelMetrics } from '../src/core/state/query.js';
+import { declaredArtifacts } from '../src/core/run/durable.js';
 
 /**
  * FR-6 + W1: templates round-trip through the engine that consumes adopters'
@@ -34,6 +41,7 @@ const FILL: Record<string, string> = {
   '{{CMD_TEST_SCOPED}}': 'pnpm test test/sample.test.ts',
   '{{CMD_BUILD}}': 'pnpm build',
   '{{DOCS_ROOT}}': 'docs/knowledge',
+  '{{MEMORY_ROOT}}': '_brain',
   '{{DOMAIN_CHECKS}}': '- [ ] sample domain check',
   '{{TECH_STANDARDS}}': '- sample stack rule',
 };
@@ -175,6 +183,181 @@ describe('readiness + summary + board round-trips (buildState / panel labels)', 
     for (const label of labels) {
       expect(board, label).toContain(`| ${label}`);
     }
+  });
+});
+
+describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
+  const section = (heading: string, lines: string[]): string =>
+    `## ${heading}\n\n${lines.join('\n')}\n\n---\n`;
+
+  it('the shipped template declares one valid input and one valid output', () => {
+    const decl = parseMemoryDeclarations(fill(template('prd-template.md')));
+    expect(decl.issues).toEqual([]);
+    expect(decl.inputs.present).toBe(true);
+    expect(decl.outputs.present).toBe(true);
+    expect(decl.inputs.none).toBe(false);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.inputs.entries).toEqual([
+      {
+        disposition: 'applied',
+        slug: '[record-slug]',
+        rationale: '[how the record changed this work item]',
+      },
+    ]);
+    expect(decl.outputs.entries).toEqual([
+      {
+        type: 'learning',
+        path: '_brain/learnings/[slug].md',
+        rationale: '[the durable fact expected]',
+      },
+    ]);
+  });
+
+  it('an ADR output beside `none` fails the mutually-exclusive grammar', () => {
+    const decl = parseMemoryDeclarations(
+      section('Memory Outputs', [
+        '- adr: `_brain/adr/ADR-0001-x.md` — the decision this work item records.',
+        '- none — nothing durable is expected.',
+      ]),
+    );
+    expect(decl.outputs.entries).toHaveLength(1);
+    expect(decl.outputs.none).toBe(true);
+    expect(decl.issues).toEqual([
+      'Memory Outputs: `none` cannot appear beside 1 entry — the two forms are mutually exclusive',
+    ]);
+  });
+
+  it('the same exclusion holds for inputs', () => {
+    const decl = parseMemoryDeclarations(
+      section('Memory Inputs', [
+        '- applied: `some-record` — it changed the shape.',
+        '- none — no active record is relevant.',
+      ]),
+    );
+    expect(decl.issues).toEqual([
+      'Memory Inputs: `none` cannot appear beside 1 entry — the two forms are mutually exclusive',
+    ]);
+  });
+
+  it('an unreasoned `none` is refused in both sections', () => {
+    expect(parseMemoryDeclarations(section('Memory Inputs', ['- none'])).issues).toEqual([
+      "Memory Inputs: `none` requires a rationale after ' — '",
+    ]);
+    expect(parseMemoryDeclarations(section('Memory Outputs', ['- none'])).issues).toEqual([
+      "Memory Outputs: `none` requires a rationale after ' — '",
+    ]);
+  });
+
+  it('an entry without a rationale is refused', () => {
+    const decl = parseMemoryDeclarations(
+      section('Memory Inputs', ['- reviewed: `some-record`']),
+    );
+    expect(decl.inputs.entries).toEqual([]);
+    expect(decl.issues).toEqual(["Memory Inputs: 'some-record' requires a rationale after ' — '"]);
+  });
+
+  it('an unknown disposition names the closed vocabulary', () => {
+    const decl = parseMemoryDeclarations(
+      section('Memory Inputs', ['- considered: `some-record` — sounds close enough.']),
+    );
+    expect(decl.issues).toEqual([
+      "Memory Inputs: 'considered' is not one of applied|reviewed|not-applicable|none",
+    ]);
+  });
+
+  it('an output that is not an exact repo-relative file is refused, one reason each', () => {
+    const cases: Array<[string, string]> = [
+      ['_brain/learnings/**', 'is a pattern, not an exact path'],
+      ['_brain/learnings/?.md', 'is a pattern, not an exact path'],
+      ['{{MEMORY_ROOT}}/learnings/x.md', 'is an unsubstituted template token, not a path'],
+      ['_brain/learnings/', 'is a directory, not a file'],
+      ['/etc/passwd', 'is not repo-relative'],
+      ['../outside/x.md', 'escapes the workspace'],
+      ['~/notes.md', 'is home-relative'],
+      ['learnings.md', 'is not a repo-relative path'],
+    ];
+    for (const [path, reason] of cases) {
+      const decl = parseMemoryDeclarations(
+        section('Memory Outputs', [`- learning: \`${path}\` — a durable fact.`]),
+      );
+      expect(decl.issues, path).toEqual([`Memory Outputs: '${path}' ${reason}`]);
+    }
+  });
+
+  it('a section present but empty declares neither form', () => {
+    const decl = parseMemoryDeclarations('## Memory Inputs\n\nprose only, no bullets.\n');
+    expect(decl.issues).toEqual([
+      'Memory Inputs: declares neither an entry nor a reasoned `none`',
+    ]);
+  });
+
+  it('an absent section is reported as absent, not as a grammar issue', () => {
+    const decl = parseMemoryDeclarations('# PRD-999\n\nnothing here.\n');
+    expect(decl.issues).toEqual([]);
+    expect(decl.inputs.present).toBe(false);
+    expect(decl.outputs.present).toBe(false);
+  });
+
+  it('a rationale wrapped across lines folds into one entry', () => {
+    const decl = parseMemoryDeclarations(
+      section('Memory Outputs', [
+        '- adr: `_brain/adr/ADR-0001-closed-loop-agent-memory.md` — explicit PRD memory inputs,',
+        '  watched review triggers, base-ref weakening proof, and Phase 7 capture are the',
+        '  canonical closed-loop architecture.',
+      ]),
+    );
+    expect(decl.issues).toEqual([]);
+    expect(decl.outputs.entries).toHaveLength(1);
+    expect(decl.outputs.entries[0]!.rationale).toBe(
+      'explicit PRD memory inputs, watched review triggers, base-ref weakening proof, and ' +
+        'Phase 7 capture are the canonical closed-loop architecture.',
+    );
+  });
+
+  it('target matching strips `::SymbolName` before the glob applies', () => {
+    expect(normalizeTarget('packages/provegate/src/core/run/chain.ts::runPhase')).toBe(
+      'packages/provegate/src/core/run/chain.ts',
+    );
+    expect(normalizeTarget('packages/provegate/src/core/run/chain.ts')).toBe(
+      'packages/provegate/src/core/run/chain.ts',
+    );
+    expect(
+      watchMatches(
+        ['packages/provegate/src/core/run/**'],
+        ['packages/provegate/src/core/run/chain.ts::runPhase'],
+      ),
+    ).toEqual(['packages/provegate/src/core/run/chain.ts']);
+    // the false negative this normalization exists to prevent
+    expect(
+      watchMatches(['packages/provegate/src/core/run/*.ts'], ['docs/method.mdx']),
+    ).toEqual([]);
+  });
+
+  it('every declared output must also be a Durable Artifact', () => {
+    const outputs = [
+      { type: 'adr' as const, path: '_brain/adr/ADR-0001-x.md', rationale: 'why' },
+      { type: 'learning' as const, path: '_brain/learnings/y.md', rationale: 'why' },
+    ];
+    expect(outputsMissingFromDurable(outputs, ['_brain/adr/ADR-0001-x.md'])).toEqual([
+      '_brain/learnings/y.md',
+    ]);
+    expect(
+      outputsMissingFromDurable(outputs, [
+        '_brain/adr/ADR-0001-x.md',
+        '_brain/learnings/y.md',
+      ]),
+    ).toEqual([]);
+  });
+
+  it("the shipped template satisfies its own pairing rule", () => {
+    // The template is the first thing an adopter copies, so a template that
+    // violates the contract it teaches would fail on their first close.
+    const filled = fill(template('prd-template.md'));
+    const decl = parseMemoryDeclarations(filled);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/[slug].md']);
+    expect(outputsMissingFromDurable(decl.outputs.entries, declaredArtifacts(filled))).toEqual(
+      [],
+    );
   });
 });
 

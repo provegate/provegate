@@ -31,6 +31,10 @@
    **not** bypass the gate, hand-edit whatever format it expects, or modify the gate
    itself. Gates are part of the workflow contract; changing one is an `infra`-class
    PRD of its own.
+9. **Re-open each selected record:** Before relying on a Memory Input, open that record's
+   detail file and confirm the paths and commands it names still exist. A record is
+   evidence only while it is true; a stale one is recorded as a finding rather than
+   acted on.
 
 ---
 

@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
@@ -233,5 +234,338 @@ describe('codex review regressions (round 1)', () => {
     });
     const outcome = runChain({ config: cfg, root, id: 'PRD-002', chain, fromPhase: null });
     expect(outcome.stopped?.why).toContain('unsafe');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-4 / FR-5 — the Phase 7 memory close gates.
+// ---------------------------------------------------------------------------
+
+const memOn = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+
+const RECORD_MD = (name: string, watch?: string): string =>
+  [
+    '---',
+    `name: ${name}`,
+    'description: a record the close gate resolves',
+    'type: gotcha',
+    'scope: workflow',
+    'status: active',
+    ...(watch === undefined ? [] : [`watch: [${watch}]`]),
+    '---',
+    '',
+    'Body.',
+    '',
+    '**Why:** the trap is real.',
+    '',
+    '**How to apply:** do the safe thing.',
+    '',
+  ].join('\n');
+
+interface PrdParts {
+  inputs?: string[];
+  outputs?: string[];
+  durable?: string[];
+  changelog?: string[];
+}
+
+const prd = (parts: PrdParts = {}): string =>
+  [
+    '# PRD-002',
+    '',
+    '## Memory Inputs',
+    '',
+    ...(parts.inputs ?? ['- applied: `sample-record` — it shaped this work item.']),
+    '',
+    '## Memory Outputs',
+    '',
+    ...(parts.outputs ?? ['- learning: `_brain/learnings/new-thing.md` — the durable fact.']),
+    '',
+    '## Durable Artifacts',
+    '',
+    ...(parts.durable ?? ['- `_brain/learnings/new-thing.md` — the durable fact']),
+    '',
+    '## 11. Verification Commands',
+    '',
+    '| FR   | Command |',
+    '| ---- | ------- |',
+    '| FR-1 | `node -e "process.exit(0)"` |',
+    '',
+    '## Changelog',
+    '',
+    '| Date | Author | Changes |',
+    '| ---- | ------ | ------- |',
+    ...(parts.changelog ?? ['| 2026-07-25 | agent | initial draft |']),
+    '',
+  ].join('\n');
+
+/** A committed repo: the baseline PRD lives on `main`, as FR-5 requires. */
+function gitRepo(files: Record<string, string>): string {
+  const root = tempRoot();
+  const run = (args: string[]): void => {
+    execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+  };
+  run(['init', '-b', 'main']);
+  run(['config', 'user.email', 'gate@example.test']);
+  run(['config', 'user.name', 'gate']);
+  run(['config', 'commit.gpgsign', 'false']);
+  for (const [path, content] of Object.entries(files)) {
+    mkdirSync(join(root, dirname(path)), { recursive: true });
+    writeFileSync(join(root, path), content);
+  }
+  run(['add', '-A']);
+  run(['commit', '-m', 'baseline', '--no-verify']);
+  return root;
+}
+
+const STORE = (watch?: string): Record<string, string> => ({
+  '_brain/INDEX.md': [
+    '# index',
+    '',
+    '- [sample](learnings/sample-record.md) — hook',
+    ...(watch === undefined ? [] : ['- [watcher](learnings/watcher-record.md) — hook']),
+    '',
+  ].join('\n'),
+  '_brain/learnings/sample-record.md': RECORD_MD('sample-record'),
+  ...(watch === undefined
+    ? {}
+    : { '_brain/learnings/watcher-record.md': RECORD_MD('watcher-record', watch) }),
+});
+
+function chainFor(options: {
+  root: string;
+  prdContent: string;
+  changedFiles: string[];
+  config?: typeof cfg;
+  rec?: StateRecord;
+}) {
+  return buildGateChain({
+    config: options.config ?? memOn,
+    manifest: defaultManifest(options.config ?? memOn),
+    root: options.root,
+    record: options.rec ?? record(),
+    prdContent: options.prdContent,
+    tasksContent: '| independent-review | x | passed |',
+    changedFiles: options.changedFiles,
+    prdClass: 'infra',
+  });
+}
+
+const gate = (chain: ReturnType<typeof buildGateChain>, needle: string) => {
+  const found = chain.find((g) => (g.label ?? '').includes(needle));
+  expect(found, `no gate labelled ${needle}`).toBeDefined();
+  return found!.fn!();
+};
+
+describe('FR-4 memory close gates', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+
+  it('passes when every declared output is durable and in the diff', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    expect(gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs')).toEqual(
+      { ok: true },
+    );
+  });
+
+  it('refuses a declared output that never reached the merge diff', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: [] }), 'declared outputs');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'_brain/learnings/new-thing.md' is declared but absent");
+    expect(result.why).toContain('a declaration is not a capture');
+  });
+
+  it('refuses an output that is not also a Durable Artifact', () => {
+    const content = prd({ durable: ['- `_brain/learnings/other.md` — something else'] });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE() });
+    const result = gate(chainFor({ root, prdContent: content, changedFiles: CHANGED }), 'declared outputs');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('is not listed in Durable Artifacts');
+  });
+
+  it('refuses when the diff changes a watched file with no input disposition', () => {
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE('packages/x/**') });
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/src/a.ts");
+    expect(result.why).toContain('it needs an input disposition');
+  });
+
+  it('accepts the same diff once the record carries a disposition', () => {
+    const content = prd({
+      inputs: ['- not-applicable: `watcher-record` — matched, but the trap is elsewhere.'],
+    });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE('packages/x/**') });
+    expect(
+      gate(
+        chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+        'declared outputs',
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it('fails closed on a missing section and on an unreadable store', () => {
+    const noOutputs = prd().replace('## Memory Outputs', '## Something Else');
+    const root = gitRepo({ '_prds/wip/p.md': noOutputs, ...STORE() });
+    expect(gate(chainFor({ root, prdContent: noOutputs, changedFiles: CHANGED }), 'declared outputs').why).toContain(
+      'missing `## Memory Outputs` section',
+    );
+
+    const noStore = gitRepo({ '_prds/wip/p.md': prd() });
+    expect(gate(chainFor({ root: noStore, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs').why).toContain(
+      "memory index '_brain/INDEX.md' does not exist",
+    );
+  });
+
+  it('--dry-run prints every memory check it would perform', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const plan = planChain(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), null).join('\n');
+    expect(plan).toContain('memory: declared outputs in Durable Artifacts and the merge diff');
+    expect(plan).toContain('memory: no weakening against main');
+  });
+
+  it('the configured validator runs after capture, never before', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const withValidator = { ...memOn, memory: { ...memOn.memory, verifyCommand: 'pnpm verify:brain' } };
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, config: withValidator });
+    const labels = chain.map((g) => g.label ?? (g.cmds ?? []).map((c) => c.cmd).join(','));
+    const capture = labels.findIndex((l) => l.includes('declared outputs'));
+    const validator = labels.findIndex((l) => l.includes('configured validator'));
+    expect(capture).toBeGreaterThanOrEqual(0);
+    expect(validator).toBeGreaterThan(capture);
+  });
+
+  it('adds no gate at all when memory is disabled', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, config: cfg });
+    expect(chain.some((g) => (g.label ?? '').startsWith('memory:'))).toBe(false);
+    expect(chain.map((g) => g.phase)).toEqual([
+      '4 Implementation',
+      '5 Testing',
+      '6 Final Auditing',
+      '7 Learning',
+      'merge gate',
+    ]);
+  });
+});
+
+describe('FR-5 base-ref weakening', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    '- `_brain/adr/ADR-0001-x.md` — the decision',
+  ];
+
+  it('passes when the working declaration matches the baseline', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    expect(gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening')).toEqual({
+      ok: true,
+    });
+  });
+
+  it('allows appending an output discovered during implementation', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const appended = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    expect(gate(chainFor({ root, prdContent: appended, changedFiles: CHANGED }), 'no weakening')).toEqual({
+      ok: true,
+    });
+  });
+
+  it('W2 — a PRD absent from the base ref names the cause AND the remedy', () => {
+    const root = gitRepo({ 'README.md': 'no PRD committed here', ...STORE() });
+    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toBe(
+      'PRD-002 has no committed copy on `main`; commit the PRD to the base branch before ' +
+        'closing, or reclaim with `--worktree`',
+    );
+  });
+
+  it('refuses removal outright when the PRD is eligible for autonomous close', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() });
+    const result = gate(
+      chainFor({
+        root,
+        prdContent: prd(),
+        changedFiles: CHANGED,
+        rec: record({ autonomousClose: 'eligible' }),
+      }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('eligible for autonomous close, which refuses outright');
+    expect(result.why).toContain("removed — the baseline promised '_brain/adr/ADR-0001-x.md'");
+  });
+
+  it('an operator-gated PRD needs a changelog approval naming the path', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() });
+    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no owner approval row in the Changelog naming');
+    expect(result.why).toContain("'_brain/adr/ADR-0001-x.md'");
+  });
+
+  it('and, with the approval, still needs a valid owner acceptance', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() });
+    const approved = prd({
+      changelog: [
+        '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — the decision moved to PRD-022 |',
+      ],
+    });
+    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no valid owner acceptance entry exists for PRD-002');
+  });
+
+  it('passes as waived when both the changelog row and the acceptance exist', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — the decision moved to PRD-022 |',
+      ],
+    });
+    const root = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({
+        acceptances: [
+          {
+            prd: 'PRD-002',
+            owner: 'owner',
+            items: ['memory output removal'],
+            reason: 'the decision moved to PRD-022',
+            date: '2026-07-25',
+            method: 'interactive',
+          },
+        ],
+      }),
+      ...STORE(),
+    });
+    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(true);
+    expect(result.waived).toBe(true);
+  });
+
+  it('type change and replacement with `none` are both weakening', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    const retyped = prd({
+      outputs: ['- adr: `_brain/learnings/new-thing.md` — same path, different type.'],
+    });
+    const retypedResult = gate(chainFor({ root, prdContent: retyped, changedFiles: CHANGED }), 'no weakening');
+    expect(retypedResult.why).toContain("was declared 'learning' on the base ref and is now 'adr'");
+
+    const noned = prd({ outputs: ['- none — turns out nothing durable came of it.'] });
+    const nonedResult = gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening');
+    expect(nonedResult.why).toContain('the working PRD declares `none`');
   });
 });

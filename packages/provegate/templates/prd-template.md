@@ -126,6 +126,45 @@ changes, cache/queue plans) as your project requires. -->
 
 ---
 
+## Memory Inputs
+
+Records from the memory index this work item considered, each with a disposition and a
+rationale. `applied` — the record changed this work item's shape. `reviewed` — it was read
+and found not to change it, but is close enough that a reader deserves to know it was
+considered. `not-applicable` — its watch or subject matched, and it does not apply here.
+A rationale is required in every form, including `none`: an unreasoned `none` is the
+ceremonial answer this contract exists to prevent.
+
+Required in a memory-enabled repository, alongside Memory Outputs below.
+
+- applied: `[record-slug]` — [how the record changed this work item]
+
+<!-- When no active record is relevant, replace the bullets above with exactly one
+reasoned `none` line: `- none — [why no active record is relevant]`. -->
+
+---
+
+## Memory Outputs
+
+The durable records this work item expects to produce, at **exact** repo-relative paths. A
+directory, a glob, or a promise to "capture learnings" is not an output. A non-empty output
+set may **not** contain `none` — the two forms are mutually exclusive, because `none`
+asserts the set is empty. Every non-`none` output must also appear in Durable Artifacts
+below: outputs and durable artifacts are one contract expressed twice, never two lists that
+may disagree.
+
+Appending an output discovered during implementation is always allowed, with a rationale.
+Removing one, changing its type or path, or replacing it with `none` is **weakening**, and
+Phase 7 compares against this PRD as committed on the base branch — not against working
+state.
+
+- learning: `{{MEMORY_ROOT}}/learnings/[slug].md` — [the durable fact expected]
+
+<!-- When no non-derivable output is expected, replace the bullets above with exactly one
+reasoned `none` line: `- none — [why no non-derivable output is expected]`. -->
+
+---
+
 ## Conflict Surface
 
 Resource paths (globs) this PRD claims **exclusive write ownership** of. The lock
@@ -149,6 +188,8 @@ only **this PRD's** durable knowledge.
 
 - `{{DOCS_ROOT}}/[page].md` — [what is learned] | `none`
 - ADR: `{{DOCS_ROOT}}/decisions/adr-XXX-[slug].md` | `none`
+- `{{MEMORY_ROOT}}/learnings/[slug].md` — every Memory Output above repeats here; the two
+  lists are one contract and Phase 7 refuses when they disagree
 
 ---
 

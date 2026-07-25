@@ -16,6 +16,11 @@
 4. **Run the PRD lint:** Before assigning PASS, run
    `gate check {{ID_PREFIX}}-XXX`. A lint failure caps the verdict at ITERATE unless
    explicitly waived with a written reason in the readiness report.
+5. **Challenge each Memory Input:** Stress-test the selection like any other claim.
+   Challenge each input's relevance, and name any active record whose `watch` overlaps a
+   declared target and is missing from the inputs. Score a ceremonial or unexamined
+   `none` down rather than accepting it — a `none` that nobody examined is worth less
+   than an input that was considered and rejected with a reason.
 
 ---
 

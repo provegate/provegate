@@ -105,6 +105,29 @@ its close must touch (a `_brain` learning or `Learning: none`, the review artifa
 ADR). The close is invalid if a declared path is absent from the merge diff
 (`verify:durable-artifacts`).
 
+## Memory contract (memory-enabled repositories)
+
+Two sections in every work item, parsed rather than read:
+
+- `## Memory Inputs` — `applied` / `reviewed` / `not-applicable`: `` `<record-slug>` `` —
+  rationale; or exactly one reasoned `none`. A rationale is required in every form,
+  including `none`.
+- `## Memory Outputs` — `learning` / `adr`: `` `<exact repo-relative path>` `` — the
+  durable fact expected; or exactly one reasoned `none`. A non-empty output set may not
+  contain `none`, and every non-`none` output repeats in Durable Artifacts.
+
+An active record's `watch` glob overlapping a declared target requires an input
+disposition naming that record. A watch is a **review trigger, not a staleness verdict**:
+the obligation is to say what you did about the record, never to edit it.
+
+At close, declared outputs are compared against the work item **as committed on the base
+branch** — the one version an agent editing its own artifact cannot rewrite. Appending an
+output discovered during implementation is always allowed. Removing one, changing its type
+or path, or replacing it with `none` is weakening, and needs owner acceptance.
+
+Enabled by `memory.enabled` in `workflow.config.json`. A repository that has not opted in
+behaves exactly as it did before.
+
 ## Triage — value scoring
 
 Before a candidate enters the pipeline, score it on five weighted dimensions (1–5 each);

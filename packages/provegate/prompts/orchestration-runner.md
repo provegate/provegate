@@ -71,6 +71,10 @@ validates the ledger row and the artifact schema mechanically.
 ## Invariants
 
 - **Learning before merge** — durable docs land in the same merge as the code.
+- **Declared outputs must be in the diff** — refuse a Phase 7 close whose declared Memory
+  Outputs are absent from the merge diff. A declaration with no file behind it is the
+  ceremonial capture the contract exists to catch, and the runner is the last place that
+  can still tell the difference.
 - **Cleanup after verified merge** — a failed merge must never destroy the working tree.
 - **Never push** — the runner stops at the handoff card; the human decides. There is
   no code path that pushes and the runner will never push a remote; `gate push`

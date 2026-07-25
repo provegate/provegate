@@ -48,6 +48,12 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 
 [Findings — backward compatibility, deployment order, undo plan]
 
+### 5. Memory Inputs
+
+[Challenge each declared input's relevance, and name any active record whose `watch`
+overlaps a declared target and is missing from the inputs. A ceremonial or unexamined
+`none` scores down rather than passing.]
+
 ---
 
 ## Scorecard

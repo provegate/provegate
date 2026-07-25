@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-018-memory-contract-enforcement.md](../../_prds/wip/prd-018-memory-contract-enforcement.md)
 > **Readiness**: [readiness-018-memory-contract-enforcement.md](../../_readiness/wip/readiness-018-memory-contract-enforcement.md)
-> **Status**: Not Started
+> **Status**: In Progress
 > **Readiness Score**: 8.33/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-25
@@ -95,89 +95,89 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight and ownership
-  - [ ] 0.1 Run `gate open PRD-018 --worktree` from the base checkout; confirm the lease
+- [x] 0.0 Pre-flight and ownership
+  - [x] 0.1 Run `gate open PRD-018 --worktree` from the base checkout; confirm the lease
         covers the PRD Conflict Surface and record branch/worktree in the Progress Log.
-  - [ ] 0.2 Verify `_state/prds.json` records PRD-017 as Ship Verified. If not, STOP.
-  - [ ] 0.3 Open the five Memory Context records; confirm the paths and commands each
+  - [x] 0.2 Verify `_state/prds.json` records PRD-017 as Ship Verified. If not, STOP.
+  - [x] 0.3 Open the five Memory Context records; confirm the paths and commands each
         names still exist and note any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.4 Re-confirm W1's fix is still in place: `pnpm verify:turbo-inputs` passes and
+  - [x] 0.4 Re-confirm W1's fix is still in place: `pnpm verify:turbo-inputs` passes and
         `web#build` still hashes `apps/web/app/**`. FR-6 wires `check-egress` into the
         floor on the strength of that fix; if it regressed, the gate would scan replayed
         bytes.
-  - [ ] 0.5 Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and
+  - [x] 0.5 Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and
         `pnpm check-egress`; a pre-existing red is ledgered, never normalized silently.
 
-- [ ] 1.0 FR-1 — The artifact contract
-  - [ ] 1.1 Implement the Memory Inputs/Outputs grammar from the PRD-017 addendum in
+- [x] 1.0 FR-1 — The artifact contract
+  - [x] 1.1 Implement the Memory Inputs/Outputs grammar from the PRD-017 addendum in
         `packages/provegate/src/core/memory/artifacts.ts`: input dispositions
         (`applied` / `reviewed` / `not-applicable`) with slug and rationale; outputs as
         exact repo-relative learning or ADR paths with a rationale.
-  - [ ] 1.2 Enforce mutual exclusion: a non-empty output set may not contain `none`, and
+  - [x] 1.2 Enforce mutual exclusion: a non-empty output set may not contain `none`, and
         `none` requires a reason. This is the ambiguity the retired draft shipped.
-  - [ ] 1.3 Every declared output is also a Durable Artifact — validate the pairing here
+  - [x] 1.3 Every declared output is also a Durable Artifact — validate the pairing here
         so the runner does not have to infer it later.
-  - [ ] 1.4 Normalize `path.ts::SymbolName` to `path.ts` before any glob match; the
+  - [x] 1.4 Normalize `path.ts::SymbolName` to `path.ts` before any glob match; the
         symbol suffix is the obvious false negative in target matching.
-  - [ ] 1.5 Add the grammar to `packages/provegate/templates/prd-template.md`.
-  - [ ] 1.6 Cover it in `packages/provegate/test/content-templates.test.ts`, including the
+  - [x] 1.5 Add the grammar to `packages/provegate/templates/prd-template.md`.
+  - [x] 1.6 Cover it in `packages/provegate/test/content-templates.test.ts`, including the
         ADR-output-plus-`none` collision failing.
 
-- [ ] 2.0 FR-2 — Readiness watch gate
-  - [ ] 2.1 In `packages/provegate/src/core/gates/prd-ready.ts`, require both sections
+- [x] 2.0 FR-2 — Readiness watch gate
+  - [x] 2.1 In `packages/provegate/src/core/gates/prd-ready.ts`, require both sections
         when `memory.enabled` is true; resolve inputs against active indexed records and
         reject duplicates, superseded records, and missing ones by name.
-  - [ ] 2.2 Match each record's `watch` globs against the PRD's normalized FR Targets and
+  - [x] 2.2 Match each record's `watch` globs against the PRD's normalized FR Targets and
         fail on any overlap that has no input disposition, naming the record and the
         normalized path.
-  - [ ] 2.3 Assert the disabled path in `packages/provegate/test/prd-ready.test.ts`:
+  - [x] 2.3 Assert the disabled path in `packages/provegate/test/prd-ready.test.ts`:
         with memory off, behavior is byte-identical to today and historical PRDs are never
         rewritten.
-  - [ ] 2.4 Assert the enabled path against fixtures covering each rejection reason
+  - [x] 2.4 Assert the enabled path against fixtures covering each rejection reason
         separately — a single "invalid" case cannot prove five different refusals.
 
-- [ ] 3.0 FR-3 — Recall through Phase 1–7 (W3, per-file)
-  - [ ] 3.1 Apply the PRD's obligation table one file at a time across
+- [x] 3.0 FR-3 — Recall through Phase 1–7 (W3, per-file)
+  - [x] 3.1 Apply the PRD's obligation table one file at a time across
         `packages/provegate/prompts/**`: phases 1–7, `knowledge-ingest.md`,
         `knowledge-lint.md`, and `orchestration-runner.md`. Each file gains exactly the
         obligation the table names — no more, and nothing invented outside the addendum.
-  - [ ] 3.2 Register any new placeholder token in `packages/provegate/prompts/PLACEHOLDERS.md`;
+  - [x] 3.2 Register any new placeholder token in `packages/provegate/prompts/PLACEHOLDERS.md`;
         leave `prompts/adapters/**` vendor-neutral and obligation-free.
-  - [ ] 3.3 Carry the contract into `templates/readiness-template.md` and
+  - [x] 3.3 Carry the contract into `templates/readiness-template.md` and
         `templates/tasks-template.md` (a Memory Context section and a per-record re-open
         task, matching what the phase-3 obligation states).
-  - [ ] 3.4 Update `practices/templates/AGENT_BOOTSTRAP.template.md` and
+  - [x] 3.4 Update `practices/templates/AGENT_BOOTSTRAP.template.md` and
         `practices/shims/**` to match.
-  - [ ] 3.5 In `packages/provegate/test/content-prompts.test.ts`, assert the obligation
+  - [x] 3.5 In `packages/provegate/test/content-prompts.test.ts`, assert the obligation
         **per file** — ten separate assertions keyed to the table. A test that only proves
         the directory changed is the failure mode W3 exists to prevent.
-  - [ ] 3.6 Assert every pre-existing frozen snapshot file is byte-unchanged, and that all
+  - [x] 3.6 Assert every pre-existing frozen snapshot file is byte-unchanged, and that all
         new method content traces to the PRD-017 addendum.
 
-- [ ] 4.0 FR-4 — Phase 7 output and watch enforcement
-  - [ ] 4.1 In `packages/provegate/src/core/run/chain.ts` and `run/durable.ts`, check that
+- [x] 4.0 FR-4 — Phase 7 output and watch enforcement
+  - [x] 4.1 In `packages/provegate/src/core/run/chain.ts` and `run/durable.ts`, check that
         every exact declared output appears in Durable Artifacts **and** in the merge
         diff — declaration without evidence is the `durable-artifact-must-commit` trap.
-  - [ ] 4.2 Check that every watched file changed by the diff has an input disposition.
-  - [ ] 4.3 Run `memory.verifyCommand` through the existing command-safety allowlist and
+  - [x] 4.2 Check that every watched file changed by the diff has an input disposition.
+  - [x] 4.3 Run `memory.verifyCommand` through the existing command-safety allowlist and
         require exit 0 **after** capture, per `verify-check-phase-placement`.
-  - [ ] 4.4 Dry-run prints every check it would perform; missing records, missing config,
+  - [x] 4.4 Dry-run prints every check it would perform; missing records, missing config,
         and missing baselines all fail closed.
-  - [ ] 4.5 Cover the whole set in `packages/provegate/test/chain.test.ts`, including the
+  - [x] 4.5 Cover the whole set in `packages/provegate/test/chain.test.ts`, including the
         Phase 7 ordering.
 
-- [ ] 5.0 FR-5 — Base-ref weakening proof (W2)
-  - [ ] 5.1 Compare working declarations against the same PRD blob on the configured base
+- [x] 5.0 FR-5 — Base-ref weakening proof (W2)
+  - [x] 5.1 Compare working declarations against the same PRD blob on the configured base
         ref — never against working state, which the editing agent controls.
-  - [ ] 5.2 Implement the matrix: append-only emergent output is legal; removal, type or
+  - [x] 5.2 Implement the matrix: append-only emergent output is legal; removal, type or
         path change, and replacement with `none` are weakening. An `eligible` PRD refuses
         outright; an `operator-gated` PRD requires both a changelog approval entry and
         owner acceptance.
-  - [ ] 5.3 W2 — the non-worktree path has no baseline guarantee. When the PRD blob is
+  - [x] 5.3 W2 — the non-worktree path has no baseline guarantee. When the PRD blob is
         absent from the base ref, refuse with cause **and** remedy in one message:
         "PRD-NNN has no committed copy on `<base>`; commit the PRD to the base branch
         before closing, or reclaim with `--worktree`."
-  - [ ] 5.4 Cover both flows in `packages/provegate/test/chain.test.ts` — the worktree
+  - [x] 5.4 Cover both flows in `packages/provegate/test/chain.test.ts` — the worktree
         happy path and the non-worktree refusal text. Only the second is new.
 
 - [ ] 6.0 FR-6 — Safe activation, manifest wiring, and the land barrier
@@ -336,7 +336,34 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   measured every candidate boundary as unsound: the lease persists no base SHA, commit
   timestamps are mutable, and a merge commit cannot contain its own SHA. The land-time
   lease barrier replaces it, and the residual is recorded rather than engineered around.
-- (none deferred yet)
+- Task 0.3 stale finding — `turbo-cache-masks-out-of-input-reads` names a remedy the repo
+  has since forbidden. The record says to add out-of-package paths to the turbo task's
+  `inputs`; `verify:turbo-inputs` now fails **any** cached task that declares `inputs`
+  without an exceptions entry, precisely because an enumeration silently rots. The hazard
+  itself is still live and was re-measured, not assumed: `provegate#test` hashes 179
+  inputs, none of them outside the package, while `test/review-quorum.test.ts:70` reads
+  `../../../_docs/reviews`. So a change confined to `_docs/reviews/` cannot bust that
+  cache. This is the same shape as the "Frozen-snapshot digest" deferral opened at the
+  PRD-017 close (owner, due 2026-08-29), which names the snapshot corpus rather than
+  `_docs/reviews/`; both want a cache-free `scripts/verify/` gate. Out of PRD-018's
+  surface — recorded, not taken. The other four records verified accurate:
+  `gate-wire-or-delete` is enforced live (`verify:gates-wired`, 10 registered / 10 on
+  disk), `push-is-human-by-omission` holds (`gate push` refuses in the shipped CLI help),
+  and the two workflow-seed records name no path that could drift.
+- Phase 4 scope decision (owner-approved 2026-07-25) — **`packages/provegate/src/cli.ts` is
+  edited although PRD-018's Conflict Surface does not declare it.** One argument on one
+  line: `lintPrd(config, manifest, content)` → `lintPrd(config, manifest, content, root)`.
+  FR-2's gate resolves declared inputs against the real record store, so it needs a
+  repository root, and `gate check` is the only caller. Not wiring it was not the safe
+  option: `lintPrd` fails closed when memory is enabled without a root, so FR-6's
+  activation would have broken `gate check` for **every** PRD in this repo — and an
+  unwired gate is what `gate-wire-or-delete`, one of this PRD's own Memory Inputs, exists
+  to forbid. `gate queue` reports the file claimed by PRD-019/021/022/023; none holds an
+  active lease, so there is no concurrent writer. The signature matches the house shape
+  `auditWiring(config, manifest, root)` already uses.
+- Task 0.4 measurement — W1 holds. `verify:turbo-inputs` PASS (6 tasks); `turbo.json`
+  declares no `inputs` on `build`, and `web#build` hashes 14 files of which 6 are under
+  `app/`. `check-egress` therefore scans bytes the cache key covers.
 
 ---
 
@@ -345,17 +372,24 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Date       | Task    | Notes |
 | ---------- | ------- | ----- |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-018 (Approved), readiness iteration 6 PASS 8.33, and watch items W1–W13, after owner Go. No implementation started. Phase 4 entry is blocked on PRD-017 Ship Verified (task 0.2). |
+| 2026-07-25 | 0.0–0.5 | Phase 4 opened. `gate open PRD-018 --worktree` claimed 22 surface globs; branch `feat/prd-018-memory-contract-enforcement`, worktree `.worktrees/prd-018-memory-contract-enforcement`, lease `_state/locks/prd-018-memory-contract-enforcement.json`. `open` printed two fatal-looking lines — `workflow.config.json` and `gates.manifest.json` absent in the base commit — which is the expected pre-activation state: FR-6 creates both, so there is nothing yet to materialize. 0.2 met: `_state/prds.json` records PRD-017 `Ship Verified` (58/58, land `823d766`, board close `b916307`). Baseline green and captured: `pnpm test` 41 files / 552 tests, `pnpm verify:workflow` PASS across all nine checks, `pnpm check-egress` clean, `pnpm build` 4/4. Nothing pre-existing red, so nothing ledgered as normalized. Two findings recorded in Deferrals & Decisions (0.3, 0.4). No implementation files touched yet. |
 
 ---
 
 ## Blockers / Open Questions
 
-- PRD-017 must be Ship Verified before Phase 4 (task 0.2).
-- Not parallelizable: `gate queue` reports overlaps with PRD-017, PRD-019, and PRD-021 on
-  `practices-pack.test.ts`, `content-prompts.test.ts`, `_brain/**`, `README.md`, and
-  `pack-drift-ledger.json`.
-- PRD-022 must be more than a stub before this PRD lands (task 8.5); it is currently
-  Draft and unscored.
+- ~~PRD-017 must be Ship Verified before Phase 4 (task 0.2).~~ **Cleared 2026-07-25** —
+  `_state/prds.json` records it Ship Verified; lease released before this one was claimed.
+- Not parallelizable. Re-run at Phase 4 open rather than read from this list, per task
+  0.2.1's standing instruction: `gate queue` now reports PRD-018 overlapping **four** PRDs
+  — PRD-019 (`practices-pack.test.ts`, `README.md`, `pack-drift-ledger.json`), PRD-021
+  (`prd-ready.ts`, `prd-ready.test.ts`, `pack-drift-ledger.json`), PRD-022
+  (`method.mdx`), and PRD-023 (`prd-ready.ts`, `durable.ts`, `init.ts`,
+  `practices-pack.test.ts`, `_brain/**`, `pack-drift-ledger.json`). The PRD-017 and
+  `content-prompts.test.ts` entries this list carried are gone with PRD-017's close.
+- ~~PRD-022 must be more than a stub before this PRD lands (task 8.5); it is currently
+  Draft and unscored.~~ **Cleared 2026-07-25** — PRD-022 is Approved, readiness PASS 9.10,
+  73 tasks planned. Task 8.5 still verifies this at land time rather than trusting the row.
 
 ---
 

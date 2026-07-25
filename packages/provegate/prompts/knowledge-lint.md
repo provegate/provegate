@@ -6,6 +6,16 @@
 
 ---
 
+## Scope
+
+Validate the declared grammar, not prose quality. Every check below is a question a
+machine could ask: does the field exist, does the pointer resolve, does the status
+vocabulary match, do two pages contradict each other on a fact. Whether a record is
+well-written is not this protocol's business — a record that reads badly and is true
+stays; a record that reads beautifully and is false is a finding.
+
+---
+
 ## Step 1: Freshness Check
 
 For each page family, verify the content is still accurate against the repo:

@@ -1,5 +1,7 @@
 import type { WorkflowConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
+import { lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
+import { declaredArtifacts } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
 import { parseVerificationCommands } from './safety.js';
@@ -51,10 +53,17 @@ export interface PrdReadyReport {
   issues: string[];
 }
 
+/**
+ * `root` is the repository root, required only when `memory.enabled` is true —
+ * the memory contract resolves declared inputs against the real record store,
+ * and a store is a directory, not a string. A disabled repository never reads
+ * it, so its behavior is byte-identical to before the contract existed.
+ */
 export function lintPrd(
   config: WorkflowConfig,
   manifest: GatesManifest,
   content: string,
+  root?: string,
 ): PrdReadyReport {
   const issues: string[] = [];
   const frs = frBlocks(content);
@@ -110,6 +119,24 @@ export function lintPrd(
   }
 
   const allTargets = frs.flatMap((fr) => frTargets(fr.body));
+
+  if (config.memory.enabled) {
+    if (root === undefined) {
+      // Fail closed rather than skip: a gate that quietly does nothing when its
+      // input is missing is the false green this repo keeps paying for.
+      issues.push('memory is enabled but the readiness lint received no repository root');
+    } else {
+      issues.push(
+        ...lintMemoryContract(
+          content,
+          allTargets,
+          loadMemoryStore(root, config.memory),
+          declaredArtifacts(content),
+        ),
+      );
+    }
+  }
+
   for (const cap of manifest.hardCaps) {
     const regexes = cap.when.targetsMatch.map(globToRegExp);
     const fires = allTargets.some((t) => regexes.some((re) => re.test(t)));

@@ -137,6 +137,144 @@ describe('knowledge prompts carry the generic taxonomy (FR-4)', () => {
 });
 
 /**
+ * FR-3 + W3: each prompt states EXACTLY the obligation the PRD's table assigns it.
+ *
+ * The assertion is per file and keyed to that table on purpose. A suite that proved
+ * "the prompts directory mentions memory" would pass with nine files untouched and one
+ * carrying every obligation — which is the failure W3 exists to prevent, and the shape
+ * a directory-level assertion cannot see.
+ */
+describe('FR-3 per-file prompt obligations (W3)', () => {
+  /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
+   * its line breaks. Comparing on collapsed whitespace keeps this suite measuring
+   * content rather than `prettier`'s column budget. */
+  const flat = (value: string): string => value.replace(/\s+/g, ' ').trim();
+
+  const OBLIGATIONS: Array<{ file: string; anchors: string[] }> = [
+    {
+      file: 'phase-1-prd-generator.md',
+      anchors: [
+        'Select Memory Inputs',
+        '`applied`, `reviewed`, or `not-applicable`',
+        'Emit `none` only with a reason',
+      ],
+    },
+    {
+      file: 'phase-2-readiness-scorer.md',
+      anchors: [
+        'Challenge each Memory Input',
+        "Challenge each input's relevance",
+        'Score a ceremonial or unexamined `none` down',
+      ],
+    },
+    {
+      file: 'phase-3-task-generator.md',
+      anchors: ['Carry the selected slugs', '`## Memory Context`', 're-opening each'],
+    },
+    {
+      file: 'phase-4-implementation.md',
+      anchors: [
+        'Re-open each selected record',
+        'confirm the paths and commands it names still exist',
+      ],
+    },
+    {
+      file: 'phase-5-testing.md',
+      anchors: ['Name the memory-derived constraints', "ledger's Notes column"],
+    },
+    {
+      file: 'phase-6-final-auditing.md',
+      anchors: [
+        'Audit the memory contract',
+        'whether each Memory Input was actually applied',
+        '`none` is a finding',
+      ],
+    },
+    {
+      file: 'phase-7-learning.md',
+      anchors: [
+        'Capture exact output paths',
+        'Memory Outputs and Durable Artifacts before writing the record',
+        'validator **after** capture',
+      ],
+    },
+    {
+      file: 'knowledge-ingest.md',
+      anchors: ['only after the PRD declares its exact path'],
+    },
+    {
+      file: 'knowledge-lint.md',
+      anchors: ['Validate the declared grammar, not prose quality'],
+    },
+    {
+      file: 'orchestration-runner.md',
+      anchors: ['refuse a Phase 7 close whose declared Memory Outputs are absent'],
+    },
+  ];
+
+  it('covers every file the obligation table names, and no more', () => {
+    expect(OBLIGATIONS.map((o) => o.file).sort()).toEqual(
+      [...PHASE_PROMPTS, 'knowledge-ingest.md', 'knowledge-lint.md', 'orchestration-runner.md']
+        .slice()
+        .sort(),
+    );
+  });
+
+  for (const { file, anchors } of OBLIGATIONS) {
+    it(`${file} states its obligation`, () => {
+      const content = flat(prompt(file));
+      for (const anchor of anchors) {
+        expect(content, `${file}: ${anchor}`).toContain(flat(anchor));
+      }
+    });
+  }
+
+  it('adapters stay vendor-neutral and gain no obligation of their own', () => {
+    for (const name of ['adapters/cursor-bootstrap.md', 'adapters/codex-starter.md']) {
+      const content = prompt(name);
+      expect(/Memory Inputs|Memory Outputs/.test(content), name).toBe(false);
+    }
+  });
+
+  it('every obligation traces to the addendum, not to this PRD', () => {
+    // Method content may only come from the frozen snapshot or an owner-approved
+    // addendum. §8 is where these ten obligations come from, so the prompts are
+    // checked against IT rather than against the PRD that transcribed it.
+    const addendum = flat(
+      readFileSync(
+        join(
+          pkgRoot,
+          '../../docs/research/provegate-bootstrap/source-snapshot',
+          'addenda/agent-memory-closed-loop-2026-07-25.md',
+        ),
+        'utf8',
+      ),
+    );
+    for (const source of [
+      'select relevant records, write Memory Inputs with dispositions and rationales',
+      'challenge an unreasoned `none`',
+      'Carry the selected slugs into executable task context',
+      'confirm the paths and commands it names still exist before relying on it',
+      'No memory obligation. Verification is verification.',
+      'Audit whether the selected records were actually applied',
+      'Capture the actual outputs at their exact declared paths',
+      'run the configured validator after capture — not before',
+    ]) {
+      expect(addendum, source).toContain(flat(source));
+    }
+  });
+
+  it('every placeholder token the new content introduces is registered', () => {
+    const registry = prompt('PLACEHOLDERS.md');
+    for (const { file } of OBLIGATIONS) {
+      for (const match of prompt(file).matchAll(/\{\{[A-Z_]+\}\}/g)) {
+        expect(registry, `${file}: ${match[0]}`).toContain(match[0]);
+      }
+    }
+  });
+});
+
+/**
  * FR-1 (PRD-017): method provenance. Shipped method content may trace to the frozen
  * snapshot or to an owner-approved addendum beside it — nothing else. Freezing is only
  * meaningful if something notices when it breaks, so the snapshot's bytes are pinned by

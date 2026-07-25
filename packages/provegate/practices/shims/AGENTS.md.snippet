@@ -12,3 +12,6 @@ This repo keeps durable, non-derivable knowledge in `_brain/` (agent-agnostic, c
 - **At close:** if you learned something the code can't reveal, add
   `_brain/learnings/<slug>.md` (schema in `_brain/_templates/learning.md`) and its
   `_brain/INDEX.md` pointer. Store only what is NOT derivable from code, git history, or docs.
+
+When memory is enabled, a work item also declares `## Memory Inputs` and `## Memory
+Outputs` — see AGENT_BOOTSTRAP.md, "Memory contract". The gate parses both.
