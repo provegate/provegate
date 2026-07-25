@@ -649,7 +649,13 @@ export function outputPlacementIssues(
   outputs: readonly MemoryOutput[],
   memory: MemoryConfig,
 ): string[] {
-  const root = memory.root.replace(/\/+$/, '');
+  // `_brain`, `_brain/`, and `./_brain` name one directory, and a raw string
+  // compare says otherwise — the same normalization `config/validate.ts` applies
+  // when it checks that the index lives under the root.
+  const root = memory.root
+    .split(/[/\\]/)
+    .filter((part) => part.length > 0 && part !== '.')
+    .join('/');
   const issues: string[] = [];
   for (const output of outputs) {
     const dir = output.type === 'adr' ? 'adr' : 'learnings';

@@ -10,6 +10,7 @@ import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gate
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
   normalizeTarget,
+  outputPlacementIssues,
   outputsMissingFromDurable,
   parseMemoryDeclarations,
   watchMatches,
@@ -378,5 +379,56 @@ describe('lifecycle vocabulary alignment (codex review)', () => {
     const phase6 = readFileSync(join(pkgRoot, 'prompts/phase-6-final-auditing.md'), 'utf8');
     expect(phase6).not.toContain('For high-risk diffs');
     expect(phase6).toContain('>=3/5 pass quorum');
+  });
+});
+
+describe('phase 6 round 3 self-attack (before the independent round returned)', () => {
+  const outputs = (path: string): string =>
+    `## Memory Outputs\n\n- learning: \`${path}\` — a durable fact.\n\n---\n`;
+
+  it('a configured root spelled `./_brain` or `_brain/` names the same directory', () => {
+    // Raw string compare said otherwise, so a repo whose config wrote `./_brain`
+    // would have had every correctly-placed output rejected.
+    const entries = parseMemoryDeclarations(outputs('_brain/learnings/x.md')).outputs.entries;
+    for (const root of ['_brain', '_brain/', './_brain', './_brain/']) {
+      expect(
+        outputPlacementIssues(entries, { ...cfg.memory, root }),
+        `root: ${root}`,
+      ).toEqual([]);
+    }
+  });
+
+  it('a sibling directory sharing a prefix is not the store', () => {
+    const entries = parseMemoryDeclarations(outputs('_brainstorm/learnings/x.md')).outputs.entries;
+    expect(outputPlacementIssues(entries, { ...cfg.memory, root: '_brain' })).toEqual([
+      "Memory Outputs: '_brainstorm/learnings/x.md' is declared 'learning', so it must live " +
+        "under '_brain/learnings/'",
+    ]);
+  });
+
+  it('a record nested below the store directory is refused', () => {
+    const entries = parseMemoryDeclarations(outputs('_brain/learnings/sub/x.md')).outputs.entries;
+    expect(outputPlacementIssues(entries, cfg.memory)).toEqual([
+      "Memory Outputs: '_brain/learnings/sub/x.md' is nested below '_brain/learnings/'",
+    ]);
+  });
+
+  it('an unclosed fence hides the rest of the document — and that fails CLOSED', () => {
+    // withoutFences blanks everything after an unterminated fence. The section
+    // then reads as ABSENT, which the gates refuse; the dangerous direction
+    // would be reading a shadowed section as valid.
+    const decl = parseMemoryDeclarations(
+      ['# PRD', '', '```', 'an example that was never closed', '', outputs('_brain/learnings/x.md')].join(
+        '\n',
+      ),
+    );
+    expect(decl.outputs.present).toBe(false);
+  });
+
+  it('a section declared twice is an ambiguity, not a duplicate', () => {
+    const twice = [outputs('_brain/learnings/x.md'), outputs('_brain/learnings/y.md')].join('\n');
+    expect(parseMemoryDeclarations(twice).issues).toEqual([
+      'Memory Outputs: declared 2 times — exactly one section is parseable',
+    ]);
   });
 });
