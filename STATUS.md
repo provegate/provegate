@@ -34,6 +34,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-25 — turbo cache-key fix landed: `build` and `generate-tokens` no longer narrow their `inputs`, so no gate can read a stale cached artifact (`web#build` hashed ONE file; `apps/web/app/**` was outside the key, and `check-egress` reads build output). New `verify:turbo-inputs` keeps the policy enforced — closes PRD-018 readiness W1
 - 2026-07-25 — closed-loop memory program entered the pipeline as PRD-017/018/019 (substrate → contract+enforcement → adoption CLI). The original single 10-FR/72-task PRD was split after an independent review found a self-contradictory Memory Outputs grammar and a silent manifest-floor ambiguity; effectiveness metrics deferred. PRD-017 readiness **PASS 8.425** on an independent iteration-3 re-score (W10–W13 bind Phase 3), awaiting owner Go
 - 2026-07-25 — pack-drift gate landed (`8c95bc8`): `verify:pack-drift` reconciles the shipped practices pack against the live layer by hash ledger (49 pairs); one-sided edits now fail the bundle. Deferral board is EMPTY
 - 2026-07-25 — test-sandbox fix landed (`43eb33e`): the NO_COLOR spawns ran with no cwd and rewrote the live `_state/prds.json`; they now run in a fixture repo with a slug guard, deferral closed

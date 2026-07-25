@@ -119,14 +119,15 @@ Hard caps — none triggered:
 
 ## Missing Pieces (watch items)
 
-1. **W1 — the sixth floor gate must not scan stale bytes.** `web#build` hashes exactly one
-   file (`package.json`); `apps/web/app/**` is outside the turbo cache key, so editing a
-   page does not invalidate the build and `check-egress` would scan a replayed `.next`.
-   The scanner is fail-closed on *missing* output but has no defence against *stale*
-   output. Before FR-6 wires egress into Phase 4, either fix the Next apps' build `inputs`
-   in `turbo.json` or make the egress step depend on an uncached build — and bring
-   `turbo.json` into Targets/Conflict Surface, or split it out as its own fix. This is the
-   repo's own `turbo-cache-masks-out-of-input-reads` learning, currently live.
+1. **W1 — the sixth floor gate must not scan stale bytes. — RESOLVED 2026-07-25, outside
+   this PRD.** `web#build` hashed exactly one file (`package.json`), leaving
+   `apps/web/app/**` outside the turbo cache key, so `check-egress` would have scanned a
+   replayed `.next`. Landed as its own fix rather than inside this PRD: `build` and
+   `generate-tokens` no longer declare `inputs` (a second incomplete enumeration was found
+   in the same pass — `generate-tokens` omitted `scripts/emit.ts`, which the generator
+   imports), and `verify:turbo-inputs` now refuses any narrowed cache key on a cached task,
+   with a reasoned exceptions file. `web#build` now hashes 14 files including `app/**`.
+   FR-6 may wire `check-egress` into Phase 4 as written.
 2. **W2 — name the non-worktree baseline path.** `gate open --worktree` guarantees the PRD
    blob exists on the base branch; a plain `gate open` does not. FR-5 must state the
    refusal message and its remediation ("commit the PRD to the base branch first"), so the
@@ -156,7 +157,7 @@ Hard caps — none triggered:
 - [x] Human-only push and owner-only acceptance unchanged.
 - [x] Memory-disabled repositories retain current behavior.
 - [x] Output grammar is mutually exclusive and enforced by test, not prose.
-- [ ] W1 resolved before FR-6 wires `check-egress` into Phase 4.
+- [x] W1 resolved before FR-6 wires `check-egress` into Phase 4 (landed 2026-07-25 as `verify:turbo-inputs` plus the turbo cache-key fix).
 - [ ] PRD-017 Ship Verified before Phase 4 entry.
 
 ---
@@ -173,5 +174,6 @@ FR-6 wires `check-egress` into the Phase 4 floor, but that command consumes buil
 whose turbo cache key covers a single file, so the gate can pass on bytes it never scanned.
 Wiring a gate is not the same as arming it (W1).
 
-Phase 3 may begin now; Phase 4 waits on PRD-017 Ship Verified. W1 must be resolved before
-FR-6 lands, or the sixth floor command is decoration.
+Phase 3 may begin now; Phase 4 waits on PRD-017 Ship Verified. W1 was resolved on
+2026-07-25 outside this PRD — the turbo cache key now covers the app sources and
+`verify:turbo-inputs` keeps it that way — so FR-6 may wire `check-egress` as written.
