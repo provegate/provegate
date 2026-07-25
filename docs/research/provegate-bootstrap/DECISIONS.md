@@ -56,3 +56,20 @@ Extraction map: `de-emofy-inventory-2026-07-22.md`. Program plan: `oss-extractio
 (Phase A partially done: hygiene PRD-418 landed, name decided; this bootstrap = "repo iskeleti" item).
 Thesis + evidence: `whitepaper-gated-autonomy-2026-07-22.md`. Market: `competitor-landscape-*.md`
 (incl. §2.5 shipgate/gatecheck addendum). Launch copy source: `positioning-and-faq-2026-07-22.md`.
+
+## Post-bootstrap method extensions
+
+The `source-snapshot/` copy is frozen: extraction happens *from* that version and it is
+never edited to accommodate later work. The rule that shipped method content must trace to
+the snapshot had no expression for a deliberate extension, which left only two bad options —
+fabricate package content, or edit the frozen copy.
+
+**Decision (owner, 2026-07-25):** a post-bootstrap method extension requires an
+owner-approved addendum under `source-snapshot/addenda/`, dated and listed in
+`MANIFEST.md`. Every shipped prompt, template, or schema byte must trace to the frozen
+snapshot **or** to such an addendum; nothing else counts as method provenance. Addenda are
+written in English because they source English-only package content.
+
+| Addendum | Date | Scope |
+| -------- | ---- | ----- |
+| `addenda/agent-memory-closed-loop-2026-07-25.md` | 2026-07-25 | Closed-loop agent memory: PRD Memory Inputs/Outputs grammar, watch and weakening semantics, the `_brain` versus product-doc boundary, deterministic local recall constraints, and the offline / zero-dependency / human-push invariants. Source for PRD-017, PRD-018, and PRD-019. |

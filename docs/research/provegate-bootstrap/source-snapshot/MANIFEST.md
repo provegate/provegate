@@ -47,6 +47,18 @@ Shape generic, içerik Emofy — adapter katmanına referans.
 `status-board-example.md` (\_STATUS.md — board yapı örneği; içerik Emofy'ye özel, YAPIYI al),
 `package-scripts-map.json` (npm script → dosya haritası, filtrelenmiş).
 
+### addenda/ — donmuş anlık görüntüden SONRAKİ metot uzantıları
+
+Snapshot donmuştur; ama metot bazen bilerek genişler. Uzantı, snapshot'ı düzenlemek ya da
+paket içeriği uydurmak yerine buraya, tarihli ve owner onaylı bir addendum olarak yazılır.
+Paketteki her prompt/şablon/şema byte'ı ya snapshot'a ya bir addendum'a izlenebilir olmalıdır
+(kural: `../../DECISIONS.md` → "Post-bootstrap method extensions"). Addendum'lar İngilizce
+yazılır (paket içeriğinin kaynağıdır; §4).
+
+| Dosya | Tarih | Onay | Kapsam |
+| ----- | ----- | ---- | ------ |
+| `addenda/agent-memory-closed-loop-2026-07-25.md` | 2026-07-25 | owner | Kapalı döngü agent hafızası: PRD memory input/output grameri, watch ve weakening semantiği, `_brain` ↔ ürün dokümanı sınırı, deterministik yerel geri çağırma kısıtları, offline/sıfır-bağımlılık/insan-push invaryantları. Kaynak: PRD-017/018/019 |
+
 ## Kullanım kuralları (yeni repo agent'ı için)
 
 1. Bu kod OLDUĞU GİBİ ÇALIŞTIRILMAK için değil, ÇIKARIM için: TypeScript'e port edilirken

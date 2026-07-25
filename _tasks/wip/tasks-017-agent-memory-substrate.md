@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-017-agent-memory-substrate.md](../../_prds/wip/prd-017-agent-memory-substrate.md)
 > **Readiness**: [readiness-017-agent-memory-substrate.md](../../_readiness/wip/readiness-017-agent-memory-substrate.md)
-> **Status**: Not Started
+> **Status**: In Progress
 > **Readiness Score**: 8.425/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-25
@@ -89,37 +89,37 @@ and commands it names still exist **before** the dependent task starts (task 0.2
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight and ownership
-  - [ ] 0.1 Run `gate open PRD-017 --worktree` from the base checkout; confirm the lease
+- [x] 0.0 Pre-flight and ownership
+  - [x] 0.1 Run `gate open PRD-017 --worktree` from the base checkout; confirm the lease
         covers the PRD Conflict Surface and record branch/worktree in the Progress Log of
         `_tasks/wip/tasks-017-agent-memory-substrate.md`.
-  - [ ] 0.2 In the worktree, open `_brain/learnings/memory-index-vs-detail.md`,
+  - [x] 0.2 In the worktree, open `_brain/learnings/memory-index-vs-detail.md`,
         `_brain/learnings/gate-wire-or-delete.md`, and
         `_brain/learnings/turbo-cache-masks-out-of-input-reads.md`; confirm every path and
         command each one names still exists, and record any stale finding in
         **Deferrals & Decisions** before implementing.
-  - [ ] 0.3 Capture the green baseline for `pnpm verify:workflow`, `pnpm verify:brain`,
+  - [x] 0.3 Capture the green baseline for `pnpm verify:workflow`, `pnpm verify:brain`,
         `node scripts/verify/verify-pack-drift.mjs`, and the package suite in the Progress
         Log; a pre-existing red must be ledgered, never normalized silently.
-  - [ ] 0.4 Re-measure and record the W10 baseline in the Progress Log so the plan is
+  - [x] 0.4 Re-measure and record the W10 baseline in the Progress Log so the plan is
         acting on current facts, not on the readiness snapshot: count `_brain/INDEX.md`
         hooks over 120 characters, and count records in `_brain/learnings/` missing
         `**Why:**`, `**How to apply:**`, or `provenance`. Expected at Phase-3 time: 0 and
         0. A non-zero count re-opens the migration question in **Deferrals & Decisions**.
 
-- [ ] 1.0 FR-1 — Canonical method provenance (W7 lineage, blocking)
-  - [ ] 1.1 Write
+- [x] 1.0 FR-1 — Canonical method provenance (W7 lineage, blocking)
+  - [x] 1.1 Write
         `docs/research/provegate-bootstrap/source-snapshot/addenda/agent-memory-closed-loop-2026-07-25.md`
         BEFORE any shipped method byte changes: the three-PRD program, the exact Memory
         Inputs/Outputs grammar (including that a non-empty output set may not contain
         `none`), `_brain`-versus-product-doc boundary, watch and weakening semantics,
         deterministic local CLI constraints, and the offline/zero-dependency/no-push
         invariants.
-  - [ ] 1.2 Append only the new inventory entry to
+  - [x] 1.2 Append only the new inventory entry to
         `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`.
-  - [ ] 1.3 Record the post-bootstrap extension rule and the PRD-017 owner decision in
+  - [x] 1.3 Record the post-bootstrap extension rule and the PRD-017 owner decision in
         `docs/research/provegate-bootstrap/DECISIONS.md`; do not restate the addendum body.
-  - [ ] 1.4 In `packages/provegate/test/content-prompts.test.ts`, assert every
+  - [x] 1.4 In `packages/provegate/test/content-prompts.test.ts`, assert every
         pre-existing frozen snapshot file is byte-unchanged (hash the set, fail on any
         delta) and that the manifest lists the addendum. This is the test that makes
         "frozen" mean something.
@@ -318,6 +318,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   readiness iteration 3 found 0 INDEX hooks over 120 (longest 102) and 23/23 records
   already carrying `**Why:**`, `**How to apply:**`, and `provenance`. Task 0.4 re-measures
   before any editing decision.
+- 1.4 — the frozen-snapshot digest lives in `content-prompts.test.ts` as the PRD says, not in a `scripts/verify/` gate. A verify script would be cache-immune, but adding one means touching `verify-workflow.mjs` and `package.json`, neither of which is in this PRD's Conflict Surface (and `verify-workflow.mjs` is claimed by PRD-021). Residual risk: a docs-only snapshot edit could replay a cached local pass; CI checks out fresh with no restored turbo cache, so the gate is real there. Recorded rather than hidden.
 - (none deferred yet)
 
 ---
@@ -326,6 +327,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task | Notes |
 | ---------- | ---- | ----- |
+| 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red. |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-017 (Approved), readiness iteration 3 PASS 8.425, and watch items W10–W13, after owner Go. `infra` skeleton: Migration & Rollback is its own parent (task 6.0) because deployment ordering carries 20% of this class's readiness weight. No implementation started. |
 
 ---
