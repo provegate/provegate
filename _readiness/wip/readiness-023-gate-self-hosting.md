@@ -1,35 +1,36 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
-> **Current state: iteration 2, 8.30/10, ITERATE — and the ITERATE is on independence,
-> not substance.** W1–W10 are all closed in the PRD, no hard cap trips, and
-> `gate check PRD-023` exits 0. But the same session wrote the remediation and scored it,
-> and `AGENT_BOOTSTRAP.md` forbids self-declaring a gate green — so `_state/prds.json`
-> keeps ITERATE and Phase 3 stays shut. **The next round must be run by a different model
-> or a human.** See §5 for iteration 2's measurements and the two items (W9, W10) it found
-> and fixed.
+> **Current state: iteration 3, 6.65/10, ITERATE — scored independently by Codex
+> (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 2's
+> self-scored 8.30 does not stand. The independent round found four [P1] items, and the
+> first is blocking in a way neither self-scored round came close to: **the three scripts
+> this PRD deletes are also shipped in the practices pack, installed by
+> `gate init --practices`, run by the packed bundle, and protected by a pack-drift rule
+> that fails when a mapped repo destination disappears.** The deletion as specified would
+> red `pnpm verify:pack-drift`, which this PRD's own floor requires green. See §6.
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-023-gate-self-hosting.md`       |
-| Score                  | 8.30/10                                        |
-| Verdict                | ITERATE — **on independence, not on substance.** The score is in the PASS band and no watch item is open; but this round was run by the session that wrote the W1–W10 remediation, and the critical rule forbids self-declaring a gate green |
-| Iteration              | 2                                              |
-| Model Tier (Execution) | high — assign on an independent PASS           |
-| Model Tier (Audit)     | high                                           |
-| Scored by              | Claude Opus 5 — **the same session that wrote the remediation** |
-| Self-scored            | **yes** — this session revised the PRD before scoring it |
+| Score                  | 6.65/10                                        |
+| Verdict                | ITERATE — four [P1] items open (§6). The self-scored 8.30 at iteration 2 is superseded |
+| Iteration              | 3                                              |
+| Model Tier (Execution) | do not assign — score < 8                      |
+| Model Tier (Audit)     | high (on a PASS)                               |
+| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
+| Self-scored            | **no**                                         |
 | Date                   | 2026-07-25                                     |
-| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-023` exit 0 (re-run at iteration 2) |
+| PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-023` exit 0 (re-run at iteration 3) |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
 
-At iteration 2 no PRD-side item is open. The architecture is the strongest in the wave,
-needed no rework across either round, and the remediation held up under re-measurement.
-The only thing standing between this and a PASS is who did the scoring.
+At iteration 3 four [P1] items are open. The architecture is still the strongest in the
+wave and still needs no rework — but the PRD's **scope** is wrong: it treats three scripts
+as repo-local when the package publishes and installs copies of all three.
 
 ---
 
@@ -270,13 +271,102 @@ only reader is the script being deleted is the right call.
 text. W9 and W10 were catchable only because they were checkable against source; a wrong
 judgement in the same prose would have read as correct.
 
+### 6. Iteration-3 independent measurement — Codex
+
+Run via the `/codex` skill, consult mode, read-only sandbox, `model_reasoning_effort=high`,
+with an explicit instruction not to defer to the self-scored conclusions. **Every finding
+below was re-verified against source by the recording session before being written here.**
+
+**[P1] 1 — BLOCKING: the three "duplicates" are published, installed, and protected, and
+deleting them fails this PRD's own verification floor.** Both self-scored rounds treated
+`scripts/verify/verify-{review-artifact,durable-artifacts,gates-wired}.mjs` as
+repo-local files. They are not. Verified:
+
+- `packages/provegate/practices/verify/` ships all three
+  (`verify-review-artifact.mjs`, `verify-durable-artifacts.mjs`, `verify-gates-wired.mjs`).
+- `core/run/init.ts` maps each one into an adopter repo — `gate init --practices` installs
+  them at `scripts/verify/…`, and installs `gates-wired-exceptions.json` too.
+- The packed bundle `practices/verify/verify-workflow.mjs` lists `verify-gates-wired.mjs`
+  among its six `CHECKS`.
+- `scripts/verify/verify-pack-drift.mjs` fails with *"pack ships 'X' but this repo has no
+  'Y' — the live layer lost its copy"* when a mapped repo destination is absent.
+
+So deleting the root scripts reds `pnpm verify:pack-drift`, which §11's cross-cutting
+floor requires green. **And the packed `gates-wired-exceptions.json` is not empty** — it
+carries eight entries, while the root copy this PRD inspected is `[]`. FR-4(c)'s "the file
+is empty, so nothing migrates" is true of the root copy and false of the shipped one.
+
+Scope must expand to the practices scripts, the packed bundle, the packed exceptions file,
+`init.ts`, `NEXT_STEPS.md`, the pack manifest and its test, and the pack-drift ledger — or
+Goal 2 ("exactly one implementation of each rule") and User Story 1 ("adopters get the
+method this repo demonstrates") are both false as written.
+
+**[P1] 2 — FR-4 makes three paths configurable and names no keys.** The iteration-2
+remediation said the hooks directory, the bundle path, and the on-disk verify directory
+"become config", but its Targets list only `config/types.ts`. `WorkflowConfig` has no such
+fields today and `validate.ts` mirrors the full shape, so the change needs named keys,
+defaults, semantic validation, config tests, and Conflict Surface entries for
+`defaults.ts` and `validate.ts`. None are present.
+
+**[P1] 3 — FR-3 consumes a predicate PRD-021 does not promise to export.** "One predicate
+for two sections" requires PRD-021's FR-13 named-file/dotfile test to be reusable, but
+PRD-021 names only `declaredGlobs` and `parseConflictSurface` as targets. Either PRD-021
+must export a named predicate with tests, or PRD-023 must add `markdown.ts` to its own
+Targets and Conflict Surface. As written, Phase 4 either duplicates the logic — in the PRD
+whose thesis is that duplication is the defect — or edits out of scope.
+
+**[P1] 4 — the class rationale is false and the release is missing.** The header says "no
+application behavior and **no new user-facing feature**". This PRD adds two public CLI
+flags (`--review-artifacts`, `--durable-artifacts`), new public config keys (item 2), and
+changes published practices assets. That is a user-facing surface change and needs a
+changeset with compatibility notes, plus a semantic assertion that it exists.
+
+**[P2] 5 — two revision leftovers.** §9 Q2 still says "eleven slash-less tokens, all eleven
+classified correctly" (lines 537–538) after FR-3 was corrected to fourteen. §7 Dependencies
+still claims PRD-021 "edits `verify-workflow.mjs` and `gates-wired-exceptions.json`"
+(line 488), contradicting both FR-4(c) and the corrected Conflict Surface paragraph at
+line 610, which state that PRD-021 does not claim that file.
+
+**[P2] 6 — ADR-0002's machine comparison has no parseable format.** The ADR is genuinely
+absent (`_brain/adr/` holds only `.gitkeep`; the INDEX carries a commented placeholder) and
+`_brain/**` is leased by PRD-017 until 21:44Z, so the stop-precondition is valid. But FR-1
+promises a check that the ledger "classifies every script exactly as the ADR does", and
+nothing specifies a parseable shape in the ADR to compare against. Bind FR-1 to a named
+table or marker rather than unconstrained prose.
+
+**What Codex confirmed, having been told to distrust it.** The FR-4(b) surface table is
+accurate, and keeping CI at `run:` text is correct — the deleted script reads nearly the
+whole YAML while `yamlRunText` excludes comments and non-executing fields, so the package
+is genuinely stricter. The 14-token corpus measurement is right under the package's
+extraction (2 real paths, 8 prose tokens, 4 `none`), and the only wip cases are the two
+`none`s. FR-4's size is not itself a blocker if Phase 3 decomposes it.
+
+**The lesson for this file.** The self-scored rounds asked "does the remediation match the
+source it cites?" and it did. They never asked "is the *scope* right?" — and the answer was
+no, in a way one `ls packages/provegate/practices/verify/` would have shown.
+
 ---
 
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
 
-**Iteration 2 — scores the remediated FR set. Self-scored; see the Verdict.**
+**Iteration 3 — independent (Codex). Supersedes the self-scored iteration 2 below.**
+
+| #         | Dimension                | Weight | Score      | Notes |
+| --------- | ------------------------ | ------ | ---------- | ----- |
+| 1         | Clarity                  | 15%    | 6.5/10     | FR-4 does not name its new config contract, and two stale contradictions survive the revision. |
+| 2         | Completeness             | 20%    | 6.0/10     | The published practices-pack duplicates and the installer contract are entirely omitted. |
+| 3         | Technical Depth          | 20%    | 7.5/10     | Surface comparison and parser measurements are strong; integration boundaries are not. |
+| 4         | Multi-Tenancy & Security | 10%    | 9.0/10     | No protected surface, payload, runtime dependency, network, or push path. |
+| 5         | Scope & Testability      | 15%    | 6.5/10     | Core tests are named, but the required pack/init and config-validation surfaces are absent. |
+| 6         | Migration & Rollback     | 20%    | 5.5/10     | The deletion as specified breaks pack-drift; no changeset and no adopter migration. |
+| **Total** | **Weighted**             |        | **6.65/10** | **ITERATE** |
+
+Hard caps: none tripped. Lint exits 0.
+
+<details>
+<summary>Superseded — iteration-2 scorecard (self-scored, 8.30 ITERATE)</summary>
 
 | #         | Dimension                | Weight | Score      | Notes |
 | --------- | ------------------------ | ------ | ---------- | ----- |
@@ -295,6 +385,8 @@ Weighted sum:
 Hard caps checked (iteration 2): security not tripped, contract not tripped, lint exit 0,
 no runtime dependency and no push path. **No cap forces the ITERATE** — the independence
 rule does.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-1 scorecard (pre-remediation, 7.95 ITERATE)</summary>
@@ -383,6 +475,7 @@ Verdict.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 3   | 2026-07-25 | 6.65  | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort. Supersedes the self-scored 8.30.** Four [P1]s, all re-verified against source before recording. The blocking one is scope, not detail: the three scripts this PRD deletes are **shipped in the practices pack**, installed into adopter repos by `gate init --practices` (`core/run/init.ts`), run by the packed `verify-workflow.mjs` bundle, and protected by `verify-pack-drift.mjs`, which fails with "pack ships 'X' but this repo has no 'Y' — the live layer lost its copy" when a mapped destination disappears. So the deletion reds `pnpm verify:pack-drift`, which §11's floor requires green — and the packed `gates-wired-exceptions.json` holds eight entries where the root copy this PRD inspected is `[]`, so FR-4(c)'s "the file is empty" is true of the wrong copy. Also: FR-4 makes three paths configurable without naming keys, defaults, validation, or the `defaults.ts`/`validate.ts` targets; FR-3 consumes a predicate PRD-021 never promises to export, so Phase 4 must duplicate it or edit out of scope; the class rationale claims "no new user-facing feature" while adding two public CLI flags and new config, with no changeset. Two revision leftovers: §9 Q2 still says eleven tokens after FR-3 was corrected to fourteen, and §7 Dependencies still claims PRD-021 edits `gates-wired-exceptions.json`, contradicting FR-4(c). Codex confirmed the FR-4(b) surface table, the `run:`-only CI narrowing, and the 14-token measurement. |
 | 2   | 2026-07-25 | 8.30  | ITERATE | **Self-scored — the ITERATE is on independence, not substance.** W1–W8 all resolved: FR-4 became three parts with the surface-delta table inline, keeping the package's narrower CI `run:` reading as a deliberate strengthening rather than restoring parity; FR-4(c) settled the exceptions store on `manifest.wiringExceptions` and deleted the empty JSON file, correcting a false claim that PRD-021 owned it; the corpus measurement regrouped to 14 tokens in three groups with `lucide-react` dropped; FR-5 handed the "first `gate` invocation" claim to PRD-021 FR-8; FR-3 gained its own `--durable-artifacts` flag, a stated acceptance shape for mixed sections, and the third parser divergence. Two new items caught by checking the remediation against source and both fixed: **W9**, FR-4(b) was about to move `.githooks/` and the bundle path into shipped package code as literals when this repo's hooks path comes from its own `prepare` script; and **W10**, the third surface row dropped the `startsWith('verify:')` exclusion that stops a bundle from wiring its own members. No hard cap trips and the lint exits 0; the verdict is held solely by the rule that a gate may not be self-declared green. |
 | 1   | 2026-07-25 | 7.95  | ITERATE | First independent assessment. Every measurable claim re-derived from source and found exact: six line counts, both named parser divergences, the `parseVerificationCommands` whole-line match (with a live instance in PRD-021's own §11 Notes cell), the `lintPrd` `deferred` filter, `auditWiring`'s two directions, and the six-checks-after-deletion arithmetic across the PRD-021 dependency. Verdict rests on W1: `auditWiring`'s executing-surface set is narrower than the script FR-4 deletes by three surface kinds (git hooks, the bundle body, other `package.json` script bodies), unported and unmentioned, against a Goal that promises no lost guarantee — zero measured impact today, but the same class the FR exists to prevent. Also W2–W8: the exceptions store changes shape without a migration, the FR-3 corpus measurement reports 11 where 14 exist and names a token that is not there, the "first `gate` invocation" claim is taken by a declared prerequisite, one sweep flag carries two unrelated rules, the declaration lint's mixed-section shape is unstated, a third parser divergence is unnamed, and the overlap prose lists three of five `gate queue`-reported PRD-021 files. |
 
@@ -431,6 +524,39 @@ Verdict.
 
 ## Verdict
 
+**ITERATE — 6.65/10, iteration 3, scored independently by Codex.** Four [P1] items are
+open. The self-scored 8.30 does not stand, and the gap is not judgement — it is a scope
+error that two rounds of careful source-checking never looked for.
+
+The blocking item is [P1] 1. This PRD's premise is "three method rules are implemented
+twice, once in the package and once as a repo script; delete the script". The truth is that
+all three scripts are *also published in the practices pack*, installed into adopter repos
+by `gate init --practices`, executed by the packed bundle, and pinned by a pack-drift rule
+that fails the moment a mapped destination disappears. Deleting the root copies reds
+`pnpm verify:pack-drift`, which this PRD's own cross-cutting floor requires green. The
+duplication is threefold, not twofold, and the third copy is the one adopters actually get.
+
+That reframes the PRD rather than patching it: Goal 2 and User Story 1 are false while the
+packed copies survive, and FR-2/FR-3/FR-4 each need a pack-side half. It is still the right
+PRD — the finding strengthens its thesis — but the scope has to grow before Phase 3 can
+decompose it.
+
+The other three are contained: FR-4 names three configurable paths without naming keys or
+validation targets; FR-3 depends on PRD-021 exporting a predicate it never promises; the
+class rationale claims no user-facing change while adding two CLI flags and new config, so
+a changeset is missing.
+
+**Remediation order.** Item 1 is a scope expansion the owner should sign off before it is
+written — it pulls in `init.ts`, the pack manifest, `NEXT_STEPS.md`, and the ledger, and it
+touches PRD-019's and PRD-018's surfaces. Items 2 and 4 are specification work. Item 3
+needs a one-line commitment in PRD-021 (export the predicate) or one added target here.
+Item 5 is two stale sentences.
+
+Whoever remediates must not also score the next round.
+
+<details>
+<summary>Superseded — iteration-2 verdict (self-scored, 8.30 ITERATE)</summary>
+
 **ITERATE — 8.30/10, iteration 2. The score is in the PASS band and the verdict is not,
 and the gap is entirely the scorer.**
 
@@ -467,6 +593,8 @@ judgement in the same prose would have read as correct to the session that wrote
 
 On an independent PASS, assign high tier for both Phase 4 and Phase 6: three relocations
 and three deletions whose failure mode is silent capability loss.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-1 verdict (pre-remediation, 7.95 ITERATE)</summary>

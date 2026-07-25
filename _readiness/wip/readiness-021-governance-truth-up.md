@@ -1,13 +1,13 @@
 # Readiness Assessment: PRD-021 — Governance Truth-Up
 
-> **Current state: iteration 8, 8.15/10, ITERATE — and the ITERATE is on independence,
-> not substance.** W13–W23 are all closed in the PRD, no hard cap trips, and
-> `gate check PRD-021` exits 0. But the same session wrote the remediation and scored it,
-> and `AGENT_BOOTSTRAP.md` forbids self-declaring a gate green — so `_state/prds.json`
-> keeps ITERATE and Phase 3 stays shut. **The next round must be run by a different model
-> or a human**, and the Verdict lists the five things it needs to check rather than
-> re-derive. See §11 for iteration 8's measurements and the two items (W22, W23) it found
-> and fixed.
+> **Current state: iteration 9, 7.10/10, ITERATE — scored independently by Codex
+> (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 8's
+> self-scored 8.15 does not stand. The independent round found four [P1] items the
+> self-scored round missed, including a **false premise** the self-scorer asserted in the
+> PRD, this report, `STATUS.md`, and two commit messages: the shipped
+> `practices/templates/AGENT_BOOTSTRAP.template.md` **does** carry a triage section
+> (`## Triage — value scoring`, line 108). See §12. Every finding below was re-verified
+> against source before being recorded.
 >
 > <details><summary>Iteration 7 (7.30 ITERATE) — the round that produced W13–W21</summary>
 >
@@ -27,15 +27,15 @@
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 8.15/10 (infra weights) |
-| Verdict | ITERATE — **on independence, not on substance.** The score is in the PASS band and no watch item is open; but this round was run by the session that wrote the W13–W23 remediation, and `AGENT_BOOTSTRAP.md` critical rule forbids self-declaring a gate green. Only an independent round may issue the PASS |
-| Iteration | 8 |
-| Model Tier (Execution) | high — assign on an independent PASS |
-| Model Tier (Audit) | high |
-| Scored by | Claude Opus 5 — **the same session that wrote the remediation** |
-| Self-scored | **yes** — this session revised the PRD before scoring it |
+| Score | 7.10/10 (infra weights) |
+| Verdict | ITERATE — four [P1] items open (§12). The self-scored 8.15 at iteration 8 is superseded |
+| Iteration | 9 |
+| Model Tier (Execution) | do not assign — score < 8 |
+| Model Tier (Audit) | high (on a PASS) |
+| Scored by | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
+| Self-scored | **no** |
 | Date | 2026-07-25 |
-| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 8) |
+| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 9) |
 | State Record | updated — `gate status` re-run after saving |
 
 ---
@@ -487,12 +487,97 @@ despite an 8.15.
 
 ---
 
+### 12. Iteration-9 independent measurement — Codex
+
+Run via the `/codex` skill, consult mode, read-only sandbox, `model_reasoning_effort=high`.
+Codex was given the PRD, this report, the rubric, and an explicit instruction not to defer
+to the self-scored conclusions. **Every finding below was re-verified against source by the
+recording session before being written here.**
+
+**[P1] 1 — the adopter premise this PRD's blocking fix was built on is FALSE, and the real
+hole is worse.** W13, the PRD's §1, this report's §10, `STATUS.md`, and two commit messages
+all assert that the shipped `practices/templates/AGENT_BOOTSTRAP.template.md` "has no
+triage section at all". It does: `## Triage — value scoring` at **line 108**. The
+self-scored round missed it because it grepped for the literal weight values
+(`0.25|0.20|0.15`) and for `Value` — and the section uses lowercase "value scoring" plus a
+`{{VALUE_AXES_TABLE}}` placeholder, so both greps returned nothing. That was a
+measurement designed to confirm rather than to find.
+
+The correction makes the problem **larger**, not smaller. Line 111 tells adopters to
+"**define your own axes**". FR-1 and FR-2 hardcode `MF/UI/TL/AR/RM` in both the config
+shape and the header grammar. So the shipped method invites an adopter to choose their own
+axes and then ships a gate that can only score ProveGate's five. Resolve explicitly: either
+make axis identifiers and order configurable, or change the shipped template to canonical
+axes under an owner-approved snapshot addendum — and add a template-to-gate round-trip
+test either way. The presence-triggered default (W13's fix) is still correct and still
+necessary; it is just no longer the whole story.
+
+**[P1] 2 — FR-2 and FR-6 now specify null-id behavior in opposite directions.** The
+iteration-8 remediation rewrote FR-2 to state that a `null` id skips the presence
+requirement (line 298 region), which is what keeps
+`packages/provegate/test/content-templates.test.ts` green on the header-less shipped
+template. FR-6 was not touched and still requires "`null` id with no header → fails"
+(**line 348**). Two FRs, one gate, opposite contracts, and the existing test agrees with
+FR-2. Change FR-6 to "passes", and keep its separate assertion that a *present wrong*
+header fails at any id.
+
+**[P1] 3 — the header grammar accepts dimensions the rubric forbids.** FR-2 says
+dimensions are "integers 1–5" and then specifies the pattern as "each dim **a single
+digit**" (**line 260**). A single digit admits `0` and `6`–`9`, so
+`9.00 (MF/UI/TL/AR/RM: 9/9/9/9/9)` recomputes consistently and passes. Require `[1-5]`
+explicitly, with reject fixtures for `0` and `6`.
+
+**[P1] 4 — W9 is still a false-green and has been carried for four rounds.** FR-12
+requires *one* changeset carrying both the `provegate` minor front-matter and the
+compatibility sentence; its two recursive greps are satisfied by two *different* files.
+Replace them with one semantic assertion that enumerates changeset entries and checks both
+properties on the same entry.
+
+**[P2] 5 — rollback omits the per-PRD call site.** The rollback text removes the sweep
+branch and says `core/gates/value-score.ts` "may stay — uncalled". It would not be
+uncalled: FR-2 wires it into `lintPrd`. Add removal of that call and the config plumbing.
+
+**[P2] 6 — "every PRD in the corpus writes the header" is false.** Only the eight
+header-bearing PRDs do; PRD-001–015 have none. Codex independently re-ran the
+metadata-block grammar and confirmed the iteration-8 fix works — one match per
+header-bearing PRD, zero duplicates — so the *rule* is right and only the sentence is
+wrong. Say "every PRD that carries a Value header".
+
+**What Codex confirmed, having been told to distrust it.** The source-snapshot reading is
+correct: `validateVScore` has no id parameter and no cutoff guard
+(`verify-prd-ready.mjs:287`), and `ENFORCE_FROM_PRD` guards the checks at 215, 231, 256,
+and 272 and never this one. FR-9's weight-table pin is at the right seam. FR-13(b)'s
+scope-out of the two `readyOverlaps` weaknesses is "defensible because `findConflicts` is
+the enforcing path" — the reasoning was sound, not merely convenient. The declared overlap
+lists match what the queue algorithm produces.
+
+**The lesson for this file.** Two self-scored rounds produced 8.15; one independent round
+produced 7.10 and four [P1]s, one of which was a false premise the self-scorer had
+asserted four times in four artifacts. The independence rule is not ceremony.
+
+---
+
 ## Scorecard
 
 Class `infra` weights, per
 `packages/provegate/prompts/phase-2-readiness-scorer.md`.
 
-**Iteration 8 — scores the remediated FR set. Self-scored; see the Verdict.**
+**Iteration 9 — independent (Codex). Supersedes the self-scored iteration 8 below.**
+
+| # | Dimension | Weight | Score | Notes |
+| - | --------- | ------ | ----- | ----- |
+| 1 | Clarity | 15% | 7.0/10 | Formal lint criteria pass, but null-id behavior is specified in opposite directions by FR-2 and FR-6, and the adopter guidance contradicts the shipped template. |
+| 2 | Completeness | 20% | 6.5/10 | The shipped custom-axis model is unresolved, and invalid dimensions (0, 6–9) can pass the grammar. |
+| 3 | Technical Depth | 20% | 7.5/10 | Integer-hundredths arithmetic and the snapshot analysis are strong; boundary validation is incomplete. |
+| 4 | Multi-Tenancy & Security | 10% | 9.0/10 | No protected surface, payload, dependency, network, or push path. |
+| 5 | Scope & Testability | 15% | 7.0/10 | Tests are named, but FR-6 conflicts with FR-2 and FR-12's greps can false-green. |
+| 6 | Migration & Rollback | 20% | 6.5/10 | Presence-triggered rollout is sound, but adopter compatibility and rollback are incomplete. |
+| **Total** | **Weighted** | | **7.10/10** | **ITERATE** |
+
+Hard caps: none tripped. Lint exits 0.
+
+<details>
+<summary>Superseded — iteration-8 scorecard (self-scored, 8.15 ITERATE)</summary>
 
 | # | Dimension | Weight | Score | Notes |
 | - | --------- | ------ | ----- | ----- |
@@ -511,6 +596,8 @@ Weighted sum:
 Hard caps checked (iteration 8): security not tripped, contract not tripped, lint exit 0,
 no runtime dependency and no push path. **No cap forces the ITERATE** — the independence
 rule does.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-7 scorecard (pre-remediation FR set, 7.30 ITERATE)</summary>
@@ -670,6 +757,7 @@ Verdict.
 | 4 | 2026-07-25 | 7.60 | ITERATE | Independent re-score measured FR-13's five silently dropped root claims and confirmed PRD-018 owns root-config creation. FR-13 lacks an observable parse-failure contract and an enforcing-path test for an untracked root artifact; W10–W11 must be resolved. |
 | 5 | 2026-07-25 | 7.78 | ITERATE | W10 and W11 are resolved: diagnostics have named consumers and unmaterialized-glob union reaches mixed surfaces. W12 remains because the prose-like dotted-token rejection contradicts the stated acceptance predicate. |
 | 6 | 2026-07-25 | 8.43 | PASS | Literal named-file and dotfile regexes resolve W12; direct execution confirms every requested accept/reject case and the documented `Node.js` residual. W9 remains binding. |
+| 9 | 2026-07-25 | 7.10 | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort. Supersedes the self-scored 8.15.** Four [P1]s, all re-verified against source before recording. The heaviest is a **false premise the self-scorer asserted four times across four artifacts**: `practices/templates/AGENT_BOOTSTRAP.template.md` does have a triage section (`## Triage — value scoring`, line 108) — the self-scored grep looked for the literal weight values and the token `Value`, and the section uses lowercase prose plus a `{{VALUE_AXES_TABLE}}` placeholder. The correction enlarges the hole: line 111 tells adopters to "define your own axes" while FR-1/FR-2 hardcode MF/UI/TL/AR/RM, so the shipped gate cannot score an adopter's own axes. Also: FR-2 and FR-6 now specify null-id behavior in opposite directions (FR-6 line 348 still says "null id with no header → fails" while FR-2's remediation says it passes, and `content-templates.test.ts` agrees with FR-2); the grammar's "each dim a single digit" (line 260) admits 0 and 6–9 so `9/9/9/9/9` passes; W9's two greps still false-green across two files; rollback calls `value-score.ts` "uncalled" while FR-2 wires it into `lintPrd`. Codex independently confirmed the snapshot reading, the FR-9 pin seam, the FR-13(b) scope-out, and the metadata-block grammar fix. |
 | 8 | 2026-07-25 | 8.15 | ITERATE | **Self-scored — the ITERATE is on independence, not substance.** W13–W21 all resolved. W13's fix came from precedent rather than preference: the source snapshot's `validateVScore` takes no PRD number and has no cutoff guard, because "only PRDs carrying a V-Skor line are checked, so pre-triage PRDs are never retro-failed", while its `ENFORCE_FROM_PRD = 248` guards four other checks and never this one — so `enforceFrom` now ships absent and 17 is this repo's opt-in. Two new items were caught by measuring the remediation instead of reading it, and both are fixed: **W22**, the new grammar's "multi-match is an error" rule returned two hits on PRD-021 itself (its header plus FR-2's own fenced example), now scoped to the metadata block with 0 of 23 PRDs multi-matching; and **W23**, the null-id path skips the presence requirement even with a cutoff set, which matters because `content-templates.test.ts:80` lints the shipped template through `lintPrd` and asserts zero issues — the mechanical proof that an id-based default would have reddened a shipped artifact. W9 remains binding from iteration 6. No hard cap trips and the lint exits 0; the verdict is held solely by `AGENT_BOOTSTRAP.md`'s rule that a gate may not be self-declared green. |
 | 7 | 2026-07-25 | 7.30 | ITERATE | First round against the **relocated** FR set; not comparable to iteration 6. Verified the relocation's core against source: `lintPrd` already takes the resolved config, `runCheck` already holds the record, the `--wiring` branch is the right model, `declaredGlobs` drops slash-less tokens, `findConflicts` falls back only at zero materialization, and a `.mjs`-less `verify:*` key still satisfies `verify-gates-wired`. Blocked on W13 — `enforceFrom: 1` ships an adopter-facing gate while `templates/prd-template.md` has no `Value:` line, so every adopter's first `gate check` fails on a header the method never emitted. Also W14 (the specified header grammar matches no file on disk), W15 (FR-9/FR-10 recreate the weight duplication the relocation claimed to remove), W16/W17 (`gate queue` reports a five-file PRD-023 overlap and the active PRD-017 lease collides on five surfaces, neither declared), W18 (`readyOverlaps` stays blind to glob-vs-file and to in-flight leases), W19–W21 (drifted cross-references, stale corpus/lease facts, a self-expiring DO NOT). All eight declared `Value:` headers recompute exactly, so the live corpus would sweep green. Value re-score recommended: 3.65 → **4.10** (5/4/4/4/3). |
 
@@ -749,6 +837,32 @@ Iteration 7 (relocated FR set):
 
 ## Verdict
 
+**ITERATE — 7.10/10, iteration 9, scored independently by Codex.** Four [P1] items are
+open and they are substantive, not procedural. The self-scored 8.15 does not stand.
+
+The blocking item is the one the self-scored round could not see: its own false premise.
+W13 was built on "the shipped adopter bootstrap template has no triage section", asserted
+in the PRD, in this report, on the status board, and in two commit messages. The template
+has one at line 108, and it tells adopters to define their own axes — which the gate, as
+specified, cannot score. The presence-triggered fix remains correct; it is now necessary
+but not sufficient.
+
+The other three are ordinary and cheap: FR-6 contradicts FR-2 on null-id behavior in a way
+an existing test already resolves; the grammar's "single digit" admits dimensions the
+rubric forbids; W9's changeset greps have been a known false-green for four rounds.
+
+**Remediation order.** Item 1 needs an owner decision (configurable axis identifiers, or a
+snapshot addendum changing the shipped template) — it is a design question the PRD does not
+answer, so it is a stop-and-ask, not an edit. Items 2, 3, 5, and 6 are one-line corrections.
+Item 4 is the standing W9 work.
+
+Whoever remediates must not also score the next round. That is now demonstrated rather than
+asserted: two self-scored rounds returned 8.15 with zero [P1]s; one independent round
+returned 7.10 with four.
+
+<details>
+<summary>Superseded — iteration-8 verdict (self-scored, 8.15 ITERATE)</summary>
+
 **ITERATE — 8.15/10, iteration 8. The score is in the PASS band and the verdict is not,
 and the gap is entirely the scorer.**
 
@@ -782,6 +896,8 @@ machine outcome, not a formality to route around.
 
 On an independent PASS, assign high tier for both Phase 4 and Phase 6: the config surface,
 the `lintPrd` seam, and the lock parser are all cross-module.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-7 verdict (pre-remediation, 7.30 ITERATE)</summary>
