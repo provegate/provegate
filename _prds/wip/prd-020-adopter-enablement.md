@@ -34,6 +34,9 @@ This PRD closes the enablement gap with content, not new CLI surface: two canoni
 example manifests, one brownfield adoption page, and a docs pass that makes the
 practices path first-class. No command behavior changes.
 
+**Dependency:** PRD-019 must be Ship Verified before this PRD enters Phase 4 — both
+claim `apps/docs/content/docs/cli.mdx` and `quickstart.mdx` (owner decision, see §9).
+
 ---
 
 ## 2. Goals
@@ -118,10 +121,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    annotating every key and naming the failure each gate catches.
    - **Targets:** `packages/provegate/examples/manifests/single-package/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/single-package/README.md` (new)
-2. **FR-2**: Ship `examples/manifests/monorepo/` — the same for an existing pnpm
-   workspace: filtered per-package floor commands, a `classDefaults` split across
-   `feature`/`infra`/`hotfix`, and one hard cap wired to the `route-guard-coverage`
-   example plugin so the two galleries connect.
+2. **FR-2**: Ship `examples/manifests/monorepo/` — the same for a **generic** pnpm
+   workspace (not a copy of this repo's manifest): filtered per-package floor commands,
+   a `classDefaults` split across `feature`/`infra`/`hotfix`, and one hard cap wired to
+   the `route-guard-coverage` example plugin so the two galleries connect.
    - **Targets:** `packages/provegate/examples/manifests/monorepo/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/monorepo/README.md` (new)
 3. **FR-3**: A fixture test loads both example manifests through the real
@@ -184,16 +187,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   a schema change breaks the test instead of the adopter.
 - **Sequencing against the memory program.** PRD-019 also writes public CLI
   documentation (`gate doctor --memory`, `gate memory find`). `apps/docs/content/docs/cli.mdx`
-  and `quickstart.mdx` therefore appear in both conflict surfaces. This PRD should enter
-  Phase 4 **after** PRD-019 is Ship Verified, or drop FR-5's `cli.mdx` target and land
-  the flag documentation inside PRD-019's docs pass.
+  and `quickstart.mdx` therefore appear in both conflict surfaces. The owner resolved
+  this by sequencing rather than re-scoping: PRD-019 is already readiness-approved at
+  8.425, and widening its scope would force a re-score. This PRD keeps FR-5 and enters
+  Phase 4 only after PRD-019 is Ship Verified.
 - **`package.json` `files`** must include the new example directory for the published
   tarball; it is a shared append-only manifest and stays out of the conflict surface.
 
 ### Dependencies
 
-- Sequencing dependency on PRD-019 for the shared docs pages (see above). No code
-  dependency.
+- PRD-019 Ship Verified (sequencing only, for the shared docs pages). No code dependency.
 
 ---
 
@@ -211,11 +214,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 9. Open Questions
 
-- [ ] Does FR-5's `cli.mdx` edit stay here, or move into PRD-019's docs pass to remove
-      the conflict-surface overlap? (Owner decision before Phase 2 PASS.)
-- [ ] Should the monorepo example be generic, or mirror this repo's own manifest once
-      PRD-018 writes the dogfood one? (A generic example ages better; a mirrored one is
-      provably real.)
+(none) — both resolved by owner on 2026-07-25.
+
+**Q1 resolved:** FR-5's `cli.mdx` edit stays in this PRD; the overlap with PRD-019 is
+handled by sequencing (Phase 4 after PRD-019 is Ship Verified) rather than by widening
+PRD-019, which is already readiness-approved at 8.425.
+**Q2 resolved:** the monorepo example is generic, with no dependency on the dogfood
+manifest PRD-018 will write.
 
 ---
 
@@ -313,6 +318,7 @@ rationalize.
 
 ## Changelog
 
-| Date       | Author | Changes                                             |
-| ---------- | ------ | --------------------------------------------------- |
-| 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P1 4–6) |
+| Date       | Author | Changes                                                                      |
+| ---------- | ------ | ---------------------------------------------------------------------------- |
+| 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P1 4–6)                          |
+| 2026-07-25 | Cursor | Open Questions resolved by owner: keep FR-5 and sequence after PRD-019; generic monorepo example |

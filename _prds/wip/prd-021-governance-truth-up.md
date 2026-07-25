@@ -49,7 +49,8 @@ cannot silently return.
 
 ### Primary Goals
 
-- [ ] Ship the value-score recompute gate promised by the triage rules.
+- [ ] Ship the value-score recompute gate promised by the triage rules, with its weights
+      configurable rather than hardcoded.
 - [ ] Correct every stale wave-2 claim in the governance docs, on both the live side and
       the shipped practices copy.
 - [ ] Mark the research pack as the frozen bootstrap record and name `apps/docs` as the
@@ -61,7 +62,8 @@ cannot silently return.
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | PRDs whose declared value equals the weighted sum | unverified | all, machine-checked | `pnpm verify:value-score` |
-| Stale "wave 2" claims about shipped gates | 4 | 0 | drift check |
+| Copies of the weight table that can silently diverge | n/a | 0 | `value-score-weights.test.ts` |
+| Stale "wave 2" claims about shipped gates | 4 | 0 | `pnpm verify:doc-claims` |
 | Pack/live pairs left one-sided | n/a | 0 | `pnpm verify:pack-drift` |
 | Research pack canon status stated | no | yes | banner on the pack README |
 | Runtime dependencies added | 0 | 0 | zero-dep policy |
@@ -121,23 +123,39 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 1. **FR-1**: Add `scripts/verify/verify-value-score.mjs`: for every PRD under
    `_prds/wip/` and `_prds/completed/`, parse the `Value:` header, recompute
-   Σ(dimension × weight), and fail on mismatch beyond a stated rounding tolerance.
-   Weights are read from configuration/one declared constant table, never scattered
-   literals (config-over-hardcode). A PRD with a malformed or absent header is reported
-   as a failure, not skipped.
+   Σ(dimension × weight), and require **exact two-decimal equality** — the shipped
+   weights (.25/.25/.20/.15/.15) against integer 1–5 dimensions always land on a .05
+   multiple, so no tolerance band is warranted. A PRD with a malformed or absent header
+   is reported as a failure, not skipped.
    - **Targets:** `scripts/verify/verify-value-score.mjs` (new),
      `scripts/verify/lib.mjs` (reuse the existing reporter)
-2. **FR-2**: Wire the gate: a `verify:value-score` script in `package.json`, membership
-   in the `verify:workflow` bundle, and the CI hygiene job — so `gate check --wiring`
-   sees a registered check on an executing surface (the wire-or-delete meta-gate).
+2. **FR-2**: The weights are configuration, not literals: the script reads
+   `valueScoring.weights` from `workflow.config.json` when present and otherwise uses
+   its documented fallback table. Because the config validator treats unknown keys as
+   errors, the key must also exist in the CLI config surface (spec + types + defaults)
+   or any adopter who sets it breaks every `gate` command. This repo ships no root
+   `workflow.config.json`, so its effective weights are unchanged by this PRD.
+   - **Targets:** `packages/provegate/src/core/config/types.ts`,
+     `packages/provegate/src/core/config/defaults.ts`,
+     `packages/provegate/src/core/config/validate.ts`,
+     `scripts/verify/verify-value-score.mjs`
+3. **FR-3**: A test pins the two copies of the weight table together: the standalone
+   script's fallback must equal `DEFAULT_CONFIG.valueScoring.weights`, and a fixture PRD
+   with a deliberately wrong total must FAIL the check (a check that only passes on good
+   input is not evidence).
+   - **Targets:** `packages/provegate/test/value-score-weights.test.ts` (new)
+4. **FR-4**: Wire the gates: `verify:value-score` and `verify:doc-claims` scripts in
+   `package.json`, membership in the `verify:workflow` bundle, and the CI hygiene job —
+   so `gate check --wiring` sees each registered check on an executing surface (the
+   wire-or-delete meta-gate).
    - **Targets:** `package.json` (`scripts`), `scripts/verify/verify-workflow.mjs`,
      `.github/workflows/` (hygiene job)
-3. **FR-3**: Correct the stale governance claims: `AGENT_BOOTSTRAP.md` durable-artifacts
+5. **FR-5**: Correct the stale governance claims: `AGENT_BOOTSTRAP.md` durable-artifacts
    (line ~128) and value-score (line ~144) sentences, the `STATUS.md` deferral-cap note
    (line ~25), and the `_brain/PROTOCOL.md` optional-tooling sections (~182, ~204). Each
    sentence states the shipped script name and the surface that runs it.
    - **Targets:** `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
-4. **FR-4**: Port the same corrections to the shipped practices copies and reconcile the
+6. **FR-6**: Port the same corrections to the shipped practices copies and reconcile the
    hash ledger in the same change — `brain/PROTOCOL.md`, `templates/AGENT_BOOTSTRAP.template.md`,
    and `templates/STATUS.template.md` are all pack-drift pairs, so a one-sided edit fails
    the bundle.
@@ -145,26 +163,28 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`,
      `packages/provegate/practices/templates/STATUS.template.md`,
      `scripts/verify/pack-drift-ledger.json`
-5. **FR-5**: Add a status banner to `docs/research/provegate-bootstrap/README.md`:
+7. **FR-7**: Add a status banner to `docs/research/provegate-bootstrap/README.md`:
    frozen bootstrap record, extraction complete through PRD-016, live canon is
    `apps/docs`. Mark the roadmap's shipped phases and point the draft whitepaper at the
    published v1.0.
    - **Targets:** `docs/research/provegate-bootstrap/README.md`,
      `docs/research/provegate-bootstrap/oss-extraction-roadmap-2026-07-22.md`,
      `docs/research/provegate-bootstrap/whitepaper-gated-autonomy-2026-07-22.md`
-6. **FR-6**: Add a drift check that fails when a governance doc describes a `verify:*`
-   script as future work while a script of that name is wired in `package.json`. Scope
-   it to the governance file set; keep it a plain scan with a named allowlist for
-   genuinely unshipped work.
-   - **Targets:** `scripts/verify/verify-value-score.mjs` or a sibling check registered
-     the same way (implementer's call, recorded in the task plan)
+8. **FR-8**: Add `scripts/verify/verify-doc-claims.mjs`: fail when a governance doc
+   describes a `verify:*` script as future work while a script of that name is wired in
+   `package.json`. Deliberately narrow — the governance file set only, with a named
+   in-script allowlist for genuinely unshipped work, each allowlist entry carrying the
+   reason it is still future.
+   - **Targets:** `scripts/verify/verify-doc-claims.mjs` (new),
+     `scripts/verify/lib.mjs` (reporter)
 
 ---
 
 ## 5. Non-Goals (Out of Scope)
 
-- Changing the weights, thresholds, or the expand-don't-delete triage rule — this gate
-  enforces the declared arithmetic, it does not re-tune the model.
+- Retuning the default weight values or thresholds, or touching the expand-don't-delete
+  triage rule — this gate enforces the declared arithmetic and makes the weights
+  configurable; it does not change what they are.
 - Retro-scoring or rewriting completed PRDs whose headers are already correct.
 - Memory effectiveness metrics (`gate memory stats`) — a dated deferral, owner-held.
 - Panel-vs-single-reviewer machine rule — needs an ADR before any PRD.
@@ -184,7 +204,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   edit, **When** `pnpm verify:pack-drift` runs, **Then** it fails until the counterpart
   is ported and the ledger reconciled.
 - **Given** the full corrected set, **When** `pnpm verify:workflow` runs, **Then** it
-  exits 0 with the new check included.
+  exits 0 with the new checks included.
+- **Given** a `workflow.config.json` carrying `valueScoring.weights`, **When** any `gate`
+  command loads config, **Then** it resolves normally instead of failing on an unknown
+  key; **and** the recompute uses those weights.
+- **Given** the standalone script's fallback weight table edited away from
+  `DEFAULT_CONFIG`, **When** the test suite runs, **Then** it fails.
 
 ---
 
@@ -206,6 +231,19 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Phase placement.** Register the new check in the phase where its failure should
   surface (the verify-check-phase-placement learning) — it is a Phase 1/2 triage
   invariant, so it belongs on the pre-merge hygiene surface, not late in Phase 4.
+- **Config-borne weights cost a package change.** `validateConfig` reports unknown keys
+  as errors, so `valueScoring` cannot simply appear in an adopter's config — the spec,
+  types, and defaults in `packages/provegate/src/core/config/` must carry it. That is
+  why this PRD is not content-only: it ships a (backward-compatible, additive) package
+  surface change and therefore needs a changeset.
+- **Two copies of the weight table.** The verify scripts are standalone and zero-dep;
+  they cannot import the built package (PRD-016 deliberately left them
+  convention-default). The fallback table in the script and `DEFAULT_CONFIG` are
+  therefore duplicates, and duplicates drift — FR-3 pins them with a test rather than
+  trusting review.
+- **Rollback.** Additive throughout: an absent `valueScoring` key resolves to today's
+  defaults, and removing the two scripts from `package.json` plus the bundle restores
+  the current behavior with no data or artifact migration.
 
 ### Dependencies
 
@@ -217,7 +255,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### In Scope
 
-- [ ] `scripts/verify/verify-value-score.mjs` (new) + bundle/CI registration
+- [ ] `scripts/verify/verify-value-score.mjs`, `scripts/verify/verify-doc-claims.mjs`
+      (new) + bundle/CI registration
+- [ ] `packages/provegate/src/core/config/` — `valueScoring` spec, types, defaults
+- [ ] `packages/provegate/test/value-score-weights.test.ts` (new) + a changeset
 - [ ] `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
 - [ ] `packages/provegate/practices/` counterparts + `pack-drift-ledger.json`
 - [ ] `docs/research/provegate-bootstrap/` status banner + roadmap/whitepaper pointers
@@ -226,12 +267,14 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 9. Open Questions
 
-- [ ] Rounding tolerance for the recompute: exact two-decimal equality, or ±0.005?
-      (Exact is stricter and the declared headers are all two-decimal today.)
-- [ ] Does FR-6's drift check ship here, or is it over-fitting a one-time cleanup?
-      (Owner decision before Phase 2 PASS; dropping it lowers the value score.)
-- [ ] Should the weights live in `workflow.config.json` so adopters can retune them, or
-      stay a script-local constant table until an adopter asks?
+(none) — all three resolved by owner on 2026-07-25.
+
+**Q1 resolved:** exact two-decimal equality, no tolerance band (FR-1).
+**Q2 resolved:** the doc-claims drift check ships, scoped narrowly to the governance
+file set with a reasoned allowlist (FR-8).
+**Q3 resolved:** the weights live in `workflow.config.json` so adopters can retune them
+— which pulls the CLI config surface into scope (FR-2) and the anti-drift test with it
+(FR-3).
 
 ---
 
@@ -259,8 +302,13 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 > `workflow.config.json` `sharedAppendOnly`.
 
 - `scripts/verify/verify-value-score.mjs`
+- `scripts/verify/verify-doc-claims.mjs`
 - `scripts/verify/verify-workflow.mjs`
 - `scripts/verify/pack-drift-ledger.json`
+- `packages/provegate/src/core/config/types.ts`
+- `packages/provegate/src/core/config/defaults.ts`
+- `packages/provegate/src/core/config/validate.ts`
+- `packages/provegate/test/value-score-weights.test.ts`
 - `AGENT_BOOTSTRAP.md`
 - `STATUS.md`
 - `_brain/PROTOCOL.md`
@@ -292,15 +340,19 @@ with a runnable backticked command** (allowlisted prefix, no shell metacharacter
 single line — and never a pipe character inside a backticked command in this table).
 `gate check` lints this section; `gate run` executes it and refuses unsafe rows.
 
-| FR   | Command / Check                                                     | Scope | Notes                                        |
-| ---- | ------------------------------------------------------------------- | ----- | -------------------------------------------- |
-| FR-1 | `node scripts/verify/verify-value-score.mjs`                         | repo  | every PRD header recomputed                  |
-| FR-2 | `pnpm verify:value-score`                                            | repo  | script registered in package.json            |
-| FR-2 | `grep -c value-score scripts/verify/verify-workflow.mjs`             | repo  | member of the verify bundle                  |
-| FR-3 | `pnpm verify:workflow`                                               | repo  | governance docs pass the full bundle         |
-| FR-4 | `pnpm verify:pack-drift`                                             | repo  | pack/live pairs reconciled, ledger updated   |
-| FR-5 | `grep -c "frozen" docs/research/provegate-bootstrap/README.md`       | docs  | status banner present                        |
-| FR-6 | `node scripts/verify/verify-value-score.mjs`                         | repo  | drift scan reports zero stale wave-2 claims  |
+| FR   | Command / Check                                                        | Scope | Notes                                             |
+| ---- | ----------------------------------------------------------------------- | ----- | -------------------------------------------------- |
+| FR-1 | `node scripts/verify/verify-value-score.mjs`                             | repo  | every PRD header recomputed, exact equality        |
+| FR-2 | `grep -c valueScoring packages/provegate/src/core/config/defaults.ts`    | pkg   | config key exists, absent config keeps the default |
+| FR-2 | `grep -c valueScoring packages/provegate/src/core/config/validate.ts`    | pkg   | the key validates instead of erroring as unknown   |
+| FR-3 | `pnpm --filter provegate test test/value-score-weights.test.ts`          | pkg   | fallback pinned to DEFAULT_CONFIG, wrong score fails |
+| FR-4 | `pnpm verify:value-score`                                                | repo  | script registered in package.json                  |
+| FR-4 | `pnpm verify:doc-claims`                                                 | repo  | drift check registered in package.json             |
+| FR-4 | `grep -c value-score scripts/verify/verify-workflow.mjs`                 | repo  | member of the verify bundle                        |
+| FR-5 | `pnpm verify:workflow`                                                   | repo  | governance docs pass the full bundle               |
+| FR-6 | `pnpm verify:pack-drift`                                                 | repo  | pack/live pairs reconciled, ledger updated         |
+| FR-7 | `grep -c frozen docs/research/provegate-bootstrap/README.md`             | docs  | status banner present                              |
+| FR-8 | `node scripts/verify/verify-doc-claims.mjs`                              | repo  | zero stale wave-2 claims about wired scripts       |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -311,8 +363,8 @@ Cross-cutting floor (run before Code Complete):
 
 Hard caps (when your gates manifest configures them):
 
-- Deny test: `scripts/verify/` gains a check — a fixture proving a wrong score FAILS is
-  required; a check that only passes on good input is not evidence.
+- Deny test: `packages/provegate/test/value-score-weights.test.ts` — "a wrong declared
+  total fails the check"; a check that only passes on good input is not evidence.
 - Contract test: n/a — no client→server payload ships
 
 Before Phase 2 PASS, run: `gate check PRD-021`
@@ -332,12 +384,18 @@ rationalize.
 - DO NOT silence the new check by adding a known-red ledger entry instead of fixing a
   wrong header.
 - DO NOT rewrite research-pack content while adding its status banner.
-- DO NOT change the scoring weights or thresholds under cover of this cleanup.
+- DO NOT change the default weight values or thresholds under cover of this cleanup —
+  making them configurable is in scope, retuning them is not.
+- DO NOT let the script's fallback weights and `DEFAULT_CONFIG` diverge; the test pins
+  them, so fix the source, never the assertion.
+- DO NOT add a root `workflow.config.json` just to exercise the new key — this repo's
+  effective weights must stay the defaults.
 
 ---
 
 ## Changelog
 
-| Date       | Author | Changes                                                   |
-| ---------- | ------ | ---------------------------------------------------------- |
-| 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P0-3 and P2-7) |
+| Date       | Author | Changes                                                                        |
+| ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P0-3 and P2-7)                       |
+| 2026-07-25 | Cursor | Owner resolved all three Open Questions: exact equality, narrow doc-claims check, config-borne weights (adds the CLI config surface + anti-drift test, FR count 6 → 8) |
