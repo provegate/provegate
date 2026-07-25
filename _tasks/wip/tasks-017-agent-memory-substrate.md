@@ -144,22 +144,22 @@ and commands it names still exist **before** the dependent task starts (task 0.2
         is rejected, an absolute / `..` / cross-root / symlinked path is rejected with a
         path-tagged message, and an unknown key fails.
 
-- [ ] 3.0 FR-3 — Typed record parser and schema
-  - [ ] 3.1 Implement the supported frontmatter subset in
+- [x] 3.0 FR-3 — Typed record parser and schema
+  - [x] 3.1 Implement the supported frontmatter subset in
         `packages/provegate/src/core/memory/parse.ts`: scalar, folded scalar (`>-`) with
         its body actually read, and inline list. Anything outside the subset fails with a
         path-tagged error — never a silent degrade or a guess.
-  - [ ] 3.2 Implement typed learning validation in the same file: meaningful non-empty
+  - [x] 3.2 Implement typed learning validation in the same file: meaningful non-empty
         `description`, valid `provenance`, `type` ∈ the documented set, `scope`, `status`,
         `superseded-by` required when superseded, and `**Why:**` + `**How to apply:**`
         bodies for `gotcha`/`convention`/`decision`.
-  - [ ] 3.3 Implement ADR validation in the same file: `type: decision` plus the
+  - [x] 3.3 Implement ADR validation in the same file: `type: decision` plus the
         Context / Decision / Consequences / Alternatives sections.
-  - [ ] 3.4 Validate optional `tags` and `watch` as non-empty slug/glob arrays; reuse the
+  - [x] 3.4 Validate optional `tags` and `watch` as non-empty slug/glob arrays; reuse the
         repository containment primitive so a `watch` glob cannot escape the workspace.
-  - [ ] 3.5 Export the typed model through `packages/provegate/src/core/memory/index.ts`
+  - [x] 3.5 Export the typed model through `packages/provegate/src/core/memory/index.ts`
         and `packages/provegate/src/index.ts`, honoring the 2.4 decision.
-  - [ ] 3.6 Add parser tests to `packages/provegate/test/memory.test.ts` covering the
+  - [x] 3.6 Add parser tests to `packages/provegate/test/memory.test.ts` covering the
         positive shapes; the deny cases come from the shared corpus in 4.2 so they cannot
         drift from the standalone verifier's.
 
@@ -328,6 +328,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task | Notes |
 | ---------- | ---- | ----- |
+| 2026-07-25 | 3.0 | FR-3 parser landed. The subset was derived from the corpus, not guessed: an inventory of all 44 records and templates found exactly four frontmatter forms (scalar, folded `>-` with continuations, inline list, `#` comment) and nothing else, so everything outside them fails loud. Two design calls came out of the tests. A `#` opens a comment only when whitespace precedes it — YAML's rule, borrowed rather than invented, because two implementations must agree on where a value ends. And an ADR is exempt from `**Why:**`/`**How to apply:**`: its four required sections ARE its rationale, so demanding both shapes would make every ADR argue twice. The parser accepts all 44 live records with zero issues, which is task 5.3's assertion arriving early. 2.2 closed here — `containedPath` is imported from the init module rather than reimplemented; only its message is re-tagged, since the risk in duplication is the algorithm drifting, not the wording. 538 tests green. |
 | 2026-07-25 | 2.0 | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates. |
 | 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red. |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-017 (Approved), readiness iteration 3 PASS 8.425, and watch items W10–W13, after owner Go. `infra` skeleton: Migration & Rollback is its own parent (task 6.0) because deployment ordering carries 20% of this class's readiness weight. No implementation started. |

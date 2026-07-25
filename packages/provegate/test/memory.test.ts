@@ -6,6 +6,7 @@ import {
   validateResolvedConfig,
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
+import { validateRecord } from '../src/core/memory/index.js';
 
 /**
  * PRD-017 FR-2: the memory configuration surface. Two properties carry the
@@ -132,5 +133,195 @@ describe('memory enablement preconditions (FR-2)', () => {
 
   it('an empty entrypoint list is legal while disabled', () => {
     expect(resolved({ enabled: false, entrypoints: [] })).toEqual([]);
+  });
+});
+
+/**
+ * PRD-017 FR-3: the record parser. The headline case is the empty folded
+ * description — the previous validator stored the literal `>-` and never read
+ * the fold at all, so no folded description in the repository was ever checked.
+ */
+describe('frontmatter subset parser (FR-3)', () => {
+  const fm = (lines: string[], body = '\n**Why:** w\n**How to apply:** h\n'): string =>
+    `---\n${lines.join('\n')}\n---\n${body}`;
+
+  const base = [
+    'name: sample',
+    'description: a real one-line description',
+    'type: gotcha',
+    'scope: workflow',
+    'status: active',
+  ];
+
+  const check = (lines: string[], body?: string, slug = 'sample') =>
+    validateRecord(fm(lines, body), 'x.md', slug);
+
+  const messages = (lines: string[], body?: string, slug?: string) =>
+    check(lines, body, slug).issues.map((i) => `${i.path} ${i.message}`);
+
+  it('reads a folded scalar body instead of storing the fold marker', () => {
+    const { record, issues } = check([
+      'name: sample',
+      'description: >-',
+      '  first line of the fold',
+      '  second line of the fold',
+      'type: gotcha',
+      'scope: workflow',
+      'status: active',
+    ]);
+    expect(issues).toEqual([]);
+    expect(record?.description).toBe('first line of the fold second line of the fold');
+  });
+
+  it('rejects a folded scalar with an empty body', () => {
+    // The exact record the old validator accepted.
+    expect(
+      messages([
+        'name: sample',
+        'description: >-',
+        'type: gotcha',
+        'scope: workflow',
+        'status: active',
+      ]).join('|'),
+    ).toContain('x.md:description missing or empty');
+  });
+
+  it('parses inline lists and distinguishes empty links from empty selectors', () => {
+    expect(check([...base, 'links: [a-slug, b-slug]']).record?.links).toEqual(['a-slug', 'b-slug']);
+    expect(check([...base, 'links: []']).issues).toEqual([]);
+    // A record claiming `tags: []` claims a selector it does not have.
+    expect(messages([...base, 'tags: []']).join('|')).toContain('must not be empty when present');
+    expect(messages([...base, 'watch: []']).join('|')).toContain('must not be empty when present');
+  });
+
+  it('fails loud on every unsupported YAML form rather than guessing', () => {
+    expect(messages([...base, 'links:', '  - a-slug']).join('|')).toContain('block list');
+    expect(messages([...base, 'description2: |', '  literal']).join('|')).toContain('unknown key');
+    expect(messages([...base, 'watch: |', '  literal']).join('|')).toContain(
+      'literal block scalar',
+    );
+    expect(messages(['nested:', '  key: value', ...base]).join('|')).toContain('unknown key');
+    expect(messages([...base, 'not a mapping line']).join('|')).toContain('unparseable');
+  });
+
+  it('refuses a duplicate key instead of letting the last one win', () => {
+    expect(messages([...base, 'description: a second one']).join('|')).toContain(
+      'x.md:description duplicate key',
+    );
+  });
+
+  it('refuses an unknown key — a typo is not an extension', () => {
+    expect(messages([...base, 'provanance: seed']).join('|')).toContain('x.md:provanance unknown');
+  });
+
+  it('treats a whitespace-preceded `#` as a comment, matching YAML', () => {
+    // Both parser implementations must agree on where a value ends, so the rule
+    // is YAML's rather than a house variant: ` #` opens a comment, `x#y` does not.
+    expect(
+      check([
+        'name: sample',
+        'description: token#fragment is part of the value  # this part is not',
+        'type: gotcha',
+        'scope: workflow',
+        'status: active',
+      ]).record?.description,
+    ).toBe('token#fragment is part of the value');
+  });
+});
+
+describe('record schema (FR-3)', () => {
+  const fm = (lines: string[], body = '\n**Why:** w\n**How to apply:** h\n'): string =>
+    `---\n${lines.join('\n')}\n---\n${body}`;
+  const base = [
+    'name: sample',
+    'description: a real one-line description',
+    'type: gotcha',
+    'scope: workflow',
+    'status: active',
+  ];
+  const messages = (lines: string[], body?: string, slug = 'sample', isAdr = false) =>
+    validateRecord(fm(lines, body), 'x.md', slug, { isAdr })
+      .issues.map((i) => `${i.path} ${i.message}`)
+      .join('|');
+
+  it('requires the name to match the filename slug', () => {
+    expect(messages(base, undefined, 'other-slug')).toContain('does not match the filename slug');
+  });
+
+  it('rejects placeholder values', () => {
+    expect(messages(['name: sample', 'description: <one line>', ...base.slice(2)])).toContain(
+      'placeholder',
+    );
+  });
+
+  it('requires rationale sections for gotcha, convention, and decision', () => {
+    expect(messages(base, '\nbody with no sections\n')).toContain('requires a **Why:** section');
+    expect(messages(base, '\n**Why:** w\n')).toContain('requires a **How to apply:** section');
+  });
+
+  it('exempts a reference record from rationale sections', () => {
+    expect(
+      validateRecord(
+        fm(
+          ['name: sample', 'description: a pointer', 'type: reference', ...base.slice(3)],
+          '\nSee the dashboard.\n',
+        ),
+        'x.md',
+        'sample',
+      ).issues,
+    ).toEqual([]);
+  });
+
+  it('ties supersession to its target in both directions', () => {
+    expect(messages([...base.slice(0, 4), 'status: superseded'])).toContain(
+      'required when status is superseded',
+    );
+    expect(messages([...base, 'superseded-by: other-slug'])).toContain('status is not superseded');
+  });
+
+  it('enforces the ADR shape: decision type, name pattern, and four sections', () => {
+    const adrBody =
+      '\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n';
+    const adrLines = [
+      'name: ADR-0001-a-decision',
+      'description: a real description',
+      'type: decision',
+      'scope: workflow',
+      'status: active',
+    ];
+    expect(
+      validateRecord(fm(adrLines, adrBody), 'x.md', 'ADR-0001-a-decision', { isAdr: true }).issues,
+    ).toEqual([]);
+    expect(messages(adrLines, '\n## Context\nc\n', 'ADR-0001-a-decision', true)).toContain(
+      "requires a '## Decision' section",
+    );
+    expect(
+      messages(
+        [
+          'name: ADR-0001-a-decision',
+          ...adrLines.slice(1, 2),
+          'type: gotcha',
+          ...adrLines.slice(3),
+        ],
+        adrBody,
+        'ADR-0001-a-decision',
+        true,
+      ),
+    ).toContain('must be type: decision');
+  });
+
+  it('refuses a watch glob that escapes the workspace', () => {
+    const issues = validateRecord(fm([...base, 'watch: [../outside/**]']), 'x.md', 'sample', {
+      root: process.cwd(),
+    }).issues;
+    expect(issues.map((i) => i.message).join('|')).toContain('escapes the workspace');
+  });
+
+  it('accepts a contained watch glob', () => {
+    expect(
+      validateRecord(fm([...base, 'watch: [packages/provegate/src/**]']), 'x.md', 'sample', {
+        root: process.cwd(),
+      }).issues,
+    ).toEqual([]);
   });
 });
