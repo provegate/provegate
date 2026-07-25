@@ -123,7 +123,10 @@ describe('single-package support (PRD-015)', () => {
     expect(existsSync(join(root, 'gates.manifest.json'))).toBe(true);
     for (const artifact of Object.values(DEFAULT_CONFIG.dirs.artifacts)) {
       for (const state of DEFAULT_CONFIG.dirs.states) {
-        expect(existsSync(join(root, artifact.dir, state, '.gitkeep')), `${artifact.dir}/${state}`).toBe(true);
+        expect(
+          existsSync(join(root, artifact.dir, state, '.gitkeep')),
+          `${artifact.dir}/${state}`,
+        ).toBe(true);
       }
     }
 
@@ -144,7 +147,9 @@ describe('single-package support (PRD-015)', () => {
     // Default `pnpm <script>` commands resolve to the repo's own scripts…
     expect(auditWiring(DEFAULT_CONFIG, defaultManifest(DEFAULT_CONFIG), root).issues).toEqual([]);
     // …and allowlisted non-pnpm execs are accepted (execs, not package scripts).
-    expect(auditWiring(singlePkgConfig(), defaultManifest(singlePkgConfig()), root).issues).toEqual([]);
+    expect(auditWiring(singlePkgConfig(), defaultManifest(singlePkgConfig()), root).issues).toEqual(
+      [],
+    );
   });
 
   it('FR-1/W3: the four NON-pnpm floor commands actually execute in the gate chain', () => {
@@ -191,7 +196,10 @@ describe('single-package support (PRD-015)', () => {
     // The floor is real: a failing command halts the chain at phase 4 (this is
     // exactly what the config-only proof missed — a dead command cannot fail).
     expect(outcome.stopped?.phase).toBe('4 Implementation');
-    expect(outcome.results).toContainEqual(['4 Implementation: node -e "process.exit(1)"', 'FAILED']);
+    expect(outcome.results).toContainEqual([
+      '4 Implementation: node -e "process.exit(1)"',
+      'FAILED',
+    ]);
   });
 
   it('FR-1: the local no-ff merge lands in a single-package single-checkout repo — nothing pushed', () => {

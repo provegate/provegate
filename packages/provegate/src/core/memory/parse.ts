@@ -193,13 +193,17 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
     // exactly the shape the shipped template hands an author to copy.
     const raw = stripComment(kv[2]!);
 
+    // Reported as STRUCTURE, not as the key: these are problems with the shape
+    // of the frontmatter rather than with a value, and tagging them by key made
+    // the coverage matrix name a field that varies per case. The message still
+    // names the key, which is what a repair needs.
     if (values.has(key)) {
       // Last-wins is the classic silent corruption: two descriptions, one read.
-      issues.push({ path: at(key), message: 'duplicate key' });
+      issues.push({ path: at('structure'), message: `duplicate key '${key}'`, entry: key });
       continue;
     }
     if (!KNOWN_KEYS.has(key)) {
-      issues.push({ path: at(key), message: 'unknown key' });
+      issues.push({ path: at('structure'), message: `unknown key '${key}'`, entry: key });
       continue;
     }
 
@@ -360,8 +364,19 @@ export function validateRecord(
     }
     if (key !== 'watch') {
       for (const entry of list) {
-        if (!SLUG.test(entry) && !ADR_NAME.test(entry)) {
-          issues.push({ path: at(key), message: `'${entry}' is not a valid record slug`, entry });
+        // `links` may name an ADR; a TAG is a lowercase kebab slug and nothing
+        // else. Sharing one branch let `tags: [ADR-0001-x]` through on both
+        // sides, which conformance cannot expose because both were wrong.
+        const ok = key === 'tags' ? SLUG.test(entry) : SLUG.test(entry) || ADR_NAME.test(entry);
+        if (!ok) {
+          issues.push({
+            path: at(key),
+            message:
+              key === 'tags'
+                ? `'${entry}' is not a valid tag slug`
+                : `'${entry}' is not a valid record slug`,
+            entry,
+          });
         }
       }
     }
@@ -407,20 +422,31 @@ export function validateRecord(
   // no `why`; and an ADR, whose four required sections below ARE its rationale —
   // demanding both shapes would make every ADR carry the same argument twice.
   if (type !== null && type !== 'reference' && !isAdr) {
-    if (!/\*\*Why:\*\*/.test(body)) {
-      issues.push({ path: at('body'), message: `type '${type}' requires a **Why:** section` });
-    }
-    if (!/\*\*How to apply:\*\*/.test(body)) {
-      issues.push({
-        path: at('body'),
-        message: `type '${type}' requires a **How to apply:** section`,
-      });
+    for (const marker of ['Why', 'How to apply'] as const) {
+      const found = new RegExp(
+        `\\*\\*${marker}:\\*\\*([\\s\\S]*?)(?=\\n\\s*\\n|\\*\\*[A-Z]|$)`,
+      ).exec(body);
+      if (found === null) {
+        issues.push({
+          path: at('body'),
+          message: `type '${type}' requires a **${marker}:** section`,
+        });
+      } else if (found[1]!.trim().length === 0) {
+        // A marker with nothing after it is the ceremonial record this
+        // validator exists to reject — the heading is not the rationale.
+        issues.push({ path: at('body'), message: `the **${marker}:** section is empty` });
+      }
     }
   }
   if (isAdr) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
-      if (!new RegExp(`^##\\s+${heading}`, 'mi').test(body)) {
+      const found = new RegExp(`^##\\s+${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'mi').exec(
+        body,
+      );
+      if (found === null) {
         issues.push({ path: at('body'), message: `ADR requires a '## ${heading}' section` });
+      } else if (found[1]!.trim().length === 0) {
+        issues.push({ path: at('body'), message: `the '## ${heading}' section is empty` });
       }
     }
   }

@@ -93,8 +93,16 @@ describe('findConflicts', () => {
   });
 
   it('catches a sibling wildcard pair over a greenfield dir (zero tracked files)', () => {
-    const a: SurfacedLock = { prd: 'PRD-001', phase: 'Phase 4', ownedPaths: ['greenfield/api/*.ts'] };
-    const b: SurfacedLock = { prd: 'PRD-002', phase: 'Phase 4', ownedPaths: ['greenfield/api/users.ts'] };
+    const a: SurfacedLock = {
+      prd: 'PRD-001',
+      phase: 'Phase 4',
+      ownedPaths: ['greenfield/api/*.ts'],
+    };
+    const b: SurfacedLock = {
+      prd: 'PRD-002',
+      phase: 'Phase 4',
+      ownedPaths: ['greenfield/api/users.ts'],
+    };
     const conflicts = findConflicts(cfg, [a, b], FILES);
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]!.shared).toEqual(['greenfield/api/*.ts ~ greenfield/api/users.ts']);

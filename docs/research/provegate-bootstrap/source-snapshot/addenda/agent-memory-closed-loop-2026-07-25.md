@@ -208,9 +208,9 @@ These bind every part of the extension and are not negotiable per work item.
    installation. A repository that has not opted in behaves exactly as it did before.
 5. **Never overwrite.** Installation is additive. Existing configuration, manifests, agent
    entrypoints, package manifests, and CI files are never edited on an adopter's behalf.
-6. **Supported subset, not general parsing.** The record format is an explicitly documented
-   subset. Anything outside it fails with a path-tagged error rather than being guessed —
-   a tolerant parser and a strict one disagreeing about the same file is the failure this
+6. **Supported subset, not general parsing.** The record format is the subset specified in
+   §12. Anything outside it fails with a path-tagged error rather than being guessed — a
+   tolerant parser and a strict one disagreeing about the same file is the failure this
    prevents.
 7. **One semantic contract, two implementations.** The typed parser and the standalone
    validator cannot import each other, because the validator runs in repositories where the
@@ -225,3 +225,77 @@ The seven-phase lifecycle, the gate model, the artifact directories, the review 
 value-scoring triage, and the acceptance model are all untouched. Repositories that do not
 enable memory keep their current behavior byte for byte. Historical work items are not
 rewritten to manufacture retrospective compliance; they are simply outside the contract.
+
+## 12. Record format — the authorized subset
+
+Shipped schema documentation must trace to this section. It is stated here, rather than
+left to an implementation, because two parsers implement it and the one thing they cannot
+be allowed to do is disagree.
+
+### Frontmatter forms
+
+Exactly four, delimited by a `---` fence:
+
+| Form          | Example                                                   |
+| ------------- | --------------------------------------------------------- |
+| scalar        | `type: gotcha`                                            |
+| folded scalar | `description: >-` followed by indented continuation lines |
+| inline list   | `links: [a-slug, b-slug]`                                 |
+| comment       | a whole line starting with `#`, or a trailing ` # …`      |
+
+A `#` opens a comment when whitespace precedes it or when it opens the value — YAML's own
+rule, borrowed rather than invented, so two implementations agree on where a value ends.
+The comment is removed BEFORE the form is classified; otherwise `description: >- # …` reads
+as a scalar and its continuation line fails as an orphan indent, which is the shape a
+template hands an author to copy.
+
+Everything else fails, naming the field or line: block sequences, nested maps, literal block
+scalars and any block-scalar modifier (`|`, `>+`, `>2`), duplicate keys, unknown keys.
+Duplicate and unknown keys are reported as structural problems naming the offending key.
+
+### Fields
+
+`name`, `description`, `type`, `scope`, `status` are required and may not be empty or
+placeholder text. `name` equals the filename slug. A slug is lowercase kebab-case —
+segments of `[a-z0-9]` joined by single hyphens, so `-`, `foo-`, and `--` are not slugs —
+and an ADR filename is `ADR-NNNN-<slug>` whose suffix obeys the same rule.
+
+Learnings use `active | superseded`; ADRs use `proposed | accepted | superseded`. The two
+vocabularies stay separate: merging them would quietly accept `status: active` on a
+decision. `status: superseded` requires `superseded-by`, `superseded-by` requires that
+status, and its value must be a valid record slug.
+
+`links` may name records or ADRs and may be empty. `tags` are lowercase kebab slugs only —
+never an ADR name — and `watch` holds globs; both are invalid when present and empty.
+`provenance` is optional, non-empty, and not placeholder text; the exact value
+`workflow-seed` is reserved for content shipped with the practices pack.
+
+`gotcha`, `convention`, and `decision` records carry `**Why:**` and `**How to apply:**`
+sections, and those sections carry CONTENT — a marker with nothing after it is the
+ceremonial record this schema exists to reject. `reference` records carry neither. An ADR's
+four sections (Context, Decision, Consequences, Alternatives) are its rationale and must
+likewise be non-empty.
+
+### Index
+
+One pointer per record, in bullet form: `- [title](learnings/<slug>.md) — hook`. Only that
+form counts, so a prose mention cannot satisfy the pointer requirement while escaping the
+hook rules. No duplicates, no dangling pointers, no orphan records. The hook — the text
+after the link, excluding link markup — is limited to 120 characters, because the index is
+read on every task and its cost is paid constantly. No public pointer may resolve under
+`private/`, including through character references, percent-encoding, a `file:` URL, or a
+case-variant segment.
+
+## 13. What "default-off" covers
+
+The guarantee is about CONFIGURATION-DRIVEN behavior: with memory absent or disabled, the
+gate chain, the runner, the CLI, and config loading behave exactly as before, and nothing
+infers enablement from a store existing.
+
+It does **not** cover the strictness of the record validator itself. Hardening that
+validator is the substrate's purpose, and it runs wherever an adopter has wired it, without
+consulting memory configuration — so a repository that already validates its store will see
+records rejected that the previous, weaker validator accepted. Chiefly: a folded description
+was never actually read, so no folded description was ever checked; rationale markers were
+accepted empty; malformed `superseded-by` and unknown keys passed. That is a deliberate,
+breaking improvement, and it belongs here rather than being discovered on upgrade.

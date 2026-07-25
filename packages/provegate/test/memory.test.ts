@@ -227,12 +227,14 @@ describe('frontmatter subset parser (FR-3)', () => {
 
   it('refuses a duplicate key instead of letting the last one win', () => {
     expect(messages([...base, 'description: a second one']).join('|')).toContain(
-      'x.md:description duplicate key',
+      "x.md:structure duplicate key 'description'",
     );
   });
 
   it('refuses an unknown key — a typo is not an extension', () => {
-    expect(messages([...base, 'provanance: seed']).join('|')).toContain('x.md:provanance unknown');
+    expect(messages([...base, 'provanance: seed']).join('|')).toContain(
+      "x.md:structure unknown key 'provanance'",
+    );
   });
 
   it('treats a whitespace-preceded `#` as a comment, matching YAML', () => {
@@ -380,19 +382,51 @@ describe('record conformance corpus (FR-4, W12)', () => {
     return field.startsWith('line ') ? 'structure' : field;
   };
 
-  it('binds every matrix cell to at least one case', () => {
+  it('binds every matrix cell to exactly one case, and every claim to real behaviour', () => {
     // Counting cases proves nothing: deleting every watch case while adding
     // filler elsewhere would keep the totals up. Each case CLAIMS the cells it
     // exercises, and every declared cell must be claimed by someone — so a new
     // rule with no case, or a deleted case, fails here rather than silently
     // shrinking what the two parsers are held to.
-    const claimed = new Set(corpus.cases.flatMap((c) => c.matrix ?? []));
+    const claims: [string, string][] = corpus.cases.flatMap((c) =>
+      (c.matrix ?? []).map((cell): [string, string] => [c.id, cell]),
+    );
     const declared = Object.entries(corpus._matrix).flatMap(([field, modes]) =>
       modes.map((mode) => `${field}:${mode}`),
     );
+    const claimed = new Set(claims.map(([, cell]) => cell));
+
+    // Both directions of membership: no unclaimed cell, no undeclared claim.
     expect(declared.filter((cell) => !claimed.has(cell))).toEqual([]);
-    // And no case may claim a cell the matrix does not declare.
     expect([...claimed].filter((cell) => !declared.includes(cell))).toEqual([]);
+
+    // EXACTLY one case per cell. With duplicates allowed, deleting a case can
+    // leave every cell still claimed, so the corpus shrinks in silence — which
+    // is the same vacuous coverage this file exists to prevent, one level up.
+    const perCell = new Map<string, string[]>();
+    for (const [id, cell] of claims) perCell.set(cell, [...(perCell.get(cell) ?? []), id]);
+    expect([...perCell].filter(([, ids]) => ids.length > 1)).toEqual([]);
+
+    // A claim must match BEHAVIOUR, not just be written down; otherwise a case
+    // can claim any cell and the matrix proves nothing. Both directions carry
+    // weight: a deny cell must actually fail on the field it names, and a cell
+    // asserting something is LEGAL must produce no issues at all.
+    for (const [id, cell] of claims) {
+      const c = corpus.cases.find((x) => x.id === id)!;
+      const failing = new Set(
+        validateRecord(c.content, 'x.md', c.slug, { isAdr: c.isAdr }).issues.map((i) =>
+          tsField(i.path),
+        ),
+      );
+      if (c.valid) {
+        expect([...failing], `${id} claims ${cell} but is not accepted`).toEqual([]);
+      } else {
+        expect(
+          failing.has(cell.split(':')[0]!),
+          `${id} claims ${cell} but does not fail on that field`,
+        ).toBe(true);
+      }
+    }
   });
 
   it('the typed parser reaches the expected verdict on every case', () => {

@@ -66,9 +66,9 @@ if (!existsSync(indexPath)) {
   // `see [record](learnings/foo.md)` used to satisfy the orphan check while the
   // hook loop below ignored it — so a record could be "indexed" by a line that
   // carries no hook and was never held to the length limit.
-  const pointers = [
-    ...indexText.matchAll(/^- \[[^\]]*\]\(((?:learnings|adr)\/[^)]+\.md)\)/gm),
-  ].map((m) => m[1]);
+  const pointers = [...indexText.matchAll(/^- \[[^\]]*\]\(((?:learnings|adr)\/[^)]+\.md)\)/gm)].map(
+    (m) => m[1],
+  );
   const counts = new Map();
   for (const p of pointers) counts.set(p, (counts.get(p) ?? 0) + 1);
   for (const [p, n] of counts) {
@@ -118,7 +118,10 @@ if (!existsSync(indexPath)) {
     } catch {
       /* a malformed escape stays as written — still worth checking */
     }
-    if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')) continue; // external / anchor
+    // `file:` resolves LOCALLY, so skipping it as an "external scheme" was a
+    // documented way to publish a private record from the always-loaded index.
+    if (/^file:/i.test(target)) target = target.replace(/^file:(\/\/)?/i, '');
+    else if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('#')) continue; // external / anchor
     // Case-insensitive: the default macOS and Windows filesystems resolve
     // `PRIVATE/` to the same directory, so an exact-case check is a boundary
     // that holds on the CI host and not on the developer's laptop.

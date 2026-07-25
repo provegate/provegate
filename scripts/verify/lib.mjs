@@ -72,12 +72,13 @@ export function parseRecordFrontmatter(content) {
     // continuation line fail as an orphan indent — the exact shape the shipped
     // template hands an author to copy.
     const raw = stripComment(kv[2]);
+    // Reported as STRUCTURE, not as the key: a shape problem, not a value one.
     if (values.has(key)) {
-      issues.push({ field: key, message: 'duplicate key' });
+      issues.push({ field: 'structure', message: `duplicate key '${key}'`, entry: key });
       return;
     }
     if (!KNOWN_KEYS.has(key)) {
-      issues.push({ field: key, message: 'unknown key' });
+      issues.push({ field: 'structure', message: `unknown key '${key}'`, entry: key });
       return;
     }
     if (raw === '>-' || raw === '>') {
@@ -264,8 +265,17 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
       }
     } else {
       for (const entry of entries) {
-        if (!SLUG_RE.test(entry) && !ADR_RE.test(entry)) {
-          issues.push({ field: key, message: `'${entry}' is not a valid record slug`, entry });
+        // `links` may name an ADR; a TAG is a lowercase kebab slug and nothing else.
+        const ok = key === 'tags' ? SLUG_RE.test(entry) : SLUG_RE.test(entry) || ADR_RE.test(entry);
+        if (!ok) {
+          issues.push({
+            field: key,
+            message:
+              key === 'tags'
+                ? `'${entry}' is not a valid tag slug`
+                : `'${entry}' is not a valid record slug`,
+            entry,
+          });
         }
       }
     }
@@ -285,24 +295,31 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
 
   // `reference` has no `why`; an ADR's four sections ARE its rationale.
   if (type !== null && type !== 'reference' && !isAdr) {
-    if (!/\*\*Why:\*\*/.test(body)) {
-      issues.push({ field: 'body', message: `type '${type}' requires a **Why:** section` });
-    }
-    if (!/\*\*How to apply:\*\*/.test(body)) {
-      issues.push({
-        field: 'body',
-        message: `type '${type}' requires a **How to apply:** section`,
-      });
+    for (const marker of ['Why', 'How to apply']) {
+      const found = new RegExp(
+        `\\*\\*${marker}:\\*\\*([\\s\\S]*?)(?=\\n\\s*\\n|\\*\\*[A-Z]|$)`,
+      ).exec(body);
+      if (found === null) {
+        issues.push({ field: 'body', message: `type '${type}' requires a **${marker}:** section` });
+      } else if (found[1].trim().length === 0) {
+        // A marker with nothing after it is the ceremonial record this
+        // validator exists to reject — the heading is not the rationale.
+        issues.push({ field: 'body', message: `the **${marker}:** section is empty` });
+      }
     }
   }
   if (isAdr) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
-      if (!new RegExp(`^##\\s+${heading}`, 'mi').test(body)) {
+      const found = new RegExp(`^##\\s+${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'mi').exec(
+        body,
+      );
+      if (found === null) {
         issues.push({ field: 'body', message: `ADR requires a '## ${heading}' section` });
+      } else if (found[1].trim().length === 0) {
+        issues.push({ field: 'body', message: `the '## ${heading}' section is empty` });
       }
     }
   }
-
   return { issues, values, body };
 }
 

@@ -258,8 +258,7 @@ describe('claimPrd (FR-2, W3)', () => {
     // quarantine validation must catch.
     const result = claimPrd(cfg, root, id, {
       steal: true,
-      raceWindow: () =>
-        foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']),
+      raceWindow: () => foreignLease(root, 'prd-094-sleeper.json', 'PRD-094', ['src/patient/**']),
     });
     expect(result.ok).toBe(false);
     expect(result.issues.join(' ')).toContain('victims restored');

@@ -90,8 +90,8 @@ Link related records inline with [[absence-must-be-asserted]].
 
 ### Supported frontmatter subset
 
-Frontmatter is parsed as an explicitly documented subset, not as general YAML. Four forms
-exist:
+Frontmatter is parsed as the subset authorized in the source addendum (§12), not as
+general YAML. Four forms exist:
 
 | Form          | Example                                                   |
 | ------------- | --------------------------------------------------------- |

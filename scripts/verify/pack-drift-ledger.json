@@ -16,8 +16,8 @@
   "pairs": {
     "brain/PROTOCOL.md": {
       "dest": "_brain/PROTOCOL.md",
-      "pack": "6e310641c6346bc8",
-      "repo": "5271b4f0a410d093"
+      "pack": "4bdf83ff003b2c3f",
+      "repo": "f483d5fce5e19fe4"
     },
     "brain/README.md": {
       "dest": "_brain/README.md",
@@ -99,13 +99,13 @@
     },
     "verify/lib.mjs": {
       "dest": "scripts/verify/lib.mjs",
-      "pack": "78bf3f517fdfd08e",
-      "repo": "c4355bb5ca7e3878"
+      "pack": "70c0733847937a95",
+      "repo": "a21e5df5e371e179"
     },
     "verify/verify-brain.mjs": {
       "dest": "scripts/verify/verify-brain.mjs",
-      "pack": "1b5681f0b0ca8149",
-      "repo": "724bec1589fb0187"
+      "pack": "c7a28d8abd94b633",
+      "repo": "4544bc581e2d1aff"
     },
     "verify/verify-review-artifact.mjs": {
       "dest": "scripts/verify/verify-review-artifact.mjs",

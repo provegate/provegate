@@ -26,37 +26,38 @@
   ],
   "_matrix": {
     "structure": [
-      "missing fence",
-      "duplicate key",
-      "unknown key",
       "block list",
-      "literal block",
-      "nested map",
-      "unparseable line",
+      "block scalar indent modifier",
+      "block scalar keep modifier",
       "comment before form",
-      "block scalar modifier"
+      "duplicate key",
+      "literal block",
+      "missing fence",
+      "nested map",
+      "unknown key",
+      "unparseable line"
     ],
     "name": [
-      "missing",
-      "slug mismatch",
-      "not kebab-case",
       "ADR pattern",
+      "ADR suffix kebab",
       "boundary hyphen",
-      "ADR suffix kebab"
+      "missing",
+      "not kebab-case",
+      "slug mismatch"
     ],
-    "description": ["missing", "empty fold", "placeholder"],
-    "type": ["missing", "out of set", "ADR must be decision"],
+    "description": ["empty fold", "missing", "placeholder"],
+    "type": ["ADR must be decision", "missing", "out of set"],
     "scope": ["out of set"],
-    "status": ["out of set", "superseded without target", "ADR vocabulary vs learning vocabulary"],
+    "status": ["ADR rejects a learning status", "learning rejects an ADR status", "out of set"],
     "superseded-by": [
+      "invalid slug",
       "missing when superseded",
       "present when not superseded",
-      "wrong form",
-      "invalid slug"
+      "wrong form"
     ],
     "provenance": ["placeholder", "wrong form"],
-    "links": ["invalid slug", "empty is legal"],
-    "tags": ["empty when present", "invalid slug"],
+    "links": ["ADR name is legal", "empty is legal", "invalid slug"],
+    "tags": ["ADR name is not a tag", "empty when present", "invalid slug"],
     "watch": [
       "UNC",
       "absolute",
@@ -69,10 +70,14 @@
       "traversal anywhere"
     ],
     "body": [
-      "missing Why",
-      "missing How to apply",
+      "ADR empty section",
       "ADR missing a required section",
+      "empty How to apply",
+      "empty Why",
+      "missing How to apply",
+      "missing Why",
       "reference exempt",
+      "wikilink boundary hyphen",
       "wikilink slug"
     ]
   },
@@ -175,7 +180,7 @@
       "isAdr": false,
       "valid": false,
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ndescription: a second description\n---\n\n**Why:** w\n**How to apply:** h\n",
-      "fields": ["description"],
+      "fields": ["structure"],
       "matrix": ["structure:duplicate key"]
     },
     {
@@ -184,7 +189,7 @@
       "isAdr": false,
       "valid": false,
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nprovanance: workflow-seed\n---\n\n**Why:** w\n**How to apply:** h\n",
-      "fields": ["provanance"],
+      "fields": ["structure"],
       "matrix": ["structure:unknown key"]
     },
     {
@@ -211,7 +216,7 @@
       "isAdr": false,
       "valid": false,
       "content": "---\nnested:\n  key: value\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
-      "fields": ["nested"],
+      "fields": ["structure"],
       "matrix": ["structure:nested map"]
     },
     {
@@ -312,7 +317,7 @@
       "valid": false,
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\n---\n\n**Why:** w\n**How to apply:** h\n",
       "fields": ["superseded-by"],
-      "matrix": ["status:superseded without target"]
+      "matrix": ["superseded-by:missing when superseded"]
     },
     {
       "id": "superseded-by-without-status",
@@ -438,7 +443,7 @@
       "fields": ["status"],
       "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: active\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n",
       "note": "`active` is a learning status; an ADR must not borrow it",
-      "matrix": ["status:ADR vocabulary vs learning vocabulary"]
+      "matrix": ["status:ADR rejects a learning status"]
     },
     {
       "id": "learning-status-from-adr-vocabulary",
@@ -447,7 +452,7 @@
       "valid": false,
       "fields": ["status"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: accepted\n---\n\n**Why:** w\n**How to apply:** h\n",
-      "matrix": ["status:ADR vocabulary vs learning vocabulary"]
+      "matrix": ["status:learning rejects an ADR status"]
     },
     {
       "id": "valid-template-shaped-record",
@@ -514,7 +519,7 @@
       "fields": ["superseded-by"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: superseded\nsuperseded-by: [newer-slug]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "a list here used to read as absent, so the superseded check passed",
-      "matrix": ["superseded-by:missing when superseded", "superseded-by:wrong form"]
+      "matrix": ["superseded-by:wrong form"]
     },
     {
       "id": "tags-invalid-slug",
@@ -571,7 +576,7 @@
       "isAdr": false,
       "valid": false,
       "fields": ["body"],
-      "matrix": ["body:wikilink slug"],
+      "matrix": ["body:wikilink boundary hyphen"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\nsee [[foo-]]\n\n**Why:** w\n**How to apply:** h\n"
     },
     {
@@ -580,7 +585,7 @@
       "isAdr": false,
       "valid": false,
       "fields": ["description"],
-      "matrix": ["structure:block scalar modifier"],
+      "matrix": ["structure:block scalar keep modifier"],
       "content": "---\nname: sample\ndescription: >+\n  folded with a keep modifier\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "`>+` and `>2` are YAML block-scalar forms outside the documented subset"
     },
@@ -590,7 +595,7 @@
       "isAdr": false,
       "valid": false,
       "fields": ["description"],
-      "matrix": ["structure:block scalar modifier"],
+      "matrix": ["structure:block scalar indent modifier"],
       "content": "---\nname: sample\ndescription: >2\n  folded with an indent modifier\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:** h\n"
     },
     {
@@ -648,6 +653,52 @@
       "matrix": [],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [packages/**/src/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "a globstar spanning depths is legal; its shape is what is checked"
+    },
+    {
+      "id": "empty-why-section",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:empty Why"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:**\n**How to apply:** h\n",
+      "note": "a marker with nothing after it is the ceremonial record the schema rejects"
+    },
+    {
+      "id": "empty-how-section",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:empty How to apply"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\n---\n\n**Why:** w\n**How to apply:**\n"
+    },
+    {
+      "id": "adr-empty-section",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": false,
+      "fields": ["body"],
+      "matrix": ["body:ADR empty section"],
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\n\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "tags-adr-name",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["tags"],
+      "matrix": ["tags:ADR name is not a tag"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\ntags: [ADR-0001-x]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "links may name an ADR; a tag is a lowercase kebab slug and nothing else"
+    },
+    {
+      "id": "valid-links-adr-name",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "matrix": ["links:ADR name is legal"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nlinks: [ADR-0001-x]\n---\n\n**Why:** w\n**How to apply:** h\n"
     }
   ]
 }

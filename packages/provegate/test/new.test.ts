@@ -179,9 +179,9 @@ describe('createPrd (FR-1)', () => {
       '> classless now',
     );
     writeFileSync(join(root, 'no-class.md'), drifted);
-    expect(() => createPrd(cfg, root, { slug: 'no-class', templatePath: join(root, 'no-class.md') })).toThrow(
-      /anchor not found/,
-    );
+    expect(() =>
+      createPrd(cfg, root, { slug: 'no-class', templatePath: join(root, 'no-class.md') }),
+    ).toThrow(/anchor not found/);
   });
 
   it('only supported date sites are substituted; the changelog row is one of them', () => {
