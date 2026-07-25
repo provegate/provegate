@@ -125,21 +125,21 @@ and commands it names still exist **before** the dependent task starts (task 0.2
         "frozen" mean something.
 
 - [ ] 2.0 FR-2 — Default-off memory configuration
-  - [ ] 2.1 Add the optional `memory` block (`enabled`, `root`, `index`, `entrypoints`,
+  - [x] 2.1 Add the optional `memory` block (`enabled`, `root`, `index`, `entrypoints`,
         `verifyCommand`, `retroAfterCompleted`) to
         `packages/provegate/src/core/config/types.ts`.
   - [ ] 2.2 Add disabled-by-default values to
         `packages/provegate/src/core/config/defaults.ts`; a repo with no config keeps
         exactly today's behavior.
-  - [ ] 2.3 Validate in `packages/provegate/src/core/config/validate.ts`: types, unknown
+  - [x] 2.3 Validate in `packages/provegate/src/core/config/validate.ts`: types, unknown
         keys, `retroAfterCompleted` as a non-negative integer, `verifyCommand` through the
         existing command-safety allowlist, and every path repo-relative and contained.
-  - [ ] 2.4 W13 — resolve the dead-config window in
+  - [x] 2.4 W13 — resolve the dead-config window in
         `packages/provegate/src/core/config/types.ts` and **Deferrals & Decisions**:
         `verifyCommand` and `retroAfterCompleted` are validated here but consumed by
         nobody until PRD-018. Either document the window as accepted in the type comment,
         or keep the fields internal until 018 — decide once, record which and why.
-  - [ ] 2.5 Add config tests to `packages/provegate/test/memory.test.ts`: defaults are
+  - [x] 2.5 Add config tests to `packages/provegate/test/memory.test.ts`: defaults are
         disabled, an unsafe `verifyCommand` is rejected, a negative or fractional cadence
         is rejected, an absolute / `..` / cross-root / symlinked path is rejected with a
         path-tagged message, and an unknown key fails.
@@ -318,6 +318,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   readiness iteration 3 found 0 INDEX hooks over 120 (longest 102) and 23/23 records
   already carrying `**Why:**`, `**How to apply:**`, and `provenance`. Task 0.4 re-measures
   before any editing decision.
+- 2.4 (W13) — the dead-config window is ACCEPTED and documented, not hidden: `memory.verifyCommand` and `memory.retroAfterCompleted` are validated by this PRD and consumed by PRD-018/019, so a released version may carry validated fields nothing reads. The alternative — landing the runner and its configuration together — is precisely the whole-repo change the three-PRD split exists to avoid. The reason is written where a reader meets the fields, in the `MemoryConfig` doc comments, rather than only here.
 - 1.4 — the frozen-snapshot digest lives in `content-prompts.test.ts` as the PRD says, not in a `scripts/verify/` gate. A verify script would be cache-immune, but adding one means touching `verify-workflow.mjs` and `package.json`, neither of which is in this PRD's Conflict Surface (and `verify-workflow.mjs` is claimed by PRD-021). Residual risk: a docs-only snapshot edit could replay a cached local pass; CI checks out fresh with no restored turbo cache, so the gate is real there. Recorded rather than hidden.
 - (none deferred yet)
 
@@ -327,6 +328,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task | Notes |
 | ---------- | ---- | ----- |
+| 2026-07-25 | 2.0 | FR-2 config surface landed: `memory` block (types/defaults/validate), disabled by default with `entrypoints: []`. Two spec kinds were missing and were added rather than worked around — `boolean`, and `countOrZero` because `0` is a legal cadence meaning "off" while the existing `number` kind demands ≥1. Containment is checked whether or not memory is enabled: a bad path parked in a disabled block is a trap that springs when someone flips the switch. `verifyCommand` reuses `isSafeCommand` rather than a second copy of the allowlist (the import is type-erased into gates, so no runtime cycle). 15 new tests, suite 523 green. Task 2.2 stays open: its lexical half lives in config validation, its symlink half belongs to `memory/parse.ts`, which task 3.0 creates. |
 | 2026-07-25 | 0.0-1.0 | Phase 4 opened: lease + worktree `.worktrees/prd-017-agent-memory-substrate` (branch `feat/prd-017-agent-memory-substrate`), `pnpm install` in the worktree (a fresh worktree has no node_modules). Baselines green: verify:workflow, verify:brain, verify:pack-drift, verify:turbo-inputs. W10 re-measured at 0 overlong hooks and 0 schema violations across 23 records — the plan's no-migration prohibition holds. Addendum written (English; the manifest entry is Turkish to match that research file), listed in MANIFEST.md, rule recorded in DECISIONS.md. Frozen snapshot pinned by digest over 74 files, mutation-checked: appending one byte to a snapshot file turns the test red. |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-017 (Approved), readiness iteration 3 PASS 8.425, and watch items W10–W13, after owner Go. `infra` skeleton: Migration & Rollback is its own parent (task 6.0) because deployment ordering carries 20% of this class's readiness weight. No implementation started. |
 

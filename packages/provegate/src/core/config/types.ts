@@ -110,11 +110,50 @@ export interface WorkflowConfig {
   templates: TemplatesConfig;
   /** Append-only manifests excluded from exclusive path-ownership overlap. */
   sharedAppendOnly: string[];
+  /** Durable-memory store; disabled by default. */
+  memory: MemoryConfig;
 }
 
 export interface TemplatesConfig {
   /** Path (repo-root relative) to a forked PRD template; '' = shipped one. */
   prd: string;
+}
+
+/**
+ * Durable-memory store (addendum A1). Every field is explicit configuration:
+ * behavior NEVER keys off the presence of a memory directory, so a repository
+ * that has not opted in behaves exactly as it did before. Detection may report
+ * a partial installation; it may not enable a gate.
+ */
+export interface MemoryConfig {
+  /** Master switch. Disabled by default — opting in is a deliberate act. */
+  enabled: boolean;
+  /** Record store, repo-root relative (e.g. `_brain`). */
+  root: string;
+  /** Always-loaded pointer index, repo-root relative; must live under `root`. */
+  index: string;
+  /** Agent entrypoint files that must carry the index pointer. Vendor-neutral
+   * by design: the set is whatever this repository actually uses. */
+  entrypoints: string[];
+  /**
+   * Validator run after Phase 7 capture; '' disables it. Passes the same
+   * command-safety allowlist as a §11 gate command.
+   *
+   * Consumed by the Phase 7 runner (PRD-018), not by this package version —
+   * the substrate defines and validates the field so the contract work can
+   * rely on it, which means a released version may carry a validated field
+   * nothing reads yet. That window is deliberate and recorded; the
+   * alternative — landing the runner and its configuration together — is the
+   * whole-repo change the three-PRD split exists to avoid.
+   */
+  verifyCommand: string;
+  /**
+   * Warn after this many completed contract-bearing work items without a
+   * retrospective; `0` disables the cadence warning entirely.
+   *
+   * Same deliberate window as `verifyCommand`: consumed by PRD-019.
+   */
+  retroAfterCompleted: number;
 }
 
 /** A single validation problem, tagged with its config path. */

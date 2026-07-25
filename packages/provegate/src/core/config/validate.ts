@@ -1,4 +1,5 @@
-import type { ConfigIssue } from './types.js';
+import { isSafeCommand } from '../gates/safety.js';
+import type { ConfigIssue, WorkflowConfig } from './types.js';
 
 /**
  * Hand-rolled structural validation (zero dependencies by design). The spec
@@ -9,6 +10,8 @@ import type { ConfigIssue } from './types.js';
 type Spec =
   | { kind: 'string' }
   | { kind: 'number' }
+  | { kind: 'countOrZero' }
+  | { kind: 'boolean' }
   | { kind: 'stringArray' }
   | { kind: 'stringRecord' }
   | { kind: 'maybeEmptyString' }
@@ -20,6 +23,9 @@ const strArr: Spec = { kind: 'stringArray' };
 const strRec: Spec = { kind: 'stringRecord' };
 const obj = (children: Record<string, Spec>): Spec => ({ kind: 'object', children });
 const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
+const bool: Spec = { kind: 'boolean' };
+/** A cadence: a count where 0 is a legal value meaning "off", unlike `num`. */
+const countOrZero: Spec = { kind: 'countOrZero' };
 
 const artifactKind = obj({ dir: str, prefix: str });
 
@@ -63,6 +69,14 @@ const CONFIG_SPEC = obj({
   classes: strArr,
   verifyScriptPattern: str,
   templates: obj({ prd: strOrEmpty }),
+  memory: obj({
+    enabled: bool,
+    root: str,
+    index: str,
+    entrypoints: strArr,
+    verifyCommand: strOrEmpty,
+    retroAfterCompleted: countOrZero,
+  }),
 });
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -79,6 +93,18 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
     case 'maybeEmptyString':
       if (typeof value !== 'string') {
         issues.push({ path, message: 'must be a string' });
+      }
+      return;
+    case 'boolean':
+      if (typeof value !== 'boolean') {
+        issues.push({ path, message: 'must be a boolean' });
+      }
+      return;
+    case 'countOrZero':
+      // A fractional or negative cadence is a typo, and `true` coerces to 1 in
+      // arithmetic — both must fail here rather than silently arm a warning.
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+        issues.push({ path, message: 'must be a non-negative integer (0 disables it)' });
       }
       return;
     case 'number':
@@ -146,6 +172,14 @@ export function validateResolvedConfig(config: {
   };
   executionPhases: string[];
   classes?: string[];
+  commands?: { allowedPrefixes: string[] };
+  memory?: {
+    enabled: boolean;
+    root: string;
+    index: string;
+    entrypoints: string[];
+    verifyCommand: string;
+  };
 }): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
 
@@ -189,5 +223,83 @@ export function validateResolvedConfig(config: {
     issues.push({ path: 'classes', message: 'must not be empty' });
   }
 
+  if (config.memory !== undefined) validateMemory(config, issues);
+
   return issues;
+}
+
+/**
+ * Why a configured path is not usable as a repo-relative path, or null when it
+ * is. Lexical only: a symlink that escapes the workspace still resolves to a
+ * legal-looking relative path, so the runtime resolver checks that separately.
+ * Both checks are needed — this one refuses what should never be written, the
+ * runtime one refuses what the filesystem actually points at.
+ */
+function unsafeRelPath(value: string): string | null {
+  if (value.length === 0) return 'must not be empty';
+  if (value.startsWith('~')) return 'must not start with ~ (home-relative)';
+  if (/^[/\\]/.test(value) || /^[A-Za-z]:[/\\]/.test(value)) return 'must be repo-relative';
+  const segments = value.split(/[/\\]/);
+  if (segments.includes('..')) return 'must not contain a `..` segment';
+  return null;
+}
+
+function validateMemory(
+  config: {
+    memory?: {
+      enabled: boolean;
+      root: string;
+      index: string;
+      entrypoints: string[];
+      verifyCommand: string;
+    };
+    commands?: { allowedPrefixes: string[] };
+  },
+  issues: ConfigIssue[],
+): void {
+  const memory = config.memory;
+  if (memory === undefined) return;
+
+  // Containment is checked whether or not memory is enabled: a typo parked in a
+  // disabled block is a trap that springs on the day someone flips the switch.
+  const paths: [string, string][] = [
+    ['memory.root', memory.root],
+    ['memory.index', memory.index],
+    ...memory.entrypoints.map((e, i): [string, string] => [`memory.entrypoints[${i}]`, e]),
+  ];
+  for (const [path, value] of paths) {
+    const reason = unsafeRelPath(value);
+    if (reason !== null) issues.push({ path, message: reason });
+  }
+
+  // The index is the store's own entry point; one living outside the store
+  // would be indexed by nothing and validated by nothing.
+  const root = memory.root.replace(/\/+$/, '');
+  if (unsafeRelPath(memory.root) === null && unsafeRelPath(memory.index) === null) {
+    if (!memory.index.startsWith(`${root}/`)) {
+      issues.push({ path: 'memory.index', message: `must live under memory.root (${root}/)` });
+    }
+  }
+
+  if (memory.verifyCommand.length > 0 && config.commands !== undefined) {
+    // Same allowlist as a §11 gate command — a validator invoked by the runner
+    // is a user-gate command, and it gets no weaker check for being configured.
+    if (!isSafeCommand({ commands: config.commands } as WorkflowConfig, memory.verifyCommand)) {
+      issues.push({
+        path: 'memory.verifyCommand',
+        message: 'is not a safe command (shell metacharacter, or a non-allowlisted prefix)',
+      });
+    }
+  }
+
+  if (!memory.enabled) return;
+
+  // Enabled means something must be able to load a record. An empty entrypoint
+  // list is legal while disabled and meaningless once enabled.
+  if (memory.entrypoints.length === 0) {
+    issues.push({
+      path: 'memory.entrypoints',
+      message: 'must name at least one agent entrypoint when memory is enabled',
+    });
+  }
 }
