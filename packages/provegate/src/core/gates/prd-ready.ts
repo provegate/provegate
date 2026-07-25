@@ -171,12 +171,20 @@ export function lintPrd(
       // input is missing is the false green this repo keeps paying for.
       issues.push('memory is enabled but the readiness lint received no repository root');
     } else {
+      const durable = declaredArtifactsStrict(content);
+      if (durable.ambiguous) {
+        // Readiness discarded this and Phase 7 refused the same PRD later —
+        // a gate that passes what a later gate must reject is a trap, not a gate.
+        issues.push(
+          '`## Durable Artifacts` is declared more than once — exactly one section is parseable',
+        );
+      }
       issues.push(
         ...lintMemoryContract(
           content,
           frs.flatMap((fr) => frTargetEntries(fr.body)),
           loadMemoryStore(root, config.memory),
-          declaredArtifactsStrict(content).paths,
+          durable.paths,
           config.memory,
         ),
       );

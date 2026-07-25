@@ -516,3 +516,38 @@ describe('FR Targets are read as an entry, not as one line', () => {
     ]);
   });
 });
+
+describe('phase 6 round 8 regressions', () => {
+  it('[R8-P2-4] readiness reports an ambiguous Durable Artifacts section', () => {
+    // It discarded the flag and Phase 7 refused the same PRD later. A gate that
+    // passes what a later gate must reject is a trap, not a gate.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-memory-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(join(root, '_brain/INDEX.md'), '# index\n');
+    const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    const content = [
+      READY_PRD,
+      '',
+      '## Memory Inputs',
+      '',
+      '- none — nothing applied.',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — nothing durable expected.',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `docs/a.md` — one',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `docs/b.md` — two',
+      '',
+    ].join('\n');
+    expect(lintPrd(on, manifest, content, root).issues).toContainEqual(
+      '`## Durable Artifacts` is declared more than once — exactly one section is parseable',
+    );
+  });
+});

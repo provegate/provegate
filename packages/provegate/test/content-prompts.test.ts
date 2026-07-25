@@ -171,7 +171,9 @@ const constraintsOf = (file: string): string => {
 
 /** Numbered constraint entries in a prompt's Agent Constraints list. */
 const constraintCount = (file: string): number =>
-  (constraintsOf(file).match(/^\d+\. \*\*/gm) ?? []).length;
+  // Every numbered entry, bold or not: matching `^\d+\. \*\*` let an
+  // unstyled `5. Reopen every prior learning...` ship without moving the count.
+  (constraintsOf(file).match(/^\d+\.[ \t]/gm) ?? []).length;
 
 describe('FR-3 per-file prompt obligations (W3)', () => {
   /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
@@ -507,5 +509,18 @@ describe('phase 6 round 3 — the provenance oracle is tested, not trusted', () 
     ]) {
       expect(MEMORY_VOCABULARY.test(phrasing), phrasing).toBe(false);
     }
+  });
+});
+
+describe('phase 6 round 8 — the constraint count is discriminating', () => {
+  const countIn = (body: string): number => (body.match(/^\d+\.[ \t]/gm) ?? []).length;
+
+  it('[R8-P2-6] an UNSTYLED numbered constraint moves the count', () => {
+    // `^\d+\. \*\*` counted only bold entries, so a plain
+    // `5. Reopen every prior learning...` shipped without moving the number the
+    // phase-5 guard rests on.
+    const four = ['1. **A**', '2. **B**', '3. **C**', '4. **D**'].join('\n');
+    expect(countIn(four)).toBe(4);
+    expect(countIn(`${four}\n5. Reopen every prior learning before running tests.`)).toBe(5);
   });
 });

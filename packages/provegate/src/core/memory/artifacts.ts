@@ -120,14 +120,15 @@ function pathProblem(value: string): string | null {
  */
 const COMMENT_MASK = '␀';
 
-function executableView(content: string): string {
+function executableView(content: string): { view: string; unreliable: string | null } {
   interface Fence {
     char: string;
     length: number;
   }
   let fence: Fence | null = null;
   let inComment = false;
-  /** Open code-span delimiter run in backticks, or 0 outside one. */
+  /** Open code-span delimiter run in backticks, or 0 outside one. Only ever
+   * opened when a matching run closes it on the same line. */
   let span = 0;
   const out: string[] = [];
 
@@ -173,8 +174,19 @@ function executableView(content: string): string {
       if (raw[i] === '`') {
         let run = 0;
         while (raw[i + run] === '`') run += 1;
-        if (span === 0) span = run;
-        else if (run === span) span = 0;
+        if (span === 0) {
+          // A delimiter run opens a span only when a run of the SAME length
+          // closes it on this line. CommonMark renders an unmatched run
+          // literally, and letting one stay open across blocks was a fail-open:
+          // a following fence became span content, so a path quoted inside an
+          // example counted as declared. Measured first — four real artifacts
+          // in this repository carry an unmatched run and must keep parsing.
+          const rest = raw.slice(i + run);
+          const closer = new RegExp(`(?<!\`)\`{${run}}(?!\`)`).test(rest);
+          if (closer) span = run;
+        } else if (run === span) {
+          span = 0;
+        }
         line += raw.slice(i, i + run);
         i += run;
         continue;
@@ -191,13 +203,43 @@ function executableView(content: string): string {
     out.push(line);
   }
 
-  return out.join('\n');
+  // State left open at EOF means the document and this scanner disagree about
+  // where its blocks end — and a scanner that is unsure must not be believed.
+  // Only the two states that BLANK content are fatal. An unmatched backtick run
+  // no longer opens a span at all, so it cannot leave one dangling — and
+  // refusing on it would have rejected four real artifacts in this repository
+  // that render perfectly well.
+  const dangling =
+    fence !== null ? 'an unclosed code fence' : inComment ? 'an unclosed HTML comment' : null;
+
+  return { view: out.join('\n'), unreliable: dangling };
 }
 
-/** Everything a rendered document does not execute: fenced code and HTML
- * comments. Contract sections are read from this view and nothing else. */
+/**
+ * Everything a rendered document does not execute.
+ *
+ * This scanner is a Markdown APPROXIMATION, not a CommonMark implementation —
+ * the package takes zero runtime dependencies, so there is no parser to defer
+ * to. Six review rounds each found another rule it approximated, and each fix
+ * was correct and insufficient, which is the signal that the strategy was
+ * wrong: an approximation that disagrees with a renderer must never disagree in
+ * the PERMISSIVE direction.
+ *
+ * So the contract reads refuse when the scan ends in a state the document did
+ * not close. An unmatched backtick run, an unclosed fence, or an unclosed
+ * comment means "this document is not one I can read", and the gate says so
+ * instead of guessing. Drift becomes a refusal rather than a hole.
+ */
 export function contractView(content: string): string {
-  return executableView(content);
+  return executableView(content).view;
+}
+
+/** Why the document cannot be read reliably, or null when it can. */
+export function contractViewProblem(content: string): string | null {
+  const { unreliable } = executableView(content);
+  return unreliable === null
+    ? null
+    : `the document ends with ${unreliable}, so its contract sections cannot be read reliably`;
 }
 
 /**
@@ -234,16 +276,23 @@ export function contractSection(content: string, heading: string): { count: numb
   // `#Other` over dashes IS a setext H2, and rejecting every line starting `#`
   // let an owner row below it stay inside the preceding section. Same for `-`,
   // `*`, `+` and `|`: they open a block only in the shapes below.
+  // Up to three leading spaces are legal on a heading, and a lone `|` opens a
+  // table only when the line carries a second one — excluding every `|` and
+  // every indented line suppressed REAL setext headings, which let an owner row
+  // beneath one stay inside the section above it.
   const NOT_A_PARAGRAPH = [
     '[-*+][ \\t]', // bullet list item
     '\\d+[.)][ \\t]', // ordered list item
     '#{1,6}(?:[ \\t]|$)', // ATX heading
     '>', // block quote
-    '\\|', // table row
-    '[ \\t]', // indented continuation
+    '\\|[^\\n]*\\|', // table row
+    '[ \\t]{4,}', // indented code block
   ].join('|');
   const setext = rest.search(
-    new RegExp(`^(?!(?:${NOT_A_PARAGRAPH}))[^\\n]+\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`, 'm'),
+    new RegExp(
+      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-{2,}[ \\t]*\\r?$`,
+      'm',
+    ),
   );
   const stops = [atx, setext].filter((i) => i !== -1);
   const next = stops.length === 0 ? -1 : Math.min(...stops);
@@ -378,7 +427,15 @@ function slugProblem(value: string): string | null {
 export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations {
   // Every contract read happens on the executable view of the document, so a
   // quoted example or a commented-out block can never stand in for the real
-  // section.
+  // section — and an unreadable document is refused rather than guessed at.
+  const unreadable = contractViewProblem(rawContent);
+  if (unreadable !== null) {
+    return {
+      inputs: { present: false, entries: [], none: false },
+      outputs: { present: false, entries: [], none: false },
+      issues: [unreadable],
+    };
+  }
   const content = contractView(rawContent);
   const inputs = parseSection<MemoryInput>(
     content,
@@ -679,6 +736,7 @@ export function changelogApproves(
   // `## Changelog` carrying an owner row would otherwise shadow the real one and
   // approve a removal the PRD never recorded. More than one real Changelog is an
   // ambiguity, and an ambiguous approval is no approval.
+  if (contractViewProblem(rawContent) !== null) return false;
   const { count, body: section } = contractSection(contractView(rawContent), 'Changelog');
   if (count !== 1) return false;
   const ownerSet = new Set(owners.map((owner) => owner.toLowerCase()));

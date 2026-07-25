@@ -874,18 +874,43 @@ describe('phase 6 round 8 self-attack (before the independent round returned)', 
     expect(decl.outputs.entries).toHaveLength(1);
   });
 
-  it('a fence cannot open while a code span is open', () => {
-    // The span guard matters: treating the ``` line as a fence would blank the
-    // rest of the document and the section would read as absent.
+  it('an UNMATCHED backtick is literal, so a following fence is still a fence', () => {
+    // Round 8: letting an unmatched run open a span across blocks was a
+    // fail-open — the fence became span content and a path quoted inside the
+    // example counted as declared. CommonMark renders an unmatched run
+    // literally, and so does this scanner now.
     const doc = [
       '## Memory Outputs',
       '',
-      '- learning: `_brain/learnings/x.md` — a rationale with an ` unclosed span',
+      '- learning: `_brain/learnings/x.md` — a rationale with an ` unmatched run',
+      '```markdown',
+      '- learning: `_brain/learnings/quoted.md` — inside an example, not declared.',
       '```',
-      '- learning: `_brain/learnings/y.md` — still inside the section.',
+      '',
+      '- learning: `_brain/learnings/y.md` — declared.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.present).toBe(true);
+    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
+      '_brain/learnings/x.md',
+      '_brain/learnings/y.md',
+    ]);
+  });
+
+  it('a MATCHED span still shields its contents', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — a rationale quoting `<!--` inline.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('an unclosed FENCE makes the document unreadable, and the gate says so', () => {
+    const doc = ['# PRD', '', '```', '## Memory Outputs', '', '- none — fenced off.'].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([
+      'the document ends with an unclosed code fence, so its contract sections cannot be read reliably',
+    ]);
   });
 
   it('the comment placeholder appears in no shipped artifact, so it changes no parse', () => {
