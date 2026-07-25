@@ -300,6 +300,43 @@ Records to open and confirm still accurate before the dependent task starts (tas
           should have caught [P1-6]. Bind per prompt. Depends on 10.3.6.
     - [x] 10.3.10 [P2-10] The mutex fixture proves acquisition, not retention. Prove the
           claim mutex is held ACROSS the merge and its post-merge verification.
+    - [x] 10.4 Round 2 (independent, same reviewer family, directed at the FIXES).
+          Verdict FAIL: 5 [P1] + 4 [P2], every round-1 fix confirmed closed. All nine
+          re-verified against source before acceptance; three by direct measurement.
+      - [x] 10.4.1 [R2-P1-1] `capturedDiffFiles` preferred `origin/<base>` while the merge
+            targets the LOCAL base. Measured on this repository: `origin/main` is one
+            commit behind `main`, so a record added on unpushed local base would have
+            counted as this PRD's capture — fail open. Pinned to the local base, `-z`
+            parsing, and a git error now REFUSES instead of falling back to the weaker
+            name-only list.
+      - [x] 10.4.2 [R2-P1-2] A fenced `## Memory Outputs` example shadowed the real
+            section, because section lookup takes the first heading. Contract reads now
+            run on a fence-stripped document, and a section declared twice is an
+            ambiguity rather than a duplicate.
+      - [x] 10.4.3 [R2-P1-3] Same shadowing let a fenced `## Changelog` approve a
+            removal the PRD never recorded. Same fix, plus exactly-one-Changelog.
+      - [x] 10.4.4 [R2-P1-4] Any repo-relative `.md` path counted as a record, so
+            `learning: docs/release-note.md` passed and adding that ordinary file
+            satisfied capture while the store and INDEX never changed.
+            `outputPlacementIssues` binds the declared type to `<memory.root>/learnings/`
+            or `<memory.root>/adr/`.
+      - [x] 10.4.5 [R2-P1-5] `existsSync` accepted a directory, an added submodule, or a
+            symlink as the captured file. Now `lstatSync(...).isFile()`.
+      - [x] 10.4.6 [R2-P2-6] The provenance deny-list named four exact tokens, so an
+            obligation phrased around `_brain` or "detail file" escaped it. Widened, and
+            each granted phase must carry its OWN §8 clause and no other phase's.
+      - [x] 10.4.7 [R2-P2-7] An unreadable indexed record failed only at close, so
+            readiness passed a PRD that could never close. Now a shared store issue.
+      - [x] 10.4.8 [R2-P2-8] **The deferral this PRD claimed to have recorded did not
+            exist.** The `frTargets` comment and task 10.3.5 both said the hard-cap
+            migration was "recorded as a deferral" while `STATUS.md` carried no such row —
+            a false claim of governance, which is worse than the split it excused. The row
+            now exists with an owner and a due date.
+      - [x] 10.4.9 [R2-P2-9] The capture assertions were vacuous: replacing
+            `capturedDiffFiles` with `return null` would have left them green, because the
+            tests inject `changedFiles` and `existsSync` did the rejecting. A fixture now
+            names an EXISTING file in `changedFiles` that the feature branch never touched,
+            so only the real diff status can refuse it.
 
 - [ ] 11.0 Phase 7 — Durable learning and close preparation
   - [ ] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is

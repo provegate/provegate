@@ -812,3 +812,187 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 6 round 2 — the fix layer's own defects. Round 1's remediations opened
+// these, which is why the second round attacked the fixes rather than the code
+// they replaced.
+// ---------------------------------------------------------------------------
+
+describe('phase 6 round 2 regressions', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+
+  it('[R2-P1-1] a stale `origin/base` cannot lend its commits to this feature', () => {
+    // The reviewer measured it on this very repository: origin/main one commit
+    // behind main made the origin-based range 52 files where the local-base
+    // range is 50. A record added on unpushed local base would have counted as
+    // this PRD's capture. The gate now asks the LOCAL base, which is what the
+    // merge actually targets.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
+    // the record lands on main AFTER the branch forks, and origin/main is stale
+    execFileSync('git', ['branch', 'origin/main'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['checkout', 'main'], { cwd: root, stdio: 'ignore' });
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(join(root, '_brain/learnings/new-thing.md'), RECORD_MD('new-thing'));
+    execFileSync('git', ['add', '-A'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'someone else added the record', '--no-verify'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    execFileSync('git', ['checkout', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('was not added or modified by the merge diff');
+  });
+
+  it('[R2-P1-2] a fenced example section cannot shadow the real one', () => {
+    const shadowed = [
+      '# PRD-002',
+      '',
+      'An example of the grammar:',
+      '',
+      '```markdown',
+      '## Memory Outputs',
+      '',
+      '- none — the example promises nothing.',
+      '```',
+      '',
+      prd(),
+    ].join('\n');
+    const root = gitRepo({ '_prds/wip/p.md': shadowed, ...STORE() }, CAPTURED_RECORD);
+    // The real section is malformed on the base ref, so the baseline must refuse
+    // rather than read the fenced `none` and permit every removal.
+    const broken = shadowed.replace(
+      '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+      '- learning: `_brain/learnings/new-thing.md`',
+    );
+    const brokenRoot = gitRepo({ '_prds/wip/p.md': broken, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root: brokenRoot, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('do not parse');
+    // and the unfenced document still parses normally
+    expect(
+      gate(chainFor({ root, prdContent: shadowed, changedFiles: CHANGED }), 'declared outputs'),
+    ).toEqual({ ok: true });
+  });
+
+  it('[R2-P1-3] a fenced Changelog cannot approve a removal', () => {
+    const TWO_OUTPUTS = [
+      '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+      '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+    ];
+    const TWO_DURABLE = [
+      '- `_brain/learnings/new-thing.md` — the durable fact',
+      '- `_brain/adr/ADR-0001-x.md` — the decision',
+    ];
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const forged = [
+      prd(),
+      '',
+      'For reference, an approval row looks like this:',
+      '',
+      '```markdown',
+      '## Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
+      '```',
+      '',
+    ].join('\n');
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': baseline,
+        '_state/acceptances.json': JSON.stringify({
+          acceptances: [
+            {
+              prd: 'PRD-002',
+              owner: 'owner',
+              items: ['_brain/adr/ADR-0001-x.md'],
+              reason: 'moved to PRD-022',
+              date: '2026-07-25',
+              method: 'interactive',
+            },
+          ],
+        }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const result = gate(chainFor({ root, prdContent: forged, changedFiles: CHANGED }), 'no weakening');
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no owner approval row in the Changelog naming');
+  });
+
+  it('[R2-P1-4] an ordinary `.md` file outside the store is not a memory record', () => {
+    const content = prd({
+      outputs: ['- learning: `docs/release-note.md` — a durable fact, allegedly.'],
+      durable: ['- `docs/release-note.md` — a durable fact'],
+    });
+    const root = gitRepo(
+      { '_prds/wip/p.md': content, ...STORE() },
+      { 'docs/release-note.md': '# note\n' },
+    );
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: ['docs/release-note.md'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("is declared 'learning', so it must live under '_brain/learnings/'");
+  });
+
+  it('[R2-P1-4] an `adr` output may not sit in the learnings directory', () => {
+    const content = prd({
+      outputs: ['- adr: `_brain/learnings/new-thing.md` — a decision in the wrong drawer.'],
+    });
+    const root = gitRepo({ '_prds/wip/p.md': content, ...STORE() }, CAPTURED_RECORD);
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("must live under '_brain/adr/'");
+  });
+
+  it('[R2-P1-5] a DIRECTORY named like a record is not a capture', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    // replace the captured file with a directory of the same name
+    rmSync(join(root, '_brain/learnings/new-thing.md'));
+    mkdirSync(join(root, '_brain/learnings/new-thing.md'), { recursive: true });
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('no file exists at that path after the merge');
+  });
+
+  it('[R2-P2-9] the capture check is the diff status, not the injected file list', () => {
+    // The reviewer's charge: replacing capturedDiffFiles with `return null`
+    // would have left every earlier assertion green, because the tests inject
+    // changedFiles and existsSync did the rejecting. Here the file EXISTS and
+    // is named in changedFiles, and the only thing that can refuse it is the
+    // real diff status — the feature branch never touched it.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE(), ...CAPTURED_RECORD });
+    execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
+    writeFileSync(join(root, 'unrelated.txt'), 'something else\n');
+    execFileSync('git', ['add', '-A'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'unrelated work', '--no-verify'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('was not added or modified by the merge diff');
+  });
+});

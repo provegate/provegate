@@ -248,8 +248,26 @@ describe('FR-2 memory readiness gate', () => {
     it('an input naming a record that does not validate', () => {
       const broken = record().replace('type: gotcha', 'type: nonsense');
       const root = fixture([{ slug: 'sample-record', content: broken }]);
+      // Both gates report the store problem now: reporting it only at close let
+      // readiness pass a PRD that could never close (phase 6 round 2, P2-7).
       expect(lintPrd(on, manifest, VALID, root).issues).toEqual([
         "Memory Inputs: 'sample-record' does not validate — repair the record first",
+        "memory store: indexed record 'sample-record' does not validate, so its watch cannot " +
+          'be evaluated — repair it before closing',
+      ]);
+    });
+
+    it('an UNRELATED broken record also fails readiness, not just the close', () => {
+      const root = fixture([
+        { slug: 'sample-record', content: record() },
+        {
+          slug: 'other-record',
+          content: record({ name: 'other-record' }).replace('type: gotcha', 'type: nonsense'),
+        },
+      ]);
+      expect(lintPrd(on, manifest, VALID, root).issues).toEqual([
+        "memory store: indexed record 'other-record' does not validate, so its watch cannot " +
+          'be evaluated — repair it before closing',
       ]);
     });
 

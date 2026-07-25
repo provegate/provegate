@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
@@ -85,36 +85,49 @@ export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
  * than silently treating every output as uncaptured.
  */
 function capturedDiffFiles(root: string, base: string): string[] | null {
-  for (const ref of [`origin/${base}`, base]) {
-    try {
-      const mergeBase = execFileSync('git', ['merge-base', 'HEAD', ref], {
-        cwd: root,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
-      const out = execFileSync('git', ['diff', '--name-status', `${mergeBase}...HEAD`], {
-        cwd: root,
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      });
-      const captured: string[] = [];
-      for (const line of out.split('\n')) {
-        if (line.trim().length === 0) continue;
-        const parts = line.split('\t');
-        const status = parts[0] ?? '';
-        if (/^[AM]/.test(status)) {
-          if (parts[1] !== undefined) captured.push(parts[1].trim());
-        } else if (/^R/.test(status)) {
-          // A rename captures the DESTINATION; the source is a deletion.
-          if (parts[2] !== undefined) captured.push(parts[2].trim());
-        }
+  try {
+    // The LOCAL base, and only the local base. `collectDiffFiles` prefers
+    // `origin/<base>`, which is the wrong question here: `mergeToLocalBase`
+    // merges into the local branch, and a local base ahead of its remote makes
+    // the origin-based range include commits this feature never made — so a
+    // record added on unpushed local base counts as this PRD's capture. That
+    // fails OPEN, and this repository is in exactly that state today.
+    const mergeBase = execFileSync('git', ['merge-base', 'HEAD', base], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    // `-z` because a path with a tab, a newline, or a non-ASCII byte under
+    // `core.quotepath` does not survive line-and-tab splitting intact.
+    const out = execFileSync('git', ['diff', '--name-status', '-z', `${mergeBase}...HEAD`], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const fields = out.split('\0').filter((field) => field.length > 0);
+    const captured: string[] = [];
+    for (let i = 0; i < fields.length; i += 1) {
+      const status = fields[i]!;
+      if (/^[RC]/.test(status)) {
+        // Rename or copy: source then DESTINATION. The destination is what this
+        // diff wrote; the source is a deletion.
+        const destination = fields[i + 2];
+        if (destination !== undefined) captured.push(destination);
+        i += 2;
+        continue;
       }
-      return captured;
-    } catch {
-      // try the next ref
+      const path = fields[i + 1];
+      i += 1;
+      // Only "added" and "modified" are a capture. D, T, U and anything else
+      // deliberately fall through: an unknown status must never read as one.
+      if (/^[AM]/.test(status) && path !== undefined) captured.push(path);
     }
+    return captured;
+  } catch {
+    // Fail closed: the caller refuses rather than falling back to the weaker
+    // name-only evidence that includes deletions.
+    return null;
   }
-  return null;
 }
 
 /** The PRD exactly as committed on the base ref, or null when it is not there.
@@ -285,13 +298,35 @@ export function buildGateChain(options: {
       label: 'memory: declared outputs in Durable Artifacts and the merge diff',
       fn: () => {
         const captured = capturedDiffFiles(root, config.branches.base);
+        if (captured === null) {
+          // Without the status list there is no way to tell a capture from a
+          // deletion, and guessing in the permissive direction is the defect
+          // this gate exists to prevent.
+          return {
+            ok: false,
+            why:
+              `cannot read the merge diff against \`${config.branches.base}\` — the close ` +
+              `cannot tell a captured record from a deleted one, so it refuses`,
+          };
+        }
         const issues = memoryCloseIssues({
           content: prdContent,
           changedFiles,
           store: loadMemoryStore(root, config.memory),
           durable: declaredArtifacts(prdContent),
-          ...(captured === null ? {} : { capturedFiles: captured }),
-          exists: (path) => existsSync(resolve(root, path)),
+          memory: config.memory,
+          capturedFiles: captured,
+          // lstat, and a regular-file test: a directory named `x.md`, an added
+          // submodule (gitlink), or a symlink pointing at an existing record all
+          // satisfy `existsSync` without anything having been captured at the
+          // declared path.
+          exists: (path) => {
+            try {
+              return lstatSync(resolve(root, path)).isFile();
+            } catch {
+              return false;
+            }
+          },
         });
         return issues.length === 0 ? { ok: true } : { ok: false, why: issues.join('; ') };
       },

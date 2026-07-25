@@ -284,20 +284,50 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
   });
 
+  /**
+   * Vocabulary that signals a memory instruction, however it is phrased.
+   *
+   * The first version of this deny-list named four exact tokens, so an
+   * obligation written as "re-open every `_brain` detail before choosing
+   * fixtures" would have slipped straight through — the same escape the test is
+   * supposed to close. It covers the store, the index, the record vocabulary,
+   * and the two contract sections.
+   */
+  const MEMORY_VOCABULARY =
+    /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
+
   it('phase 5 carries NO memory instruction — §8 denies it one', () => {
     // The row is a stated position, not an omission: "Verification is
     // verification." A prompt that adds an instruction §8 does not name is out
     // of scope for the addendum, which makes it fabricated method content.
-    const phase5 = prompt('phase-5-testing.md');
-    expect(/Memory Input|Memory Output|memory-derived/i.test(phase5)).toBe(false);
+    expect(MEMORY_VOCABULARY.test(prompt('phase-5-testing.md'))).toBe(false);
   });
 
   it('no phase prompt carries a memory instruction its §8 row does not grant', () => {
     for (const { file, source } of ADDENDUM_SOURCE) {
-      const mentionsMemory = /Memory Input|Memory Output|memory-derived|selected record/i.test(
-        prompt(file),
-      );
-      expect(mentionsMemory, `${file} vs addendum §8`).toBe(source !== null);
+      expect(MEMORY_VOCABULARY.test(prompt(file)), `${file} vs addendum §8`).toBe(source !== null);
+    }
+  });
+
+  it('a granted phase carries ITS OWN obligation, not another phase clause', () => {
+    // A boolean "mentions memory" cannot tell phase 4's obligation from phase
+    // 7's. Each granted file must contain its own §8 clause, and must not carry
+    // the distinctive clause of a different phase.
+    const OWN: Record<string, RegExp> = {
+      'phase-1-prd-generator.md': /Select Memory Inputs/,
+      'phase-2-readiness-scorer.md': /Challenge each Memory Input/,
+      'phase-3-task-generator.md': /Carry the selected slugs/,
+      'phase-4-implementation.md': /Re-open each selected record/,
+      'phase-6-final-auditing.md': /Audit the memory contract/,
+      'phase-7-learning.md': /Capture exact output paths/,
+    };
+    for (const [file, own] of Object.entries(OWN)) {
+      const content = prompt(file);
+      expect(own.test(content), `${file}: own clause`).toBe(true);
+      for (const [other, clause] of Object.entries(OWN)) {
+        if (other === file) continue;
+        expect(clause.test(content), `${file} must not carry ${other}'s clause`).toBe(false);
+      }
     }
   });
 

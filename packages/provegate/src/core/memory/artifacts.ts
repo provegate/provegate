@@ -103,6 +103,35 @@ function pathProblem(value: string): string | null {
 }
 
 /**
+ * The document with fenced code blocks blanked out, line for line.
+ *
+ * Section lookup takes the FIRST matching heading, so a fenced example
+ * containing `## Memory Outputs` shadowed the real section: a PRD could carry a
+ * quoted, well-formed example above a malformed real one and the gate would read
+ * the example. Blanking rather than deleting keeps every other offset intact, so
+ * nothing downstream has to know this happened.
+ */
+function withoutFences(content: string): string {
+  let fenced = false;
+  return content
+    .split('\n')
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) {
+        fenced = !fenced;
+        return '';
+      }
+      return fenced ? '' : line;
+    })
+    .join('\n');
+}
+
+/** How many times an unfenced `## <heading>` appears. More than one is an
+ * ambiguity, not a duplicate: the parser would silently pick one of them. */
+function headingCount(content: string, heading: string): number {
+  return (content.match(new RegExp(`^##\\s+${heading}\\s*$`, 'gim')) ?? []).length;
+}
+
+/**
  * Split a section body into bullet blocks, folding indented continuation lines
  * into the bullet that opened them. A declaration whose rationale wraps across
  * lines is the normal case in a hand-written PRD — treating the wrap as a new
@@ -158,10 +187,14 @@ function parseSection<T>(
   valueNoun: string,
 ): { section: MemorySection<T>; issues: string[] } {
   const issues: string[] = [];
-  const pattern = new RegExp(`^##\\s+${heading}\\s*$`, 'im');
-  const present = pattern.test(content);
+  const count = headingCount(content, heading);
+  const present = count > 0;
   const section: MemorySection<T> = { present, entries: [], none: false };
   if (!present) return { section, issues };
+  if (count > 1) {
+    issues.push(`${heading}: declared ${count} times — exactly one section is parseable`);
+    return { section, issues };
+  }
 
   for (const block of bulletBlocks(sectionAfter(content, heading))) {
     const parsed = parseBlock(block);
@@ -223,7 +256,10 @@ function slugProblem(value: string): string | null {
 
 /** Parse both sections of a PRD. Absent headings are reported by `present`, not
  * as issues — whether they are required is the caller's configured question. */
-export function parseMemoryDeclarations(content: string): MemoryDeclarations {
+export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations {
+  // Every contract read happens on the fence-stripped document, so a quoted
+  // example can never stand in for the real section.
+  const content = withoutFences(rawContent);
   const inputs = parseSection<MemoryInput>(
     content,
     INPUTS_HEADING,
@@ -296,6 +332,9 @@ export interface MemoryCloseOptions {
   changedFiles: readonly string[];
   store: MemoryStore;
   durable: readonly string[];
+  /** The configured store, so an output's declared type can be checked against
+   * where it actually landed. */
+  memory?: MemoryConfig;
   /**
    * Paths the diff ADDED or MODIFIED, when the caller can tell them apart from
    * deletions, plus a predicate for "this path exists as a regular file".
@@ -367,11 +406,9 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   // An indexed record that will not parse has no readable watch, so its watch
   // cannot fire. Deleting a watched record and its pointer would otherwise
   // erase the trigger and leave a smaller, self-consistent store behind.
-  for (const slug of store.unreadable) {
-    issues.push(
-      `memory store: indexed record '${slug}' does not validate, so its watch cannot be ` +
-        `evaluated — repair it before closing`,
-    );
+  issues.push(...unreadableStoreIssues(store));
+  if (options.memory !== undefined) {
+    issues.push(...outputPlacementIssues(decl.outputs.entries, options.memory));
   }
 
   for (const indexed of activeRecords(store)) {
@@ -481,10 +518,16 @@ export function outputWeakenings(baselineContent: string, workingContent: string
  * THIS removal rather than any owner row that happens to exist.
  */
 export function changelogApproves(
-  content: string,
+  rawContent: string,
   owners: readonly string[],
   path: string,
 ): boolean {
+  // Fence-stripped for the same reason the contract sections are: a quoted
+  // `## Changelog` carrying an owner row would otherwise shadow the real one and
+  // approve a removal the PRD never recorded. More than one real Changelog is an
+  // ambiguity, and an ambiguous approval is no approval.
+  const content = withoutFences(rawContent);
+  if (headingCount(content, 'Changelog') !== 1) return false;
   const section = sectionAfter(content, 'Changelog');
   const ownerSet = new Set(owners.map((owner) => owner.toLowerCase()));
   for (const line of section.split('\n')) {
@@ -593,6 +636,51 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
   return store;
 }
 
+/**
+ * Where a declared output of each type must live, given the configured store.
+ *
+ * Grammar alone accepted any repo-relative `.md` path, so `learning:
+ * docs/release-note.md` passed readiness and adding that ordinary Markdown file
+ * satisfied capture — while the record store and its index never changed and
+ * `verify:brain` never looked at it. A "memory output" that lands outside the
+ * memory store is not a record; it is a file with a rationale attached.
+ */
+export function outputPlacementIssues(
+  outputs: readonly MemoryOutput[],
+  memory: MemoryConfig,
+): string[] {
+  const root = memory.root.replace(/\/+$/, '');
+  const issues: string[] = [];
+  for (const output of outputs) {
+    const dir = output.type === 'adr' ? 'adr' : 'learnings';
+    const expected = `${root}/${dir}/`;
+    if (!output.path.startsWith(expected)) {
+      issues.push(
+        `${OUTPUTS_HEADING}: '${output.path}' is declared '${output.type}', so it must live ` +
+          `under '${expected}'`,
+      );
+      continue;
+    }
+    // One segment under the directory: a record is a file in the store, not a
+    // tree of its own.
+    const slug = output.path.slice(expected.length);
+    if (slug.includes('/')) {
+      issues.push(`${OUTPUTS_HEADING}: '${output.path}' is nested below '${expected}'`);
+    }
+  }
+  return issues;
+}
+
+/** Indexed records that do not validate — a store problem both gates report,
+ * because a record whose frontmatter is broken has no readable watch. */
+export function unreadableStoreIssues(store: MemoryStore): string[] {
+  return store.unreadable.map(
+    (slug) =>
+      `memory store: indexed record '${slug}' does not validate, so its watch cannot be ` +
+      `evaluated — repair it before closing`,
+  );
+}
+
 interface StoreView {
   bySlug: Map<string, IndexedRecord>;
   superseded: Set<string>;
@@ -665,6 +753,7 @@ export function lintMemoryContract(
   targets: readonly string[],
   store: MemoryStore,
   durable: readonly string[],
+  memory: MemoryConfig,
 ): string[] {
   const issues: string[] = [];
   const decl = parseMemoryDeclarations(content);
@@ -699,6 +788,11 @@ export function lintMemoryContract(
   for (const path of outputsMissingFromDurable(decl.outputs.entries, durable)) {
     issues.push(`${OUTPUTS_HEADING}: '${path}' is not listed in Durable Artifacts`);
   }
+  issues.push(...outputPlacementIssues(decl.outputs.entries, memory));
+
+  // An unreadable indexed record is a STORE problem, reported by both gates.
+  // Reporting it only at close let readiness pass a PRD that could never close.
+  issues.push(...unreadableStoreIssues(store));
 
   return issues;
 }
