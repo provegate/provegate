@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +16,7 @@ import {
   DEFAULT_CONFIG,
   deepMerge,
   validateConfig,
+  resolveConfig,
   validateResolvedConfig,
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
@@ -324,17 +333,13 @@ describe('record schema (FR-3)', () => {
   });
 
   it('refuses a watch glob that escapes the workspace', () => {
-    const issues = validateRecord(fm([...base, 'watch: [../outside/**]']), 'x.md', 'sample', {
-      root: process.cwd(),
-    }).issues;
+    const issues = validateRecord(fm([...base, 'watch: [../outside/**]']), 'x.md', 'sample').issues;
     expect(issues.map((i) => i.message).join('|')).toContain('escapes the workspace');
   });
 
   it('accepts a contained watch glob', () => {
     expect(
-      validateRecord(fm([...base, 'watch: [packages/provegate/src/**]']), 'x.md', 'sample', {
-        root: process.cwd(),
-      }).issues,
+      validateRecord(fm([...base, 'watch: [packages/provegate/src/**]']), 'x.md', 'sample').issues,
     ).toEqual([]);
   });
 });
@@ -392,10 +397,7 @@ describe('record conformance corpus (FR-4, W12)', () => {
 
   it('the typed parser reaches the expected verdict on every case', () => {
     for (const c of corpus.cases) {
-      const issues = validateRecord(c.content, 'x.md', c.slug, {
-        isAdr: c.isAdr,
-        root: process.cwd(),
-      }).issues;
+      const issues = validateRecord(c.content, 'x.md', c.slug, { isAdr: c.isAdr }).issues;
       const fields = [...new Set(issues.map((i) => tsField(i.path)))];
       if (c.valid) expect(fields, c.id).toEqual([]);
       else for (const field of c.fields ?? []) expect(fields, c.id).toContain(field);
@@ -432,10 +434,7 @@ describe('record conformance corpus (FR-4, W12)', () => {
       // Sorted WITH duplicates, not de-duped: a field Set hides a divergence
       // inside a multi-entry field, where one side flags both bad globs and the
       // other flags only the first. Same field, different semantics.
-      const ts = validateRecord(c.content, 'x.md', c.slug, {
-        isAdr: c.isAdr,
-        root: process.cwd(),
-      })
+      const ts = validateRecord(c.content, 'x.md', c.slug, { isAdr: c.isAdr })
         .issues.map((i) => tsField(i.path))
         .sort();
       expect(standalone.get(c.id), `${c.id}: the two implementations disagree`).toEqual(ts);
@@ -506,82 +505,64 @@ describe('default-off compatibility (task 6.2)', () => {
 });
 
 /**
- * PRD-017 FR-3 containment, against a REAL filesystem. The corpus is a static
- * contract and cannot express a symlink, so these cases build a tree and run
- * both implementations against it. Labelling them inside the corpus instead —
- * as an earlier version did — claimed coverage that nothing exercised, which is
- * the vacuous green the corpus exists to prevent.
+ * PRD-017 FR-2 containment, against a REAL filesystem. Watch globs are checked
+ * lexically and need no tree; the CONFIGURED paths are read, so those are the
+ * ones worth resolving — and the three cases below each defeated a simpler
+ * version during review.
  */
-describe('watch containment against a real tree (FR-3)', () => {
+describe('configured memory paths against a real tree (FR-2)', () => {
   const roots: string[] = [];
   afterEach(() => {
     while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
   });
 
-  /** A repo with an escaping symlink, a dangling one, a loop, and a clean path. */
+  /** A repo with a direct escape, a dangling link, a CHAIN, a loop, and a clean dir. */
   function tree(): string {
     const base = mkdtempSync(join(tmpdir(), 'provegate-contain-'));
     roots.push(base);
     const repo = join(base, 'repo');
-    mkdirSync(join(repo, 'packages', 'pkg'), { recursive: true });
-    mkdirSync(join(repo, 'ok', 'src'), { recursive: true });
-    mkdirSync(join(base, 'outside', 'src'), { recursive: true });
-    symlinkSync(join(base, 'outside', 'src'), join(repo, 'packages', 'pkg', 'src'));
-    symlinkSync(join(base, 'gone', 'nowhere'), join(repo, 'dangling'));
+    mkdirSync(join(repo, 'inside'), { recursive: true });
+    mkdirSync(join(base, 'outside'), { recursive: true });
+    symlinkSync(join(base, 'outside'), join(repo, 'direct'));
+    symlinkSync(join(base, 'gone', 'nowhere'), join(repo, 'nested'));
+    symlinkSync('nested', join(repo, 'alias')); // chain: alias -> nested -> outside
     symlinkSync('loop', join(repo, 'loop'));
     return repo;
   }
 
-  const record = (glob: string): string =>
-    [
-      '---',
-      'name: sample',
-      'description: a real one-line description',
-      'type: gotcha',
-      'scope: workflow',
-      'status: active',
-      `watch: [${glob}]`,
-      '---',
-      '',
-      '**Why:** w',
-      '**How to apply:** h',
-      '',
-    ].join('\n');
-
-  /** Field verdicts from the SHIPPED standalone validator, spawned as a module. */
-  function standaloneFields(repo: string, glob: string): string[] {
-    const libPath = join(fixturesDir, '..', '..', 'practices', 'verify', 'lib.mjs');
-    const script = [
-      `import { validateMemoryRecord } from ${JSON.stringify(libPath)};`,
-      `const content = ${JSON.stringify(record(glob))};`,
-      `const out = validateMemoryRecord(content, { slug: 'sample', root: ${JSON.stringify(repo)} });`,
-      `process.stdout.write(JSON.stringify(out.issues.map((i) => i.field).sort()));`,
-    ].join('\n');
-    return JSON.parse(
-      execFileSync(process.execPath, ['--input-type=module', '-e', script], {
-        encoding: 'utf8',
-        stdio: 'pipe',
+  const load = (repo: string, root: string): string[] => {
+    writeFileSync(
+      join(repo, 'workflow.config.json'),
+      JSON.stringify({
+        memory: {
+          enabled: true,
+          root,
+          index: `${root}/INDEX.md`,
+          entrypoints: ['CLAUDE.md'],
+        },
       }),
-    ) as string[];
-  }
-
-  const typedFields = (repo: string, glob: string): string[] =>
-    validateRecord(record(glob), 'x.md', 'sample', { root: repo })
-      .issues.map((i) => i.path.split(':').pop()!)
-      .sort();
+    );
+    try {
+      resolveConfig(repo);
+      return [];
+    } catch (error) {
+      return (error as { issues?: { path: string }[] }).issues?.map((i) => i.path) ?? ['threw'];
+    }
+  };
 
   it.each([
-    ['a symlink hidden behind a wildcard', 'packages/*/src/**', false],
-    ['a dangling symlink pointing outside', 'dangling/**', false],
-    ['a symlink loop', 'loop/sub/**', false],
-    ['a contained path with a wildcard', 'ok/*/**', true],
-  ])('%s: both implementations agree', (_label, glob, shouldPass) => {
-    const repo = tree();
-    const typed = typedFields(repo, glob);
-    const standalone = standaloneFields(repo, glob);
-    expect(standalone, 'the two implementations disagree').toEqual(typed);
-    // Over-rejection is a defect too: a legitimate wildcard must survive.
-    if (shouldPass) expect(typed).toEqual([]);
-    else expect(typed).toContain('watch');
+    ['a symlink straight out of the workspace', 'direct', false],
+    ['a dangling symlink pointing outside', 'nested', false],
+    ['a CHAIN whose first hop looks in-repo', 'alias', false],
+    ['a symlink loop', 'loop', false],
+    ['an ordinary contained directory', 'inside', true],
+  ])('%s', (_label, root, shouldLoad) => {
+    const issues = load(tree(), root);
+    if (shouldLoad) {
+      // Over-rejection is a defect too: a plain directory must still load.
+      expect(issues).toEqual([]);
+    } else {
+      expect(issues).toContain('memory.root');
+    }
   });
 });

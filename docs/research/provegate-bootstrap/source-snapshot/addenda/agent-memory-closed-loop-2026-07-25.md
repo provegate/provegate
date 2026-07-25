@@ -123,6 +123,23 @@ re-reading.
 - Target matching strips an optional `::SymbolName` suffix before applying the repository's
   existing glob grammar, so a symbol-scoped target still matches a path-scoped watch.
 - `watch` is not an ownership claim. Two records may watch the same path.
+- **A watch glob is a pattern, and only its shape is checked.** It must be
+  repo-relative: no absolute path, no `~`, no drive-absolute or drive-relative form
+  (`C:foo` resolves against another drive's working directory), no UNC prefix, and no
+  `..` segment anywhere in it. That rule is total and host-independent, so every
+  implementation reaches the same verdict on the same string.
+
+  It deliberately does **not** ask whether the pattern could match something that is
+  itself a symlink out of the workspace. A watch is never dereferenced — it is matched
+  against declared targets and the paths in a closing diff, which are repo-relative
+  strings — so a pattern naming something outside simply never matches. Deciding
+  otherwise means walking the filesystem to expand a pattern, and that question has no
+  stable answer: globstars span arbitrary depth, any expansion bound hides the escape it
+  was meant to survive, symlink chains and case-insensitive volumes each move the line
+  again, and two implementations must then agree on all of it. Configured paths that
+  *are* read — the memory root, its index, and the agent entrypoints — get the
+  filesystem check instead, where the question is a single concrete path and therefore
+  decidable.
 - A record may also carry `tags`: kebab-case slugs used for retrieval ranking.
 - **An optional selector list, present but empty, is invalid.** `tags: []` and
   `watch: []` claim a capability the record does not have — a reader or a retrieval

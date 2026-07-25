@@ -133,7 +133,11 @@ conformance corpus holds both to one behaviour.
 - **watch** — optional inline list of globs naming the paths whose change makes this record
   worth re-reading. A watch is a **review trigger, not a staleness verdict** — an overlap
   asks someone to look, it does not assert the record is wrong, and it is not an ownership
-  claim (two records may watch the same path). Globs must stay inside the workspace.
+  claim (two records may watch the same path). Only the glob's SHAPE is validated: it must
+  be repo-relative, with no absolute, `~`, drive, or UNC prefix and no `..` segment. A watch
+  is matched against diff paths and never dereferenced, so a pattern pointing outside is
+  dead configuration rather than a way out of the workspace; the paths that ARE read — the
+  configured memory root, index, and entrypoints — are resolved through symlinks instead.
 
 ---
 

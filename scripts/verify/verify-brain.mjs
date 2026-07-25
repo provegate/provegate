@@ -36,7 +36,7 @@ const referenced = new Set();
 function checkRecord(file, isAdr) {
   const slug = basename(file, '.md');
   const content = read(file);
-  for (const issue of validateMemoryRecord(content, { slug, isAdr, root }).issues) {
+  for (const issue of validateMemoryRecord(content, { slug, isAdr }).issues) {
     r.fail(`${file}: ${issue.field} — ${issue.message}`);
   }
 

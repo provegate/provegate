@@ -1,5 +1,4 @@
-import { lstatSync, readFileSync, readdirSync, readlinkSync, realpathSync } from 'node:fs';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 /**
  * The supported record format (addendum A1 §10.6): an explicitly documented
@@ -55,82 +54,35 @@ export interface MemoryRecord {
  * Both implementations must agree on where a value ends, and borrowing the rule
  * everyone already knows is cheaper than inventing one they must learn.
  */
-/** Bound on wildcard expansion: containment must not become a directory crawl. */
-const MAX_GLOB_MATCHES = 200;
-
 /**
- * Resolve `probe` under `root` and report whether it lands outside.
+ * Host-independent lexical containment: absolute, home-relative, drive-absolute
+ * or drive-RELATIVE (`C:foo` resolves against another drive's cwd), UNC, or a
+ * `..` segment anywhere in the value.
  *
- * Three things this must survive, each of which defeated a simpler version:
- * a symlink that resolves outside; a DANGLING symlink, whose `realpath` raises
- * ENOENT exactly like an ordinary missing path, so the walk inspects the link
- * itself rather than skipping to the parent; and a wildcard, since a segment
- * after a metacharacter cannot be resolved as one string yet its matches can.
+ * This is the WHOLE contract for a watch glob, and the narrowing is deliberate.
+ * Five review rounds tried to decide statically whether a PATTERN could reach
+ * outside the workspace by walking the filesystem, and each fix exposed the
+ * next edge: `**` spanning depths, an expansion bound that silently hid the
+ * escape it was meant to survive, symlink chains, TOCTOU, case-insensitive
+ * volumes. That is not a hard problem being solved badly; it is an
+ * undecidable-by-inspection problem being asked the wrong question.
  *
- * A resolution error that is not "missing" fails CLOSED: containment was not
- * established, and an ELOOP symlink is where guessing "contained" is worst.
- */
-function escapesUnder(root: string, probe: string): boolean {
-  let rootReal: string;
-  try {
-    rootReal = realpathSync(resolve(root));
-  } catch {
-    return true;
-  }
-  const outside = (real: string): boolean => real !== rootReal && !real.startsWith(rootReal + sep);
-
-  const walk = (current: string, segments: string[]): boolean => {
-    // A dangling symlink reports ENOENT from realpath, so read the link itself.
-    try {
-      if (lstatSync(current).isSymbolicLink()) {
-        const target = readlinkSync(current);
-        const resolved = isAbsolute(target) ? target : resolve(dirname(current), target);
-        if (outside(resolve(resolved))) return true;
-      }
-    } catch (error) {
-      // Only "missing" means the path simply does not exist yet. Any other
-      // error — ELOOP above all — means containment was never established, and
-      // swallowing it here is how a symlink loop read as contained.
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return true;
-    }
-    if (segments.length === 0) {
-      try {
-        return outside(realpathSync(current));
-      } catch (error) {
-        return (error as NodeJS.ErrnoException).code !== 'ENOENT';
-      }
-    }
-    const head = segments[0]!;
-    const rest = segments.slice(1);
-    if (/[*?[]/.test(head)) {
-      let entries: string[];
-      try {
-        entries = readdirSync(current).slice(0, MAX_GLOB_MATCHES);
-      } catch {
-        return false; // nothing to expand against; the lexical rule already ran
-      }
-      return entries.some((entry) => walk(join(current, entry), rest));
-    }
-    return walk(join(current, head), rest);
-  };
-
-  return walk(
-    rootReal,
-    probe.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.'),
-  );
-}
-
-/**
- * Host-independent: absolute, home-relative, drive-letter, UNC, or `..`.
+ * A watch glob is never dereferenced. It is matched against declared targets
+ * and the paths in a closing diff — strings, repo-relative by construction — to
+ * decide whether a record must be named in Memory Inputs. A pattern naming
+ * something outside the workspace simply never matches: dead configuration, not
+ * an exploit. So the rule that matters is the one about the pattern's own
+ * shape, and that rule is total, host-independent, and identical on both sides
+ * by construction.
  *
- * Applied to the WHOLE glob, not to the literal prefix before the first
- * metacharacter: a glob whose literal prefix is harmless can still
- * escape after its first metacharacter, so checking only the prefix reads the
- * safe part of a hostile path.
+ * Where a path IS dereferenced — the configured memory root, index, and
+ * entrypoints, which are read — the filesystem check stays and is stricter, in
+ * `config/load.ts`. Those are single concrete paths: no wildcards, no
+ * expansion, no bound, and therefore decidable.
  */
 function escapesLexically(value: string): boolean {
   if (value.startsWith('~')) return true;
-  if (/^[/\\]/.test(value) || /^[A-Za-z]:[/\\]/.test(value)) return true;
+  if (/^[/\\]/.test(value) || /^[A-Za-z]:/.test(value)) return true;
   return value.split(/[/\\]/).includes('..');
 }
 
@@ -279,8 +231,6 @@ const asString = (v: string | string[] | undefined): string | null =>
 const asList = (v: string | string[] | undefined): string[] | null => (Array.isArray(v) ? v : null);
 
 export interface ValidateOptions {
-  /** Repo root, for `watch` containment. Omit to skip the filesystem check. */
-  root?: string;
   /** True when the file lives in the ADR directory. */
   isAdr?: boolean;
 }
@@ -426,16 +376,6 @@ export function validateRecord(
       // The lexical rule reads the entire glob; only the realpath probe needs
       // the literal prefix, because a metacharacter cannot be resolved.
       if (escapesLexically(glob)) {
-        issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
-        continue;
-      }
-      if (options.root === undefined) continue;
-      // Resolve the probe ITSELF, not just its parent. `containedPath` walks up
-      // from the parent, so `watch: [link/**]` — probe exactly `link` — was
-      // contained here and escaping there. The walk below is deliberately the
-      // same shape as the standalone validator's: these two must agree by
-      // construction, and the only way to guarantee that is to do the same thing.
-      if (escapesUnder(options.root, glob)) {
         issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
       }
     }

@@ -1,15 +1,8 @@
 // Shared helpers for the verify:* library — wave 2.
 // One module for every parser that two checks read (shared-module rule: two gates
 // reading the same format must import one parser so they cannot drift).
-import {
-  existsSync,
-  lstatSync,
-  readFileSync,
-  readdirSync,
-  readlinkSync,
-  realpathSync,
-} from 'node:fs';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 /** Repo root: optional first positional arg (used by self-tests), else cwd. */
 export function targetRoot() {
@@ -155,74 +148,23 @@ const ADR_RE = /^ADR-\d{4}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** A watch glob's literal prefix must stay inside the workspace. */
-function watchEscapes(glob) {
-  // Read the WHOLE glob: `src/*/../../../outside/**` has a harmless literal
-  // prefix and still escapes, so checking only the prefix reads the safe part
-  // of a hostile path.
-  if (glob.startsWith('~')) return true;
-  if (/^[/\\]/.test(glob) || /^[A-Za-z]:[/\\]/.test(glob)) return true;
-  return glob.split(/[/\\]/).includes('..');
-}
-
-/** Bound on wildcard expansion: containment must not become a directory crawl. */
-const MAX_GLOB_MATCHES = 200;
-
 /**
- * Resolve a watch glob under `root` and report whether it lands outside. Same
- * algorithm as the package parser, deliberately: a symlink resolving outside, a
- * DANGLING symlink (whose realpath raises ENOENT exactly like an ordinary
- * missing path), and a component after a wildcard all have to be caught, and the
- * only way two implementations agree on that is to do the same thing.
+ * Lexical containment is the WHOLE contract for a watch glob: absolute,
+ * home-relative, drive-absolute or drive-RELATIVE (`C:foo` resolves against
+ * another drive's cwd), UNC, or a `..` segment anywhere.
  *
- * Errors other than "missing" fail CLOSED — an ELOOP symlink is where guessing
- * "contained" is worst.
+ * A watch is never dereferenced — it is matched against repo-relative diff
+ * paths — so a pattern naming something outside simply never matches. Deciding
+ * statically whether a PATTERN could reach outside by walking the filesystem is
+ * the wrong question, and asking it produced five rounds of edges: globstars
+ * spanning depths, an expansion bound that hid the escape it was meant to
+ * survive, symlink chains, case-insensitive volumes. The filesystem check lives
+ * where a path is actually read instead — the configured memory paths.
  */
-function watchEscapesRealpath(root, glob) {
-  let rootReal;
-  try {
-    rootReal = realpathSync(resolve(root));
-  } catch {
-    return true;
-  }
-  const outside = (real) => real !== rootReal && !real.startsWith(rootReal + sep);
-
-  const walk = (current, segments) => {
-    try {
-      if (lstatSync(current).isSymbolicLink()) {
-        const target = readlinkSync(current);
-        const resolved = isAbsolute(target) ? target : resolve(dirname(current), target);
-        if (outside(resolve(resolved))) return true;
-      }
-    } catch (err) {
-      // Only "missing" means not-yet-created; anything else (ELOOP) means
-      // containment was never established.
-      if (err.code !== 'ENOENT') return true;
-    }
-    if (segments.length === 0) {
-      try {
-        return outside(realpathSync(current));
-      } catch (err) {
-        return err.code !== 'ENOENT';
-      }
-    }
-    const head = segments[0];
-    const rest = segments.slice(1);
-    if (/[*?[]/.test(head)) {
-      let entries;
-      try {
-        entries = readdirSync(current).slice(0, MAX_GLOB_MATCHES);
-      } catch {
-        return false;
-      }
-      return entries.some((entry) => walk(join(current, entry), rest));
-    }
-    return walk(join(current, head), rest);
-  };
-
-  return walk(
-    rootReal,
-    glob.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.'),
-  );
+function watchEscapes(glob) {
+  if (glob.startsWith('~')) return true;
+  if (/^[/\\]/.test(glob) || /^[A-Za-z]:/.test(glob)) return true;
+  return glob.split(/[/\\]/).includes('..');
 }
 
 /**
@@ -231,7 +173,7 @@ function watchEscapesRealpath(root, glob) {
  * implementations agree on what is wrong, and leaves them free to word it
  * differently.
  */
-export function validateMemoryRecord(content, { slug, isAdr = false, root } = {}) {
+export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
   const { values, body, issues } = parseRecordFrontmatter(content);
   const str = (k) => (typeof values.get(k) === 'string' ? values.get(k) : null);
   const list = (k) => (Array.isArray(values.get(k)) ? values.get(k) : null);
@@ -316,7 +258,7 @@ export function validateMemoryRecord(content, { slug, isAdr = false, root } = {}
     }
     if (key === 'watch') {
       for (const glob of entries) {
-        if (watchEscapes(glob) || (root !== undefined && watchEscapesRealpath(root, glob))) {
+        if (watchEscapes(glob)) {
           issues.push({ field: 'watch', message: `'${glob}' escapes the workspace` });
         }
       }

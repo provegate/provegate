@@ -44,10 +44,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /** Plain objects merge recursively; arrays and scalars replace wholesale. */
 /**
- * Symlink containment for configured memory paths. The lexical rule in
- * `validate.ts` is pure and cannot see the filesystem, but a repository symlink
- * pointing outside the workspace spells a perfectly contained relative path —
- * so the check that needs a real root lives here, where one exists.
+ * Filesystem containment for configured memory paths — the store, its index, and
+ * the agent entrypoints. Unlike a watch glob, these ARE dereferenced: something
+ * reads them. They are also single concrete paths with no wildcards, so the
+ * question is decidable and worth asking properly.
+ *
+ * Three cases a simpler version missed, each found in review:
+ * a symlink resolving outside; a DANGLING symlink, whose `realpath` raises
+ * ENOENT exactly like an ordinary missing path; and a CHAIN, where the first
+ * link points at an in-repo name that itself points outside. Anything that is
+ * not a clean "does not exist yet" fails closed.
  */
 function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
   const memory = config.memory;
@@ -64,6 +70,31 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
   } catch {
     return issues; // an unreadable root is not this check's failure to report
   }
+
+  // Case-insensitive volumes (default macOS, Windows) name one directory two
+  // ways, so an exact comparison rejects a contained path for its spelling.
+  const caseInsensitive = process.platform === 'darwin' || process.platform === 'win32';
+  const norm = (value: string): string => (caseInsensitive ? value.toLowerCase() : value);
+  const outside = (candidate: string): boolean =>
+    norm(candidate) !== norm(rootReal) && !norm(candidate).startsWith(norm(rootReal) + sep);
+
+  /** Follow a link chain to its end, or null when a hop cannot be read. */
+  const chainEnd = (start: string): string | null => {
+    let current = start;
+    for (let hops = 0; hops < 40; hops++) {
+      let info;
+      try {
+        info = lstatSync(current);
+      } catch (error) {
+        return (error as NodeJS.ErrnoException).code === 'ENOENT' ? current : null;
+      }
+      if (!info.isSymbolicLink()) return current;
+      const target = readlinkSync(current);
+      current = isAbsolute(target) ? target : resolve(dirname(current), target);
+    }
+    return null; // a loop, or a chain long enough to be one
+  };
+
   const entries: [string, string][] = [
     ['memory.root', memory.root],
     ['memory.index', memory.index],
@@ -71,36 +102,24 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
   ];
   for (const [path, value] of entries) {
     if (value.length === 0 || isAbsolute(value)) continue; // lexical rules own these
-    let target = rootReal;
-    let escaped = false;
-    let unresolvable = false;
+    let current = rootReal;
+    let verdict: 'contained' | 'outside' | 'unresolvable' = 'contained';
     for (const segment of value.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.')) {
-      target = resolve(target, segment);
-      try {
-        // A DANGLING symlink raises ENOENT from realpath exactly like an
-        // ordinary missing path, so read the link itself rather than walking
-        // past it: `_brain -> /gone/elsewhere` must not read as contained.
-        if (lstatSync(target).isSymbolicLink()) {
-          const link = readlinkSync(target);
-          const resolved = isAbsolute(link) ? link : resolve(dirname(target), link);
-          if (resolved !== rootReal && !resolved.startsWith(rootReal + sep)) escaped = true;
-        }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') unresolvable = true;
-        break; // the rest does not exist yet; where it would live is contained
+      current = resolve(current, segment);
+      const end = chainEnd(current);
+      if (end === null) {
+        verdict = 'unresolvable';
+        break;
       }
-    }
-    if (!escaped && !unresolvable) {
-      try {
-        const real = realpathSync(target);
-        if (real !== rootReal && !real.startsWith(rootReal + sep)) escaped = true;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') unresolvable = true;
+      if (outside(end)) {
+        verdict = 'outside';
+        break;
       }
+      current = end;
     }
-    if (escaped) {
+    if (verdict === 'outside') {
       issues.push({ path, message: 'resolves outside the workspace through a symlink' });
-    } else if (unresolvable) {
+    } else if (verdict === 'unresolvable') {
       issues.push({ path, message: 'could not be resolved to a contained path' });
     }
   }

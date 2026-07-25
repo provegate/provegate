@@ -238,7 +238,10 @@ export function validateResolvedConfig(config: {
 function unsafeRelPath(value: string): string | null {
   if (value.length === 0) return 'must not be empty';
   if (value.startsWith('~')) return 'must not start with ~ (home-relative)';
-  if (/^[/\\]/.test(value) || /^[A-Za-z]:[/\\]/.test(value)) return 'must be repo-relative';
+  // `C:foo` is drive-RELATIVE: it resolves against that drive's working
+  // directory, not against this repository, so the slash is not what makes a
+  // drive path dangerous.
+  if (/^[/\\]/.test(value) || /^[A-Za-z]:/.test(value)) return 'must be repo-relative';
   const segments = value.split(/[/\\]/);
   if (segments.includes('..')) return 'must not contain a `..` segment';
   return null;

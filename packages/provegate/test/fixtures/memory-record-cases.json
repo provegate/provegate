@@ -58,13 +58,15 @@
     "links": ["invalid slug", "empty is legal"],
     "tags": ["empty when present", "invalid slug"],
     "watch": [
-      "empty when present",
-      "escapes workspace",
+      "UNC",
       "absolute",
       "drive letter",
+      "drive relative",
+      "empty when present",
       "escapes without a root",
+      "escapes workspace",
       "per-entry",
-      "traversal after a metacharacter"
+      "traversal anywhere"
     ],
     "body": [
       "missing Why",
@@ -606,7 +608,7 @@
       "isAdr": false,
       "valid": false,
       "fields": ["watch"],
-      "matrix": ["watch:traversal after a metacharacter"],
+      "matrix": ["watch:traversal anywhere"],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [src/*/../../../outside/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "the literal prefix is harmless; the escape hides behind the first metacharacter"
     },
@@ -618,6 +620,34 @@
       "matrix": [],
       "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [packages/*/src/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
       "note": "a glob with a metacharacter and no traversal stays legal"
+    },
+    {
+      "id": "watch-drive-relative",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["watch"],
+      "matrix": ["watch:drive relative"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [C:foo/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "`C:foo` resolves against another drive's working directory, so the slash is not what makes a drive path dangerous"
+    },
+    {
+      "id": "watch-unc",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["watch"],
+      "matrix": ["watch:UNC"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [//server/share/**]\n---\n\n**Why:** w\n**How to apply:** h\n"
+    },
+    {
+      "id": "valid-watch-globstar",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "matrix": [],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [packages/**/src/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "a globstar spanning depths is legal; its shape is what is checked"
     }
   ]
 }
