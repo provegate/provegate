@@ -96,10 +96,11 @@ Records to open and confirm still accurate before the dependent task starts (tas
 - [ ] 1.0 FR-1 — Single-package cookbook entry
   - [ ] 1.1 Write
         `packages/provegate/examples/manifests/single-package/gates.manifest.json` with
-        `phases["4"]` = the four floor commands in order (`npm run check-types`,
-        `npm run lint`, `npm run test`, `npm run build`), `postMerge` = check-types and
-        build, `wiringExceptions` = `{}`, and exactly one additive `classDefaults.hotfix`
-        rule.
+        `phases["4"]` = the four floor commands in `defaultManifest()`'s order
+        (`npm run check-types`, `npm run lint`, `npm run build`, `npm run test` — build
+        precedes test in the shipped default, so the cookbook must not invert it),
+        `postMerge` = check-types and build, `wiringExceptions` = `{}`, and exactly one
+        additive `classDefaults.hotfix` rule.
   - [ ] 1.2 W7 — write
         `packages/provegate/examples/manifests/single-package/README.md` so it annotates
         every key with the failure that key catches, and states plainly that class
@@ -134,7 +135,8 @@ Records to open and confirm still accurate before the dependent task starts (tas
         and `postMerge` — with `isSafeCommand`; a cookbook entry the runner would refuse
         is not a cookbook entry.
   - [ ] 3.3 Assert the single-package specifics: `phases["4"]` equals the four FR-1
-        commands in order.
+        commands in order, and that the order matches `defaultManifest(DEFAULT_CONFIG)`'s
+        Phase 4 sequence rather than restating a literal that can drift from it.
   - [ ] 3.4 Assert the monorepo specifics: `hardCaps` is non-empty, its first entry has
         all four `HardCap` fields non-empty, its `requireLine` compiles as a `RegExp`, and
         `classDefaults` has a rule for `feature`, `hotfix`, and `infra`.

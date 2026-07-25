@@ -127,8 +127,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 1. **FR-1**: Ship `examples/manifests/single-package/` — a `gates.manifest.json` for a
    greenfield single-package Node library plus a `README.md` annotating every key and
    naming the failure each gate catches. The manifest declares `phases["4"]` with exactly
-   the four floor commands (`npm run check-types`, `npm run lint`, `npm run test`,
-   `npm run build`), `postMerge` with check-types and build, an empty `wiringExceptions`,
+   the four floor commands **in the shipped default's order** (`npm run check-types`,
+   `npm run lint`, `npm run build`, `npm run test` — `defaultManifest()` builds before it
+   tests, and a cookbook that teaches the floor must not invert it),
+   `postMerge` with check-types and build, an empty `wiringExceptions`,
    and one `classDefaults.hotfix` rule. **Class defaults are additive only** — the runner
    merges their `run` commands onto Phase 4 (`gates/classes.ts` pushes, never subtracts),
    so the hotfix rule adds a focused gate and the README states plainly that narrowing a

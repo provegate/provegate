@@ -5,16 +5,16 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-019-memory-adoption-cli.md` |
-| Score                  | 8.425/10 |
+| Score                  | 8.58/10 |
 | Verdict                | PASS |
-| Iteration              | 1 |
+| Iteration              | 2 |
 | Model Tier (Execution) | high |
 | Model Tier (Audit)     | high |
-| Scored by              | independent agent (different model family from the PRD author), via owner |
+| Scored by              | independent agent (gpt-5.6, different model family from the PRD author), via owner |
 | Self-scored            | no |
 | Date                   | 2026-07-25 |
 | PRD Lint               | passed — `gate check PRD-019` exit 0 |
-| State Record           | updated — PRD-019 shows `PASS · 8.425` |
+| State Record           | pending — not regenerated during this read-only re-score |
 | Dependency             | PRD-017 and PRD-018 must be Ship Verified before Phase 4 |
 
 ---
@@ -23,8 +23,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | high | Score band 8–8.9. The work itself is read-only and additive, but byte-stable JSON, deterministic tie-breaking, and a doctor that must diagnose partial installs without ever writing are easy to implement almost-correctly. |
-| Phase 6 (Audit)     | high | The audit's job is to make doctor lie: find a broken wiring mode it reports green, or a repository state it silently mutates. Both are cheap to check and fatal if present. |
+| Phase 4 (Execution) | high | Score band 8–8.9. Byte-stable JSON, deterministic tie-breaking, containment around real paths/symlinks, and a doctor that must never write are easy to implement almost-correctly. |
+| Phase 6 (Audit)     | high | Audit must make doctor lie: construct broken local wiring, symlink escapes, and repository states it silently mutates; it must also verify that shipped-pack guidance follows the actual pack ledger contract. |
 
 ---
 
@@ -48,7 +48,9 @@
   reject — recall and validation cannot disagree.
 
 The depth ceiling is inherent: this PRD reports on a model PRD-017 defines and a loop
-PRD-018 closes. That is a virtue for risk and a limit on how deep it can be.
+PRD-018 closes. That is a virtue for risk and a limit on how deep it can be. W4 is now
+properly closed: §7 says ranking is deterministic, explicitly not a relevance guarantee,
+and directs Phase 6 to audit determinism and bounds rather than a declared non-goal.
 
 ### 2. Edge Cases & Failure Modes
 
@@ -56,9 +58,10 @@ Measured against the live repository:
 
 | Claim under test | Method | Result |
 | ---------------- | ------ | ------ |
-| The doctor's entrypoint check is well-defined on the dogfood repo | inspected this repo's configured entrypoints | **gap** — `AGENTS.md` is a **symlink to `CLAUDE.md`**. Containment must reject escapes, not symlinks; and two entrypoints resolving to one file must not read as two independent passes. Neither case appears in the FR-2 matrix. See W1 |
-| Adoption-guidance targets are pack-paired | checked FR-5's targets against the pack ledger | **gap** — `practices/NEXT_STEPS.md` and `practices/shims/**` are hash-paired with the shipped copies; editing them without `verify:pack-drift --reconcile` fails the bundle. The obligation is unstated. See W2 |
-| `gate check PRD-019` passes | ran the lint | confirmed, exit 0 |
+| The dog's configured entrypoints include a symlink | `ls -la AGENTS.md CLAUDE.md` | **confirmed** — `AGENTS.md -> CLAUDE.md`; FR-2 now explicitly requires valid contained symlinks, deduplication by resolved file, and rejection of external escapes. W1 resolved. |
+| `gate renew` and `gate release` establish the bare-command style | invoked each without arguments and read `src/cli.ts` | **confirmed** — each writes its stated usage to stderr and exits 1; FR-1 adopts that defined behavior for bare `gate doctor`. W3 resolved. |
+| Adoption-guidance targets are hash-paired with shipped copies | read `scripts/verify/pack-drift-ledger.json` and verifier | **false** — `NEXT_STEPS.md` and all three shims are ledger `packOnly`, not `pairs`; the verifier says pack-only files have no repository counterpart. FR-5's registration obligation is real, but its paired-copy/reconcile rationale is not. W2 remains open; see W5. |
+| `gate check PRD-019` passes | ran `node packages/provegate/dist/cli.js check PRD-019` | **confirmed**, exit 0 |
 
 The PRD does enumerate a strong matrix on its own: fresh practices, existing
 config/manifest, missing index/script/package-script/Phase-7 wiring, placeholder residue,
@@ -76,17 +79,19 @@ declarative.
   an adapter without vendor coupling — the same discipline the rest of the CLI follows.
 - The stats deferral is recorded on the status board with an owner and a review date rather
   than dropped, so the decision is revisitable instead of forgotten.
-- Minor surface gap: the PRD introduces a top-level `doctor` command but says nothing about
-  bare `gate doctor` without `--memory`. See W3.
+- The bare-command surface is no longer implicit: FR-1 specifies usage plus exit 1 and
+  cites a measured house style. W3 resolved.
 
 ### 4. Migration & Rollback
 
 - Purely additive: two read-only commands, no state file, no cache, no schema.
 - Rollback removes the commands; every record stays readable Markdown.
 - Dependencies are stated as Phase 4 preconditions, not as vague ordering.
-- The one migration-shaped obligation is distribution: new shipped files must be registered
-  in `pack-manifest.json`, and edited packed files must be reconciled in the drift ledger
-  (W2).
+- The one migration-shaped obligation is distribution: newly shipped files must be
+  registered in `pack-manifest.json`. However, FR-5 incorrectly calls its existing
+  `NEXT_STEPS`/shim targets hash-paired and mandates pair reconciliation, though the live
+  ledger classifies them as pack-only. That inaccurate operational instruction remains a
+  real rollback/deployment risk (W2/W5).
 
 ---
 
@@ -96,17 +101,17 @@ Class `infra` weights, per `prompts/phase-2-readiness-scorer.md`.
 
 | #         | Dimension                | Weight | Score        | Notes |
 | --------- | ------------------------ | ------ | ------------ | ----- |
-| 1         | Clarity                  | 15%    | 8.5/10       | Six FRs with concrete Targets; the ranking rule, selector requirement, limit default and range, and JSON field names are all stated exactly enough to implement without asking. Docked only for leaving bare `gate doctor` undefined |
-| 2         | Completeness             | 20%    | 8.0/10       | The partial-install and recall matrices are genuinely thorough, and non-mutation is made testable by tree hash. Docked for two cases measurement found missing: the symlinked entrypoint this very repo uses, and the pack-reconcile obligation created by editing shipped adoption files |
-| 3         | Technical Depth          | 20%    | 8.0/10       | Deterministic ranking with an explicit tie-break, bounded output, verify-before-use, no persistent index. Appropriate rather than deep — it reports over a model two other PRDs define, which is the correct scope, not a flaw |
+| 1         | Clarity                  | 15%    | 8.6/10       | Six FRs have concrete Targets; ranking, selectors, bounds, JSON fields, symlink semantics, and bare-doctor behavior are executable without clarification. Docked for the false pack-pair claim in FR-5 |
+| 2         | Completeness             | 20%    | 8.4/10       | The matrices are thorough and tree hashing makes non-mutation testable. Docked because the FR-5 distribution workflow misclassifies pack-only content as reconciled pairs, leaving its actual verification obligation ambiguous |
+| 3         | Technical Depth          | 20%    | 8.4/10       | Deterministic ranking, explicit tie-breaks, bounds, verify-before-use, and no persistent index are appropriate. §7 now correctly accepts determinism rather than relevance; docked only for the incorrect pack-drift model in the adoption architecture |
 | 4         | Multi-Tenancy & Security | 10%    | 9.0/10       | No tenant surface. Read-only by construction, no network, no shell execution, selectors are data and never shell fragments, containment on path selectors, private records excluded from public results |
 | 5         | Scope & Testability      | 15%    | 9.0/10       | The narrowest and best-bounded of the three. Non-goals name which PRD owns each exclusion, and every success metric is mechanically checkable — the before/after tree hash in particular converts a claim into a test |
-| 6         | Migration & Rollback     | 20%    | 8.5/10       | Additive read-only surface, rollback is deletion, no state or data to migrate, dependencies stated as Phase 4 preconditions. Docked for the unstated pack-manifest/drift-reconcile obligation in FR-5 |
-| **Total** | **Weighted**             |        | **8.425/10** | **PASS** |
+| 6         | Migration & Rollback     | 20%    | 8.4/10       | Additive read-only surface, rollback is deletion, and dependencies are Phase 4 preconditions. Docked because FR-5 prescribes reconciliation for documents that have no counterpart and does not state the valid pack-only verification path |
+| **Total** | **Weighted**             |        | **8.58/10** | **PASS** |
 
 Weighted sum:
-`0.15×8.5 + 0.20×8.0 + 0.20×8.0 + 0.10×9.0 + 0.15×9.0 + 0.20×8.5`
-`= 1.275 + 1.60 + 1.60 + 0.90 + 1.35 + 1.70 = 8.425`.
+`0.15×8.6 + 0.20×8.4 + 0.20×8.4 + 0.10×9.0 + 0.15×9.0 + 0.20×8.4`
+`= 1.29 + 1.68 + 1.68 + 0.90 + 1.35 + 1.68 = 8.58`.
 
 Hard caps — none triggered:
 
@@ -121,22 +126,23 @@ Hard caps — none triggered:
 
 ## Missing Pieces (watch items)
 
-1. **W1 — the symlinked entrypoint.** This repository's `AGENTS.md` is a symlink to
-   `CLAUDE.md`, and it is a configured agent entrypoint. Doctor must treat an in-repo
-   symlink as valid (containment rejects *escapes*, not symlinks) and must not report two
-   entrypoints resolving to one file as two independent passes. Add both to the FR-2
-   matrix; the dogfood repo is the fixture, so this is free coverage.
-2. **W2 — pack reconcile and manifest registration.** FR-5 edits `practices/NEXT_STEPS.md`
-   and `practices/shims/**`, which are hash-paired with their shipped copies. The plan must
-   include registering any new shipped file in `pack-manifest.json`, running
-   `node scripts/verify/verify-pack-drift.mjs --reconcile`, and reading its per-pair output.
-   Without it, Phase 5 hits a red gate with no documented escape.
-3. **W3 — define the bare command.** Specify what `gate doctor` without `--memory` does.
-   House style is usage plus exit 1 (`gate renew`, `gate release`); pick it deliberately so
-   the command surface is not half-defined the moment a second doctor mode appears.
-4. **W4 — say plainly that ranking is deterministic, not relevant.** Determinism is proved;
-   relevance is not evaluated anywhere, by design. State that as an accepted consequence so
-   Phase 6 does not relitigate a non-goal, and keep the conservative default of 20.
+1. **W1 — RESOLVED: symlinked entrypoint.** FR-2 explicitly covers a contained symlink,
+   resolved-file deduplication, and an escaping target. The measured `AGENTS.md -> CLAUDE.md`
+   fixture makes this executable.
+2. **W2 — NOT RESOLVED: pack reconcile and manifest registration.** FR-5 names the
+   distribution obligation, but its claim that `NEXT_STEPS.md` and `shims/**` are
+   hash-paired is false. Correct it to distinguish registration of new packed files from
+   verification of existing pack-only files; do not present pair reconciliation as their
+   counterpart check.
+3. **W3 — RESOLVED: bare command.** FR-1 specifies usage plus exit 1, matching the
+   measured `gate renew` and `gate release` behavior.
+4. **W4 — RESOLVED: determinism, not relevance.** §7 records the intended trade and
+   constrains Phase 6's audit accordingly.
+5. **W5 — false pack-drift claim.** The ledger lists `NEXT_STEPS.md` and every shim in
+   `packOnly[]`; `verify-pack-drift.mjs` explicitly says those have no counterpart.
+   Replace FR-5's “hash-paired” assertion and specify a non-mutating verification command
+   appropriate to pack-only files. `--reconcile` writes the ledger and is not evidence that
+   these files were paired.
 
 ---
 
@@ -145,6 +151,7 @@ Hard caps — none triggered:
 | # | Date       | Score | Verdict | Key Changes |
 | - | ---------- | ----- | ------- | ----------- |
 | 1 | 2026-07-25 | 8.425 | PASS    | First independent scoring of the split adoption-CLI scope. Measured the entrypoint and distribution claims against the live repo: the symlinked `AGENTS.md` entrypoint and the pack-reconcile obligation are both uncovered |
+| 2 | 2026-07-25 | 8.58 | PASS | Independent re-score. W1/W3/W4 verified resolved; W2 remains because FR-5's pack-pair claim is false in the live ledger, recorded separately as W5 |
 
 ---
 
@@ -156,20 +163,22 @@ Hard caps — none triggered:
 - [x] Memory-disabled repositories refuse with remediation rather than misbehaving.
 - [x] Deterministic, bounded output with stable JSON field names.
 - [x] Stats deferral recorded on the board with an owner and review date.
-- [ ] W1/W2 folded into Phase 3 tasks.
+- [x] W1, W3, and W4 verified against the PRD and repository.
+- [ ] W2/W5: correct FR-5 to the live pack-only ledger contract.
 - [ ] PRD-017 and PRD-018 Ship Verified before Phase 4 entry.
 
 ---
 
 ## Verdict
 
-**PASS — 8.425/10.** Scored independently: a different model family from the PRD author,
-with no authoring involvement.
+**PASS — 8.58/10.** Scored independently by gpt-5.6, a different model family from the
+PRD author, with no authoring involvement.
 
-The best-bounded PRD of the three. It is read-only, additive, and rolls back by deletion,
-and it makes its central claim testable instead of asserting it — a before/after tree hash
-is what turns "doctor never mutates" into a gate. The two gaps measurement found are both
-small and both live in this repository already: a symlinked entrypoint the matrix does not
-mention, and a pack-reconcile obligation the plan does not name.
+The amended symlink matrix, bare-command rule, and determinism trade all survive
+measurement. The report remains PASS because the sole active issue is narrow and does not
+trip a hard cap: FR-5 describes a distribution workflow from a false premise. The live
+ledger classifies its `NEXT_STEPS` and shim targets as pack-only, so pair reconciliation is
+not their counterpart check. Correct W2/W5 before task generation if the workflow is to be
+implemented literally.
 
 Phase 3 may begin now; Phase 4 waits on PRD-017 and PRD-018 Ship Verified.

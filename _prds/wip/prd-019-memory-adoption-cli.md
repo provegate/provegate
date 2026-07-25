@@ -98,7 +98,9 @@ so that I can select relevant records without embeddings or vendor-specific stor
    INDEX pointer, standalone verify script, package script, Phase 7 manifest reachability,
    optional CI literal reachability, and unfilled practice placeholders. Mandatory local
    failures use stable non-zero codes; CI absence warns. It never edits config,
-   manifests, entrypoints, scripts, or state.
+   manifests, entrypoints, scripts, or state. Bare `gate doctor` with no mode flag prints
+   usage and exits 1 — the house style already set by `gate renew` and `gate release` —
+   so the surface stays defined when a second doctor mode appears.
    - **Targets:** `packages/provegate/src/core/memory/doctor.ts` (new),
      `packages/provegate/src/core/memory/index.ts`,
      `packages/provegate/src/cli.ts`,
@@ -110,6 +112,14 @@ so that I can select relevant records without embeddings or vendor-specific stor
    and `detail`. Test fresh practices, existing config/manifest, missing index/script/
    package script/Phase 7 wiring, multiple entrypoint combinations, placeholder residue,
    disabled memory, CI warning, and byte-for-byte non-mutation.
+
+   **Symlinked entrypoints are in the matrix, using this repository as the fixture.**
+   `AGENTS.md` here is a symlink to `CLAUDE.md`, and both are configured entrypoints.
+   Two cases follow: an in-repo symlink is **valid** — containment rejects escapes, not
+   symlinks — and two configured entrypoints resolving to the same real file count as
+   **one** satisfied entrypoint, never two independent passes. A symlink whose target
+   resolves outside the repository is an escape and fails. The dogfood repo makes this
+   coverage free, so a fixture that skips it is a choice, not an omission.
    - **Targets:** `packages/provegate/src/core/memory/doctor.ts`,
      `packages/provegate/src/cli.ts`,
      `packages/provegate/test/memory.test.ts`,
@@ -141,6 +151,16 @@ so that I can select relevant records without embeddings or vendor-specific stor
    package README/QUICKSTART, docs CLI reference, pack manifest, and content tests with
    doctor/find behavior, activation order, warnings versus failures, no-overwrite,
    local-only recall, and the explicit stats deferral. Root dogfood doctor must be green.
+   The distribution obligation is registration, **not** reconciliation:
+   `practices/NEXT_STEPS.md` and `practices/shims/**` are `packOnly` entries in
+   `scripts/verify/pack-drift-ledger.json` — a bare name list with no hashes and no live
+   counterpart — so editing them requires no `--reconcile` pass. What does fail is
+   shipping a **new** packed file that is neither paired nor listed: `verify:pack-drift`
+   refuses it by name. So any new shipped file must be added to `pack-manifest.json`
+   (the byte-exact tarball allowlist) **and** declared in the ledger's `packOnly[]` or
+   paired with a live counterpart. No FR-5 target is a hash pair today — verified against
+   the ledger on 2026-07-25 — so a `--reconcile` pass here would be ceremony, and the
+   ledger edit this PRD does make is one added `packOnly` name.
    - **Targets:** `packages/provegate/practices/NEXT_STEPS.md`,
      `packages/provegate/practices/shims/**`,
      `packages/provegate/README.md`, `packages/provegate/QUICKSTART.md`,
@@ -201,6 +221,12 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - Find scans current indexed active records on demand. Output is bounded and no cache
   invalidation problem exists.
 - Human and JSON rendering share typed results so adapters cannot change semantics.
+- **Ranking is deterministic, not relevant — and that is the accepted trade.** The order
+  is reproducible and its reasons are printed, but nothing here evaluates whether a
+  returned record was actually useful; relevance would require embeddings or telemetry,
+  both of which are non-goals. Phase 6 should audit determinism and bounds, not
+  relitigate result quality. The conservative default of 20 exists for the same reason:
+  a bounded, explainable list beats a ranked guess.
 - CI reachability is warning-only because CI layouts are user-defined; Phase 7 local
   manifest reachability is mandatory.
 
@@ -323,6 +349,12 @@ Before Phase 2 PASS, run: `gate check PRD-019`
 - DO NOT return partial results after validation failure.
 - DO NOT treat CI warning as a local gate failure or local failure as a warning.
 - DO NOT duplicate parser/validator semantics from PRD-017.
+- DO NOT treat an in-repo symlinked entrypoint as invalid, and DO NOT count two
+  entrypoints resolving to one real file as two passes.
+- DO NOT claim or imply relevance; the guarantee is determinism with printed reasons.
+- DO NOT ship a new packed file without adding it to `pack-manifest.json` and declaring
+  it in the ledger (`packOnly[]` or a pair) — and DO NOT run `--reconcile` for `packOnly`
+  edits, which have no counterpart to reconcile.
 
 ---
 
@@ -330,6 +362,8 @@ Before Phase 2 PASS, run: `gate check PRD-019`
 
 | Date       | Author           | Changes |
 | ---------- | ---------------- | ------- |
+| 2026-07-25 | Cursor | Readiness iteration 2 (PASS 8.58): W5 corrects a false claim I introduced — `practices/NEXT_STEPS.md` and the shims are ledger `packOnly` entries (a bare name list, no hashes, no live counterpart), not hash pairs, so FR-5's obligation is registration in `pack-manifest.json` plus a `packOnly[]` declaration, never a reconcile pass |
+| 2026-07-25 | Cursor | Next-wave prep: readiness W1–W4 resolved in the PRD. FR-2 takes the symlinked-entrypoint cases (this repo's `AGENTS.md` is still a symlink to `CLAUDE.md`, verified 2026-07-25), FR-1 defines bare `gate doctor` as usage plus exit 1, FR-5 names the pack-manifest and drift-reconcile obligation, and §7 records determinism-not-relevance as an accepted consequence so Phase 6 does not relitigate a non-goal |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
 | 2026-07-25 | owner            | Approved PRD-019 Phase 1 scope; waits for PRD-017/018 dependencies |
 | 2026-07-25 | independent agent via owner | Readiness iteration 1: PASS 8.425 (infra weights), tiers high/high. Found two uncovered cases living in this repo already: the symlinked `AGENTS.md` entrypoint and the pack-reconcile obligation on shipped adoption files. Watch items W1–W4 |

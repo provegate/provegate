@@ -114,10 +114,27 @@ so that learning capture cannot be ceremonial or silently weakened.
 
 3. **FR-3 — Recall through Phase 1–7:** Update the addendum-traceable phase prompts,
    placeholder registry, readiness/tasks templates, knowledge protocols, practices
-   bootstrap, and thin agent shims. Phase 1 selects inputs; Phase 2 challenges relevance;
-   Phase 3 carries slugs; Phase 4 opens/revalidates details; Phase 6 independently audits
-   application and `none`; Phase 7 captures exact outputs. Product/architecture docs
-   maintain current explanations while `_brain` owns non-derivable traps/rationale.
+   bootstrap, and thin agent shims. Product/architecture docs maintain current
+   explanations while `_brain` owns non-derivable traps/rationale.
+
+   Each prompt gains exactly one stated obligation, so `content-prompts.test.ts` asserts
+   **per file** rather than proving the directory changed:
+
+   | Prompt file | Obligation the file must state |
+   | ----------- | ------------------------------ |
+   | `phase-1-prd-generator.md` | Select Memory Inputs from the INDEX with a disposition and rationale each; emit `none` only with a reason |
+   | `phase-2-readiness-scorer.md` | Challenge each input's relevance and score a ceremonial or unexamined `none` down rather than accepting it |
+   | `phase-3-task-generator.md` | Carry the selected slugs into a Memory Context section and bind a task to re-opening each before its dependent work |
+   | `phase-4-implementation.md` | Open each detail file and confirm the paths and commands it names still exist before acting on it |
+   | `phase-5-testing.md` | Record memory-derived constraints that shaped a verification result in the ledger notes |
+   | `phase-6-final-auditing.md` | Independently audit whether each input was actually applied, and challenge every `none` — an unexamined `none` is a finding |
+   | `phase-7-learning.md` | Capture exact output paths into both Memory Outputs and Durable Artifacts before writing the record |
+   | `knowledge-ingest.md` | Write the record only after the PRD declares its exact path |
+   | `knowledge-lint.md` | Validate the declared grammar, not prose quality |
+   | `orchestration-runner.md` | Refuse a Phase 7 close whose declared outputs are absent from the merge diff |
+
+   `PLACEHOLDERS.md` registers any new token the above introduce; `adapters/**` stays
+   vendor-neutral and gains no obligation of its own.
    - **Targets:** `packages/provegate/prompts/**`,
      `packages/provegate/templates/readiness-template.md`,
      `packages/provegate/templates/tasks-template.md`,
@@ -139,6 +156,15 @@ so that learning capture cannot be ceremonial or silently weakened.
    type/path change, or replacement with `none` is weakening; an `eligible` PRD always
    refuses, while an `operator-gated` PRD requires both a changelog approval entry and
    owner acceptance. Missing/malformed/uncommitted baseline refuses.
+
+   **Non-worktree flows have no baseline guarantee.** `gate open --worktree` already
+   refuses while workflow artifacts are uncommitted on the base (`worktree.ts:425`), so
+   the blob is guaranteed there; a plain `gate open` carries no such promise. When the
+   PRD blob is absent from the base ref, the refusal names the cause and the remedy in one
+   message — "PRD-NNN has no committed copy on `<base>`; commit the PRD to the base branch
+   before closing, or reclaim with `--worktree`" — so the first non-worktree close fails
+   with an instruction rather than an opaque baseline error. A fixture covers the
+   non-worktree refusal text, not only the worktree happy path.
    - **Targets:** `packages/provegate/src/core/memory/artifacts.ts`,
      `packages/provegate/src/core/run/chain.ts`,
      `packages/provegate/test/chain.test.ts`
@@ -151,9 +177,41 @@ so that learning capture cannot be ceremonial or silently weakened.
    `check-types`, `lint`, `build`, `test`, `verify:workflow`, `check-egress`, and Phase 7
    as `verify:brain`; `phases.4: []` is forbidden by a regression test. Root activation
    happens last.
+
+   **Activation blast radius.** Turning the contract on changes the lint every future PRD
+   passes through, so the rule for work already in flight is stated rather than
+   discovered: a PRD whose lease was opened **before** this PRD merges is **grandfathered
+   as pre-contract** — readiness does not require Memory Inputs/Outputs of it, and Phase 7
+   does not enforce declared outputs against it. The boundary is the lease's `startedAt`
+   versus this PRD's merge commit. `startedAt` is already recorded in every lease; the
+   merge commit does not exist until this PRD lands, so Phase 4 writes its SHA into the
+   changelog row **at merge time** and the enforcement reads it from there rather than
+   inferring it. Until that row exists the contract is inert, which is the safe direction.
+
+   The comparison is **git ancestry, not a timestamp**: a lease is grandfathered when the
+   activation commit is not an ancestor of the lease's base — commit timestamps are
+   mutable and clock-dependent, so a rebase or a skewed clock could silently flip a PRD's
+   status. Boundary tests cover a lease immediately before the activation commit, one
+   immediately after, one whose recorded base is malformed, and one whose `startedAt` is
+   in the future; the malformed case fails closed rather than defaulting to exempt.
+   Any PRD opened after the merge carries the contract in full. The grandfathering is
+   recorded in the changelog with the merge commit, and it expires with those leases —
+   there is no permanent exemption list.
+
+   **Both root files are worktree control artifacts.** `gate open --worktree` snapshots
+   `workflow.config.json` and `gates.manifest.json` by content hash and compares them
+   against the base, so creating them refuses every lease whose snapshot predates them
+   until it merges or rebases. This PRD owns that **introduction** transition and proves
+   both sides in a fixture: a worktree leased before the files exist is refused on reuse,
+   and succeeds after merging the base. PRD-021 later adds one key to
+   `workflow.config.json` and proves only the edit case. Phase 4 preflight re-checks
+   `_state/locks` immediately before committing these files, because the measurement goes
+   stale during implementation.
    - **Targets:** `packages/provegate/src/core/run/init.ts`,
      `packages/provegate/test/init.test.ts`,
      `packages/provegate/test/practices-pack.test.ts`,
+     `packages/provegate/test/open.test.ts` (the introduction-transition fixture:
+     refused on reuse before the base merge, accepted after),
      `workflow.config.json` (new), `gates.manifest.json` (new),
      `packages/provegate/test/manifest.test.ts`
 
@@ -199,6 +257,12 @@ so that learning capture cannot be ceremonial or silently weakened.
   exactly the four floor commands followed by `verify:workflow` and built-site
   `check-egress`; Phase 7 runs `verify:brain`.
 - **Given** memory disabled, **When** legacy checks run, **Then** behavior is unchanged.
+- **Given** a PRD whose lease opened before this PRD's merge commit, **When** its
+  readiness and Phase 7 gates run, **Then** the memory contract is not required of it.
+- **Given** a worktree leased before the root control files exist, **When** it is reused
+  after they land, **Then** it is refused until the base is merged, and succeeds after.
+- **Given** a PRD with no committed copy on the base ref, **When** a non-worktree close
+  runs, **Then** the refusal names both the cause and the remedy.
 
 ---
 
@@ -321,6 +385,8 @@ per the configured shared-file rule.
 | FR-5 | `pnpm --filter provegate test test/chain.test.ts`                 | pkg   | base-ref weakening matrix |
 | FR-6 | `pnpm --filter provegate test test/manifest.test.ts`              | pkg   | exact root/practices Phase 4 semantics |
 | FR-6 | `pnpm --filter provegate test test/practices-pack.test.ts`        | pkg   | additive practices activation |
+| FR-6 | `pnpm --filter provegate test test/open.test.ts`                  | pkg   | control-artifact introduction: refused before base merge, accepted after |
+| FR-6 | `pnpm --filter provegate test test/prd-ready.test.ts`             | pkg   | grandfather boundary: ancestor lease exempt, descendant lease enforced |
 | FR-7 | `node scripts/verify/verify-pack-drift.mjs`                       | repo  | live/package parity |
 
 Cross-cutting floor:
@@ -343,6 +409,11 @@ Before Phase 2 PASS, run: `gate check PRD-018`
   exact floor before additions.
 - DO NOT enable root/practices memory before PRD-017 and all PRD-018 gates exist.
 - DO NOT compare weakening against working-state declarations.
+- DO NOT let a non-worktree close fail with a bare baseline error; name the remedy.
+- DO NOT apply the contract retroactively to a lease opened before this PRD merged, and
+  DO NOT turn the grandfathering into a standing exemption list.
+- DO NOT prove FR-3 by asserting the prompts directory changed; assert the per-file
+  obligation table.
 - DO NOT treat watch overlap as proof of staleness.
 - DO NOT add doctor/find/stats, runtime dependencies, telemetry, network, or push.
 - DO NOT auto-edit existing adopter files or historical PRDs.
@@ -354,6 +425,8 @@ Before Phase 2 PASS, run: `gate check PRD-018`
 
 | Date       | Author           | Changes |
 | ---------- | ---------------- | ------- |
+| 2026-07-25 | Cursor | Readiness iteration 2 (PASS 8.43): W5 gives FR-6 a named introduction-transition fixture (`test/open.test.ts`) and a runnable row; W6 replaces the timestamp boundary with git ancestry against an activation SHA recorded at merge time, with malformed leases failing closed. Corrects an iteration-2 finding: the merge commit is not "already recorded" — it cannot exist until this PRD lands |
+| 2026-07-25 | Cursor | Next-wave prep: readiness W2/W3/W4 resolved in the PRD. FR-3 gains a per-file prompt obligation table (ten files were behind one verification row), FR-5 states the non-worktree baseline refusal and its remedy, and FR-6 fixes the activation boundary at lease `startedAt` versus the merge commit. FR-6 also takes ownership of the root control-artifact **introduction** transition, per the owner's decision that this PRD creates `workflow.config.json` and PRD-021 only adds a key |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
 | 2026-07-25 | owner            | Approved PRD-018 Phase 1 scope; waits for PRD-017 dependency |
 | 2026-07-25 | independent agent via owner | Readiness iteration 1: PASS 8.15 (infra weights), tiers high/high. Verified the deep-merge floor rule and the egress scanner's fail-closed behavior; found the egress gate can scan cache-stale build output. Watch items W1–W4 |

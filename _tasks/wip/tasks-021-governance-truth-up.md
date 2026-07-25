@@ -58,6 +58,14 @@ Records to open and confirm still accurate before the dependent task starts (tas
 - `scripts/verify/doc-claims-allowlist.json` — new; shrink-only, `reviewBy` expiry.
 - `scripts/verify/verify-workflow.mjs`, `package.json`, `.github/workflows/` — wiring.
 
+### Conflict Surface parser (FR-13)
+
+- `packages/provegate/src/core/state/markdown.ts` — root-file claims plus the new
+  `parseConflictSurface` diagnostics.
+- `packages/provegate/src/core/locks/conflicts.ts` — structural overlap over globs that
+  materialize to no tracked file; this is the half that actually enforces.
+- `packages/provegate/src/core/state/query.ts` — the `gate queue` advisory.
+
 ### Governance documents (live + shipped pack copies, hash-paired)
 
 - `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
@@ -91,16 +99,20 @@ Records to open and confirm still accurate before the dependent task starts (tas
 - [ ] 0.0 Pre-flight and ownership
   - [ ] 0.1 Run `gate open PRD-021 --worktree` from the base checkout; confirm the lease
         covers the PRD Conflict Surface and record branch/worktree in the Progress Log.
-  - [ ] 0.2 W8 — confirm `_state/locks` holds no active lease other than this one before
-        the root `workflow.config.json` is committed; record the result. A live lease
-        predating the file must merge the base branch before its next `gate` command.
-  - [ ] 0.3 Open the five Memory Context records; confirm the paths and commands each one
+  - [ ] 0.2 Confirm the dependency: `_state/prds.json` records PRD-018 as Ship Verified
+        and the root `workflow.config.json` exists. If either is false, STOP — FR-4 adds a
+        key to PRD-018's file and must never create it.
+  - [ ] 0.3 W8 — confirm `_state/locks` holds no active lease other than this one before
+        `workflow.config.json` is edited; record the result. The file is snapshotted by
+        content hash, so any lease predating the edit must merge the base branch before
+        its next `gate` command.
+  - [ ] 0.4 Open the five Memory Context records; confirm the paths and commands each one
         names still exist and note any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.4 Re-measure the corpus facts the plan rests on and record them: the number of
+  - [ ] 0.5 Re-measure the corpus facts the plan rests on and record them: the number of
         PRD files under `_prds/wip` and `_prds/completed`, and how many carry a `Value:`
         header. Expected at Phase-3 time: 21 and 6. A different count re-opens the cutoff
         question before any code is written.
-  - [ ] 0.5 Capture the green baseline for `pnpm verify:workflow`,
+  - [ ] 0.6 Capture the green baseline for `pnpm verify:workflow`,
         `node scripts/verify/verify-pack-drift.mjs`, and the package suite; a pre-existing
         red is ledgered, never normalized silently.
 
@@ -154,16 +166,19 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [ ] 3.5 Assert the passing cases: custom valid config yields the custom weights and a
         total computed from them, and the pre-cutoff missing-header fixture exits 0.
 
-- [ ] 4.0 FR-4 / FR-5 — Repo cutoff and the control-artifact transition (W8)
-  - [ ] 4.1 Create the root `workflow.config.json` containing only
-        `{"valueScoring": {"enforceFrom": 17}}` — PRD-017 is the first PRD written under
-        the scoring rule. Nothing else goes in this file.
+- [ ] 4.0 FR-4 / FR-5 — Repo cutoff and the control-artifact edit (W8)
+  - [ ] 4.1 Add `{"valueScoring": {"enforceFrom": 17}}` to the **existing** root
+        `workflow.config.json` that PRD-018 created — merge one key, do not recreate or
+        reformat the file. If it is absent, the PRD-018 dependency was violated: stop and
+        record it in **Blockers**, never create it here.
   - [ ] 4.2 In `packages/provegate/test/config-value-scoring.test.ts`, assert the resolved
-        config deep-equals `DEFAULT_CONFIG` in every respect except the cutoff; this is
-        what keeps "minimal" true rather than merely intended.
-  - [ ] 4.3 W8 — add the transition fixture: a worktree leased **before** the config file
-        existed is refused on reuse (its control-artifact snapshot lacks the file), and
-        succeeds after merging the base branch. Use the existing worktree test helpers.
+        config differs from `DEFAULT_CONFIG` only in the cutoff **and** PRD-018's memory
+        block; enumerate both rather than asserting a bare deep-equal, which PRD-018's
+        landing would break.
+  - [ ] 4.3 W8 — add the edit-transition fixture: `workflow.config.json` is snapshotted by
+        content hash, so a worktree leased before the key was added is refused on reuse
+        and succeeds after merging the base. The **introduction** case (a lease predating
+        the file itself) belongs to PRD-018 — do not duplicate it here.
   - [ ] 4.4 Run `node scripts/verify/verify-value-score.mjs` against the live repo and
         confirm the 15 pre-cutoff PRDs are skipped with reasons and the five at-or-after
         the cutoff recompute correctly.
@@ -255,6 +270,40 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [ ] 10.3 Confirm `pnpm changeset status` is **not** used as evidence anywhere: it
         exits 0 on an empty `.changeset/`, so it can never fail.
 
+- [ ] 10.5 FR-13 — Make a root-file Conflict Surface claim real
+  - [ ] 10.5.1 Reproduce first, in `packages/provegate/test/markdown.test.ts`: today
+        `declaredGlobs` drops `workflow.config.json`, `AGENT_BOOTSTRAP.md`, and
+        `STATUS.md` from this PRD's surface and `workflow.config.json` plus
+        `gates.manifest.json` from PRD-018's. Write the failing assertion before the fix
+        so the regression is proven, not assumed.
+  - [ ] 10.5.2 FR-13(a) — in `packages/provegate/src/core/state/markdown.ts`, accept a
+        backticked claim with no `/` only when it matches one of the PRD's two literal
+        shapes: a named file `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` or a
+        dotfile `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$`. The trailing-dot ban is what
+        keeps `e.g.` out; do not re-derive a looser "contains a dot" rule.
+  - [ ] 10.5.3 FR-13(b) — add `parseConflictSurface(content): { globs, rejected[] }` and
+        make `declaredGlobs` delegate to it without changing its exported signature. Print
+        each rejected token with its reason from `candidateFromPrd` (`gate open`) and
+        `readyOverlaps` (`gate queue`) — the two functions that actually read the surface.
+        `gate check` never reads it, so do not wire it there.
+  - [ ] 10.5.4 Assert the rejection reasons in `packages/provegate/test/markdown.test.ts`:
+        `none`, `{placeholder}`, `e.g.`, and a `..` escape each carry their reason text,
+        not merely their absence from the result. Also assert the accepted shapes:
+        `workflow.config.json`, `STATUS.md`, `AGENT_BOOTSTRAP.md`, `.gitignore`.
+  - [ ] 10.5.5 W11 / FR-13(c) — the parser fix alone does not reach the enforcing path.
+        In `findConflicts` (`packages/provegate/src/core/locks/conflicts.ts`), structural
+        overlap currently runs only when a whole surface materializes to zero tracked
+        files, so PRD-018 and PRD-021 — dozens of tracked files each — would still not
+        collide on the untracked `workflow.config.json`. Compute structural overlap over
+        each surface's **unmaterialized** globs and union it with the file intersection.
+  - [ ] 10.5.6 In `packages/provegate/test/conflicts.test.ts`, drive the enforcing path:
+        build candidates through `candidateFromPrd`, give a rival active lease the same
+        root filename, pass a tracked-file list that does **not** contain it, and assert
+        `candidateConflicts` refuses. Keep this separate from the parser unit test.
+  - [ ] 10.5.7 Re-run `node packages/provegate/dist/cli.js queue` and record the new
+        overlap set in the Progress Log; a pair that appears only after this fix is a
+        collision the board was hiding.
+
 - [ ] 11.0 Phase 5 — Execute verification
   - [ ] 11.1 Run every PRD §11 command exactly as written from the repository root and
         fill the matching Verification Ledger rows with evidence; no substitutions, no
@@ -314,6 +363,9 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | FR-11              | `pnpm --filter provegate test test/content-canon.test.ts`          | pkg   | pending |          | banner, canonical link, roadmap marks |
 | FR-12a             | `grep -rc "provegate': minor" .changeset`                          | repo  | pending |          | fails when the minor changeset is missing (see W9) |
 | FR-12b             | `grep -rc "upgrade the CLI before" .changeset`                     | repo  | pending |          | the compatibility instruction is in the note |
+| FR-13a             | `pnpm --filter provegate test test/markdown.test.ts`               | pkg   | pending |          | root-file claims parse; rejections name token and reason |
+| FR-13b             | `pnpm --filter provegate test test/conflicts.test.ts`              | pkg   | pending |          | enforcing path: untracked root claim conflicts structurally |
+| FR-13c             | `pnpm --filter provegate test test/state-query.test.ts`            | pkg   | pending |          | the queue advisory prints rejected tokens |
 | types              | `pnpm check-types`                                                 | root  | pending |          | zero errors |
 | lint               | `pnpm lint`                                                        | root  | pending |          | zero warnings |
 | test               | `pnpm test`                                                        | root  | pending |          | full suite |
@@ -330,14 +382,16 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Watch | Binding tasks |
 | ----- | ------------- |
-| W1 — prospective cutoff, no backfill | 0.4, 2.3, 4.1, 4.4, 9.1 |
+| W1 — prospective cutoff, no backfill | 0.5, 2.3, 4.1, 4.4, 9.1 |
 | W2 — `valueScoring` as a real schema | 1.1–1.6 |
 | W3 — float-safe decimal validation | 1.4, 1.5, 1.6 |
 | W4 — prove both weight copies by behavior | 2.5, 3.2, 3.4 |
 | W5 — compatibility, changeset, rollout | 9.2–9.4, 10.1 |
 | W6 — doc-claims grammar, not intention | 5.1–5.5 |
 | W7 — outcome evidence, not token greps | 3.2–3.5, 5.5, 8.3, 10.2 |
-| W8 — root-config control-artifact transition | 0.2, 4.3, 9.5 |
+| W8 — root-config control-artifact transition | 0.3, 4.3, 9.5 |
+| W10 — observable rejected-claim diagnostics | 10.5.3, 10.5.4 |
+| W11 — enforcing path for an untracked root file | 10.5.5, 10.5.6 |
 | W9 — semantic changeset assertion | 10.2, 10.3 |
 
 ---
@@ -364,6 +418,9 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Blockers / Open Questions
 
+- **PRD-018 must be Ship Verified before Phase 4** (task 0.2). It creates the root
+  `workflow.config.json` that FR-4 adds a key to. This is a wave-ordering decision the
+  owner made on 2026-07-25, not a technical discovery.
 - Not blocked, but **not parallelizable with the memory program**: `gate queue` reports
   that `scripts/verify/pack-drift-ledger.json` is claimed by PRD-017, PRD-018, and
   PRD-019 as well. The ledger is modify-in-place, not append-only, so it is not

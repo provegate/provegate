@@ -183,19 +183,21 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    stdout, exit 0) purely so the fallback can be proven by behavior rather than by
    reading the source.
    - **Targets:** `scripts/verify/verify-value-score.mjs`
-4. **FR-4**: Set this repo's cutoff. Create a root `workflow.config.json` containing only
-   `{"valueScoring": {"enforceFrom": 17}}` — PRD-017 is the first PRD written under the
-   scoring rule. A test asserts the resolved config deep-equals `DEFAULT_CONFIG` in every
-   other respect, so introducing the file changes nothing else about gate behavior.
-   - **Targets:** `workflow.config.json` (new),
+4. **FR-4**: Set this repo's cutoff by **adding one key to the existing root
+   `workflow.config.json`** — `{"valueScoring": {"enforceFrom": 17}}`, PRD-017 being the
+   first PRD written under the scoring rule. PRD-018 FR-6 creates that file (memory
+   config); this PRD merges a key into it and must not recreate or rewrite it. If the file
+   is absent at Phase 4 time the dependency was violated — stop rather than create it, or
+   the two PRDs each land a different "first" version of a control artifact.
+   - **Targets:** `workflow.config.json` (owned by PRD-018; this PRD adds one key),
      `packages/provegate/test/config-value-scoring.test.ts` (new)
-5. **FR-5**: Cover the control-artifact transition the new file creates. `gate open
-   --worktree` snapshots `workflow.config.json` as a required artifact when it exists, so
-   a worktree claimed before this change carries a snapshot without it and must merge or
-   rebase the base branch before reuse. A fixture proves both sides: a leased worktree
-   created without the file is refused after the file lands, and succeeds once the base is
-   merged in. `_state/locks` is empty today, so no live lease is affected; the Phase 4
-   preflight re-checks that before the file is committed.
+5. **FR-5**: Cover the control-artifact edit. `gate open --worktree` snapshots
+   `workflow.config.json` **by content hash**, so editing it advances the base for every
+   lease taken before the edit: a pre-existing worktree is refused on reuse until it merges
+   or rebases. A fixture proves both sides — refused before the merge, accepted after.
+   The **introduction** case (a lease whose snapshot predates the file existing at all)
+   belongs to PRD-018, which creates the file; this PRD proves only the edit case. Phase 4
+   preflight re-checks `_state/locks` before committing, because the measurement goes stale.
    - **Targets:** `packages/provegate/test/config-value-scoring.test.ts`,
      `packages/provegate/src/core/run/open.ts` (read-only reference — no behavior change)
 6. **FR-6**: Prove the script by behavior, not by source inspection. Spawn the real
@@ -262,6 +264,56 @@ Each FR carries the exact target paths the implementing agent will touch. Use
     front-matter line and for the compatibility sentence in the note, both of which fail
     when the changeset is missing.
     - **Targets:** `.changeset/` (new entry)
+13. **FR-13**: Make a repo-root Conflict Surface claim real. `declaredGlobs`
+    (`packages/provegate/src/core/state/markdown.ts`) drops every claimed path that does
+    not contain `/`, so a root-level file claim is silently discarded — measured today:
+    PRD-018 loses `workflow.config.json` and `gates.manifest.json`, and this PRD loses
+    `workflow.config.json`, `AGENT_BOOTSTRAP.md`, and `STATUS.md`. Both the advisory
+    (`gate queue`) and the enforcing path (`candidateFromPrd` → lease `ownedPaths`) read
+    that function, so two PRDs can claim and create the same root control artifact with no
+    warning. Three parts, all required — the first alone does not fix the defect:
+
+    **(a) Accept root-relative filenames, by literal predicate.** A backticked claim with
+    no `/` is accepted when it matches one of exactly two shapes, and nothing else:
+    a named file `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` (so
+    `workflow.config.json`, `STATUS.md`, and `AGENT_BOOTSTRAP.md` pass), or a dotfile
+    `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$` (so `.gitignore` and `.npmrc` pass).
+    Both shapes forbid whitespace, a leading `/`, a `..` segment, and a trailing `.` —
+    which is what excludes prose abbreviations such as `e.g.`, `i.e.`, and `etc.` The
+    predicate is the specification; "plausible filename" is not.
+
+    **(b) Make rejection observable.** Add
+    `parseConflictSurface(content): { globs: string[]; rejected: { token, reason }[] }`;
+    `declaredGlobs` keeps its `string[]` signature and delegates, so no caller breaks.
+    The observable surfaces are the two real consumers — `candidateFromPrd` (`gate open`,
+    the enforcing path) and `readyOverlaps` (`gate queue`, the advisory) — each printing
+    the rejected token and its reason. `gate check` does not read the Conflict Surface at
+    all today, so it is not the place; silence at the two paths that do read it is what
+    kept this invisible for twenty PRDs.
+    Tests cover rejected `none`, `{placeholder}`, `e.g.` (trailing dot), and a `..`
+    escape, each asserting the reason text, not just the exclusion. A residual is
+    accepted knowingly: a backticked prose token that happens to be a well-formed
+    filename (`Node.js`) parses as a claim. That is the right failure direction now that
+    rejection is loud — an unintended claim surfaces as an overlap, while a silent drop
+    surfaces as nothing.
+
+    **(c) Fix the enforcing path, which (a) alone does not reach.** `findConflicts`
+    (`locks/conflicts.ts`) materializes globs against `git ls-files` and only falls back
+    to `structuralOverlap` when a surface materializes to **zero** files. PRD-018 and
+    PRD-021 each materialize dozens, so their shared claim on the not-yet-tracked
+    `workflow.config.json` would still not conflict even after (a). Compute structural
+    overlap over each surface's **unmaterialized** globs — those matching no tracked file
+    — and union it with the file intersection. Existing behavior for tracked files is
+    unchanged; the new case is "both PRDs claim a file that does not exist yet", which is
+    exactly the collision that started this FR.
+    - **Targets:** `packages/provegate/src/core/state/markdown.ts::declaredGlobs`,
+      `packages/provegate/src/core/state/markdown.ts::parseConflictSurface` (new),
+      `packages/provegate/src/core/locks/conflicts.ts::findConflicts`,
+      `packages/provegate/src/core/locks/conflicts.ts::candidateFromPrd`,
+      `packages/provegate/src/core/state/query.ts::readyOverlaps`,
+      `packages/provegate/test/markdown.test.ts`,
+      `packages/provegate/test/conflicts.test.ts`,
+      `packages/provegate/test/state-query.test.ts`
 
 ---
 
@@ -360,7 +412,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Dependencies
 
-- none (existing verify library + shipped scripts + changesets infrastructure)
+- **PRD-018 must be Ship Verified before this PRD enters Phase 4.** It creates the root
+  `workflow.config.json` that FR-4 adds a key to. That puts this PRD behind the memory
+  chain (017 → 018), which is a deliberate cost: the alternative is two PRDs each
+  creating the same control artifact, a collision the gate cannot currently see (FR-13).
+- Otherwise none — existing verify library, shipped scripts, changesets infrastructure.
 
 ---
 
@@ -371,7 +427,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - [ ] `packages/provegate/src/core/config/` — `valueScoring` types, defaults, validation
 - [ ] `scripts/verify/verify-value-score.mjs`, `scripts/verify/verify-doc-claims.mjs`,
       `scripts/verify/doc-claims-allowlist.json` (new) + bundle/CI registration
-- [ ] `workflow.config.json` (new, cutoff only)
+- [ ] `workflow.config.json` — one key added to PRD-018's file, not a new file
+- [ ] `packages/provegate/src/core/state/markdown.ts` — root-file Conflict Surface claims
 - [ ] `packages/provegate/test/config-value-scoring.test.ts`,
       `test/value-score-script.test.ts`, `test/doc-claims-script.test.ts`,
       `test/content-canon.test.ts`, `test/fixtures/value-score/**` (new)
@@ -431,7 +488,14 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `scripts/verify/doc-claims-allowlist.json`
 - `scripts/verify/verify-workflow.mjs`
 - `scripts/verify/pack-drift-ledger.json`
-- `workflow.config.json`
+- `workflow.config.json` — write ownership during this PRD's execution phase only;
+  PRD-018 owns creating it, and the two never run concurrently (see Dependencies)
+- `packages/provegate/src/core/state/markdown.ts`
+- `packages/provegate/src/core/locks/conflicts.ts`
+- `packages/provegate/src/core/state/query.ts`
+- `packages/provegate/test/markdown.test.ts`
+- `packages/provegate/test/conflicts.test.ts`
+- `packages/provegate/test/state-query.test.ts`
 - `packages/provegate/src/core/config/types.ts`
 - `packages/provegate/src/core/config/defaults.ts`
 - `packages/provegate/src/core/config/validate.ts`
@@ -487,6 +551,9 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-11 | `pnpm --filter provegate test test/content-canon.test.ts`                 | pkg   | banner, canonical link, roadmap phase marks                    |
 | FR-12 | `grep -rc "provegate': minor" .changeset`                                 | repo  | exits 1 when the minor changeset is missing                    |
 | FR-12 | `grep -rc "upgrade the CLI before" .changeset`                            | repo  | the compatibility instruction is in the note                   |
+| FR-13 | `pnpm --filter provegate test test/markdown.test.ts`                     | pkg   | root-file claims parse; each rejection names token and reason  |
+| FR-13 | `pnpm --filter provegate test test/conflicts.test.ts`                    | pkg   | enforcing path: an untracked root claim conflicts structurally |
+| FR-13 | `pnpm --filter provegate test test/state-query.test.ts`                  | pkg   | the queue advisory prints rejected tokens                      |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -522,7 +589,16 @@ rationalize.
 - DO NOT use `pnpm changeset status` as proof that a changeset exists; it exits 0 on an
   empty `.changeset/`.
 - DO NOT backfill invented scores into the pre-cutoff PRDs.
-- DO NOT put anything except the cutoff in the root `workflow.config.json`.
+- DO NOT put anything except the cutoff key into the root `workflow.config.json`, and DO
+  NOT create that file — PRD-018 owns its creation; a missing file means the dependency
+  was violated.
+- DO NOT widen `declaredGlobs` into a permissive "anything backticked is a path" parser;
+  the fix is accepting root-relative filenames **and** naming what it still rejects.
+- DO NOT stop at the parser: without the structural-overlap change in `findConflicts`, a
+  claim on a file that is not yet tracked still cannot conflict, and the defect survives
+  its own fix.
+- DO NOT change `declaredGlobs`'s exported signature; add the diagnostic function beside
+  it and delegate.
 - DO NOT edit a live governance file without porting the practices counterpart and
   reconciling the ledger in the same change.
 - DO NOT silence either new check with a known-red ledger entry instead of fixing the
@@ -537,6 +613,9 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-25 | Cursor | Readiness iteration 5 (ITERATE 7.78): W10 and W11 cleared. W12 caught FR-13 contradicting itself — "contains a `.`" accepts `e.g.` while the test list demanded prose tokens be rejected. FR-13(a) is now two literal regex shapes (named file, dotfile) that forbid a trailing dot, and the `Node.js`-shaped residual is accepted explicitly rather than left implied |
+| 2026-07-25 | Cursor | Readiness iteration 4 (ITERATE 7.60): FR-13 as first written would not have fixed the defect it names. `findConflicts` only falls back to structural overlap when a surface materializes to zero tracked files, so two surfaces claiming the untracked `workflow.config.json` still would not collide after the parser fix (W11). FR-13 now has three required parts, and W10's rejection diagnostics get a named function and the two consumers that actually read the surface — `gate check` does not |
+| 2026-07-25 | Cursor | Next-wave audit: `declaredGlobs` silently drops every Conflict Surface claim without a `/`, so this PRD's `workflow.config.json`/`AGENT_BOOTSTRAP.md`/`STATUS.md` claims and PRD-018's `workflow.config.json`/`gates.manifest.json` claims never reach a lease. Owner folded the fix in as FR-13 and assigned root-config creation to PRD-018, so FR-4 becomes an add-a-key step behind a new PRD-018 dependency and FR-5 narrows to the edit case (FR count 12 → 13) |
 | 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P0-3 and P2-7)                       |
 | 2026-07-25 | Cursor | Owner resolved three Open Questions: exact equality, narrow doc-claims check, config-borne weights (FR count 6 → 8) |
 | 2026-07-25 | Cursor | Readiness iteration 2 (ITERATE 7.50): lexical two-decimal validation replaces arithmetic (`Number.isInteger(0.29 * 100)` is false), the worktree control-artifact transition becomes a tested FR-5, FR-11 gets a direct banner assertion, and `changeset status` is replaced as evidence because it exits 0 on an empty `.changeset/` (FR count 11 → 12) |
