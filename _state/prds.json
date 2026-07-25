@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T09:05:10.767Z",
+  "generatedAt": "2026-07-25T09:15:53.316Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -715,19 +715,19 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-020-adopter-enablement.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-020-adopter-enablement.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.075,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },
@@ -752,19 +752,19 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-021-governance-truth-up.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-021-governance-truth-up.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 4.43,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },

@@ -18,7 +18,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 |--------|-------|
 | Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies. PRD-020 (3.90) and PRD-021 (3.55) are Phase 1 drafts awaiting owner answers on their Open Questions |
+| Next candidates | PRD-017 substrate — Phase 3 complete (0/58), ready for Phase 4. PRD-018 (PASS 8.15) and PRD-019 (PASS 8.425) readiness-approved, Phase 4 gated on their dependencies. PRD-020 and PRD-021 scored **ITERATE** (6.075 / 4.43) on independent readiness and need a Phase 1 revision before re-scoring |
 
 ## Deferrals
 
@@ -34,6 +34,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 ## Recent activity
 
+- 2026-07-25 — PRD-020 and PRD-021 scored independently (gpt-5.6, not the authoring model): both **ITERATE**, 6.075 and 4.43, no hard cap, lint green. Two premises were wrong and the review caught them — PRD-019 claims `cli.mdx` and the package `QUICKSTART.md` but not the docs-site `quickstart.mdx`, and the value-score gate would fail on contact because only 6 of 21 PRDs carry a `Value:` header. W1–W6 (020) and W1–W7 (021) bind the revision
 - 2026-07-25 — the vision gap analysis was triaged into the pipeline: its P0 memory items were already PRD-017/018/019 and its README drift was already closed by release prep, so only two candidates were new — **PRD-020** adopter enablement (manifest cookbook, brownfield playbook, `--practices` first-class in the published docs, which name the flag on zero pages today) and **PRD-021** governance truth-up (the value-score recompute gate that never shipped, plus three "lands in wave 2" claims about gates that already run). Both Draft; PRD-020 overlaps PRD-019 on `apps/docs` CLI pages and should follow it
 - 2026-07-25 — release prep landed for the first npm publish: the package README now documents the shipped lifecycle commands (it still called `init`/`new`/`open` unimplemented stubs, eleven items after they shipped) and is gated against that drift from the CLI's own help screen; the surface since PRD-005 is versioned as **0.2.0** (0.1.0 was an internal milestone, never published). Publish remains the owner's: repo public + `NPM_TOKEN` (provenance needs a public repo), the push, and the red `verify:dependency-audit` advisory
 - 2026-07-25 — turbo cache-key fix landed: `build` and `generate-tokens` no longer narrow their `inputs`, so no gate can read a stale cached artifact (`web#build` hashed ONE file; `apps/web/app/**` was outside the key, and `check-egress` reads build output). New `verify:turbo-inputs` keeps the policy enforced — closes PRD-018 readiness W1
