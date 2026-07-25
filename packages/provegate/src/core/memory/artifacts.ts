@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MemoryConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
@@ -911,6 +911,30 @@ export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore
     const { record } = readRecord(file, slug, { isAdr: pointer.startsWith('adr/') });
     if (record === null) store.unreadable.push(slug);
     else store.records.push({ slug, pointer, record });
+  }
+
+  // A record FILE with no executable pointer is an orphan, and reporting it is
+  // what keeps this loader's stricter pointer rule from being a fail-open. The
+  // standalone validator does not share the rule — it counts a pointer inside a
+  // fenced example — so a record could vanish from readiness and close while
+  // `verify:brain` still passed, and its watch would stop firing silently. The
+  // two parsers still disagree about what a pointer IS; they no longer disagree
+  // about whether the store is complete.
+  for (const dir of ['learnings', 'adr']) {
+    let entries: string[];
+    try {
+      entries = readdirSync(join(base, dir));
+    } catch {
+      continue;
+    }
+    for (const name of entries) {
+      if (!name.endsWith('.md')) continue;
+      if (seen.has(`${dir}/${name}`)) continue;
+      store.issues.push(
+        `memory store: ${dir}/${name} has no pointer in '${memory.index}' — an unindexed ` +
+          `record is invisible to the contract, and its watch never fires`,
+      );
+    }
   }
   return store;
 }

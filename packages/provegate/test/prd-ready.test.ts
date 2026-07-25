@@ -370,16 +370,16 @@ describe('FR-2 memory readiness gate', () => {
       ]);
     });
 
-    it('an unindexed record is not resolvable, even though the file exists', () => {
+    it('an unindexed record is not resolvable, AND the orphan is reported', () => {
+      // Round 10: reporting the orphan is what stops the loader's stricter
+      // pointer rule from failing open — a record that vanishes from the store
+      // must not vanish silently, because its watch stops firing with it.
       const root = fixture([{ slug: 'sample-record', content: record() }]);
-      writeFileSync(
-        join(root, '_brain/learnings/unindexed.md'),
-        record({ name: 'unindexed' }),
-      );
+      writeFileSync(join(root, '_brain/learnings/unindexed.md'), record({ name: 'unindexed' }));
       const content = VALID.replace('`sample-record`', '`unindexed`');
-      expect(lintPrd(on, manifest, content, root).issues).toEqual([
-        "Memory Inputs: 'unindexed' is not an active indexed record",
-      ]);
+      const issues = lintPrd(on, manifest, content, root).issues;
+      expect(issues).toContainEqual("Memory Inputs: 'unindexed' is not an active indexed record");
+      expect(issues).toContainEqual(expect.stringContaining('learnings/unindexed.md has no pointer'));
     });
 
     it('enabled without a root fails closed rather than skipping', () => {
