@@ -10,7 +10,6 @@ import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gate
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
   changelogApproves,
-  contractView,
   loadMemoryStore,
   memoryCloseIssues,
   normalizeTarget,
@@ -891,14 +890,15 @@ describe('phase 6 round 8 self-attack (before the independent round returned)', 
       '- learning: `_brain/learnings/y.md` — declared.',
       '',
     ].join('\n');
-    // Since round 10 a fence inside a contract section refuses the section
-    // outright, so the unmatched-run rule is asserted where it still decides an
-    // outcome: the scanner must not let the run swallow the fence and leak its
-    // contents into the view.
-    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('contains a code fence'),
-    );
-    expect(contractView(doc)).not.toContain('_brain/learnings/quoted.md');
+    // The property that matters is the outcome, not which rule produces it: the
+    // document is REFUSED and the quoted path is never declared. Which refusal
+    // fires has moved twice as the scanner learned CommonMark — round 10's
+    // container rule, then round 13's multiline spans, under which this run does
+    // open a span (its closer is a single backtick on a later line of the same
+    // paragraph, exactly as a renderer reads it).
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues.length).toBeGreaterThan(0);
+    expect(decl.outputs.entries.map((o) => o.path)).not.toContain('_brain/learnings/quoted.md');
   });
 
   it('a MATCHED span still shields its contents', () => {
@@ -1193,5 +1193,48 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
       '',
     ].join('\n');
     expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+});
+
+describe('phase 6 round 13 regressions (leads the round named before it was cut off)', () => {
+  it('[R13-1] a declaration inside a real multiline code span is not a declaration', () => {
+    // A span whose closer is on a later line of the same paragraph is legal, and
+    // treating its contents as live text let a `- none —` line inside one be
+    // read as a declaration.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      'Prose with an open span `foo',
+      '- none — inside a multiline code span',
+      'bar` and the span closes here.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
+    expect(decl.issues).toEqual([]);
+  });
+
+  it('[R13-2] a link reference definition over dashes is not a setext heading', () => {
+    // A link reference definition is not a paragraph, so dashes under it are a
+    // thematic break. Reading them as a heading truncated the section and hid a
+    // declaration that contradicted a reasoned `none` — accepted with zero
+    // issues, which is the shape that matters.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — baseline.',
+      '',
+      '[foo]: /url',
+      '---',
+      '',
+      '- learning: `_brain/learnings/x.md` — contradiction.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('mutually exclusive'),
+    );
   });
 });

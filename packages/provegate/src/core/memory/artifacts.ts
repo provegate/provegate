@@ -120,6 +120,25 @@ function pathProblem(value: string): string | null {
  */
 const COMMENT_MASK = '␀';
 
+/** Does a backtick run of `length` close on this line's remainder, or on a
+ * later line of the SAME paragraph? A blank line ends the paragraph, and a span
+ * cannot span one. */
+function closesBeforeParagraphEnd(
+  lines: readonly string[],
+  from: number,
+  restOfLine: string,
+  length: number,
+): boolean {
+  const closer = new RegExp(`(?<!\`)\`{${length}}(?!\`)`);
+  if (closer.test(restOfLine)) return true;
+  for (let i = from + 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (line.trim().length === 0) return false;
+    if (closer.test(line)) return true;
+  }
+  return false;
+}
+
 function executableView(content: string): { view: string; unreliable: string | null } {
   interface Fence {
     char: string;
@@ -140,7 +159,8 @@ function executableView(content: string): { view: string; unreliable: string | n
   let span = 0;
   const out: string[] = [];
 
-  for (const raw of content.split('\n')) {
+  const lines = content.split('\n');
+  for (const [lineIndex, raw] of lines.entries()) {
     if (fence !== null) {
       const closer = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/.exec(raw);
       if (
@@ -182,6 +202,7 @@ function executableView(content: string): { view: string; unreliable: string | n
 
     let line = '';
     let i = 0;
+    let carriedSpan = span > 0;
     while (i < raw.length) {
       if (inComment) {
         if (raw.startsWith('-->', i)) {
@@ -202,21 +223,43 @@ function executableView(content: string): { view: string; unreliable: string | n
         i += 1;
         continue;
       }
+      if (carriedSpan) {
+        // Interior of a span that OPENED on an earlier line: this text is code
+        // to a renderer, so it is masked rather than written through. Only a
+        // same-line span's content survives, because that is where the grammar
+        // reads its slugs and paths from.
+        if (raw[i] === '`') {
+          let run = 0;
+          while (raw[i + run] === '`') run += 1;
+          if (run === span) {
+            span = 0;
+            carriedSpan = false;
+          }
+          line += COMMENT_MASK.repeat(run);
+          i += run;
+          continue;
+        }
+        line += COMMENT_MASK;
+        i += 1;
+        continue;
+      }
       if (raw[i] === '`') {
         let run = 0;
         while (raw[i + run] === '`') run += 1;
         if (span === 0) {
-          // A delimiter run opens a span only when a run of the SAME length
-          // closes it on this line. CommonMark renders an unmatched run
-          // literally, and letting one stay open across blocks was a fail-open:
+          // A delimiter run opens a span only when a matching run closes it
+          // before the paragraph ends. CommonMark renders an unmatched run
+          // literally, and letting one stay open across BLOCKS was a fail-open:
           // a following fence became span content, so a path quoted inside an
           // example counted as declared. Measured first — SIX artifacts in this
           // repository carry an unmatched run and must keep parsing. (The first
           // count said four; it scanned six directories and left out `_docs/`.
           // Corrected after round 10 refuted it.)
-          const rest = raw.slice(i + run);
-          const closer = new RegExp(`(?<!\`)\`{${run}}(?!\`)`).test(rest);
-          if (closer) span = run;
+          //
+          // The closer may be on a LATER line of the same paragraph: a real
+          // multiline span is legal, and treating its contents as live text let
+          // a `- none —` line inside one be read as a declaration.
+          if (closesBeforeParagraphEnd(lines, lineIndex, raw.slice(i + run), run)) span = run;
         } else if (run === span) {
           span = 0;
         }
@@ -321,6 +364,7 @@ export function contractSection(content: string, heading: string): { count: numb
     '\\d+[.)][ \\t]', // ordered list item
     '#{1,6}(?:[ \\t]|$)', // ATX heading
     '>', // block quote
+    '\\[[^\\]]*\\]:', // link reference definition
     '[ \\t]{4,}', // indented code block
   ].join('|');
   // A line that is only a masked HTML comment is not a paragraph, so it cannot
