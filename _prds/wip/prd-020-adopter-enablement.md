@@ -61,7 +61,8 @@ edits both, and must reconcile onto PRD-019's shipped text rather than overwrite
 | ------ | ------- | ------ | ----------- |
 | Canonical example manifests shipped | 0 | 2 | `examples/manifests/` contents |
 | Example manifests that load through `loadManifest` | n/a | 2 | `example-manifests.test.ts` |
-| Malformed manifest fixtures proven to throw | 0 | ≥ 1 | mutation case in the same test |
+| Declared commands that resolve only inside the package checkout | n/a | 0 | adopter-path assertion |
+| Malformed manifest fixtures proven to throw | 0 | 2 | mutation cases in the same test |
 | Published docs pages naming `--practices` | 0 | ≥ 2 | `content-adoption.test.ts` |
 | Tarball allowlist entries missing for new files | n/a | 0 | `pack.test.ts` |
 | Production CLI/runner behavior changed | n/a | none | no `src/` path in scope |
@@ -125,31 +126,45 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 1. **FR-1**: Ship `examples/manifests/single-package/` — a `gates.manifest.json` for a
    greenfield single-package Node library plus a `README.md` annotating every key and
-   naming the failure each gate catches. The manifest declares `phases["4"]` with the
-   four floor commands (`npm run check-types`, `npm run lint`, `npm run test`,
-   `npm run build`), a `classDefaults.hotfix` rule narrowing the floor, `postMerge`, and
-   an empty `wiringExceptions`.
+   naming the failure each gate catches. The manifest declares `phases["4"]` with exactly
+   the four floor commands (`npm run check-types`, `npm run lint`, `npm run test`,
+   `npm run build`), `postMerge` with check-types and build, an empty `wiringExceptions`,
+   and one `classDefaults.hotfix` rule. **Class defaults are additive only** — the runner
+   merges their `run` commands onto Phase 4 (`gates/classes.ts` pushes, never subtracts),
+   so the hotfix rule adds a focused gate and the README states plainly that narrowing a
+   floor means editing `phases["4"]`, not writing a class default.
    - **Targets:** `packages/provegate/examples/manifests/single-package/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/single-package/README.md` (new)
 2. **FR-2**: Ship `examples/manifests/monorepo/` — the same for a **generic** pnpm
-   workspace (not a copy of this repo's manifest), with a complete, copyable hard cap
-   rather than a described one. The `hardCaps` entry is fully specified per the
-   `HardCap` interface — `id`, `when.targetsMatch` globs, `requireLine` regex source,
-   and `message` — and pairs with the shipped `route-guard-coverage` plugin invoked as
-   `node examples/route-guard-coverage/check.mjs`; `classDefaults` carries a rule for
-   each of `feature`, `infra`, and `hotfix`. The README shows the cap firing: which FR
-   target path triggers it and which PRD line satisfies it.
+   workspace (not a copy of this repo's manifest), carrying the canonical values already
+   published by the `route-guard-coverage` gallery entry rather than a re-invented
+   contract: `hardCaps[0]` is exactly `{ "id": "route-deny-test", "when": { "targetsMatch":
+   ["src/routes/**"] }, "requireLine": "Deny test: `[^`]+`", "message": "targets touch
+   routes - name a runnable deny-path test line" }`, and `classDefaults` carries a
+   `when.diffMatches: ["src/routes/**"]` rule running `pnpm verify:route-guards` for
+   `feature` and `hotfix`, plus one `infra` rule. The invoked command is the **adopter's**
+   script, not a package-internal path: the README's first step is copying
+   `examples/route-guard-coverage/check.mjs` into the adopter's repo as
+   `scripts/verify-route-guards.mjs` and adding the `verify:route-guards` package script,
+   matching what the plugin README already instructs. The README also shows the cap
+   firing: which FR target path triggers it and which PRD line satisfies it.
    - **Targets:** `packages/provegate/examples/manifests/monorepo/gates.manifest.json`
      (new), `packages/provegate/examples/manifests/monorepo/README.md` (new)
-3. **FR-3**: A fixture test proves the examples by behavior. For each example: create a
-   temp directory, copy the example's `gates.manifest.json` to `<tmp>/gates.manifest.json`
-   (`loadManifest(config, root)` always reads that filename at the root it is given),
-   call `loadManifest(DEFAULT_CONFIG, tmp)`, and assert it returns without throwing, that
-   `phases["4"]` is non-empty, that every command in every phase satisfies
-   `isSafeCommand`, and that each plugin path named in a command resolves to a file that
-   exists in the package. Two mutation cases must FAIL loudly: a manifest with an unknown
-   top-level key and one whose `hardCaps[0]` drops `requireLine` both throw
-   `ManifestError`.
+3. **FR-3**: A fixture test proves the examples by behavior, asserting the promised
+   content rather than mere parseability. For each example: create a temp directory, copy
+   the example's `gates.manifest.json` to `<tmp>/gates.manifest.json`
+   (`loadManifest(config, root)` always reads that filename at the root it is given), call
+   `loadManifest(DEFAULT_CONFIG, tmp)`, and assert it returns without throwing and that
+   every command in every phase, class default, and `postMerge` list satisfies
+   `isSafeCommand`. Then assert the specifics: the single-package `phases["4"]` equals the
+   four FR-1 commands in order; the monorepo manifest's `hardCaps` is non-empty, its first
+   entry carries all four `HardCap` fields non-empty, its `requireLine` compiles as a
+   `RegExp`, and its `classDefaults` has a rule for `feature`, `hotfix`, and `infra`; and
+   each README mentions every command its manifest declares plus the failure that command
+   catches. Two mutation cases must FAIL loudly: a manifest with an unknown top-level key
+   and one whose `hardCaps[0]` drops `requireLine` both throw `ManifestError`. A third
+   asserts the cap contract itself: a PRD body without the `Deny test:` line does not
+   satisfy `requireLine`, and one with it does.
    - **Targets:** `packages/provegate/test/example-manifests.test.ts` (new)
 4. **FR-4**: Add `apps/docs/content/docs/brownfield.mdx`: the adoption ladder (adopt
    `verify:workflow` alongside existing CI → `gate init` into the existing tree → fill
@@ -202,6 +217,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   every command is `isSafeCommand`.
 - **Given** an example manifest mutated to carry an unknown top-level key, **When** the
   fixture runs, **Then** `loadManifest` throws `ManifestError`.
+- **Given** the monorepo example's `requireLine`, **When** it is applied to a PRD body
+  with no `Deny test:` line, **Then** it finds no match, and **When** applied to one that
+  names a deny test, **Then** it matches.
+- **Given** an adopter who copied only the manifest, **When** they follow the README's
+  first step, **Then** every command it declares resolves to a script in their own repo.
 - **Given** the published docs, **When** `content-adoption.test.ts` runs, **Then**
   quickstart's practices recommendation, cli's never-overwrite guarantee, and
   brownfield's ladder rungs are each asserted present.
@@ -225,6 +245,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   schema change breaks the test instead of the adopter. `loadManifest(config, root)`
   resolves `<root>/gates.manifest.json`, which is why the fixture copies rather than
   loads in place.
+- **Cookbook commands run in the adopter's repo, not ours.** A manifest is copied out of
+  the package by definition, so any command naming a package-internal path (for example
+  `node examples/route-guard-coverage/check.mjs`) is dead on arrival. Every command in
+  both examples resolves against the adopter's own tree, and the README states the copy
+  step that makes it true.
 - **Reading `apps/docs` from the package suite is an established pattern.**
   `test/content-launch.test.ts` already asserts over `apps/docs/content/docs/*.mdx`, and
   turbo's `test` task declares no narrowed `inputs` (`verify:turbo-inputs` keeps it that
@@ -363,6 +388,9 @@ rationalize.
 - DO NOT change `gate init`, the runner, or the manifest schema to make an example
   work — the example adapts to the shipped surface, never the reverse.
 - DO NOT ship an example manifest whose commands `isSafeCommand` would refuse.
+- DO NOT write a command that only resolves inside this package's checkout.
+- DO NOT describe a class default as narrowing a floor; the runner only adds.
+- DO NOT ship the monorepo example with an empty `hardCaps` array.
 - DO NOT prove a docs claim with a bare token grep; assert the claim.
 - DO NOT overwrite or trim PRD-019's shipped memory-command documentation in `cli.mdx`.
 - DO NOT enter Phase 4 before `_state/prds.json` records PRD-019 as Ship Verified.
@@ -377,3 +405,4 @@ rationalize.
 | 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P1 4–6)                          |
 | 2026-07-25 | Cursor | Open Questions resolved by owner: keep FR-5 and sequence after PRD-019; generic monorepo example |
 | 2026-07-25 | Cursor | Readiness iteration 1 (ITERATE 6.075): fixture and hard-cap contracts specified, tarball allowlist owned (FR-8), token greps replaced by a docs-content test (FR-7), PRD-019 overlap corrected, scope language fixed to "no production CLI/runner change" |
+| 2026-07-25 | Cursor | Readiness iteration 2 (ITERATE 7.000): hard-cap and class-default values written out from the shipped gallery entry, plugin command made adopter-relative, FR-3 assertions extended to the promised manifest and README content, and the false "class defaults narrow the floor" claim removed |

@@ -153,7 +153,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    rejects unknown axes and non-numbers; semantic validation (`validateResolvedConfig`)
    requires all five axes present, each finite, `> 0`, expressed in at most two decimal
    places, summing to exactly 1 (compared in integer hundredths, never float equality),
-   and `enforceFrom` a non-negative integer. Package defaults keep today's weights
+   and `enforceFrom` a non-negative integer. The two-decimal test is **lexical, not
+   arithmetic**: `String(weight)` must match `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`, because
+   JS number-to-string emits the shortest round-tripping form (`String(0.29) === "0.29"`)
+   while `Number.isInteger(0.29 * 100)` is false and would reject a legal weight. Only
+   after the lexical check passes is the value scaled with `Math.round(weight * 100)` into
+   the integer hundredths used everywhere downstream. Accept fixtures must include 0.29
+   and 0.58; reject fixtures must include 0.155 and 1e-7. Package defaults keep today's weights
    (.25/.25/.20/.15/.15) and `enforceFrom: 1` — a fresh adopter has no legacy corpus, so
    the safe default is "enforce everywhere".
    - **Targets:** `packages/provegate/src/core/config/types.ts`,
@@ -180,10 +186,19 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 4. **FR-4**: Set this repo's cutoff. Create a root `workflow.config.json` containing only
    `{"valueScoring": {"enforceFrom": 17}}` — PRD-017 is the first PRD written under the
    scoring rule. A test asserts the resolved config deep-equals `DEFAULT_CONFIG` in every
-   other respect, so introducing the file changes nothing else.
+   other respect, so introducing the file changes nothing else about gate behavior.
    - **Targets:** `workflow.config.json` (new),
      `packages/provegate/test/config-value-scoring.test.ts` (new)
-5. **FR-5**: Prove the script by behavior, not by source inspection. Spawn the real
+5. **FR-5**: Cover the control-artifact transition the new file creates. `gate open
+   --worktree` snapshots `workflow.config.json` as a required artifact when it exists, so
+   a worktree claimed before this change carries a snapshot without it and must merge or
+   rebase the base branch before reuse. A fixture proves both sides: a leased worktree
+   created without the file is refused after the file lands, and succeeds once the base is
+   merged in. `_state/locks` is empty today, so no live lease is affected; the Phase 4
+   preflight re-checks that before the file is committed.
+   - **Targets:** `packages/provegate/test/config-value-scoring.test.ts`,
+     `packages/provegate/src/core/run/open.ts` (read-only reference — no behavior change)
+6. **FR-6**: Prove the script by behavior, not by source inspection. Spawn the real
    script against fixture roots and assert: no config → `--print-weights` deep-equals
    `DEFAULT_CONFIG.valueScoring.weights`; custom valid config → the custom weights and a
    total computed from them; invalid config (sum ≠ 1, three-decimal weight, missing axis)
@@ -192,7 +207,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    with no header → non-zero exit.
    - **Targets:** `packages/provegate/test/value-score-script.test.ts` (new),
      `packages/provegate/test/fixtures/value-score/**` (new)
-6. **FR-6**: Add `scripts/verify/verify-doc-claims.mjs` with an explicit grammar, not an
+7. **FR-7**: Add `scripts/verify/verify-doc-claims.mjs` with an explicit grammar, not an
    intention. Scanned files are the declared governance set (`AGENT_BOOTSTRAP.md`,
    `STATUS.md`, `_brain/PROTOCOL.md`, and the three practices counterparts). A line fails
    when it contains **both** a script token (`verify:<name>` or `verify-<name>.mjs`) that
@@ -207,20 +222,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `scripts/verify/doc-claims-allowlist.json` (new),
      `packages/provegate/test/doc-claims-script.test.ts` (new, with positive, negative,
      and stale-allowlist fixtures)
-7. **FR-7**: Wire both gates: `verify:value-score` and `verify:doc-claims` in
+8. **FR-8**: Wire both gates: `verify:value-score` and `verify:doc-claims` in
    `package.json`, membership in the `verify:workflow` bundle, and the CI hygiene job, so
    the existing wire-or-delete audit (`verify:gates-wired`) sees each registered check on
    an executing surface.
    - **Targets:** `package.json` (`scripts`), `scripts/verify/verify-workflow.mjs`,
      `.github/workflows/` (hygiene job)
-8. **FR-8**: Correct the stale governance claims: `AGENT_BOOTSTRAP.md` durable-artifacts
+9. **FR-9**: Correct the stale governance claims: `AGENT_BOOTSTRAP.md` durable-artifacts
    (line ~128) and value-score (line ~144) sentences, the `STATUS.md` deferral-cap note
    (line ~25), and the `_brain/PROTOCOL.md` optional-tooling sections (~182, ~204). Each
    sentence states the shipped script name and the surface that runs it. The
    AGENT_BOOTSTRAP triage section additionally documents that the weights and the cutoff
    are configurable, with the default values named.
    - **Targets:** `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
-9. **FR-9**: Port the same corrections to the shipped practices copies and reconcile the
+10. **FR-10**: Port the same corrections to the shipped practices copies and reconcile the
    hash ledger in the same change — `brain/PROTOCOL.md`,
    `templates/AGENT_BOOTSTRAP.template.md`, and `templates/STATUS.template.md` are all
    pack-drift pairs, so a one-sided edit fails the bundle.
@@ -228,18 +243,24 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`,
      `packages/provegate/practices/templates/STATUS.template.md`,
      `scripts/verify/pack-drift-ledger.json`
-10. **FR-10**: Add a status banner to `docs/research/provegate-bootstrap/README.md`:
+11. **FR-11**: Add a status banner to `docs/research/provegate-bootstrap/README.md`:
     frozen bootstrap record, extraction complete through PRD-016, live canon is
     `apps/docs`. Mark the roadmap's shipped phases and point the draft whitepaper at the
-    published v1.0.
+    published v1.0. A dedicated test asserts the banner directly — the exact canonical
+    link to the published docs, the "complete through PRD-016" statement, and that the
+    roadmap's shipped phases are no longer unmarked.
     - **Targets:** `docs/research/provegate-bootstrap/README.md`,
       `docs/research/provegate-bootstrap/oss-extraction-roadmap-2026-07-22.md`,
-      `docs/research/provegate-bootstrap/whitepaper-gated-autonomy-2026-07-22.md`
-11. **FR-11**: Ship the config-surface change as a release: a changeset declaring a
+      `docs/research/provegate-bootstrap/whitepaper-gated-autonomy-2026-07-22.md`,
+      `packages/provegate/test/content-canon.test.ts` (new)
+12. **FR-12**: Ship the config-surface change as a release: a changeset declaring a
     **minor** bump (additive key, no behavior change for an absent key), whose note
     states the one-way compatibility rule — an older CLI rejects `valueScoring` as an
     unknown key, so adopters upgrade the CLI before adding it, and remove the key before
-    downgrading.
+    downgrading. `pnpm changeset status` is **not** acceptable evidence: it exits 0 on a
+    checkout with no changesets at all. The gate is a grep for the `provegate` minor
+    front-matter line and for the compatibility sentence in the note, both of which fail
+    when the changeset is missing.
     - **Targets:** `.changeset/` (new entry)
 
 ---
@@ -311,7 +332,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   snapshots the config file as a control artifact when it exists
   (`run/open.ts` binds `configSourceFor` bytes into the lease). The file must therefore be
   committed in the same change as the code that reads it, and it must stay minimal —
-  FR-4's deep-equal test is what keeps "minimal" true.
+  FR-4's deep-equal test is what keeps "minimal" true. A worktree leased *before* the file
+  existed carries a snapshot without it and is refused on reuse until it merges the base
+  branch; FR-5 tests both sides of that transition rather than asserting it in prose.
 - **Phase placement.** Register both checks where their failure should surface (the
   verify-check-phase-placement learning) — these are Phase 1/2 triage invariants, so they
   belong on the pre-merge hygiene surface, not late in Phase 4.
@@ -326,6 +349,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   keys are config errors; the changeset note states this.
 - **Downgrade:** remove the `valueScoring` key from `workflow.config.json` before
   installing an older CLI. Nothing else in the repo depends on the key.
+- **In-flight worktrees:** `_state/locks` is empty at the time of writing, so no live
+  claim is affected. The Phase 4 preflight re-checks it; if a lease exists, the worktree
+  merges the base branch before its next `gate` command, which is the same procedure any
+  control-file change already requires.
 - **Rollback of this change:** delete the two scripts, their `package.json` entries, their
   bundle membership, and the root config file; the config-surface addition is additive and
   inert when unused, so a published version carrying it needs no data or artifact
@@ -347,7 +374,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - [ ] `workflow.config.json` (new, cutoff only)
 - [ ] `packages/provegate/test/config-value-scoring.test.ts`,
       `test/value-score-script.test.ts`, `test/doc-claims-script.test.ts`,
-      `test/fixtures/value-score/**` (new)
+      `test/content-canon.test.ts`, `test/fixtures/value-score/**` (new)
 - [ ] `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
 - [ ] `packages/provegate/practices/` counterparts + `pack-drift-ledger.json`
 - [ ] `docs/research/provegate-bootstrap/` status banner + roadmap/whitepaper pointers
@@ -411,6 +438,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/config-value-scoring.test.ts`
 - `packages/provegate/test/value-score-script.test.ts`
 - `packages/provegate/test/doc-claims-script.test.ts`
+- `packages/provegate/test/content-canon.test.ts`
 - `packages/provegate/test/fixtures/value-score/**`
 - `AGENT_BOOTSTRAP.md`
 - `STATUS.md`
@@ -445,18 +473,20 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR    | Command / Check                                                        | Scope | Notes                                                       |
 | ----- | ------------------------------------------------------------------------ | ----- | ------------------------------------------------------------- |
-| FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, and every reject case                 |
+| FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject     |
 | FR-2  | `node scripts/verify/verify-value-score.mjs`                              | repo  | live corpus green under the cutoff                             |
 | FR-3  | `pnpm --filter provegate test test/value-score-script.test.ts`            | pkg   | config resolution + print-weights parity with DEFAULT_CONFIG   |
 | FR-4  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | resolved config deep-equals defaults except the cutoff         |
-| FR-5  | `pnpm --filter provegate test test/value-score-script.test.ts`            | pkg   | the behavior matrix, including both failing fixtures           |
-| FR-6  | `pnpm --filter provegate test test/doc-claims-script.test.ts`             | pkg   | positive, negative, and stale-allowlist cases                  |
-| FR-7  | `pnpm verify:gates-wired`                                                 | repo  | both checks wired to an executing surface                      |
-| FR-7  | `pnpm verify:workflow`                                                    | repo  | the bundle runs both new members                               |
-| FR-8  | `pnpm verify:doc-claims`                                                  | repo  | zero stale wave-2 claims about wired scripts                   |
-| FR-9  | `pnpm verify:pack-drift`                                                  | repo  | pack/live pairs reconciled, ledger updated                     |
-| FR-10 | `pnpm --filter provegate test test/doc-claims-script.test.ts`             | pkg   | banner text and canonical-link assertion                       |
-| FR-11 | `pnpm changeset status`                                                   | repo  | a pending changeset exists for the config surface              |
+| FR-5  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | pre-existing worktree refused before merge, accepted after     |
+| FR-6  | `pnpm --filter provegate test test/value-score-script.test.ts`            | pkg   | the behavior matrix, including every failing fixture           |
+| FR-7  | `pnpm --filter provegate test test/doc-claims-script.test.ts`             | pkg   | positive, negative, and stale-allowlist cases                  |
+| FR-8  | `pnpm verify:gates-wired`                                                 | repo  | both checks wired to an executing surface                      |
+| FR-8  | `pnpm verify:workflow`                                                    | repo  | the bundle runs both new members                               |
+| FR-9  | `pnpm verify:doc-claims`                                                  | repo  | zero stale wave-2 claims about wired scripts                   |
+| FR-10 | `pnpm verify:pack-drift`                                                  | repo  | pack/live pairs reconciled, ledger updated                     |
+| FR-11 | `pnpm --filter provegate test test/content-canon.test.ts`                 | pkg   | banner, canonical link, roadmap phase marks                    |
+| FR-12 | `grep -rc "provegate': minor" .changeset`                                 | repo  | exits 1 when the minor changeset is missing                    |
+| FR-12 | `grep -rc "upgrade the CLI before" .changeset`                            | repo  | the compatibility instruction is in the note                   |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -487,6 +517,10 @@ rationalize.
   anywhere — the exemption covers absence only.
 - DO NOT compare totals as floats or introduce a tolerance band; the weight validation is
   what makes exact comparison sound.
+- DO NOT validate the two-decimal rule with `Number.isInteger(weight * 100)` — it rejects
+  legal values such as 0.29; check the canonical decimal text first.
+- DO NOT use `pnpm changeset status` as proof that a changeset exists; it exits 0 on an
+  empty `.changeset/`.
 - DO NOT backfill invented scores into the pre-cutoff PRDs.
 - DO NOT put anything except the cutoff in the root `workflow.config.json`.
 - DO NOT edit a live governance file without porting the practices counterpart and
@@ -505,4 +539,5 @@ rationalize.
 | ---------- | ------ | -------------------------------------------------------------------------------- |
 | 2026-07-25 | Cursor | Initial draft from the vision gap analysis (P0-3 and P2-7)                       |
 | 2026-07-25 | Cursor | Owner resolved three Open Questions: exact equality, narrow doc-claims check, config-borne weights (FR count 6 → 8) |
+| 2026-07-25 | Cursor | Readiness iteration 2 (ITERATE 7.50): lexical two-decimal validation replaces arithmetic (`Number.isInteger(0.29 * 100)` is false), the worktree control-artifact transition becomes a tested FR-5, FR-11 gets a direct banner assertion, and `changeset status` is replaced as evidence because it exits 0 on an empty `.changeset/` (FR count 11 → 12) |
 | 2026-07-25 | Cursor | Readiness iteration 1 (ITERATE 4.43): prospective cutoff at PRD-017 for the 15 legacy PRDs, `valueScoring` specified as a real schema with two-decimal weights and integer-hundredths arithmetic, behavioral parity via `--print-weights`, doc-claims grammar and expiring allowlist, changeset/rollout/downgrade stated, token greps replaced by spawn tests (FR count 8 → 11); value re-scored 3.55 → 3.65 |

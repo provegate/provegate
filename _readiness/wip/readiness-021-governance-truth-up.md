@@ -5,15 +5,15 @@
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 4.43/10 |
+| Score | 7.50/10 |
 | Verdict | ITERATE |
-| Iteration | 1 |
+| Iteration | 2 |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit) | — |
 | Scored by | Independent readiness scorer |
 | Self-scored | no |
 | Date | 2026-07-25 |
-| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 |
+| PRD Lint | passed — `node packages/provegate/dist/cli.js check PRD-021` exit 0 (re-run at iteration 2) |
 | State Record | pending — intentionally not updated during this assessment |
 
 ---
@@ -22,8 +22,8 @@
 
 | Phase | Tier | Rationale |
 | ----- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign | Score is below 8 and the PRD leaves the corpus migration, configurable arithmetic contract, compatibility posture, and document-claim grammar unspecified. |
-| Phase 6 (Audit) | — | Assign after the revised PRD names a deployment/rollback plan and mutation tests that prove both parsers/config consumers reject invalid inputs. |
+| Phase 4 (Execution) | Do not assign | Score remains below 8: the precision-safe implementation contract, changeset evidence, and existing-worktree migration behavior need specification before an agent can implement without inventing policy. |
+| Phase 6 (Audit) | — | Assign after the remaining mutation cases prove decimal validation and the root-config control-artifact transition, and after a check proves an actual minor changeset exists. |
 
 ---
 
@@ -117,6 +117,46 @@ scan to PRDs created after a declared cutoff. Define the rollout order (release 
 support, require minimum CLI version, then permit config use), downgrade/rollback
 behavior, and test fixtures for each side of that compatibility boundary.
 
+### 5. Iteration-2 independent measurement
+
+The revised PRD resolves the former corpus-red failure. It records the measured corpus
+reality (21 PRDs, six headers), sets this repository's `enforceFrom` to 17, and requires
+pre-cutoff missing headers to be skipped while still rejecting malformed or wrong
+headers at every id. The five PRDs at or after that cutoff (017–021) currently have
+headers whose declared default-weight totals recompute correctly.
+
+The `enforceFrom: 1` package default is coherent: a fresh adopter has no pre-existing
+PRD corpus, so it should enforce the header everywhere. The root override is also
+correctly partial under the current recursive `deepMerge`: after the proposed
+`valueScoring` default exists, `{"valueScoring":{"enforceFrom":17}}` preserves the
+default weights. It is not entirely inert, however. `workflow.config.json` becomes a
+required control-artifact snapshot for `gate open --worktree`; a pre-existing leased
+checkout without it will be refused on reuse until it merges/rebases the base branch.
+There are no current lease files in `_state/locks`, but the PRD needs to state and test
+that transition rather than treating the deep-equal resolved-config assertion as the
+whole operational effect.
+
+The mathematical claim behind integer-hundredths recomputation is sound: five
+integer-hundredth weights multiplied by integer dimensions always sum to integer cents,
+and therefore format exactly to two decimals. The implementation contract is still
+incomplete because JavaScript JSON numbers are binary floats: `0.29 * 100` evaluates to
+`28.999999999999996`. FR-1 must prescribe lexeme-safe parsing or an equivalent
+round-trip/epsilon-free decimal validation algorithm; `Number.isInteger(weight * 100)`
+would reject legal two-decimal weights.
+
+FR-6 now bounds its scanner to six named governance files. Consequently it cannot
+false-positive on PRD-021 itself or arbitrary `_brain` records: neither is scanned.
+The declared exclusions also protect fenced examples and `STATUS.md` Recent activity.
+The grammar, package-manifest lookup, and stale/expired allowlist behavior resolve the
+former unspecified-matcher concern.
+
+`pnpm changeset status` is not evidence that a changeset exists. On the current checkout
+it exits 0 while reporting “NO packages to be bumped” at patch, minor, and major. FR-11
+requires a minor changeset, but its sole §11 command would pass if the implementation
+forgot it. The PRD must add a targeted assertion that the `provegate` package has the
+required pending minor release and that the changeset text carries the compatibility
+instruction.
+
 ---
 
 ## Scorecard
@@ -126,17 +166,17 @@ Class `infra` weights, per
 
 | # | Dimension | Weight | Score | Notes |
 | - | --------- | ------ | ----- | ----- |
-| 1 | Clarity | 15% | 5.0/10 | Concrete FR targets, runnable rows, DO NOT section, and resolved questions meet the mechanical checklist. Capped below 7 by unresolved config schema, standalone-parser seam, doc-claim grammar, historical corpus policy, and release decisions. |
-| 2 | Completeness | 20% | 4.0/10 | Covers the desired docs and wiring, but omits the 15-header migration, custom-weight validity/rounding, config parser parity, old-CLI behavior, changeset/release work, and claim-check allowlist lifecycle. |
-| 3 | Technical Depth | 20% | 4.5/10 | Correctly recognizes duplicate-default drift and standalone constraints, but FR-3 does not define a behavior-proof anti-drift test. Exact decimal equality is unsound for arbitrary configured weights. |
-| 4 | Multi-Tenancy & Security | 10% | 8.0/10 | No tenant, auth, endpoint, query, or client/server payload surface changes. Strict config validation and local filesystem scanning are appropriate, but the future-claim allowlist needs expiry to avoid a governance bypass. |
-| 5 | Scope & Testability | 15% | 4.5/10 | Non-goals and FR mapping exist, but core §11 proof is weak source-token evidence. No mutation matrix establishes missing/malformed headers, invalid config, non-default arithmetic, false-positive doc text, CI wiring, or legacy-corpus behavior. |
-| 6 | Migration & Rollback | 20% | 2.5/10 | The first run red-fails 15 existing PRDs; no stated migration, release sequence, minimum version, downgrade plan, or rollback fixture exists. “Revert” does not resolve an already-published config-surface change. |
-| **Total** | **Weighted** | | **4.425/10** | **ITERATE** |
+| 1 | Clarity | 15% | 8.0/10 | All 11 FRs name targets and executable verification, the cutoff is explicit, and open questions are resolved. Docked for not prescribing the binary-float-safe two-decimal validator, the pre-existing-worktree transition, or an assertion that a minor changeset actually exists. |
+| 2 | Completeness | 20% | 7.5/10 | The cutoff, schema, rollout, allowlist lifecycle, changeset, and mutation fixtures close the iteration-1 holes. Remaining omissions are the exact decimal-input algorithm and worktree-lease migration/rollback test. |
+| 3 | Technical Depth | 20% | 7.5/10 | Integer-cent recomputation is the correct architecture, and `--print-weights` tests real standalone behavior. The acceptance contract must prevent naïve `weight * 100` validation from rejecting legal values such as 0.29 and 0.58. |
+| 4 | Multi-Tenancy & Security | 10% | 8.5/10 | No tenant, auth, endpoint, query, or client/server payload surface changes. Narrow scanning, fenced/history exclusions, and an expiring allowlist reduce governance-bypass and false-positive risk. |
+| 5 | Scope & Testability | 15% | 7.0/10 | Spawn/unit fixtures replace weak greps and `verify:gates-wired` proves wiring. `pnpm changeset status` is a false-green for FR-11, FR-10 is oddly mapped to the doc-claims test rather than a research-doc assertion, and no fixture covers a legacy leased worktree receiving the new config artifact. |
+| 6 | Migration & Rollback | 20% | 7.0/10 | The prospective cutoff, release-before-config ordering, downgrade instruction, and no-backfill choice are concrete. Root config changes worktree control-artifact provenance, however; reuse of existing worktrees needs an explicit merge/rebase procedure and regression test. |
+| **Total** | **Weighted** | | **7.500/10** | **ITERATE** |
 
 Weighted sum:
-`0.15×5.0 + 0.20×4.0 + 0.20×4.5 + 0.10×8.0 + 0.15×4.5 + 0.20×2.5`
-= `0.75 + 0.80 + 0.90 + 0.80 + 0.675 + 0.50 = 4.425`, reported as **4.43/10**.
+`0.15×8.0 + 0.20×7.5 + 0.20×7.5 + 0.10×8.5 + 0.15×7.0 + 0.20×7.0`
+= `1.20 + 1.50 + 1.50 + 0.85 + 1.05 + 1.40 = 7.500`, reported as **7.50/10**.
 
 Hard caps checked:
 
@@ -151,36 +191,31 @@ Hard caps checked:
 
 ## Missing Pieces (watch items — binding on Phase 3 and Phase 6)
 
-1. **W1 — decide the legacy PRD migration before wiring the gate.** Enumerate all 21
-   scanned artifacts and choose/implement one explicit policy for the 15 without
-   headers: audited backfill, a narrowly defined legacy exemption, or a prospective
-   cutoff. Add fixtures proving missing headers fail only where the policy requires,
-   and remove the contradictory non-goal.
-2. **W2 — define `valueScoring` as a real schema.** Name all axes and their required
-   shape; specify finite/non-negative values, sum invariant, partial-override behavior,
-   numeric representation, and deterministic total formatting. Add reject fixtures for
-   invalid/missing/extra axes and non-finite values.
-3. **W3 — make arithmetic executable and safe.** Either constrain weights so every
-   valid total is exactly representable to two decimals, or define decimal arithmetic
-   and one canonical rounding/comparison rule. Test default and non-default values,
-   including a non-.05 result, at the standalone-script boundary.
-4. **W4 — prove both weight copies by behavior.** Require a named test interface/export
-   for the standalone fallback and run the real script in fixtures with no config,
-   valid custom config, and deliberately divergent fallback/default values. Prove the
-   CLI resolved config and standalone effective config agree without importing the
-   built package at runtime.
-5. **W5 — state compatibility, changeset, and rollout.** Add a changeset path and
-   semver rationale; document that old CLIs reject the new key; require upgrade-before-
-   config rollout; and specify downgrade behavior. Add package documentation/example and
-   tests for old config on new CLI plus new config on the supported CLI.
-6. **W6 — specify `verify-doc-claims` as a grammar, not an intention.** List scanned
-   files, exact recognized future-claim forms, exclusions for historical/changelog/code
-   text, wired-script lookup semantics, and a shrink-only/expiry-reviewed allowlist.
-   Add positive, negative, and mutation fixtures proving no false future-work hit.
-7. **W7 — replace token greps with outcome evidence.** Keep greps only as supplemental
-   assertions. Add executable tests for config loading/validation, standalone behavior,
-   workflow and CI wiring (including an unwired mutation), pack-ledger reconciliation,
-   the research banner's exact canonical link, and the configured claim parser.
+1. **W1 — RESOLVED: prospective cutoff.** `enforceFrom: 17`, a no-backfill
+   non-goal, and pre-/at-cutoff fixtures resolve the 15-header legacy corpus conflict.
+2. **W2 — RESOLVED: explicit config schema.** The five axes, unknown-axis rejection,
+   positive/two-decimal/sum constraints, and non-negative cutoff are now specified for
+   structural and resolved validation.
+3. **W3 — OPEN: prescribe float-safe decimal validation.** Keep integer-hundredths
+   arithmetic, but specify the parsing algorithm (for example, validate the JSON number
+   by canonical decimal text or a safe scale-and-round trip) and add 0.29/0.58 accept
+   fixtures. Do not use `Number.isInteger(weight * 100)`.
+4. **W4 — RESOLVED: behavioral duplicate-default proof.** `--print-weights` and
+   spawned real-script fixtures cover absent/custom config and failure behavior without
+   a runtime package import.
+5. **W5 — RESOLVED: compatibility and release policy.** FR-11 names a minor changeset,
+   upgrade-before-config ordering, downgrade action, and rollback. Its actual
+   changeset-evidence command remains W7.
+6. **W6 — RESOLVED: bounded doc-claims grammar.** The file set, tokens, markers,
+   exclusions, manifest lookup, and expiring shrink-only allowlist are specific; PRDs
+   and unrelated `_brain` records are outside the scanner.
+7. **W7 — OPEN: make every verification row prove its FR.** Replace `pnpm changeset
+   status` with a command/test that fails without a `provegate` minor changeset and
+   asserts its compatibility note. Give FR-10 a direct research-banner/canonical-link
+   assertion, not an incidental doc-claims test.
+8. **W8 — NEW: handle the root-config control-artifact transition.** State that an
+   existing `gate open --worktree` checkout created before this file must merge/rebase
+   before reuse; add a fixture that proves refusal before that action and success after.
 
 ---
 
@@ -189,6 +224,7 @@ Hard caps checked:
 | # | Date | Score | Verdict | Key Changes |
 | - | ---- | ----- | ------- | ----------- |
 | 1 | 2026-07-25 | 4.43 | ITERATE | Independent infra-weighted assessment. Lint passed, but measured 21 scanned PRDs with only 6 value headers; configuration, arithmetic, compatibility, claim-parser, evidence, and rollback gaps require Phase 1 revision. |
+| 2 | 2026-07-25 | 7.50 | ITERATE | Re-score verified the prospective cutoff, complete config contract, exact-cent architecture, behavioral standalone tests, bounded doc-claim grammar, and changeset/rollout plan. W3 remains open for float-safe decimal validation; W7 for false-green changeset evidence; W8 records the root-config worktree-control-artifact transition. |
 
 ---
 
@@ -196,7 +232,7 @@ Hard caps checked:
 
 - [x] Used infra weights: Migration & Rollback 20%, Multi-Tenancy & Security 10%.
 - [x] Ran the required lint via the built CLI; exit 0.
-- [x] Confirmed no root `workflow.config.json`.
+- [x] Confirmed no root `workflow.config.json` exists before the proposed change.
 - [x] Confirmed `verify-durable-artifacts.mjs` exists and is root-manifest registered.
 - [x] Confirmed `verify-deferred.mjs` enforces cap 15 and warns at 12.
 - [x] Confirmed the cited stale statements occur in `AGENT_BOOTSTRAP.md`, `STATUS.md`,
@@ -206,25 +242,34 @@ Hard caps checked:
 - [x] Confirmed unknown config keys are validation errors and `deepMerge` recursively
   merges plain objects.
 - [x] Confirmed the package has a published config surface and changesets infrastructure.
-- [ ] Define and test legacy PRD migration before `verify:value-score` joins the bundle.
-- [ ] Define standalone config parsing/validation parity and custom-weight arithmetic.
-- [ ] Define older-CLI rollout, version bump, and rollback procedure.
-- [ ] Replace weak source-grep verification with outcome/mutation tests.
+- [x] Verified the prospective cutoff makes current PRD-017–021 in-scope and preserves
+  the 15 headerless historical PRDs without backfill.
+- [x] Verified integer-hundredths recomputation mathematically yields a two-decimal
+  result for every legal five-axis weight set.
+- [x] Verified the PRD's scanner excludes PRD-021 and non-target `_brain` records.
+- [x] Verified there are no current lease files under `_state/locks`.
+- [ ] Define and test float-safe acceptance of legal two-decimal JSON weights.
+- [ ] Replace `pnpm changeset status` with evidence that fails absent a provegate minor
+  changeset and validates its compatibility note.
+- [ ] State and test existing-worktree handling after `workflow.config.json` becomes a
+  required control artifact.
+- [ ] Give FR-10 a direct banner/canonical-link verification command.
 
 ---
 
 ## Verdict
 
-**ITERATE — 4.43/10, iteration 1.** The requested documentation truth-up is well
-motivated and its factual premises checked out, but the new gate cannot safely ship as
-specified. It would fail 15 current PRDs immediately, while the PRD declares historical
-rewrites out of scope. Its configurable arithmetic, two-copy drift defense, doc-claim
-matcher, release compatibility, and rollback plan all require decisions that an
-implementing agent must not invent.
+**ITERATE — 7.50/10, iteration 2.** The revision resolves W1, W2, W4, W5, and W6 and
+raises the PRD from a corpus-wide immediate failure to a credible implementation plan.
+It remains below the Phase-2 PASS band because JavaScript-safe decimal validation is not
+specified, `pnpm changeset status` succeeds when no changeset exists, and the new root
+configuration file changes the control-artifact set for existing worktrees without a
+documented/tested transition.
 
-No explicit factual premise requested for verification was false: the durable-artifacts,
-deferred, and brain gates are present/wired as claimed; their stale documentation is
-present; the named pack-drift pairs exist; unknown keys fail validation; and the root
-has no `workflow.config.json`. The material factual condition omitted by the PRD is the
-legacy corpus: only 6 of 21 files in the proposed scan set currently carry `Value:`
-headers.
+The lint passed again. The cutoff itself is coherent: package default `enforceFrom: 1`
+is appropriate for a fresh adopter, while this repository's prospective `17` cutoff
+keeps legacy missing headers green and still checks present bad headers. Two-decimal
+integer-cent recomputation is mathematically exact; the remaining problem is accepting
+legal two-decimal JSON inputs without binary-float false rejection. The doc-claims
+grammar does not scan this PRD or arbitrary `_brain` records, so neither can trigger the
+new checker.
