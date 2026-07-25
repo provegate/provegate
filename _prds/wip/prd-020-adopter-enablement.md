@@ -270,14 +270,19 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ### Dependencies
 
 - PRD-019 Ship Verified (sequencing only). No code dependency.
-- **PRD-019 is the only one.** Measured with `gate queue` on 2026-07-25: this PRD's
-  Conflict Surface intersects PRD-019's and nothing else in the wave — not PRD-018, not
-  PRD-021, not PRD-022, not PRD-023. Once PRD-019 is Ship Verified this PRD may therefore
-  run **concurrently** with any of them; the wave order recorded elsewhere
-  (`017 → 018 → 019 → 021 → 020 → 022 → 023`) is a valid serialization, not a required
-  one. The pair that must stay serialized is PRD-021 and PRD-022, which both claim
-  `packages/provegate/src/cli.ts`. Run `gate queue` before claiming — this note is a
-  measurement with a date on it, not a standing guarantee.
+- **PRD-023 is a second one, as of its 2026-07-25 scope expansion.** `gate queue` reports
+  `PRD-020 <-> PRD-023: packages/provegate/test/pack-manifest.json` — PRD-023 now edits the
+  shipped-file allowlist because it removes three scripts from the practices pack, and this
+  PRD edits the same allowlist for its examples. PRD-023 runs last in the wave, so
+  sequencing already resolves it; what changed is that the two may not run concurrently.
+- **Parallelism, measured rather than assumed.** With PRD-019 Ship Verified, this PRD may
+  run **concurrently with PRD-021 or PRD-022** — neither intersects its surface. It may
+  **not** run concurrently with PRD-023 (above). The wave order recorded elsewhere
+  (`017 → 018 → 019 → 021 → 020 → 022 → 023`) is one valid serialization, not the only one.
+  The other pair that must stay serialized is PRD-021 and PRD-022, on
+  `packages/provegate/src/cli.ts`. **Run `gate queue` before claiming** — this note is a
+  measurement with a date on it, and it has already moved once: an earlier version of it
+  said PRD-019 was the only overlap, and PRD-023's expansion falsified that within a day.
 
 ---
 
@@ -417,3 +422,4 @@ rationalize.
 | 2026-07-25 | Cursor | Readiness iteration 1 (ITERATE 6.075): fixture and hard-cap contracts specified, tarball allowlist owned (FR-8), token greps replaced by a docs-content test (FR-7), PRD-019 overlap corrected, scope language fixed to "no production CLI/runner change" |
 | 2026-07-25 | Cursor | Readiness iteration 2 (ITERATE 7.000): hard-cap and class-default values written out from the shipped gallery entry, plugin command made adopter-relative, FR-3 assertions extended to the promised manifest and README content, and the false "class defaults narrow the floor" claim removed |
 | 2026-07-25 | Claude Opus 5, via owner | Sequencing note only — no FR, Target, Conflict Surface entry, dependency, or verification command changed, and the readiness verdict is untouched. `gate queue` measures this PRD's Conflict Surface as intersecting PRD-019's and nothing else in the wave, so the recorded serial wave order is one valid ordering rather than a constraint: after PRD-019 is Ship Verified this PRD may run concurrently with PRD-021, PRD-022, or PRD-023. Only PRD-021 and PRD-022 must stay serialized, on `packages/provegate/src/cli.ts` |
+| 2026-07-25 | Claude Opus 5, on owner direction | Dependency correction, no FR or Target change. PRD-023's scope expansion (its FR-8 removes three scripts from the practices pack) made it edit `packages/provegate/test/pack-manifest.json`, which this PRD also edits for its examples — `gate queue` now reports the overlap. The earlier note that this PRD's surface intersects PRD-019's *and nothing else* is void. Parallelism is now: concurrent with PRD-021 or PRD-022 once PRD-019 ships; **not** concurrent with PRD-023. PRD-023 runs last, so sequencing already resolves it |

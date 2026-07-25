@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T13:28:36.856Z",
+  "generatedAt": "2026-07-25T14:00:22.074Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -603,15 +603,15 @@
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-017-agent-memory-substrate.md",
-        "readiness": "_readiness/wip/readiness-017-agent-memory-substrate.md",
-        "tasks": "_tasks/wip/tasks-017-agent-memory-substrate.md",
+        "prd": "_prds/completed/prd-017-agent-memory-substrate.md",
+        "readiness": "_readiness/completed/readiness-017-agent-memory-substrate.md",
+        "tasks": "_tasks/completed/tasks-017-agent-memory-substrate.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
@@ -763,7 +763,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.1,
+        "score": 6.7,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -837,7 +837,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.65,
+        "score": 7.19,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
