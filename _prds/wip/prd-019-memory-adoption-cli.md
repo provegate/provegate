@@ -160,7 +160,13 @@ so that I can select relevant records without embeddings or vendor-specific stor
    (the byte-exact tarball allowlist) **and** declared in the ledger's `packOnly[]` or
    paired with a live counterpart. No FR-5 target is a hash pair today — verified against
    the ledger on 2026-07-25 — so a `--reconcile` pass here would be ceremony, and the
-   ledger edit this PRD does make is one added `packOnly` name.
+   registration duty is conditional: as scoped, FR-5 edits files that are **already**
+   declared, so it adds no ledger entry and leaves `pack-drift-ledger.json` unchanged —
+   the obligation binds only if implementation ships a packed file that does not exist
+   today, and that file must then be named in the ledger. The evidence stays
+   read-only: `pnpm verify:pack-drift` refuses an undeclared packed file by name, and the
+   pack test compares `pack-manifest.json` against `npm pack --dry-run`. `--reconcile`
+   writes the ledger, so it is a maintenance action and never proof of anything.
    - **Targets:** `packages/provegate/practices/NEXT_STEPS.md`,
      `packages/provegate/practices/shims/**`,
      `packages/provegate/README.md`, `packages/provegate/QUICKSTART.md`,
@@ -178,7 +184,8 @@ so that I can select relevant records without embeddings or vendor-specific stor
      `packages/provegate/test/practices-pack.test.ts`,
      `packages/provegate/test/single-package.test.ts`,
      `scripts/check-static-egress.mjs`,
-     `scripts/verify/pack-drift-ledger.json`
+     `scripts/verify/pack-drift-ledger.json` (verification only — written only in FR-5's
+     conditional case, when implementation ships a packed file that does not exist today)
 
 ---
 
@@ -303,7 +310,8 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/cli.mdx`
 - `scripts/check-static-egress.mjs`
-- `scripts/verify/pack-drift-ledger.json`
+- `scripts/verify/pack-drift-ledger.json` — claimed defensively for FR-5's conditional
+  new-packed-file case; no unconditional write is planned
 
 ---
 
@@ -324,6 +332,8 @@ so that I can select relevant records without embeddings or vendor-specific stor
 | FR-3 | `pnpm --filter provegate test test/memory.test.ts`                | pkg   | find ranking/JSON |
 | FR-4 | `pnpm --filter provegate test test/single-package.test.ts`        | pkg   | bounds, portability, containment |
 | FR-5 | `pnpm --filter provegate test test/content-launch.test.ts`        | pkg   | docs/distribution |
+| FR-5 | `pnpm --filter provegate test test/pack.test.ts`                  | pkg   | tarball allowlist matches npm pack exactly |
+| FR-5 | `pnpm verify:pack-drift`                                          | repo  | every packed file paired or declared packOnly (read-only) |
 | FR-6 | `pnpm --filter provegate test test/practices-pack.test.ts`        | pkg   | no-overwrite and invariant regression |
 
 Cross-cutting floor:
@@ -362,6 +372,8 @@ Before Phase 2 PASS, run: `gate check PRD-019`
 
 | Date       | Author           | Changes |
 | ---------- | ---------------- | ------- |
+| 2026-07-25 | Cursor | Readiness iteration 4 (PASS 8.985): W6 resolved — the unsupported "adds one packOnly name" sentence is replaced by a conditional obligation. W7 offered two dispositions for the over-claimed ledger; taking the second, it is labelled verification-only in FR-6 Targets and claimed defensively in the Conflict Surface rather than dropped, because FR-5's conditional case would write it |
+| 2026-07-25 | Cursor | Readiness iteration 3: W5's second half addressed — FR-5 now names its read-only evidence (`verify:pack-drift` refuses an undeclared packed file, `pack.test.ts` compares the allowlist against `npm pack --dry-run`) and states that `--reconcile` writes the ledger, so it is maintenance rather than proof. Two verification rows added |
 | 2026-07-25 | Cursor | Readiness iteration 2 (PASS 8.58): W5 corrects a false claim I introduced — `practices/NEXT_STEPS.md` and the shims are ledger `packOnly` entries (a bare name list, no hashes, no live counterpart), not hash pairs, so FR-5's obligation is registration in `pack-manifest.json` plus a `packOnly[]` declaration, never a reconcile pass |
 | 2026-07-25 | Cursor | Next-wave prep: readiness W1–W4 resolved in the PRD. FR-2 takes the symlinked-entrypoint cases (this repo's `AGENTS.md` is still a symlink to `CLAUDE.md`, verified 2026-07-25), FR-1 defines bare `gate doctor` as usage plus exit 1, FR-5 names the pack-manifest and drift-reconcile obligation, and §7 records determinism-not-relevance as an accepted consequence so Phase 6 does not relitigate a non-goal |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
