@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T11:05:32.327Z",
+  "generatedAt": "2026-07-25T11:42:26.492Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -747,7 +747,7 @@
       "number": 21,
       "slug": "governance-truth-up",
       "status": "Approved",
-      "cyclePhase": "3 (Task Generation)",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -763,8 +763,8 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 8.43,
-        "verdict": "PASS",
+        "score": null,
+        "verdict": "ITERATE",
         "modelTierExecution": "high",
         "modelTierAudit": "high"
       },
@@ -810,6 +810,43 @@
         "checkedCount": 0,
         "uncheckedCount": 73,
         "operatorHandoffCount": 2
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-25"
+    },
+    {
+      "prd": "PRD-023",
+      "number": 23,
+      "slug": "gate-self-hosting",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-023-gate-self-hosting.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
       },
       "summary": {
         "shipReadiness": "Unknown"
