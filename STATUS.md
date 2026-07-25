@@ -11,15 +11,14 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent | Work item | Phase | Started |
 |-------|-----------|-------|---------|
-| claude-code | PRD-016 | 7 (awaiting operator acceptance) | 2026-07-24 |
 
 ## Current state
 
 | Metric | Value |
 |--------|-------|
-| Last shipped | PRD-015 single-package-support (2026-07-24) |
+| Last shipped | PRD-016 practices-pack (2026-07-25) |
 | Active branch | main (unpushed; push is the owner's call) |
-| Next candidates | practices handoff waves 2–4 (gate/verify, autonomous close, orchestration docs) |
+| Next candidates | operator-row parser hardening (see Deferrals); pack-vs-repo drift check |
 
 ## Deferrals
 
@@ -31,9 +30,12 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Topic | Item | Owner | Due (YYYY-MM-DD) | Renewals | Note |
 |-------|------|-------|------------------|----------|------|
+| operator gate | `countOperatorHandoff` counts only table rows, so a checkbox-bullet operator row reports 0 rows and the merge gate passes without consuming the acceptance — harden the parser or add a verify check that a tasks file with an `operator-gated` header has at least one countable row | owner | 2026-08-08 | 0 | found while closing PRD-016; interim guard is the table-row convention + `_brain/learnings/operator-row-must-be-a-table-row.md` |
+| pack drift | no check that `packages/provegate/practices/**` still matches this repo's live layer — the pack can silently rot | owner | 2026-08-22 | 0 | accepted at PRD-016 v1 (readiness §3); recorded so it cannot become "never" |
 
 ## Recent activity
 
+- 2026-07-25 — PRD-016 practices-pack **Ship Verified**: owner acceptance recorded, `gate land` merged to local main (unpushed). Close found the operator gate reporting 0 rows because the row was a checkbox bullet — fixed, captured as a `_brain` learning, parser hardening deferred
 - 2026-07-25 — both tooling deferrals resolved (guard/scanner hardenings upstreamed; verify gates wired into CI for `gate check --wiring`); PRD-016 quorum 3/3 pass, awaiting operator acceptance
 - 2026-07-24 — practices handoff complete: waves 3–4 imported (lifecycle docs + tiers, stop-and-ask, orchestration spec as docs-only), 7 high dep advisories fixed, handoff scaffolding deleted
 - 2026-07-24 — practices handoff wave 2 imported (verify:* library, known-red ledger, CI hygiene job)

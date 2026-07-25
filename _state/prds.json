@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T05:48:01.370Z",
+  "generatedAt": "2026-07-25T05:49:47.993Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -566,15 +566,15 @@
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-016-practices-pack.md",
-        "readiness": "_readiness/wip/readiness-016-practices-pack.md",
-        "tasks": "_tasks/wip/tasks-016-practices-pack.md",
+        "prd": "_prds/completed/prd-016-practices-pack.md",
+        "readiness": "_readiness/completed/readiness-016-practices-pack.md",
+        "tasks": "_tasks/completed/tasks-016-practices-pack.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
