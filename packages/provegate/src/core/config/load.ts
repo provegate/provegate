@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
-import { dirname, isAbsolute, posix, resolve, sep } from 'node:path';
+import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, statSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, posix, resolve, sep } from 'node:path';
 import { DEFAULT_CONFIG } from './defaults.js';
 import type { ConfigIssue, PartialWorkflowConfig, WorkflowConfig } from './types.js';
 import { validateConfig, validateResolvedConfig } from './validate.js';
@@ -44,16 +44,81 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /** Plain objects merge recursively; arrays and scalars replace wholesale. */
 /**
+ * Is this volume case-insensitive? Probed, not assumed: `process.platform` is a
+ * proxy that is wrong in both directions — a case-SENSITIVE volume on macOS, a
+ * case-insensitive one mounted on Linux — and getting it wrong either accepts an
+ * outside path or rejects a contained one.
+ */
+function volumeIsCaseInsensitive(root: string): boolean {
+  const flipped = join(
+    dirname(root),
+    basename(root)
+      .split('')
+      .map((c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()))
+      .join(''),
+  );
+  if (flipped === root) return false; // nothing to flip (digits, symbols)
+  try {
+    const a = statSync(root);
+    const b = statSync(flipped);
+    return a.ino === b.ino && a.dev === b.dev;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The canonical form of `path`, or null when it cannot be determined. Resolves
+ * the longest EXISTING prefix through `realpath` — which follows symlinked
+ * PARENTS, the case a segment-by-segment walk gets wrong — and re-attaches the
+ * not-yet-created tail lexically.
+ */
+function canonicalOrNull(path: string): string | null {
+  let existing = path;
+  const tail: string[] = [];
+  for (;;) {
+    try {
+      const real = realpathSync(existing);
+      return tail.length === 0 ? real : join(real, ...tail);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return null;
+      const parent = dirname(existing);
+      if (parent === existing) return null;
+      tail.unshift(basename(existing));
+      existing = parent;
+    }
+  }
+}
+
+/** Where a symlink chain starting at `path` ends, or null when it cannot be read. */
+function chainEnd(path: string): string | null {
+  let current = path;
+  for (let hops = 0; hops < 40; hops++) {
+    let info;
+    try {
+      info = lstatSync(current);
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === 'ENOENT' ? current : null;
+    }
+    if (!info.isSymbolicLink()) return current;
+    const target = readlinkSync(current);
+    current = isAbsolute(target) ? target : resolve(dirname(current), target);
+  }
+  return null; // a loop, or a chain long enough to be one
+}
+
+/**
  * Filesystem containment for configured memory paths — the store, its index, and
  * the agent entrypoints. Unlike a watch glob, these ARE dereferenced: something
  * reads them. They are also single concrete paths with no wildcards, so the
  * question is decidable and worth asking properly.
  *
- * Three cases a simpler version missed, each found in review:
- * a symlink resolving outside; a DANGLING symlink, whose `realpath` raises
- * ENOENT exactly like an ordinary missing path; and a CHAIN, where the first
- * link points at an in-repo name that itself points outside. Anything that is
- * not a clean "does not exist yet" fails closed.
+ * Four cases a simpler version missed, each found in review: a symlink resolving
+ * outside; a DANGLING symlink, whose `realpath` raises ENOENT exactly like an
+ * ordinary missing path; a CHAIN whose first hop points at an in-repo name that
+ * itself points outside; and a symlinked PARENT, where the final component is
+ * not a link and the lexical spelling still names something else entirely.
+ * Anything that is not a clean "does not exist yet" fails closed.
  */
 function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
   const memory = config.memory;
@@ -71,30 +136,30 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
     return issues; // an unreadable root is not this check's failure to report
   }
 
-  // Case-insensitive volumes (default macOS, Windows) name one directory two
-  // ways, so an exact comparison rejects a contained path for its spelling.
-  const caseInsensitive = process.platform === 'darwin' || process.platform === 'win32';
-  const norm = (value: string): string => (caseInsensitive ? value.toLowerCase() : value);
-  const outside = (candidate: string): boolean =>
-    norm(candidate) !== norm(rootReal) && !norm(candidate).startsWith(norm(rootReal) + sep);
+  const insensitive = volumeIsCaseInsensitive(rootReal);
+  const norm = (value: string): string => (insensitive ? value.toLowerCase() : value);
+  const under = (candidate: string, base: string): boolean =>
+    norm(candidate) === norm(base) || norm(candidate).startsWith(norm(base) + sep);
 
-  /** Follow a link chain to its end, or null when a hop cannot be read. */
-  const chainEnd = (start: string): string | null => {
-    let current = start;
-    for (let hops = 0; hops < 40; hops++) {
-      let info;
-      try {
-        info = lstatSync(current);
-      } catch (error) {
-        return (error as NodeJS.ErrnoException).code === 'ENOENT' ? current : null;
-      }
-      if (!info.isSymbolicLink()) return current;
-      const target = readlinkSync(current);
-      current = isAbsolute(target) ? target : resolve(dirname(current), target);
+  /** The canonical destination of `value` under `rootReal`, or a verdict. */
+  const destination = (value: string): { path: string } | { fail: 'outside' | 'unresolvable' } => {
+    let current = rootReal;
+    for (const segment of value.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.')) {
+      current = resolve(current, segment);
+      // A dangling link resolves to nothing, so read the chain itself; a live
+      // one is canonicalized below, which also follows symlinked parents.
+      const end = chainEnd(current);
+      if (end === null) return { fail: 'unresolvable' };
+      if (!under(end, rootReal)) return { fail: 'outside' };
+      const canonical = canonicalOrNull(current);
+      if (canonical === null) return { fail: 'unresolvable' };
+      if (!under(canonical, rootReal)) return { fail: 'outside' };
+      current = canonical;
     }
-    return null; // a loop, or a chain long enough to be one
+    return { path: current };
   };
 
+  const resolved = new Map<string, string>();
   const entries: [string, string][] = [
     ['memory.root', memory.root],
     ['memory.index', memory.index],
@@ -102,26 +167,27 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
   ];
   for (const [path, value] of entries) {
     if (value.length === 0 || isAbsolute(value)) continue; // lexical rules own these
-    let current = rootReal;
-    let verdict: 'contained' | 'outside' | 'unresolvable' = 'contained';
-    for (const segment of value.split(/[/\\]/).filter((s) => s.length > 0 && s !== '.')) {
-      current = resolve(current, segment);
-      const end = chainEnd(current);
-      if (end === null) {
-        verdict = 'unresolvable';
-        break;
-      }
-      if (outside(end)) {
-        verdict = 'outside';
-        break;
-      }
-      current = end;
+    const outcome = destination(value);
+    if ('fail' in outcome) {
+      issues.push({
+        path,
+        message:
+          outcome.fail === 'outside'
+            ? 'resolves outside the workspace through a symlink'
+            : 'could not be resolved to a contained path',
+      });
+      continue;
     }
-    if (verdict === 'outside') {
-      issues.push({ path, message: 'resolves outside the workspace through a symlink' });
-    } else if (verdict === 'unresolvable') {
-      issues.push({ path, message: 'could not be resolved to a contained path' });
-    }
+    resolved.set(path, outcome.path);
+  }
+
+  // The index must resolve under the STORE, not merely inside the repository:
+  // a link that leaves the store makes the scanner and the loader address two
+  // different sets of records.
+  const storeReal = resolved.get('memory.root');
+  const indexReal = resolved.get('memory.index');
+  if (storeReal !== undefined && indexReal !== undefined && !under(indexReal, storeReal)) {
+    issues.push({ path: 'memory.index', message: 'resolves outside memory.root' });
   }
   return issues;
 }

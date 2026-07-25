@@ -27,6 +27,12 @@ export type Status = (typeof STATUSES)[number] | (typeof ADR_STATUSES)[number];
 export interface RecordIssue {
   path: string;
   message: string;
+  /**
+   * The list element at fault, when the field holds several. Comparing field
+   * names alone let one implementation reject the first bad glob and the other
+   * the second while both reported `watch` — same field, different semantics.
+   */
+  entry?: string;
 }
 
 export interface MemoryRecord {
@@ -355,7 +361,7 @@ export function validateRecord(
     if (key !== 'watch') {
       for (const entry of list) {
         if (!SLUG.test(entry) && !ADR_NAME.test(entry)) {
-          issues.push({ path: at(key), message: `'${entry}' is not a valid record slug` });
+          issues.push({ path: at(key), message: `'${entry}' is not a valid record slug`, entry });
         }
       }
     }
@@ -376,7 +382,7 @@ export function validateRecord(
       // The lexical rule reads the entire glob; only the realpath probe needs
       // the literal prefix, because a metacharacter cannot be resolved.
       if (escapesLexically(glob)) {
-        issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
+        issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace`, entry: glob });
       }
     }
   }
@@ -388,7 +394,11 @@ export function validateRecord(
   for (const match of body.matchAll(/\[\[([^\]]+)\]\]/g)) {
     const target = match[1]!.trim();
     if (!SLUG.test(target) && !ADR_NAME.test(target)) {
-      issues.push({ path: at('body'), message: `wikilink '${target}' is not a valid record slug` });
+      issues.push({
+        path: at('body'),
+        message: `wikilink '${target}' is not a valid record slug`,
+        entry: target,
+      });
     }
   }
 

@@ -62,9 +62,13 @@ if (!existsSync(indexPath)) {
   // Strip HTML comments first — a commented-out pointer is not a pointer (it must
   // neither count as coverage nor be flagged as dangling).
   const indexText = read(indexPath).replace(/<!--[\s\S]*?-->/g, '');
-  const pointers = [...indexText.matchAll(/\]\(((?:learnings|adr)\/[^)]+\.md)\)/g)].map(
-    (m) => m[1],
-  );
+  // Only the documented bullet form counts as a pointer. A prose mention like
+  // `see [record](learnings/foo.md)` used to satisfy the orphan check while the
+  // hook loop below ignored it — so a record could be "indexed" by a line that
+  // carries no hook and was never held to the length limit.
+  const pointers = [
+    ...indexText.matchAll(/^- \[[^\]]*\]\(((?:learnings|adr)\/[^)]+\.md)\)/gm),
+  ].map((m) => m[1]);
   const counts = new Map();
   for (const p of pointers) counts.set(p, (counts.get(p) ?? 0) + 1);
   for (const [p, n] of counts) {

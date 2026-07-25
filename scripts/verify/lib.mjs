@@ -259,13 +259,13 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
     if (key === 'watch') {
       for (const glob of entries) {
         if (watchEscapes(glob)) {
-          issues.push({ field: 'watch', message: `'${glob}' escapes the workspace` });
+          issues.push({ field: 'watch', message: `'${glob}' escapes the workspace`, entry: glob });
         }
       }
     } else {
       for (const entry of entries) {
         if (!SLUG_RE.test(entry) && !ADR_RE.test(entry)) {
-          issues.push({ field: key, message: `'${entry}' is not a valid record slug` });
+          issues.push({ field: key, message: `'${entry}' is not a valid record slug`, entry });
         }
       }
     }
@@ -275,7 +275,11 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
   for (const match of body.matchAll(/\[\[([^\]]+)\]\]/g)) {
     const target = match[1].trim();
     if (!SLUG_RE.test(target) && !ADR_RE.test(target)) {
-      issues.push({ field: 'body', message: `wikilink '${target}' is not a valid record slug` });
+      issues.push({
+        field: 'body',
+        message: `wikilink '${target}' is not a valid record slug`,
+        entry: target,
+      });
     }
   }
 

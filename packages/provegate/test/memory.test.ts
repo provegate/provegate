@@ -417,7 +417,7 @@ describe('record conformance corpus (FR-4, W12)', () => {
       `const out = corpus.cases.map((c) => ({`,
       `  id: c.id,`,
       `  fields: validateMemoryRecord(c.content, { slug: c.slug, isAdr: c.isAdr })`,
-      `    .issues.map((i) => i.field)`,
+      `    .issues.map((i) => (i.entry === undefined ? i.field : i.field + '#' + i.entry))`,
       `    .sort(),`,
       `}));`,
       `process.stdout.write(JSON.stringify(out));`,
@@ -434,8 +434,13 @@ describe('record conformance corpus (FR-4, W12)', () => {
       // Sorted WITH duplicates, not de-duped: a field Set hides a divergence
       // inside a multi-entry field, where one side flags both bad globs and the
       // other flags only the first. Same field, different semantics.
+      // Keyed by field AND the offending entry: a field name alone let one
+      // implementation reject the first bad element and the other the second
+      // while both reported the same field.
       const ts = validateRecord(c.content, 'x.md', c.slug, { isAdr: c.isAdr })
-        .issues.map((i) => tsField(i.path))
+        .issues.map((i) =>
+          i.entry === undefined ? tsField(i.path) : `${tsField(i.path)}#${i.entry}`,
+        )
         .sort();
       expect(standalone.get(c.id), `${c.id}: the two implementations disagree`).toEqual(ts);
     }
