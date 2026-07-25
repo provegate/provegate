@@ -82,11 +82,18 @@ function escapesRealpath(root: string, probe: string): boolean {
   }
 }
 
-/** Host-independent: absolute, home-relative, drive-letter, UNC, or `..`. */
-function escapesLexically(probe: string): boolean {
-  if (probe.startsWith('~')) return true;
-  if (/^[/\\]/.test(probe) || /^[A-Za-z]:[/\\]/.test(probe)) return true;
-  return probe.split(/[/\\]/).includes('..');
+/**
+ * Host-independent: absolute, home-relative, drive-letter, UNC, or `..`.
+ *
+ * Applied to the WHOLE glob, not to the literal prefix before the first
+ * metacharacter: a glob whose literal prefix is harmless can still
+ * escape after its first metacharacter, so checking only the prefix reads the
+ * safe part of a hostile path.
+ */
+function escapesLexically(value: string): boolean {
+  if (value.startsWith('~')) return true;
+  if (/^[/\\]/.test(value) || /^[A-Za-z]:[/\\]/.test(value)) return true;
+  return value.split(/[/\\]/).includes('..');
 }
 
 function stripComment(rawValue: string): string {
@@ -378,8 +385,14 @@ export function validateRecord(
       // let `C:\…` through on POSIX — two ways for the same record to be valid
       // here and invalid there. `root` now only buys the extra symlink check,
       // which the lexical rule cannot see.
+      // The lexical rule reads the entire glob; only the realpath probe needs
+      // the literal prefix, because a metacharacter cannot be resolved.
       const literal = glob.split(/[*?[]/)[0]!;
       const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
+      if (escapesLexically(glob)) {
+        issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });
+        continue;
+      }
       if (probe.length === 0) continue;
       if (escapesLexically(probe)) {
         issues.push({ path: at('watch'), message: `'${glob}' escapes the workspace` });

@@ -92,10 +92,24 @@ if (!existsSync(indexPath)) {
   for (const raw of linkTargets) {
     let target = raw.trim().replace(/^<|>$/g, '').split(/\s+/)[0];
     // CommonMark decodes character references in a link destination, so
-    // `&#112;rivate/secret.md` names the same file as `private/secret.md`.
+    // `&#112;rivate/secret.md` and `private&sol;secret.md` both name the same
+    // file. Numeric references decode generally; the named ones that matter
+    // here are the path punctuation, since those are what rebuild a segment.
+    const NAMED = {
+      sol: '/',
+      bsol: '\\',
+      period: '.',
+      lowbar: '_',
+      hyphen: '-',
+      dash: '-',
+      amp: '&',
+      lpar: '(',
+      rpar: ')',
+    };
     target = target
       .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
-      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)));
+      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number.parseInt(dec, 10)))
+      .replace(/&([a-z]+);/gi, (whole, name) => NAMED[name.toLowerCase()] ?? whole);
     try {
       target = decodeURIComponent(target);
     } catch {
@@ -105,7 +119,11 @@ if (!existsSync(indexPath)) {
     // Case-insensitive: the default macOS and Windows filesystems resolve
     // `PRIVATE/` to the same directory, so an exact-case check is a boundary
     // that holds on the CI host and not on the developer's laptop.
-    if (target.split(/[/\\]/).some((seg) => seg.toLowerCase() === 'private')) {
+    // Belt and braces: the decoded segments, plus the raw text. A spelling this
+    // decoder does not know still fails if the word survives in the source — and
+    // one that hides the word is caught by the decode above.
+    const segments = target.split(/[/\\]/).map((seg) => seg.toLowerCase());
+    if (segments.includes('private') || /private/i.test(raw)) {
       r.fail(`INDEX.md: link '${raw}' resolves under private/ — the public index must not list it`);
     }
   }

@@ -149,12 +149,12 @@ const PLACEHOLDER_RE = /<[^>]*>|\bTBD\b|\bTODO\b|\?{3,}/;
 
 /** A watch glob's literal prefix must stay inside the workspace. */
 function watchEscapes(glob) {
-  const literal = glob.split(/[*?[]/)[0] ?? '';
-  const probe = literal.endsWith('/') ? literal.slice(0, -1) : literal;
-  if (probe.length === 0) return false;
-  if (probe.startsWith('~')) return true;
-  if (/^[/\\]/.test(probe) || /^[A-Za-z]:[/\\]/.test(probe)) return true;
-  return probe.split(/[/\\]/).includes('..');
+  // Read the WHOLE glob: `src/*/../../../outside/**` has a harmless literal
+  // prefix and still escapes, so checking only the prefix reads the safe part
+  // of a hostile path.
+  if (glob.startsWith('~')) return true;
+  if (/^[/\\]/.test(glob) || /^[A-Za-z]:[/\\]/.test(glob)) return true;
+  return glob.split(/[/\\]/).includes('..');
 }
 
 /**

@@ -79,7 +79,13 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
           issues.push({ path, message: 'resolves outside the workspace through a symlink' });
         }
         break;
-      } catch {
+      } catch (error) {
+        // Only "missing" means keep walking. An ELOOP path never establishes
+        // containment and is unusable as a store either way.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          issues.push({ path, message: 'could not be resolved to a contained path' });
+          break;
+        }
         const parent = dirname(target);
         if (parent === target) break;
         target = parent;

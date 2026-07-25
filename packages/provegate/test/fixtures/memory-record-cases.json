@@ -60,7 +60,8 @@
       "escapes without a root",
       "per-entry",
       "symlink escape (needs a real root; covered by fixture tests)",
-      "realpath error fails closed (fixture-covered)"
+      "realpath error fails closed (fixture-covered)",
+      "traversal after a metacharacter"
     ],
     "body": [
       "missing Why",
@@ -599,6 +600,25 @@
       "fields": ["name"],
       "matrix": ["name:ADR suffix kebab"],
       "content": "---\nname: ADR-0001-foo-\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\nc\n## Decision\nd\n## Consequences\nq\n## Alternatives considered\na\n"
+    },
+    {
+      "id": "watch-traversal-after-glob",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": false,
+      "fields": ["watch"],
+      "matrix": ["watch:traversal after a metacharacter"],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [src/*/../../../outside/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "the literal prefix is harmless; the escape hides behind the first metacharacter"
+    },
+    {
+      "id": "valid-watch-with-metacharacter",
+      "slug": "sample",
+      "isAdr": false,
+      "valid": true,
+      "matrix": [],
+      "content": "---\nname: sample\ndescription: a real one-line description\ntype: gotcha\nscope: workflow\nstatus: active\nwatch: [packages/*/src/**]\n---\n\n**Why:** w\n**How to apply:** h\n",
+      "note": "a glob with a metacharacter and no traversal stays legal"
     }
   ]
 }
