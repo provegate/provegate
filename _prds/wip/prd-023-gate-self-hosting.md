@@ -1,13 +1,13 @@
 # PRD-023: Gate Self-Hosting — One Implementation per Method Rule
 
-> **Status**: Draft
+> **Status**: Approved
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `gate-self-hosting`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 2 (Readiness)
 > **PRD Class**: infra
 > **Class Rationale**: This moves existing checks between surfaces and deletes their
 > duplicates; no application behavior and no new user-facing feature.
@@ -71,6 +71,8 @@ enforced, which is why the duplicates accumulated; after this PRD, CI runs `gate
 | Audit directions lost by deleting the scripts | n/a | 0 | on-disk→registered lands in `auditWiring` |
 | Repo surfaces that invoke `gate` | 0 | at least 1 CI step | CI workflow text |
 | A new method rule added only to `scripts/verify/` | passes | fails | the class ledger fixture |
+| Ledger classifications disagreeing with ADR-0002 | n/a | 0 | the ledger-vs-ADR check |
+| Lint checks matching a whole line where a part is meant | 2 | 0 | FR-7 fixtures |
 
 ---
 
@@ -123,17 +125,28 @@ so that "we build with it" is verifiable rather than asserted.
 Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
-1. **FR-1 — Record the rule as an ADR.** `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md`
-   states the deciding question and both answers: a check governs the **method's**
-   artifacts (PRDs, readiness, tasks, review records, `_brain` records, the status board,
-   the manifest) → it belongs in `packages/provegate`, because every adopter needs it; a
-   check governs **this repository's** stack (turbo cache keys, pnpm workspace test tasks,
-   the Next build's egress, the practices-pack hash ledger, dependency advisories) → it
-   belongs in `scripts/verify/`. The ADR names the current classification of every script
-   so the ledger in FR-6 has an owner-approved source, and records the three duplicates as
-   the evidence that motivated it.
-   - **Targets:** `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md` (new),
-     `_brain/INDEX.md`
+1. **FR-1 — Bind the ledger to the ADR, which is a precondition rather than a
+   deliverable.** `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md` lands on `main` ahead
+   of this PRD (owner decision of 2026-07-25: the rule must bind PRD-018 through PRD-023,
+   and a decision that ships with the last PRD in the wave binds none of them). It states
+   the deciding question and both answers: a check governs the **method's** artifacts
+   (PRDs, readiness, tasks, review records, `_brain` records, the status board, the
+   manifest) → `packages/provegate`, because every adopter needs it; a check governs
+   **this repository's** stack (turbo cache keys, pnpm workspace test tasks, the Next
+   build's egress, the practices-pack hash ledger, dependency advisories) →
+   `scripts/verify/`.
+
+   What this PRD owns is the **mechanical link**: FR-6's ledger must classify every script
+   exactly as the ADR does, and the check fails when the two disagree. An ADR whose
+   classification no repository artifact is compared against is a document, not a rule —
+   which is the failure mode PRD-021 exists to correct, and it must not be reproduced by
+   the PRD that cites it.
+
+   **If the ADR is absent at Phase 4 time the precondition was violated — stop rather
+   than write it here**, exactly as PRD-021 FR-4 treats the root config file. Two PRDs
+   each landing a different first version of one decision is worse than a blocked start.
+   - **Targets:** `scripts/verify/script-classes.json`,
+     `packages/provegate/test/wiring.test.ts`
 2. **FR-2 — Review-artifact rule: one implementation, both modes.** `core/gates/review.ts`
    already holds the stronger rule but is reachable only per-PRD, from `chain.ts` during a
    close. Add a corpus sweep, `gate check --review-artifacts`, beside the existing
@@ -159,13 +172,22 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    `scripts/verify/verify-durable-artifacts.mjs` and its `package.json` entry.
 
    **The two parsers disagree today and the merged one must pick deliberately.** The
-   package's `declaredArtifacts` drops any backticked value without a `/` and any value
+   package's    `declaredArtifacts` drops any backticked value without a `/` and any value
    containing `{` or `}`; the script ignores values containing `{`, `}`, or `*` and has no
    `/` rule. Keep the package behavior for path extraction, and adopt the script's `*`
-   exclusion, because an unfilled template placeholder may be a glob. The `/` rule is the
-   riskier half — after PRD-021 FR-13 a root-level filename is a legitimate claim
-   elsewhere in the system, so a `Durable Artifacts` entry naming `STATUS.md` is currently
-   dropped. Resolve it as an explicit decision, not as an inherited default (§9 Q2).
+   exclusion, because an unfilled template placeholder may be a glob.
+
+   **The `/` rule is replaced by PRD-021 FR-13's predicate** (owner decision of
+   2026-07-25, §9 Q2) — the same literal named-file and dotfile test that PRD already
+   specifies for Conflict Surface claims. One predicate for two sections, which is this
+   PRD's thesis applied to itself. Measured against every Durable Artifacts section in the
+   corpus it classifies all eleven slash-less tokens correctly: it accepts the two real
+   claims the current rule silently drops (`workflow.config.json` in PRD-001,
+   `RELEASING.md` in PRD-005) and still rejects the nine prose tokens (`status`, `queue`,
+   `run`, `land`, `check`, `gate new`, `--worktree`, `lucide-react`, `commands`), each on
+   a stated ground — no dot, or whitespace. **No wip PRD is affected**, so the Phase 7
+   gate gets stricter with zero effect on the in-flight wave. Those eleven tokens are the
+   fixture.
    - **Targets:** `packages/provegate/src/core/run/durable.ts::declaredArtifacts`,
      `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
      `packages/provegate/src/cli.ts::runCheck`,
@@ -193,8 +215,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    single bundle entry with the checks it wraps, so a check that later moves into the
    package changes one manifest line and nothing else. Add a CI step that runs the built
    CLI's sweep after `pnpm build`, making it the first `gate` invocation on an automated
-   surface of this repository. `verify:workflow` survives as the local no-build bundle
-   for the repo-class scripts that remain.
+   surface of this repository.
+
+   **`verify:workflow` survives** (owner decision of 2026-07-25, §9 Q1) as the local
+   no-build bundle. Folding it into the manifest would put a build on the local pre-push
+   path for the sake of one entrypoint, and the bundle is not yet a clean repo-class set
+   anyway: after this PRD's three deletions it holds six checks, and **two of them are
+   still method rules** — `verify-brain` (see FR-6) and `verify-deferred` (§5). Deleting
+   the bundle is the right end state and the wrong next step; FR-6's pending entries are
+   what make it reachable rather than aspirational.
    - **Targets:** `gates.manifest.json`, `.github/workflows/ci.yml`, `package.json`,
      `scripts/verify/verify-workflow.mjs`
 6. **FR-6 — Make the next duplicate fail at a gate, not at review.** Add
@@ -204,15 +233,56 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    PRD is clearing. An unclassified script fails. A classified script that no longer exists
    fails as stale, so the ledger shrinks with the work (the known-red-ledger lesson).
 
-   One entry needs a third state and it is the interesting one: `verify-deferred.mjs`
-   enforces the STATUS deferral policy — owner, due date, one renewal, cap 15 — which is a
-   **method** rule with **no** package implementation at all. It is a gap, not a duplicate,
-   and closing it is not this PRD's job (§5). It is classed `method-pending` with an owner
-   and a `reviewBy` date, and the check fails when that date passes. A pending entry that
-   never expires is how a stated intention becomes a permanent exemption.
+   **Two entries need a third state**, `method-pending`, and both must carry an owner and
+   a `reviewBy` date that the check fails on when it passes — a pending entry that never
+   expires is how a stated intention becomes a permanent exemption.
+
+   - `verify-deferred.mjs` enforces the STATUS deferral policy (owner, due date, one
+     renewal, cap 15). That is a **method** rule with **no** package implementation at
+     all — a gap, not a duplicate, and closing it is not this PRD's job (§5).
+   - `verify-brain.mjs` becomes a duplicate **during** this wave, not before it: PRD-017
+     FR-3 builds the package record parser (`core/memory/parse.ts`) while FR-4 hardens the
+     standalone verifier to the same schema, with one checked-in corpus deliberately run
+     against **both parser implementations**. The owner decided on 2026-07-25 to let
+     PRD-017 ship as designed — it is in flight under lease at the head of the chain,
+     and a shared fixture corpus is a materially stronger pin than the printed-value
+     comparison PRD-021 just discarded. So this is a duplicate the project accepts with
+     its eyes open, recorded with a date rather than argued away. The pack's copy
+     (`practices/verify/verify-brain.mjs`) is the reason it is not trivially deletable,
+     and the ADR should say whether a shipped pack script may be a thin CLI wrapper.
    - **Targets:** `scripts/verify/script-classes.json` (new),
      `packages/provegate/src/core/gates/wiring.ts`,
      `packages/provegate/test/wiring.test.ts`
+7. **FR-7 — Fix two lint false-negatives of the same shape.** Both match a whole line
+   where they must match a part of it, and both were found by this PRD's own drafting.
+
+   **(a) The §11 parser reads the Notes column as commands.**
+   `parseVerificationCommands` iterates every backtick span on an `| FR-N` row, so a
+   backticked word in the Scope or Notes cell becomes a gate command — an allowlisted one
+   silently joins the gate, a non-allowlisted one fails the lint for prose. Scope
+   extraction to the **Command column** (the second cell). Splitting the row on `|` is
+   safe by contract: the PRD template already forbids a pipe inside a backticked command
+   in this table, so the constraint that makes the fix sound is one the artifact already
+   carries. `_brain/learnings/notes-column-runs-commands.md` predicted this exactly and
+   ends with "fix it in the parser"; its interim guidance is retired in the same change,
+   because a learning that outlives its fix is the drift PRD-021 is about.
+
+   **(b) The Open Questions check drops any bullet containing "deferred".**
+   `lintPrd` filters `/\(none\b|deferred/i`, so a genuine unresolved question is invisible
+   to the gate whenever it merely *mentions* the word — measured on this PRD's own draft,
+   which listed three questions and was reported as two, because one names
+   `verify-deferred`. Require what the template already states — "every entry explicitly
+   deferred **with a link**" — so the exemption needs a deferral target (a link or a
+   `PRD-NNN` id), not a substring.
+
+   Both fixes make the gate **stricter**, so each needs a corpus pass before it lands: a
+   §11 Notes cell that currently supplies a real command, or an open question that
+   currently hides behind the word, becomes a new failure. Report any such case rather
+   than editing it silently.
+   - **Targets:** `packages/provegate/src/core/gates/safety.ts::parseVerificationCommands`,
+     `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
+     `_brain/learnings/notes-column-runs-commands.md`,
+     `packages/provegate/test/self-hosting.test.ts`
 
 ---
 
@@ -280,8 +350,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Dependencies
 
+- **ADR-0002 committed on `main`** — a precondition, not a work item (FR-1). It is written
+  once the PRD-017 lease releases `_brain/**`, ahead of PRD-018, so the rule binds the
+  whole wave rather than arriving behind it.
 - **PRD-018 Ship Verified** — it creates `gates.manifest.json`, which FR-5 edits, and it
-  owns `_brain/**`, where FR-1's ADR lands.
+  claims `_brain/**`, which FR-7(a) touches.
 - **PRD-019 Ship Verified** — `packages/provegate/src/cli.ts`.
 - **PRD-021 Ship Verified** — the largest coupling. It adds the `--value-score` branch to
   the same `runCheck`, edits `verify-workflow.mjs` and `gates-wired-exceptions.json`, and
@@ -304,11 +377,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### In Scope
 
-- [ ] `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md` + INDEX pointer
 - [ ] `packages/provegate/src/cli.ts` — the sweep branches in `runCheck`
-- [ ] `packages/provegate/src/core/gates/review.ts`, `wiring.ts`, `prd-ready.ts`
+- [ ] `packages/provegate/src/core/gates/review.ts`, `wiring.ts`, `prd-ready.ts`,
+      `safety.ts`
 - [ ] `packages/provegate/src/core/run/durable.ts` — the reconciled parser
-- [ ] `scripts/verify/script-classes.json` (new)
+- [ ] `scripts/verify/script-classes.json` (new), matched against ADR-0002
+- [ ] `_brain/learnings/notes-column-runs-commands.md` — retire the interim guidance
 - [ ] Deletions: `verify-review-artifact.mjs`, `verify-durable-artifacts.mjs`,
       `verify-gates-wired.mjs`, and their `package.json` entries
 - [ ] `gates.manifest.json`, `.github/workflows/ci.yml`, `scripts/verify/verify-workflow.mjs`
@@ -318,19 +392,26 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 9. Open Questions
 
-- [ ] **Q1 — Does `verify:workflow` survive?** After three deletions the bundle holds the
-      repo-class scripts plus PRD-021's doc-claims check. Keeping it means two local
-      entrypoints (the bundle and the CLI); folding it into the manifest means the local
-      pre-push path needs a build. Owner decision — it sets whether FR-5 is one CI step
-      or a full local-surface migration.
-- [ ] **Q2 — Does a Durable Artifacts entry accept a root-level filename?** The package
-      parser drops any value without a `/`, so `STATUS.md` is silently not a durable path
-      today. PRD-021 FR-13 makes exactly that shape legitimate for Conflict Surface
-      claims. Accepting it here is consistent but widens what the Phase 7 gate demands of
-      the merge diff. Owner decision, because it changes a close-time gate's strictness.
-- [ ] **Q3 — Who owns the `method-pending` entry for `verify-deferred`, and by when?**
-      FR-6 requires an owner and a date; the check fails when the date passes, so this
-      cannot be left blank.
+(none) — all three resolved by owner on 2026-07-25.
+
+**Q1 resolved — `verify:workflow` survives**, as the local no-build bundle. Folding it
+into the manifest would put a build on the local pre-push path, and the remaining set is
+not yet clean anyway: two of the six checks left after this PRD are still method rules
+(FR-5).
+
+**Q2 resolved — a Durable Artifacts entry accepts a root-level filename**, using PRD-021
+FR-13's predicate rather than a second one. The corpus measurement is in FR-3: eleven
+slash-less tokens, all eleven classified correctly, no wip PRD affected.
+
+**Q3 resolved — the pending entries are owner-held with a `reviewBy` of 2026-10-01**, and
+there are two of them, not one: `verify-deferred` and `verify-brain` (FR-6). The date is
+deliberately the same as the standing memory-metrics deferral already on the board, so
+one review pass covers the workflow's outstanding intentions rather than three scattered
+dates. The check fails when it passes, so renewal is a decision, not a default.
+
+**Owner decision recorded here because no FR carries it:** PRD-017 ships as designed,
+with two record-parser implementations pinned by a shared corpus. This PRD does not
+reopen it; FR-6 records it with a date.
 
 ---
 
@@ -363,6 +444,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/gates/review.ts`
 - `packages/provegate/src/core/gates/wiring.ts`
 - `packages/provegate/src/core/gates/prd-ready.ts`
+- `packages/provegate/src/core/gates/safety.ts`
 - `packages/provegate/src/core/run/durable.ts`
 - `packages/provegate/src/core/config/types.ts`
 - `packages/provegate/test/self-hosting.test.ts`
@@ -375,7 +457,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `scripts/verify/verify-workflow.mjs`
 - `gates.manifest.json`
 - `.github/workflows/ci.yml`
-- `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md`
+- `_brain/learnings/notes-column-runs-commands.md`
 
 **Every path above is contested, and sequencing is the only resolution.** `cli.ts` is
 claimed by PRD-019, PRD-021, and PRD-022; `prd-ready.ts` by PRD-018 and PRD-021;
@@ -385,6 +467,9 @@ runs last precisely so that every one of those is Ship Verified first. Claiming 
 exclusively is what makes an ordering mistake refuse instead of merge. **Run `gate queue`
 before claiming** — a PRD's own overlap list is not evidence.
 
+`core/gates/safety.ts` is the one path here **no other PRD claims** — the §11 parser has
+been untouched through the whole wave, which is part of why its defect survived.
+
 ---
 
 ## Durable Artifacts
@@ -393,8 +478,12 @@ Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none`
 against the merge diff). Never leave empty — write `none` explicitly. Narrow scope:
 only **this PRD's** durable knowledge.
 
-- Decision: `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md`
 - Review artifact: `_docs/reviews/review-023-gate-self-hosting.md`
+- Learning: `_brain/learnings/notes-column-runs-commands.md` — FR-7(a) retires this
+  record's interim guidance once the parser is scoped to the Command column; the record
+  is edited, not deleted, so the trap stays discoverable
+- Decision: `none` — ADR-0002 lands ahead of this PRD as a precondition (FR-1), so it
+  cannot also be this PRD's output. The close is measured against the two paths above.
 
 ---
 
@@ -407,12 +496,14 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR   | Command / Check                                              | Scope | Notes |
 | ---- | -------------------------------------------------------------- | ----- | ----- |
-| FR-1 | `pnpm verify:brain`                                             | repo  | the ADR is schema-valid and indexed |
+| FR-1 | `pnpm --filter provegate test test/wiring.test.ts`              | pkg   | the ledger disagreeing with ADR-0002 fails; a missing ADR stops the start |
 | FR-2 | `pnpm --filter provegate test test/self-hosting.test.ts`        | pkg   | the sweep fails a pass-with-criticals record; the script is gone |
 | FR-3 | `pnpm --filter provegate test test/self-hosting.test.ts`        | pkg   | declaration lint per PRD and corpus-wide; one parser, reconciled |
 | FR-4 | `pnpm --filter provegate test test/wiring.test.ts`              | pkg   | an unregistered on-disk script fails the audit |
 | FR-5 | `pnpm verify:gates-wired`                                       | repo  | replaced by the CLI audit; every manifest command resolves |
 | FR-6 | `pnpm --filter provegate test test/wiring.test.ts`              | pkg   | unclassified, superseded-but-present, stale, and expired entries all fail |
+| FR-7 | `pnpm --filter provegate test test/self-hosting.test.ts`        | pkg   | a Notes-column backtick is not a command; an open question mentioning the word is still counted |
+| FR-7 | `pnpm verify:workflow`                                          | repo  | the stricter lints pass over the live corpus |
 
 The FR-5 row runs the built CLI, so `pnpm build` must precede it; the root `pnpm test`
 already depends on `build` through turbo, and the floor below runs both.
@@ -458,6 +549,15 @@ rationalize.
 - DO NOT retune what any relocated rule decides under cover of moving it.
 - DO NOT claim the repo now runs on its own runner; FR-5 adds one CI invocation, and the
   remaining bundle is explicitly still a second surface.
+- DO NOT write ADR-0002 inside this PRD. It is a precondition; if it is absent, stop.
+- DO NOT let FR-7's stricter lints land without a corpus pass. Each one turns a silent
+  pass into a failure, and an existing PRD may be relying on the old behavior — report
+  such a case rather than quietly editing the artifact to fit the new rule.
+- DO NOT fix the Open Questions filter by deleting the `deferred` exemption outright; the
+  template promises a deferral-with-a-link escape and removing it would break PRDs that
+  legitimately use it.
+- DO NOT delete `notes-column-runs-commands.md` when its hazard is fixed; edit it, so the
+  trap and its resolution stay discoverable together.
 - DO NOT claim PRD-023 while any PRD-018, 019, 021, or 022 lease is active.
 
 ---
@@ -467,3 +567,4 @@ rationalize.
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
 | 2026-07-25 | Cursor | Initial draft. Scoped out of the duplication analysis of 2026-07-25: three method rules are implemented twice, the package copy is stronger in all three, and the script copy is the one CI runs. Created with `gate new`. Three open questions for the owner |
+| 2026-07-25 | Cursor, on owner direction | All three open questions resolved, and the resolutions changed the shape of the PRD rather than just filling blanks. **Q2** is answered by measurement, not preference: PRD-021 FR-13's predicate classifies all eleven slash-less Durable Artifacts tokens in the corpus correctly and affects no wip PRD, so FR-3 reuses that predicate instead of inventing a second one. **Q1** keeps `verify:workflow`, and FR-5 now says *why* the end state is not yet reachable — two of the six remaining checks are method rules. **Q3** puts both pending entries on 2026-10-01, and there are two: the owner also decided PRD-017 ships as designed, so `verify-brain` becomes an accepted duplicate recorded with a date rather than a defect. **FR-1 inverts**: ADR-0002 lands ahead of the wave as a precondition, because a decision shipping with the last PRD binds none of them — so this PRD owns the mechanical ledger-vs-ADR link instead of the document. **FR-7 is new**: the two lint false-negatives found while drafting, both a whole-line match where a scoped one is meant |

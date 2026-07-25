@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T11:42:26.492Z",
+  "generatedAt": "2026-07-25T11:55:30.195Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -820,8 +820,8 @@
       "prd": "PRD-023",
       "number": 23,
       "slug": "gate-self-hosting",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Approved",
+      "cyclePhase": "2 (Readiness)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
