@@ -1,3 +1,4 @@
+import { contractView } from '../memory/artifacts.js';
 import { sectionAfter } from '../state/markdown.js';
 
 /**
@@ -9,7 +10,11 @@ import { sectionAfter } from '../state/markdown.js';
 /** Backticked paths declared in `## Durable Artifacts`; `none` and template
  * tokens dropped (same discipline as the Conflict Surface parser). */
 export function declaredArtifacts(content: string): string[] {
-  const section = sectionAfter(content, 'Durable Artifacts');
+  // Read from the executable view, like every other contract section. A fenced
+  // or commented-out `## Durable Artifacts` example placed above the real one
+  // was selected instead of it — so a PRD could satisfy the "every output
+  // repeats here" rule with a list it had quoted rather than declared.
+  const section = sectionAfter(contractView(content), 'Durable Artifacts');
   const paths: string[] = [];
   for (const line of section.split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;

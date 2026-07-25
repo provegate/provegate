@@ -9,6 +9,8 @@ import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gates/review.js';
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
+  changelogApproves,
+  loadMemoryStore,
   normalizeTarget,
   outputPlacementIssues,
   outputsMissingFromDurable,
@@ -430,5 +432,114 @@ describe('phase 6 round 3 self-attack (before the independent round returned)', 
     expect(parseMemoryDeclarations(twice).issues).toEqual([
       'Memory Outputs: declared 2 times — exactly one section is parseable',
     ]);
+  });
+});
+
+describe('phase 6 round 4 regressions', () => {
+  it('[R4-P1-2] a non-breaking-space heading cannot be selected as the real section', () => {
+    // Counted with `[ \t]`, sliced with `\s` — and `\s` matches NBSP. The
+    // forgery was not counted (so no ambiguity was reported) and was then
+    // selected as the body. One predicate now does both.
+    const nbsp = ' ';
+    const doc = [
+      '# PRD',
+      '',
+      `##${nbsp}Memory Outputs`,
+      '',
+      '- none — forged, and not a heading.',
+      '',
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/x.md` — the real declaration.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toEqual([]);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/x.md']);
+  });
+
+  it('[R4-P1-4] a commented-out section is not a section', () => {
+    const doc = [
+      '# PRD',
+      '',
+      '<!--',
+      '## Memory Outputs',
+      '',
+      '- none — commented out, so it declares nothing.',
+      '-->',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.present).toBe(false);
+  });
+
+  it('[R4-P1-4] a commented-out Changelog cannot approve a weakening', () => {
+    const doc = [
+      '# PRD',
+      '',
+      '<!--',
+      '## Changelog',
+      '',
+      '| Date | Author | Changes |',
+      '| ---- | ------ | ------- |',
+      '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` |',
+      '-->',
+      '',
+    ].join('\n');
+    expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(false);
+  });
+
+  it('[R4-P1-3] a fenced Durable Artifacts example is not the declaration', () => {
+    const doc = [
+      '# PRD',
+      '',
+      '```markdown',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/forged.md` — quoted, not declared',
+      '```',
+      '',
+      '## Durable Artifacts',
+      '',
+      '- `_brain/learnings/real.md` — the actual declaration',
+      '',
+    ].join('\n');
+    expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/real.md']);
+  });
+
+  it('[R4-P1-1] a nested index resolves records against the index directory', () => {
+    // `<root>/<pointer>` mapped a record loaded from `_brain/catalog/learnings/x.md`
+    // onto `_brain/learnings/x.md`, so an arbitrary file at the outer path
+    // satisfied capture. The check now derives the path the loader used.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-nested-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/catalog/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/catalog/learnings/x.md'),
+      [
+        '---',
+        'name: x',
+        'description: a record under a nested index',
+        'type: gotcha',
+        'scope: workflow',
+        'status: active',
+        '---',
+        '',
+        'Body.',
+        '',
+        '**Why:** real.',
+        '',
+        '**How to apply:** safe.',
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(root, '_brain/catalog/INDEX.md'),
+      '# index\n\n- [x](learnings/x.md) — hook\n',
+    );
+    const memory = { ...cfg.memory, enabled: true, index: '_brain/catalog/INDEX.md' };
+    const store = loadMemoryStore(root, memory);
+    expect(store.records.map((r) => r.slug)).toEqual(['x']);
+    expect(store.issues).toEqual([]);
   });
 });

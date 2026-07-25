@@ -2,7 +2,6 @@ import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MemoryConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
-import { sectionAfter } from '../state/markdown.js';
 import { readRecord, type MemoryRecord } from './parse.js';
 
 /**
@@ -111,6 +110,36 @@ function pathProblem(value: string): string | null {
  * the example. Blanking rather than deleting keeps every other offset intact, so
  * nothing downstream has to know this happened.
  */
+function withoutHtmlComments(content: string): string {
+  // Line-preserving, like the fence stripper: an HTML comment is invisible in
+  // rendered Markdown, so a `## Changelog` inside one is not a section — but a
+  // regex that only knew about fences counted it as the real thing and let a
+  // commented-out owner row waive a removal.
+  let open = false;
+  return content
+    .split('\n')
+    .map((line) => {
+      let out = line;
+      if (open) {
+        const end = out.indexOf('-->');
+        if (end === -1) return '';
+        open = false;
+        out = out.slice(end + 3);
+      }
+      for (;;) {
+        const start = out.indexOf('<!--');
+        if (start === -1) return out;
+        const end = out.indexOf('-->', start + 4);
+        if (end === -1) {
+          open = true;
+          return out.slice(0, start);
+        }
+        out = out.slice(0, start) + out.slice(end + 3);
+      }
+    })
+    .join('\n');
+}
+
 function withoutFences(content: string): string {
   // CommonMark's rules, not a substring test: a fence opens with 3+ of ` or ~
   // at an indent of at most three spaces, and closes only with at least as many
@@ -147,16 +176,33 @@ function withoutFences(content: string): string {
     .join('\n');
 }
 
+/** Everything a rendered document does not execute: fenced code and HTML
+ * comments. Contract sections are read from this view and nothing else. */
+export function contractView(content: string): string {
+  return withoutFences(withoutHtmlComments(content));
+}
+
 /**
- * How many times an unfenced `## <heading>` appears. More than one is an
- * ambiguity, not a duplicate: the parser would silently pick one of them.
+ * The `## <heading>` occurrences and the body of the single one, read with ONE
+ * predicate.
  *
- * The separator is `[ \t]`, never `\s`. `\s` matches a NEWLINE, so `##` on one
- * line and `Memory Outputs` on the next satisfied the pattern — a forged
- * section that is not a heading at all, and the contract read it as one.
+ * Counting with `[ \t]` while slicing with the section slicer's `\s` was a live
+ * fail-open: `\s` matches a non-breaking space, so a `## Memory Outputs`
+ * forgery placed above the real section was not counted (one heading, no
+ * ambiguity) and was then SELECTED as the body. Two regexes over one document
+ * is the same class of defect as two parsers over one input.
+ *
+ * The separator is `[ \t]`, never `\s`, because `\s` also matches a newline —
+ * `##` on one line with the text on the next is not a heading.
  */
-function headingCount(content: string, heading: string): number {
-  return (content.match(new RegExp(`^##[ \\t]+${heading}[ \\t]*$`, 'gim')) ?? []).length;
+function contractSection(content: string, heading: string): { count: number; body: string } {
+  const pattern = new RegExp(`^##[ \\t]+${heading}[ \\t]*$`, 'gim');
+  const matches = [...content.matchAll(pattern)];
+  if (matches.length !== 1) return { count: matches.length, body: '' };
+  const match = matches[0]!;
+  const rest = content.slice(match.index! + match[0].length);
+  const next = rest.search(/^##[ \t]/m);
+  return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
 }
 
 /**
@@ -215,7 +261,7 @@ function parseSection<T>(
   valueNoun: string,
 ): { section: MemorySection<T>; issues: string[] } {
   const issues: string[] = [];
-  const count = headingCount(content, heading);
+  const { count, body } = contractSection(content, heading);
   const present = count > 0;
   const section: MemorySection<T> = { present, entries: [], none: false };
   if (!present) return { section, issues };
@@ -224,7 +270,7 @@ function parseSection<T>(
     return { section, issues };
   }
 
-  for (const block of bulletBlocks(sectionAfter(content, heading))) {
+  for (const block of bulletBlocks(body)) {
     const parsed = parseBlock(block);
 
     if (parsed.kind === 'none') {
@@ -285,9 +331,10 @@ function slugProblem(value: string): string | null {
 /** Parse both sections of a PRD. Absent headings are reported by `present`, not
  * as issues — whether they are required is the caller's configured question. */
 export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations {
-  // Every contract read happens on the fence-stripped document, so a quoted
-  // example can never stand in for the real section.
-  const content = withoutFences(rawContent);
+  // Every contract read happens on the executable view of the document, so a
+  // quoted example or a commented-out block can never stand in for the real
+  // section.
+  const content = contractView(rawContent);
   const inputs = parseSection<MemoryInput>(
     content,
     INPUTS_HEADING,
@@ -443,8 +490,19 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
     // exists, and `loadMemoryStore` never sees an unindexed file. Whether a
     // Phase 7 validator command happens to be wired is configuration, and a
     // gate may not depend on the adopter having wired one.
+    // The path is derived from the INDEX's directory, not from the root:
+    // `loadMemoryStore` resolves pointers relative to the index, and validated
+    // configuration allows an index nested below the root. Reconstructing
+    // `<root>/<pointer>` therefore mapped a record loaded from
+    // `_brain/catalog/learnings/x.md` onto `_brain/learnings/x.md`, and an
+    // arbitrary file at that outer path would have satisfied capture. It also
+    // mis-joined every non-canonical root spelling.
+    const indexDir = repoRelative(dirname(options.memory.index));
     const indexed = new Map(
-      store.records.map((record) => [`${options.memory!.root}/${record.pointer}`, record]),
+      store.records.map((record) => [
+        repoRelative(indexDir.length > 0 ? `${indexDir}/${record.pointer}` : record.pointer),
+        record,
+      ]),
     );
     for (const output of decl.outputs.entries) {
       const record = indexed.get(output.path);
@@ -580,9 +638,8 @@ export function changelogApproves(
   // `## Changelog` carrying an owner row would otherwise shadow the real one and
   // approve a removal the PRD never recorded. More than one real Changelog is an
   // ambiguity, and an ambiguous approval is no approval.
-  const content = withoutFences(rawContent);
-  if (headingCount(content, 'Changelog') !== 1) return false;
-  const section = sectionAfter(content, 'Changelog');
+  const { count, body: section } = contractSection(contractView(rawContent), 'Changelog');
+  if (count !== 1) return false;
   const ownerSet = new Set(owners.map((owner) => owner.toLowerCase()));
   for (const line of section.split('\n')) {
     const cells = line.trim();
@@ -714,13 +771,7 @@ export function outputPlacementIssues(
   outputs: readonly MemoryOutput[],
   memory: MemoryConfig,
 ): string[] {
-  // `_brain`, `_brain/`, and `./_brain` name one directory, and a raw string
-  // compare says otherwise — the same normalization `config/validate.ts` applies
-  // when it checks that the index lives under the root.
-  const root = memory.root
-    .split(/[/\\]/)
-    .filter((part) => part.length > 0 && part !== '.')
-    .join('/');
+  const root = repoRelative(memory.root);
   const issues: string[] = [];
   for (const output of outputs) {
     const dir = output.type === 'adr' ? 'adr' : 'learnings';
@@ -750,6 +801,16 @@ export function unreadableStoreIssues(store: MemoryStore): string[] {
       `memory store: indexed record '${slug}' does not validate, so its watch cannot be ` +
       `evaluated — repair it before closing`,
   );
+}
+
+/** `_brain`, `_brain/`, `./_brain`, and `_brain\\x` all name one repo-relative
+ * path. Every comparison in this module goes through here, so a configured
+ * spelling can never make two checks disagree about the same file. */
+function repoRelative(value: string): string {
+  return value
+    .split(/[/\\]/)
+    .filter((part) => part.length > 0 && part !== '.')
+    .join('/');
 }
 
 interface StoreView {

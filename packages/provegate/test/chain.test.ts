@@ -1088,7 +1088,10 @@ describe('phase 6 round 3 regressions', () => {
       'declared outputs',
     );
     expect(result.ok).toBe(false);
-    expect(result.why).toMatch(/must live under '_brain\/adr\/'|the store holds it as a learning/);
+    // Placement subsumes the explicit type check whenever the index sits
+    // directly under the root, which is the shipped layout — so assert the
+    // reason that actually fires rather than accepting either one.
+    expect(result.why).toContain("must live under '_brain/adr/'");
   });
 
   it('[R3-P1-4] a comma-bearing sibling filename does not waive the real path', () => {

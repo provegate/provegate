@@ -144,6 +144,28 @@ describe('knowledge prompts carry the generic taxonomy (FR-4)', () => {
  * carrying every obligation — which is the failure W3 exists to prevent, and the shape
  * a directory-level assertion cannot see.
  */
+/**
+ * Vocabulary that signals a memory instruction, however it is phrased.
+ *
+ * Module scope on purpose: round 4 caught the mutation fixture holding its OWN
+ * copy, so reverting this value to its original four tokens left the fixture
+ * green while the prompts went unguarded. One value, both users.
+ */
+const MEMORY_VOCABULARY =
+  /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
+
+/** Obligations live in the numbered constraint list, so that is what the
+ * vocabulary is applied to. Scanning the whole file made ordinary prose — "write
+ * fixtures outside `_brain`" — read as an obligation it does not impose. */
+const constraintsOf = (file: string): string => {
+  const body = prompt(file);
+  const start = body.search(/^## Agent Constraints[ \t]*$/m);
+  if (start === -1) return '';
+  const rest = body.slice(start);
+  const end = rest.search(/^---[ \t]*$/m);
+  return end === -1 ? rest : rest.slice(0, end);
+};
+
 describe('FR-3 per-file prompt obligations (W3)', () => {
   /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
    * its line breaks. Comparing on collapsed whitespace keeps this suite measuring
@@ -284,28 +306,18 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
   });
 
-  /**
-   * Vocabulary that signals a memory instruction, however it is phrased.
-   *
-   * The first version of this deny-list named four exact tokens, so an
-   * obligation written as "re-open every `_brain` detail before choosing
-   * fixtures" would have slipped straight through — the same escape the test is
-   * supposed to close. It covers the store, the index, the record vocabulary,
-   * and the two contract sections.
-   */
-  const MEMORY_VOCABULARY =
-    /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
-
   it('phase 5 carries NO memory instruction — §8 denies it one', () => {
     // The row is a stated position, not an omission: "Verification is
     // verification." A prompt that adds an instruction §8 does not name is out
     // of scope for the addendum, which makes it fabricated method content.
-    expect(MEMORY_VOCABULARY.test(prompt('phase-5-testing.md'))).toBe(false);
+    expect(MEMORY_VOCABULARY.test(constraintsOf('phase-5-testing.md'))).toBe(false);
   });
 
   it('no phase prompt carries a memory instruction its §8 row does not grant', () => {
     for (const { file, source } of ADDENDUM_SOURCE) {
-      expect(MEMORY_VOCABULARY.test(prompt(file)), `${file} vs addendum §8`).toBe(source !== null);
+      expect(MEMORY_VOCABULARY.test(constraintsOf(file)), `${file} vs addendum §8`).toBe(
+        source !== null,
+      );
     }
   });
 
@@ -418,11 +430,7 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
 
 describe('phase 6 round 3 — the provenance oracle is tested, not trusted', () => {
   /** The deny-list is only worth its comment if a violation actually trips it.
-   * Round 3's charge was that reverting the widened vocabulary left the suite
-   * green, because nothing injected a paraphrased obligation. */
-  const MEMORY_VOCABULARY =
-    /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
-
+   * The value under test is the module-level one the prompts are judged by. */
   it('catches an obligation phrased without the original four tokens', () => {
     const paraphrased = [
       '5. **Reopen the store.** Before choosing fixtures, open every `_brain` detail file',

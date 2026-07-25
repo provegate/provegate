@@ -118,9 +118,12 @@ function capturedDiffFiles(root: string, base: string): string[] | null {
       }
       const path = fields[i + 1];
       i += 1;
-      // Only "added" and "modified" are a capture. D, T, U and anything else
-      // deliberately fall through: an unknown status must never read as one.
-      if (/^[AM]/.test(status) && path !== undefined) captured.push(path);
+      // A, M, and T are candidates; the regular-file test and the indexed-record
+      // check downstream decide whether the object is acceptable. T matters
+      // because replacing a placeholder symlink with the real record is a
+      // legitimate first capture that git reports as a type change. D and U are
+      // never a capture, and an unknown status must not read as one.
+      if (/^[AMT]/.test(status) && path !== undefined) captured.push(path);
     }
     return captured;
   } catch {
