@@ -29,6 +29,8 @@
 - [operator acceptance no self-accept](learnings/operator-acceptance-no-self-accept.md) — an agent must never self-accept operator rows; TTY/--yes + owner allowlist
 - [operator row must be a table row](learnings/operator-row-must-be-a-table-row.md) — a checkbox-bullet operator row counts as 0 rows; the merge gate passes without the acceptance
 - [two parsers wrong together](learnings/two-parsers-wrong-together.md) — a corpus proves agreement, not correctness; bind each claim to behaviour
+- [fixture must reach production shape](learnings/fixture-must-reach-production-shape.md) — a regression called with cleaner arguments than production cannot detect the defect
+- [pin the claim the test cannot hold](learnings/pin-the-claim-the-test-cannot-hold.md) — locale/platform properties: assert at the source and say why, a behavioural test is green by luck
 - [cleanup after verified merge](learnings/cleanup-after-verified-merge.md) — learning lands before merge; teardown only after the merge is verified
 
 ## Project gotchas

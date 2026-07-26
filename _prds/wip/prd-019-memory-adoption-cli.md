@@ -282,13 +282,26 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - applied: `gate-wire-or-delete` — doctor proves mandatory local reachability.
 - applied: `turbo-cache-masks-out-of-input-reads` — fixtures isolate record trees and
   declare corpus inputs.
+- applied: `false-green-on-missing-file` — every mandatory doctor check fails on absence
+  rather than skipping, and the escape-hatch branches were re-read for the same shape.
+- applied: `fixture-must-reach-production-shape` — this PRD WROTE this record after its own
+  lease fix shipped broken behind five passing regressions; the worktree tests now copy the
+  production call's argument shape, and the relative-path case is refused by name.
+- applied: `pin-the-claim-the-test-cannot-hold` — this PRD wrote it too; the byte-stability
+  promise is asserted at the source with the reason in the test, because whether the two
+  comparators differ depends on the locale the suite happens to run under.
 
 ---
 
 ## Memory Outputs
 
-- none — doctor/find behavior is fully derivable from implementation and tests; append
-  an exact learning path only if implementation exposes a non-derivable trap.
+- learning: `_brain/learnings/fixture-must-reach-production-shape.md` — a regression that
+  calls the fixed function with better arguments than production does cannot detect the
+  defect, and mutation-checking it proves only that the test reaches the line. This PRD's
+  own lease fix shipped broken behind five passing regressions.
+- learning: `_brain/learnings/pin-the-claim-the-test-cannot-hold.md` — when a property is
+  only observable on machines the suite will never run on, assert it against the source and
+  say why; a behavioural test there is green by luck.
 
 ---
 
@@ -336,6 +349,8 @@ Decisions with the deferral row it retires.
 - CLI reference: `apps/docs/content/docs/cli.mdx`
 - Adoption guide: `packages/provegate/QUICKSTART.md`
 - Review: `_docs/reviews/review-019-memory-adoption-cli.md`
+- `_brain/learnings/fixture-must-reach-production-shape.md` — paired with Memory Outputs
+- `_brain/learnings/pin-the-claim-the-test-cannot-hold.md` — paired with Memory Outputs
 
 ---
 

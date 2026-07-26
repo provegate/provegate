@@ -237,14 +237,29 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [ ] 9.3 For each finding, append remediation sub-tasks here, fix under the same lease,
         re-run the affected Phase 5 gates, and obtain a fresh verdict.
 
-- [ ] 10.0 Phase 7 — Durable learning and close preparation
-  - [ ] 10.1 Run the `_brain/PROTOCOL.md` §7 capture. Memory Outputs declares `none`; if
-        implementation surfaced a non-derivable trap, append its exact path to **both**
-        Memory Outputs and Durable Artifacts before writing the record.
-  - [ ] 10.2 Confirm every declared Durable Artifact (`cli.mdx`, `QUICKSTART.md`, the
-        review) is present in the merge diff.
-  - [ ] 10.3 Prepare the owner handoff: the dogfood doctor output from 5.5, the
-        non-mutation tree-hash evidence, the independent verdict, and the merge plan.
+- [x] 10.0 Phase 7 — Durable learning and close preparation
+  - [x] 10.1 Implementation surfaced TWO non-derivable traps, so the `none` was replaced by
+        two exact paths in both Memory Outputs and Durable Artifacts, and the records
+        written: `fixture-must-reach-production-shape` (a regression called with cleaner
+        arguments than production cannot detect the defect — this PRD's own lease fix
+        shipped broken behind five passing, mutation-checked regressions) and
+        `pin-the-claim-the-test-cannot-hold` (a locale-dependent property is green by luck
+        in any behavioural test, so assert it at the source and say why).
+        **The contract then fired on its own author**: both new records carry `watch` globs
+        over files this PRD targets, so `gate check` refused until Memory Inputs declared a
+        disposition for each. That is the loop closing, not a nuisance — it is the third
+        time in this program it has caught the agent that wrote the record.
+  - [x] 10.2 Checking this found a REAL gap rather than confirming a list. `cli.mdx` and the
+        two `_brain` records were in the diff; `QUICKSTART.md` was not, even though task 5.2
+        asked for it. The declaration was right and the work was incomplete — so the
+        quickstart now carries both commands where an adopter meets them, after the manual
+        pack wiring rather than before it. The alternative, a cosmetic edit to satisfy the
+        gate, is the ceremony the gate exists to prevent.
+  - [x] 10.3 Handoff assembled: `gate doctor --memory` green on all eleven checks against
+        this repository (27 records, 3 entrypoints, CI mentions `verify:brain`); tree-hash
+        non-mutation proven on both the passing and the failing path; the readiness
+        assessment returned DO NOT CLOSE with six blockers, four `routine`, all six now
+        fixed and mutation-checked; 898 tests and the full floor green.
   - [ ] 10.4 After owner acceptance only, run `gate land PRD-019`; verify the post-merge
         gates and worktree cleanup. Never push.
 
