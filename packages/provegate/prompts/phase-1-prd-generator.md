@@ -21,6 +21,13 @@
 5. **Agent-Executable:** Every FR must carry concrete file paths + symbol names so the
    implementing agent can navigate without grep guesswork. PRDs without target paths
    fail Phase 2 Clarity.
+6. **Select Memory Inputs:** Scan the memory index under `{{MEMORY_ROOT}}` and select the
+   records relevant to this work item. Write each into the PRD's `## Memory Inputs`
+   section with a disposition — `applied`, `reviewed`, or `not-applicable` — and a
+   rationale for each. Emit `none` only with a reason; an unreasoned `none` is the
+   ceremonial answer the contract exists to prevent. Declare the expected
+   `## Memory Outputs` at exact repo-relative paths, and repeat each one in Durable
+   Artifacts.
 
 ---
 

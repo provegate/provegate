@@ -16,8 +16,8 @@
   "pairs": {
     "brain/PROTOCOL.md": {
       "dest": "_brain/PROTOCOL.md",
-      "pack": "8b0aa7889cbb9b14",
-      "repo": "f483d5fce5e19fe4"
+      "pack": "928149b82b901e0c",
+      "repo": "2a67249db232cd39"
     },
     "brain/README.md": {
       "dest": "_brain/README.md",
@@ -47,8 +47,8 @@
     },
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
-      "pack": "5d43cbd30efc8ca4",
-      "repo": "ccb3cee0d136fbcb"
+      "pack": "ad045baf1653ee97",
+      "repo": "b7787d48e3353c7a"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",

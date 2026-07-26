@@ -126,7 +126,7 @@ so that learning capture cannot be ceremonial or silently weakened.
    | `phase-2-readiness-scorer.md` | Challenge each input's relevance and score a ceremonial or unexamined `none` down rather than accepting it |
    | `phase-3-task-generator.md` | Carry the selected slugs into a Memory Context section and bind a task to re-opening each before its dependent work |
    | `phase-4-implementation.md` | Open each detail file and confirm the paths and commands it names still exist before acting on it |
-   | `phase-5-testing.md` | Record memory-derived constraints that shaped a verification result in the ledger notes |
+   | `phase-5-testing.md` | **None.** Addendum §8 states "No memory obligation. Verification is verification," and §8 forbids any prompt obligation it does not name. Removed at the Phase 6 close by owner decision; the file is asserted to carry no memory instruction |
    | `phase-6-final-auditing.md` | Independently audit whether each input was actually applied, and challenge every `none` — an unexamined `none` is a finding |
    | `phase-7-learning.md` | Capture exact output paths into both Memory Outputs and Durable Artifacts before writing the record |
    | `knowledge-ingest.md` | Write the record only after the PRD declares its exact path |
@@ -345,6 +345,12 @@ so that learning capture cannot be ceremonial or silently weakened.
 - applied: `durable-artifact-must-commit` — exact output evidence lands in the merge.
 - applied: `gate-wire-or-delete` — root/practices gates must reach executing surfaces.
 - applied: `push-is-human-by-omission` — activation adds no push path.
+- applied: `adr-section-blank-line-reads-empty` — written during Phase 4 and immediately
+  binding on it: ADR-0001 is formatted with each section's first line directly under its
+  heading, because a blank line there reads as an empty section.
+- applied: `narrow-the-grammar-not-the-parser` — written at this PRD's own Phase 7 close
+  and binding on the code it describes: the contract sections declare their shape and
+  refuse the rest, rather than the reader modelling more Markdown each round.
 
 ---
 
@@ -353,6 +359,13 @@ so that learning capture cannot be ceremonial or silently weakened.
 - adr: `_brain/adr/ADR-0001-closed-loop-agent-memory.md` — explicit PRD memory inputs,
   watched review triggers, base-ref weakening proof, and Phase 7 capture are the
   canonical closed-loop architecture.
+- learning: `_brain/learnings/adr-section-blank-line-reads-empty.md` — the ADR section
+  check anchors on `$` under `/m`, so a blank line after the heading reads as an empty
+  section; appended during Phase 4, when writing this PRD's own ADR hit it.
+- learning: `_brain/learnings/narrow-the-grammar-not-the-parser.md` — sixteen review
+  rounds found ~5 renderer disagreements each in a hand-rolled Markdown reader and never
+  converged; narrowing what a contract section may contain retired the class. Appended at
+  the Phase 7 capture, which is where the lesson finished forming.
 
 ---
 
@@ -391,6 +404,8 @@ per the configured shared-file rule.
 ## Durable Artifacts
 
 - Decision: `_brain/adr/ADR-0001-closed-loop-agent-memory.md`
+- Learning: `_brain/learnings/adr-section-blank-line-reads-empty.md`
+- Learning: `_brain/learnings/narrow-the-grammar-not-the-parser.md`
 - Method docs: `apps/docs/content/docs/method.mdx`
 - Review: `_docs/reviews/review-018-memory-contract-enforcement.md`
 
@@ -458,6 +473,7 @@ Before Phase 2 PASS, run: `gate check PRD-018`
 | 2026-07-25 | Cursor | Readiness iteration 3 (PASS 8.05): W6–W8 killed the grandfathering mechanism rather than repairing it. The lease persists no base SHA (W7) and a merge commit cannot write its own SHA into its own changelog row (W8) — the scheme was impossible, not merely imprecise. Activation now simply refuses while any foreign lease is active, so there is no in-flight PRD to grandfather and no boundary to compute |
 | 2026-07-25 | Cursor | Readiness iteration 2 (PASS 8.43): W5 gives FR-6 a named introduction-transition fixture (`test/open.test.ts`) and a runnable row; W6 replaces the timestamp boundary with git ancestry against an activation SHA recorded at merge time, with malformed leases failing closed. Corrects an iteration-2 finding: the merge commit is not "already recorded" — it cannot exist until this PRD lands |
 | 2026-07-25 | Cursor | Next-wave prep: readiness W2/W3/W4 resolved in the PRD. FR-3 gains a per-file prompt obligation table (ten files were behind one verification row), FR-5 states the non-worktree baseline refusal and its remedy, and FR-6 fixes the activation boundary at lease `startedAt` versus the merge commit. FR-6 also takes ownership of the root control-artifact **introduction** transition, per the owner's decision that this PRD creates `workflow.config.json` and PRD-021 only adds a key |
+| 2026-07-25 | claude-code | Phase 4: appended a second Memory Output. Writing ADR-0001 — this PRD's declared output, and the repository's first ADR — failed `verify:brain` with all four sections reported empty while full. The section regex ends its lazy capture at `(?=^## \|$)` under `/m`, where `$` is an end-of-LINE anchor, so a blank line after the heading captures nothing. `_brain/_templates/adr.md` puts content directly under each heading, which is why the shape was never exercised, and `prettier` writes the blank line, so `pnpm format` would break every ADR. Appending is what FR-5 permits without acceptance; the parser fix spans PRD-017's two validator copies and their shared corpus, all outside this PRD's Conflict Surface, so it is a deferral rather than a scope grab |
 | 2026-07-25 | Codex, for owner | Initial draft from owner-approved PRD-017 split |
 | 2026-07-25 | owner            | Approved PRD-018 Phase 1 scope; waits for PRD-017 dependency |
 | 2026-07-25 | independent agent via owner | Readiness iteration 1: PASS 8.15 (infra weights), tiers high/high. Verified the deep-merge floor rule and the egress scanner's fail-closed behavior; found the egress gate can scan cache-stale build output. Watch items W1–W4 |

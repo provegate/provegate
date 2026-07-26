@@ -23,6 +23,10 @@
 7. **Outcome Semantics:** Generate task files where `[x]` means completed as written.
    Do not instruct future agents to check off operator-owned, blocked, or deferred
    verification work.
+8. **Carry the selected slugs:** Copy the PRD's Memory Input slugs into a
+   `## Memory Context` section of the task file, and bind a task to re-opening each
+   record before the work that depends on it. Implementation must not re-derive what
+   Phase 1 already selected.
 
 ---
 

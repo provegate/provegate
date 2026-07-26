@@ -47,6 +47,7 @@ import {
   claimMutexPath,
   parseFromPhase,
   planChain,
+  leaseHolder,
   releaseLease,
   removeWorktree,
   runChain,
@@ -136,6 +137,11 @@ function collectLocks(root: string, config: WorkflowConfig): QueueLockInfo[] {
 }
 
 function runInit(args: string[]): number {
+  const unknown = unknownOption(args, ['--dry-run', '--practices']);
+  if (unknown !== null) {
+    console.error(`[init] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const dryRun = args.includes('--dry-run');
   const practices = args.includes('--practices');
   // Init must work before any config exists: root at the nearest .git walking
@@ -179,6 +185,11 @@ function runInit(args: string[]): number {
 }
 
 function runNew(args: string[]): number {
+  const unknown = unknownOption(args, ['--class', '--template']);
+  if (unknown !== null) {
+    console.error(`[new] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const slug = args.find((a) => !a.startsWith('--'));
   if (!slug) {
     console.error('usage: gate new <slug> [--class=X] [--template=path]');
@@ -213,6 +224,11 @@ function parseHoursOpt(args: string[]): number | undefined {
 }
 
 function runOpen(args: string[]): number {
+  const unknown = unknownOption(args, ['--steal', '--worktree', '--hours', '--agent']);
+  if (unknown !== null) {
+    console.error(`[open] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--hours=N] [--agent=identity]');
@@ -271,6 +287,11 @@ function runOpen(args: string[]): number {
 }
 
 function runRenew(args: string[]): number {
+  const unknown = unknownOption(args, ['--hours', '--agent']);
+  if (unknown !== null) {
+    console.error(`[renew] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate renew <PRD-XXX> [--hours=N] [--agent=identity]');
@@ -302,6 +323,11 @@ function runRenew(args: string[]): number {
 }
 
 function runRelease(args: string[]): number {
+  const unknown = unknownOption(args, ['--force', '--agent']);
+  if (unknown !== null) {
+    console.error(`[release] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate release <PRD-XXX> [--force] [--agent=identity]');
@@ -344,7 +370,18 @@ function paintReadiness(cell: string, tier: ReturnType<typeof colorTier>): strin
     .replace('REJECT', paint('red', 'REJECT', tier));
 }
 
-function runStatus(): number {
+function runStatus(args: string[]): number {
+  // `status` WRITES `_state/prds.json`, so it is a mutating command and belongs
+  // under the same rule as the rest. The first pass at this change listed the
+  // obviously-mutating verbs and missed the one whose name sounds read-only.
+  // `--json` is NOT accepted here: `runStatus` has no JSON branch, and listing an
+  // option the command ignores feeds a human table to automation that asked for
+  // machine output. `gate queue --json` is the command that has it.
+  const unknown = unknownOption(args, []);
+  if (unknown !== null) {
+    console.error(`[status] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const { root, config } = loadConfig();
   const state = buildState(config, root);
   const path = writeState(config, root, state);
@@ -454,6 +491,11 @@ function findRecord(
 }
 
 function runCheck(args: string[]): number {
+  const unknown = unknownOption(args, ['--wiring']);
+  if (unknown !== null) {
+    console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const { root, config } = loadConfig();
   const manifest = loadManifest(config, root);
 
@@ -479,7 +521,7 @@ function runCheck(args: string[]): number {
     return 1;
   }
   const content = readFileSync(resolve(root, found.record.artifacts.prd), 'utf8');
-  const report = lintPrd(config, manifest, content);
+  const report = lintPrd(config, manifest, content, root);
   if (!report.ok) {
     console.error(`[check] ${found.id} is not ready:`);
     for (const issue of report.issues) console.error(`  - ${issue}`);
@@ -599,7 +641,47 @@ function worktreeStamps(
   };
 }
 
+/**
+ * Refuse an option this command does not know.
+ *
+ * Flags were detected with `includes`, and anything unrecognized was simply
+ * ignored — so `gate run PRD-018 --dry-rnu` read `dryRun` as false and ran the
+ * live archive-and-merge. A misspelled SAFETY flag must never be the difference
+ * between a plan and a mutation, and silence is the worst possible answer to
+ * "did you mean --dry-run?".
+ */
+function unknownOption(args: string[], known: readonly string[]): string | null {
+  for (const arg of args) {
+    if (!arg.startsWith('-')) continue;
+    const [name, ...rest] = arg.split('=');
+    if (!known.includes(name ?? arg)) return arg;
+    // A BOOLEAN flag takes no value. `--dry-run=true` passed the name check and
+    // then failed the exact-token test that decides dry-run, so the safest
+    // spelling a user could reach for ran the live merge. Refusing is the only
+    // answer that cannot be misread: `--dry-run=false` must not silently mean
+    // "dry run" either.
+    if (rest.length > 0 && BOOLEAN_OPTIONS.has(name ?? '')) return arg;
+  }
+  return null;
+}
+
+/** Options that are present-or-absent. Giving one a value is an error, not a
+ * value. */
+const BOOLEAN_OPTIONS = new Set([
+  '--dry-run',
+  '--practices',
+  '--steal',
+  '--worktree',
+  '--force',
+  '--yes',
+]);
+
 function runRun(args: string[], { mergeOnly = false } = {}): number {
+  const unknown = unknownOption(args, ['--dry-run', '--from-phase']);
+  if (unknown !== null) {
+    console.error(`[run] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const dryRun = args.includes('--dry-run');
   if (process.env[RUN_ACTIVE_ENV] && !dryRun) {
     console.error(
@@ -874,6 +956,35 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
         `worktree cleanup skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; remove ${stamps.worktree} manually`,
       ];
     }
+  } else {
+    // A PLAIN `gate open` claims a lease too, and only the worktree path ever
+    // released one — so a successful non-worktree close left its own lease
+    // blocking every overlapping work item until it expired. The merge has
+    // LANDED, so this degrades to a warning rather than a failure (W3), and it
+    // holds the same mutex claims do so a rival cannot slip between the read
+    // and the removal.
+    try {
+      // `releaseLease` takes the claim mutex itself and fails closed on an
+      // unreadable or foreign lease, which is the behaviour wanted here: a
+      // refusal becomes a warning naming what remains, never a silent unlink.
+      // As the CLAIMING agent, read from the lease itself. Defaulting to the
+      // first configured owner made `gate open --agent=worker` unreleasable:
+      // release refused its own close's lease as foreign, and the landed work
+      // went on blocking overlapping items until the TTL expired.
+      const holder = leaseHolder(config, root, id);
+      const release = releaseLease(config, root, id, holder === null ? {} : { agent: holder });
+      if (release.released.length > 0) {
+        outcome.results.push(['cleanup: lease released', 'passed']);
+      } else if (release.issues.length > 0) {
+        cleanupWarnings = [
+          `lease for ${id} was not released (${release.issues[0]}) — the merge is landed; release it with \`gate release ${id}\``,
+        ];
+      }
+    } catch (error) {
+      cleanupWarnings = [
+        `lease release skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; release it with \`gate release ${id}\``,
+      ];
+    }
   }
 
   console.log(
@@ -930,8 +1041,18 @@ export function main(argv: string[]): number {
     if (command === 'open') return runOpen(rest);
     if (command === 'renew') return runRenew(rest);
     if (command === 'release') return runRelease(rest);
-    if (command === 'status') return runStatus();
-    if (command === 'queue') return runQueue(rest.includes('--json'));
+    if (command === 'status') return runStatus(rest);
+    if (command === 'queue') {
+      // `queue` writes the state snapshot, and `check` reaches state-writing
+      // `findRecord` — both are mutating and both were missed when the rule was
+      // written by listing the verbs that sound mutating.
+      const unknown = unknownOption(rest, ['--json']);
+      if (unknown !== null) {
+        console.error(`[queue] unknown option ${unknown} — refusing rather than guessing what it meant`);
+        return 1;
+      }
+      return runQueue(rest.includes('--json'));
+    }
     if (command === 'check') return runCheck(rest);
     if (command === 'run') return runRun(rest);
     if (command === 'land') return runRun(rest, { mergeOnly: true });

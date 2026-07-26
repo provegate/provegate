@@ -128,6 +128,37 @@ The close is invalid if a declared path is absent from the merge diff. (Mechanic
 `verify:durable-artifacts` check lands in wave 2; until then the Phase 6 review enforces
 it by inspection.)
 
+## Memory contract
+
+Two sections in every PRD, parsed rather than read. `gate check` enforces them at Phase 2
+and the gate chain enforces them at Phase 7.
+
+- `## Memory Inputs` — `applied` / `reviewed` / `not-applicable`: `` `<record-slug>` `` —
+  rationale; or exactly one reasoned `none`. A rationale is required in every form. Each
+  slug must name an **active, indexed** record: a superseded one, an unindexed file, or a
+  record that fails `verify:brain` is refused by name.
+- `## Memory Outputs` — `learning` / `adr`: `` `<exact repo-relative path>` `` — the
+  durable fact expected; or exactly one reasoned `none`. A non-empty output set may not
+  contain `none`, and every non-`none` output repeats in Durable Artifacts.
+
+An active record's `watch` glob overlapping a declared FR Target — or a file in the
+closing diff — requires an input disposition naming that record. A watch is a **review
+trigger, not a staleness verdict**: say what you did about the record; do not edit it to
+make the gate quiet. Target matching strips an optional `::SymbolName` suffix first, so a
+symbol-scoped target still matches a path-scoped watch.
+
+At Phase 7 the declared outputs are compared against the PRD **as committed on `main`** —
+the one version an agent editing its own PRD cannot rewrite. Appending an output
+discovered during implementation is always allowed, with a rationale. Removing one,
+changing its type or path, or replacing it with `none` is weakening: refused outright for
+an `eligible` PRD, and for an `operator-gated` one it needs both a Changelog row authored
+by an owner naming the exact path **in backticks** and an acceptance entry whose `items`
+name that same path. A PRD whose copy on `main` is missing, malformed, or has no
+`## Memory Outputs` section fails closed and names the remedy.
+
+Enabled by `memory.enabled` in `workflow.config.json`. Historical PRDs are outside the
+contract and are never rewritten to manufacture compliance.
+
 ## PRD triage — value scoring
 
 Before a candidate enters the pipeline, score it on five weighted dimensions (1–5 each):

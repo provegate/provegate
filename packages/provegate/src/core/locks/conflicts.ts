@@ -35,6 +35,23 @@ export interface PathConflict {
 }
 
 /** Tracked files in the repo, for glob materialization. Empty when git fails. */
+/** One spelling for one path, so two claims on the same tree collide. Mirrors
+ * `canonicalPath` in the memory reader; both exist because a glob and a target
+ * must be compared after the same normalization, never before it. */
+export function canonicalGlob(glob: string): string {
+  const slashed = glob.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+  const parts: string[] = [];
+  for (const part of slashed.split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') {
+      parts.pop();
+      continue;
+    }
+    parts.push(part);
+  }
+  return parts.join('/');
+}
+
 export function trackedFiles(cwd: string): string[] {
   try {
     return execFileSync('git', ['ls-files'], { cwd, encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -44,7 +61,7 @@ export function trackedFiles(cwd: string): string[] {
 }
 
 function materialize(config: WorkflowConfig, globs: string[], files: string[]): Set<string> {
-  const shared = new Set(config.sharedAppendOnly);
+  const shared = new Set(config.sharedAppendOnly.map(canonicalGlob));
   const regexes = globs.map(globToRegExp);
   const out = new Set<string>();
   for (const file of files) {
@@ -94,8 +111,11 @@ export function findConflicts(
     .filter((lock) => Array.isArray(lock.ownedPaths) && lock.ownedPaths.length > 0)
     .map((lock) => ({
       lock,
-      globs: lock.ownedPaths!,
-      mat: materialize(config, lock.ownedPaths!, files),
+      // Canonicalized FIRST. `globToRegExp` compiles a backslash as a literal,
+      // so `src\\api\\**` and `src/api/**` named the same tree and intersected
+      // nowhere — two maintainers claiming one directory, both leases installed.
+      globs: lock.ownedPaths!.map(canonicalGlob),
+      mat: materialize(config, lock.ownedPaths!.map(canonicalGlob), files),
     }));
 
   const conflicts: PathConflict[] = [];
@@ -105,10 +125,22 @@ export function findConflicts(
       const b = surfaced[j]!;
       if (a.lock.prd === b.lock.prd) continue;
       const shared = [...a.mat].filter((file) => b.mat.has(file));
-      const structural =
-        a.mat.size === 0 || b.mat.size === 0
-          ? structuralOverlap(a.globs, b.globs, new Set(config.sharedAppendOnly))
-          : [];
+      // Structural overlap is checked ALWAYS, not only when a whole surface
+      // materializes to nothing. Two claims of `['src/a.ts','src/new/**']` and
+      // `['src/b.ts','src/new/**']` in a tree where only `a.ts` and `b.ts` exist
+      // share no existing FILE, so the file check found nothing and the
+      // structural check never ran — and both agents installed, each owning
+      // every future path under `src/new/`. The conflict is in the claims, and
+      // whether some sibling pattern happens to match a tracked file today says
+      // nothing about it.
+      // The shared set is canonicalized too — comparing canonical globs against raw
+      // spellings made an append-only file exempt under one spelling and exclusive
+      // under another.
+      const structural = structuralOverlap(
+        a.globs,
+        b.globs,
+        new Set(config.sharedAppendOnly.map(canonicalGlob)),
+      );
       if (shared.length > 0 || structural.length > 0) {
         conflicts.push({
           a: a.lock.prd,

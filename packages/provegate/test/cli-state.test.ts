@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -164,5 +164,77 @@ describe('codex round-2: precondition-before-archive ordering (real CLI)', () =>
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("current branch is 'main'");
     expect(gitRun(['rev-parse', 'HEAD']).trim()).toBe(before);
+  });
+});
+
+describe('phase 6 round 23 — a misspelled option must never mutate', () => {
+  const attempt = async (args: string[]): Promise<{ code: number; stderr: string }> =>
+    run(process.execPath, [cliPath, ...args], { cwd: root }).then(
+      () => ({ code: 0, stderr: '' }),
+      (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
+    );
+
+  /** Every file under `root`, with its bytes — so the test can assert that a
+   * refusal changed nothing, which is the property its name claims. */
+  const snapshot = (dir: string): Record<string, string> => {
+    const out: Record<string, string> = {};
+    const walk = (current: string): void => {
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const full = join(current, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === '.git') continue;
+          walk(full);
+        } else {
+          out[full] = readFileSync(full, 'utf8');
+        }
+      }
+    };
+    walk(dir);
+    return out;
+  };
+
+  it('refuses an unknown option on every mutating command', async () => {
+    // `gate run PRD-018 --dry-rnu` ran the live archive-and-merge, because
+    // unknown flags were ignored. A misspelled SAFETY flag must never be the
+    // difference between a plan and a mutation.
+    for (const args of [
+      ['run', 'PRD-001', '--dry-rnu'],
+      ['init', '--dry-rnu'],
+      ['open', 'PRD-001', '--worktre'],
+      ['new', 'thing', '--clas=infra'],
+      ['renew', 'PRD-001', '--hrs=2'],
+      ['release', 'PRD-001', '--forc'],
+      // `status`, `queue` and `check` all write state, and each was missed in
+      // turn by writing the rule from the verbs that SOUND mutating.
+      ['status', '--dry-rnu'],
+      ['queue', '--dry-rnu'],
+      ['check', 'PRD-001', '--dry-rnu'],
+    ]) {
+      // The property this test is NAMED for: nothing on disk changed. Exit code
+      // and stderr alone were satisfied by an implementation that mutates and
+      // then prints the right refusal.
+      const before = snapshot(root);
+      const result = await attempt(args);
+      expect(result.code, args.join(' ')).toBe(1);
+      expect(result.stderr, args.join(' ')).toContain('unknown option');
+      expect(snapshot(root), args.join(' ')).toEqual(before);
+    }
+  });
+
+  it('refuses a value given to a boolean option', async () => {
+    // `--dry-run=true` passed the name check and then failed the exact-token
+    // test that decides dry-run, so the safest spelling a user could reach for
+    // ran live.
+    for (const args of [
+      ['run', 'PRD-001', '--dry-run=true'],
+      ['run', 'PRD-001', '--dry-run=false'],
+      ['init', '--practices=yes'],
+    ]) {
+      const before = snapshot(root);
+      const result = await attempt(args);
+      expect(result.code, args.join(' ')).toBe(1);
+      expect(result.stderr, args.join(' ')).toContain('unknown option');
+      expect(snapshot(root), args.join(' ')).toEqual(before);
+    }
   });
 });

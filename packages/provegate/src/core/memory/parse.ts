@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 
+import { contractView } from './scan.js';
+
 /**
  * The supported record format (addendum A1 §10.6): an explicitly documented
  * subset, not general YAML. Four forms exist in the frontmatter and no others —
@@ -130,11 +132,17 @@ export interface ParsedFrontmatter {
  * validator can report every problem in a file at once; an unparseable form is
  * itself an issue, never a silently dropped line.
  */
-export function parseFrontmatter(content: string, file: string): ParsedFrontmatter {
+export function parseFrontmatter(rawContent: string, file: string): ParsedFrontmatter {
   const issues: RecordIssue[] = [];
   const values = new Map<string, string | string[]>();
   const at = (field: string): string => `${file}:${field}`;
 
+  // CommonMark's three line endings, reduced to one — the same normalization the
+  // contract scanner does at its entry point. The fence pattern required literal
+  // LF, so a valid record saved with CRLF was reported as having no frontmatter
+  // at all, and every required field as missing. Two implementations agreeing on
+  // that refusal did not make it correct.
+  const content = rawContent.replace(/\r\n|\r/g, '\n');
   const fence = /^---\n([\s\S]*?)\n---\n?/.exec(content);
   if (!fence) {
     issues.push({ path: file, message: 'missing frontmatter fence' });
@@ -230,7 +238,40 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
         issues.push({ path: at(key), message: 'inline list has an empty element' });
         continue;
       }
+      // QUOTED elements were stored WITH their quotes, so `watch: ["packages/**"]`
+      // compiled to a glob containing `"` and matched nothing — a watch that is
+      // present, valid-looking, and permanently dead. The quote is not part of
+      // the value, and a reader that keeps it is not reading YAML.
+      const quoted = elements.find((e) => /^["']|["']$/.test(e));
+      if (quoted !== undefined) {
+        issues.push({
+          path: at(key),
+          message:
+            `inline list element ${quoted} is quoted — the supported subset takes bare ` +
+            `values, and a quoted one is stored with its quotes and matches nothing`,
+        });
+        continue;
+      }
       values.set(key, elements);
+      continue;
+    }
+    // A FLOW MAP is not in the supported subset, and falling through to "it is a
+    // scalar" accepted `description: {nested: map}` as the literal text of a map.
+    // The subset is small on purpose; anything outside it must say so.
+    if (/^\{.*\}$/.test(raw)) {
+      issues.push({
+        path: at(key),
+        message: 'flow mappings are not supported — use a plain scalar or an inline list',
+      });
+      continue;
+    }
+    if (/^["']|["']$/.test(raw)) {
+      issues.push({
+        path: at(key),
+        message:
+          'quoted scalars are not supported — the supported subset takes bare values, and a ' +
+          'quoted one is stored with its quotes',
+      });
       continue;
     }
     values.set(key, raw);
@@ -254,6 +295,64 @@ export interface ValidateOptions {
  * without `.md`; the record is returned only when it is completely valid, so a
  * caller can never half-consume a broken record.
  */
+/**
+ * Inline code removed, delimiter runs of ANY length.
+ *
+ * `/`[^`]*`/` matched only single-backtick spans: given a double-backtick span
+ * it consumed the two empty delimiter PAIRS and left the marker between them
+ * standing, so a body made entirely of code snippets validated as rationale.
+ * A span is closed by a run of the same length, which is the rule the contract
+ * grammar's own span reader already uses.
+ */
+function stripCodeSpans(text: string): string {
+  // Per PARAGRAPH: a code span cannot cross a blank line. Scanning the whole
+  // body paired two literal backticks written in different paragraphs and
+  // deleted everything between them — including a real `**Why:**` section, which
+  // is a valid record refused for a marker it does contain.
+  return text
+    .split(/\n[ \t]*\n/)
+    .map(stripSpansInParagraph)
+    .join('\n\n');
+}
+
+function stripSpansInParagraph(text: string): string {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] !== '`') {
+      out += text[i];
+      i += 1;
+      continue;
+    }
+    let run = 0;
+    while (text[i + run] === '`') run += 1;
+    const closer = exactRunAt(text, i + run, run);
+    if (closer === -1) {
+      // Unmatched: the delimiters are literal text.
+      out += text.slice(i, i + run);
+      i += run;
+      continue;
+    }
+    out += ' ';
+    i = closer + run;
+  }
+  return out;
+}
+
+/** The index of the next run of EXACTLY `run` backticks at or after `from`, or
+ * -1. `indexOf` found a shorter run inside a longer one and closed a span the
+ * renderer leaves open. */
+function exactRunAt(text: string, from: number, run: number): number {
+  for (let i = from; i < text.length; i += 1) {
+    if (text[i] !== '`') continue;
+    let length = 0;
+    while (text[i + length] === '`') length += 1;
+    if (length === run) return i;
+    i += length - 1;
+  }
+  return -1;
+}
+
 export function validateRecord(
   content: string,
   file: string,
@@ -429,6 +528,20 @@ export function validateRecord(
     }
   }
 
+  // The body a READER sees. A record whose entire rationale lives inside an HTML
+  // comment or a fenced example renders as a heading with nothing under it, and
+  // the raw-text search called it satisfied — the ceremonial record this
+  // validator exists to reject, wearing the validator's own approval. The same
+  // scan the contract grammar uses answers this, so the two cannot disagree
+  // about what is on the page.
+  // Code SPANS are stripped as well as blanked blocks. `contractView` preserves
+  // span contents deliberately — the contract grammar reads slugs and paths out
+  // of backticks — but a record whose body is only `` `**Why:** fake` `` renders
+  // as a code snippet, not a rationale section, and it validated. What the
+  // marker search needs is the prose, so the spans come out here rather than
+  // in the shared scanner, where other readers depend on them.
+  const visibleBody = stripCodeSpans(contractView(body));
+
   // Rationale sections are what make a record actionable rather than a note.
   // Two exemptions: `reference`, because a pointer to an external resource has
   // no `why`; and an ADR, whose four required sections below ARE its rationale —
@@ -437,7 +550,7 @@ export function validateRecord(
     for (const marker of ['Why', 'How to apply'] as const) {
       const found = new RegExp(
         `\\*\\*${marker}:\\*\\*([\\s\\S]*?)(?=\\n\\s*\\n|\\*\\*[A-Z]|$)`,
-      ).exec(body);
+      ).exec(visibleBody);
       if (found === null) {
         issues.push({
           path: at('body'),
@@ -467,7 +580,7 @@ export function validateRecord(
       const found = new RegExp(
         `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
         'm',
-      ).exec(body);
+      ).exec(visibleBody);
       if (found === null) {
         issues.push({
           path: at('body'),

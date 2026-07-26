@@ -23,6 +23,16 @@
 
 ---
 
+## Memory Context
+
+The slugs the PRD selected as Memory Inputs, carried here so implementation does not
+re-derive them. Each one gets a re-open task below, bound to the work that depends on it:
+a record is evidence only while it is true.
+
+- `[record-slug]` — [what it constrains here]
+
+---
+
 ## Relevant Files
 
 - `path/to/file1.ts` — Description
@@ -37,6 +47,9 @@
 
 ## Tasks
 
+- [ ] 0.0 Pre-flight
+  - [ ] 0.1 Open each Memory Context record and confirm the paths and commands it names
+        still exist; record any stale finding in **Deferrals & Decisions**.
 - [ ] 1.0 [Parent Task Title]
   - [ ] 1.1 [Sub-task with explicit file path]
   - [ ] 1.2 [Sub-task with explicit file path]

@@ -105,6 +105,28 @@ const NON_SCRIPT_SUBCOMMANDS = new Set([
  * command targets another package's scripts and is out of this audit's
  * scope (the root package.json cannot answer for it).
  */
+/** Manager options that consume the NEXT token as their value. */
+const VALUE_FLAGS = new Set([
+  '--dir',
+  '-C',
+  '--prefix',
+  '--cwd',
+  '--loglevel',
+  '--reporter',
+  '--config',
+  '--userconfig',
+]);
+
+/** Modes that make the command exit without running the script. */
+const NON_EXECUTING_FLAGS = new Set([
+  '--help',
+  '-h',
+  '--version',
+  '-v',
+  '--dry-run',
+  '--if-present',
+]);
+
 export function packageScriptOf(cmd: string): string | null {
   const tokens = cmd.trim().split(/\s+/);
   const manager = tokens[0];
@@ -125,8 +147,21 @@ export function packageScriptOf(cmd: string): string | null {
     ) {
       return null; // cross-package scope — root scripts cannot resolve it
     }
+    // A mode that does NOT run the script is not an invocation of it.
+    // `pnpm --help verify:brain` and `npm --dry-run verify:brain` exit
+    // successfully and run nothing, and both counted as wiring and as a
+    // validator.
+    if (NON_EXECUTING_FLAGS.has(tok) || NON_EXECUTING_FLAGS.has(tok.split('=')[0] ?? tok)) {
+      return null;
+    }
     if (tok.startsWith('-')) {
-      i += 1; // manager-level flag; conservative: values must use `=` form
+      // Options that take a SEPARATE value consume it, or the value is read as
+      // the script name: `pnpm --dir . run verify:brain` resolved to `.`.
+      if (VALUE_FLAGS.has(tok)) {
+        i += 2;
+        continue;
+      }
+      i += 1;
       continue;
     }
     if (!sawRun && (tok === 'run' || tok === 'run-script')) {
@@ -186,7 +221,19 @@ export function auditWiring(
       wiringText.push(...yamlRunText(readFileSync(resolve(workflowsDir, name), 'utf8')));
     }
   }
-  const wiredIn = (script: string): boolean => wiringText.some((text) => text.includes(script));
+  // The script a COMMAND resolves to, decided by the same parser the rest of
+  // this audit uses. Text matching failed both ways: `echo pnpm verify:brain`
+  // counted as wiring because the regex began matching mid-line, and a genuine
+  // `pnpm --silent run verify:brain` was called unwired because the flag sat
+  // where the parser did not look. One command, one answer, one parser.
+  const wiredScripts = new Set<string>();
+  for (const text of wiringText) {
+    for (const command of text.split(/[\n;]|&&|\|\|/)) {
+      const script = packageScriptOf(command);
+      if (script !== null) wiredScripts.add(script);
+    }
+  }
+  const wiredIn = (script: string): boolean => wiredScripts.has(script);
 
   for (const script of scriptNames) {
     if (!pattern.test(script)) continue;

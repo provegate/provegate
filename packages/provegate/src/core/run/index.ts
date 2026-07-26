@@ -39,6 +39,7 @@ export {
   ensureCheckoutClean,
   findBaseWorktree,
   mergeMessage,
+  foreignActiveLeases,
   mergePreconditions,
   mergeToLocalBase,
   type MergeOutcome,
@@ -61,6 +62,7 @@ export {
 } from './open.js';
 export { withWorkspaceMutex } from './mutex.js';
 export {
+  leaseHolder,
   releaseLease,
   type ReleaseOptions,
   type ReleaseResult,

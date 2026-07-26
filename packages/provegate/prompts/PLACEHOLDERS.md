@@ -20,6 +20,7 @@ field, the mapping is noted.
 | `{{ARCHITECTURE_DOC}}`   | Path to your architecture/memory document                          | `docs/ARCHITECTURE.md`          | —                     |
 | `{{BEST_PRACTICES_DOC}}` | Path to your coding-standards document                             | `docs/BEST_PRACTICES.md`        | —                     |
 | `{{DOCS_ROOT}}`          | Root of your knowledge base (wiki/ADRs/patterns)                   | `docs/knowledge`                | —                     |
+| `{{MEMORY_ROOT}}`        | Root of your durable-memory record store                           | `_brain`                        | `memory.root`         |
 | `{{REVIEW_TOOL}}`        | Your cross-model reviewer invocation                               | `codex review`                  | —                     |
 | `{{ENV_NOTES}}`          | What "real environment" means for your integration tests           | `local PostgreSQL via compose`  | —                     |
 

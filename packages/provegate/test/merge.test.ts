@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, deepMerge, type WorkflowConfig } from '../src/core/config/index.js';
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
 import { archiveCommitMessage, archivePrdArtifacts } from '../src/core/run/archive.js';
-import { ensureCheckoutClean, mergeToLocalBase, mergeMessage } from '../src/core/run/merge.js';
+import {
+  ensureCheckoutClean,
+  foreignActiveLeases,
+  mergeToLocalBase,
+  mergeMessage,
+} from '../src/core/run/merge.js';
+import { claimMutexPath } from '../src/core/run/open.js';
 
 const roots: string[] = [];
 afterEach(() => {
@@ -297,5 +303,223 @@ describe('codex round-2 test adequacy', () => {
     const result = mergeToLocalBase({ config: cfg, manifest, root, id: 'PRD-002' });
     expect(result.ok).toBe(false);
     expect(git(root, ['rev-parse', 'main'])).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-6 — the activation barrier.
+// ---------------------------------------------------------------------------
+
+describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
+  const memOn: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+
+  /** Write a lease into the lock dir the barrier reads. */
+  function lease(
+    root: string,
+    name: string,
+    over: { prd?: string; agent?: string; expiresAt?: string } = {},
+  ): void {
+    const dir = resolve(root, cfg.dirs.locksDir);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, `${name}.json`),
+      JSON.stringify({
+        schemaVersion: 2,
+        lockId: name,
+        agent: over.agent ?? 'other-agent',
+        prd: over.prd ?? 'PRD-009',
+        phase: 'Phase 4',
+        startedAt: '2026-07-25T00:00:00.000Z',
+        expiresAt: over.expiresAt ?? new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['packages/x/**'],
+        ownedPaths: ['packages/x/**'],
+      }),
+    );
+  }
+
+  it('refuses while another agent holds an unexpired lease, and names it', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-other-work');
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('a foreign lease is active');
+    expect(result.why).toContain('prd-009-other-work.json (other-agent)');
+    expect(result.why).toContain('Wait for the lease to expire or have its holder release it');
+    // and the merge did NOT happen
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('feat/x');
+  });
+
+  it('[R20-7] the barrier is the ACTIVATION transition, not every later merge', () => {
+    // It refused any memory-enabled PRD while any unrelated lease was active,
+    // and told each one "this merge changes gate policy" — false for an ordinary
+    // PRD, and a refusal naming something that is not happening. Activation is
+    // the merge that turns memory ON: enabled here, not yet enabled on the base.
+    const root = fixtureRepo();
+    // The base already has it on, so this merge activates nothing.
+    git(root, ['checkout', '-q', 'main']);
+    writeFileSync(resolve(root, 'workflow.config.json'), JSON.stringify({ memory: { enabled: true } }));
+    git(root, ['add', '.']);
+    git(root, ['commit', '-q', '-m', 'chore: memory already on']);
+    git(root, ['checkout', '-q', 'feat/x']);
+    lease(root, 'prd-009-other-work');
+    const after = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(after.ok).toBe(true);
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+  });
+
+  it('ignores this work item’s own lease', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-002-x', { prd: 'PRD-002' });
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(true);
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+  });
+
+  it('ignores an expired foreign lease', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-stale', { expiresAt: '2020-01-01T00:00:00.000Z' });
+    expect(
+      mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }).ok,
+    ).toBe(true);
+  });
+
+  it('[R21-7] a parseable but schema-invalid lease blocks, and the filename is not identity', () => {
+    // Expiry was read out of a lock that never passed validation, so
+    // `{"expiresAt":"2020-01-01"}` read as an expired lease though nothing in it
+    // says whose lease it is. And the self-check ran on the FILENAME before any
+    // parsing, so naming a foreign lock with this PRD's prefix hid it entirely.
+    const root = fixtureRepo();
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    writeFileSync(
+      join(resolve(root, cfg.dirs.locksDir), 'prd-009-shape.json'),
+      JSON.stringify({ expiresAt: '2020-01-01T00:00:00.000Z' }),
+    );
+    const shaped = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(shaped.ok).toBe(false);
+    expect(shaped.why).toContain('invalid:');
+
+    // A foreign lease wearing this PRD's filename prefix is still foreign.
+    const disguised = fixtureRepo();
+    lease(disguised, 'prd-002-actually-someone-else', { prd: 'PRD-009' });
+    const result = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root: disguised,
+      id: 'PRD-002',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('a foreign lease is active');
+  });
+
+  it('treats an unreadable lease as a blocker — unreadable is not absent', () => {
+    const root = fixtureRepo();
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    writeFileSync(join(resolve(root, cfg.dirs.locksDir), 'prd-009-broken.json'), '{ not json');
+    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('prd-009-broken.json (unreadable');
+  });
+
+  it('a lease with no parseable expiry blocks — it cannot be shown to be expired', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-no-expiry', { expiresAt: 'whenever' });
+    expect(
+      mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }).ok,
+    ).toBe(false);
+  });
+
+  it('a memory-disabled repository merges with the same foreign lease present', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-other-work');
+    const result = mergeToLocalBase({ config: cfg, manifest: okManifest(cfg), root, id: 'PRD-002' });
+    expect(result.ok).toBe(true);
+  });
+
+  it('the mutex is HELD across the merge and its post-merge gates, not just taken', () => {
+    // Acquisition alone proves nothing: an acquire-check-release-then-merge
+    // implementation passes the "cannot acquire" test below and still leaves the
+    // check-then-merge window W9 exists to close. So probe from INSIDE the merge:
+    // a post-merge gate tries to take the same mutex with `wx` and fails only if
+    // the merge is still holding it.
+    const root = fixtureRepo();
+    const mutex = claimMutexPath(memOn, root);
+    const verdict = join(root, 'mutex-probe.txt');
+    // A FILE, not `node -e`: the command-safety allowlist refuses shell
+    // metacharacters, and this probe needs braces and semicolons. It lives
+    // outside the repo so it is not checkout dirt, always exits 0, and records
+    // WHAT happened — a failure then names its cause instead of collapsing every
+    // outcome into "post-merge gate failed".
+    const probeFile = join(mkdtempSync(join(tmpdir(), 'provegate-probe-')), 'probe.mjs');
+    roots.push(join(probeFile, '..'));
+    writeFileSync(
+      probeFile,
+      [
+        "import { writeFileSync, unlinkSync } from 'node:fs';",
+        "let verdict = 'ACQUIRED-mutex-was-not-held';",
+        'try {',
+        "  writeFileSync(process.env.GATE_MUTEX, 'probe', { flag: 'wx' });",
+        '  unlinkSync(process.env.GATE_MUTEX);',
+        '} catch (error) {',
+        '  verdict = error.code ?? String(error);',
+        '}',
+        'writeFileSync(process.env.GATE_VERDICT, verdict);',
+        '',
+      ].join('\n'),
+    );
+    const probe = `node ${probeFile}`;
+    const previousMutex = process.env['GATE_MUTEX'];
+    const previousVerdict = process.env['GATE_VERDICT'];
+    process.env['GATE_MUTEX'] = mutex;
+    process.env['GATE_VERDICT'] = verdict;
+    try {
+      const result = mergeToLocalBase({
+        config: memOn,
+        manifest: { ...defaultManifest(memOn), postMerge: [probe] },
+        root,
+        id: 'PRD-002',
+      });
+      expect(result.ok, result.why).toBe(true);
+      // EEXIST == the marker was still there mid-merge == the mutex was HELD.
+      expect(readFileSync(verdict, 'utf8')).toBe('EEXIST');
+      expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+    } finally {
+      if (previousMutex === undefined) delete process.env['GATE_MUTEX'];
+      else process.env['GATE_MUTEX'] = previousMutex;
+      if (previousVerdict === undefined) delete process.env['GATE_VERDICT'];
+      else process.env['GATE_VERDICT'] = previousVerdict;
+      rmSync(mutex, { force: true });
+    }
+  });
+
+  it('the barrier holds the SAME mutex a claim takes — a claim cannot slip in', () => {
+    const root = fixtureRepo();
+    const mutex = claimMutexPath(memOn, root);
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    // Hold the claim mutex; the merge must not proceed past it. `withWorkspaceMutex`
+    // gives up rather than breaking a live marker, so the merge throws instead of
+    // landing — which is the whole point: no check-then-merge window exists.
+    writeFileSync(mutex, `${process.pid}:held:${new Date().toISOString()}\n`);
+    try {
+      expect(() =>
+        mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' }),
+      ).toThrow(/could not acquire workspace mutex/);
+      expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('feat/x');
+    } finally {
+      rmSync(mutex, { force: true });
+    }
+    // The mutex waits out a LIVE holder (200 × 50ms) before giving up, so this
+    // case is slower than the default per-test budget by construction.
+  }, 20_000);
+
+  it('foreignActiveLeases is the predicate, and it is exact', () => {
+    const root = fixtureRepo();
+    lease(root, 'prd-009-a');
+    lease(root, 'prd-010-b', { prd: 'PRD-010', agent: 'agent-b' });
+    lease(root, 'prd-002-mine', { prd: 'PRD-002' });
+    expect(foreignActiveLeases(memOn, root, 'PRD-002')).toEqual([
+      'prd-009-a.json (other-agent)',
+      'prd-010-b.json (agent-b)',
+    ]);
+    expect(foreignActiveLeases(memOn, root, 'PRD-009')).toEqual(['prd-002-mine.json (other-agent)', 'prd-010-b.json (agent-b)']);
   });
 });

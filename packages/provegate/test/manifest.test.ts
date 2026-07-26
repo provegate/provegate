@@ -79,6 +79,19 @@ describe('validateManifest', () => {
     });
     expect(issues.map((i) => i.path)).toContain('classDefaults.infra[0]');
   });
+
+  it('[R25-13] flags an unknown key inside a VALID rule’s `when`', () => {
+    // The fixture above pairs the unknown key with an empty `run`, and
+    // validation returns on that first — so removing the `when` unknown-key
+    // check could not fail it. This rule is otherwise valid, so the only thing
+    // left to report is the typo that silently uncapped its paths.
+    const issues = validateManifest(cfg, {
+      classDefaults: {
+        infra: [{ run: ['pnpm test'], when: { diffMatch: ['src/**'] } }],
+      },
+    });
+    expect(issues.map((i) => i.path)).toContain('classDefaults.infra[0].when.diffMatch');
+  });
 });
 
 describe('loadManifest', () => {
@@ -149,5 +162,28 @@ describe('codex review regressions (round 2)', () => {
   it('an absent manifest does NOT let unsafe workflow.config commands escape', () => {
     const evilCfg = deepMerge(cfg, { commands: { test: 'git push origin main' } });
     expect(() => loadManifest(evilCfg, tempRepo())).toThrow(/safety gate/);
+  });
+});
+
+describe('FR-6 practices manifest semantics (deep-merge, not style)', () => {
+  it('an ABSENT phases.4 leaves the configured floor intact', () => {
+    // What `gate init --practices` writes: phase 7 only.
+    const root = tempRepo({ phases: { '7': ['node scripts/verify/verify-brain.mjs'] } });
+    const loaded = loadManifest(cfg, root);
+    expect(loaded.phases['4']).toEqual(['pnpm check-types', 'pnpm lint', 'pnpm build', 'pnpm test']);
+    expect(loaded.phases['7']).toEqual(['node scripts/verify/verify-brain.mjs']);
+  });
+
+  it('`phases.4: []` ERASES the floor — the shape the pack must never generate', () => {
+    const root = tempRepo({ phases: { '4': [] } });
+    expect(loadManifest(cfg, root).phases['4']).toEqual([]);
+  });
+
+  it('the difference is the whole rule: absent inherits, empty erases', () => {
+    const absent = loadManifest(cfg, tempRepo({ phases: { '7': ['node -e "process.exit(0)"'] } }));
+    const emptied = loadManifest(cfg, tempRepo({ phases: { '4': [], '7': ['node -e "process.exit(0)"'] } }));
+    expect(absent.phases['4']).toHaveLength(4);
+    expect(emptied.phases['4']).toHaveLength(0);
+    expect(absent.phases['7']).toEqual(emptied.phases['7']);
   });
 });

@@ -24,6 +24,11 @@ before the merge** so repo docs never lag the code.
    restate the diff.
 3. **No drift.** Knowledge pages must reflect post-merge reality — run the
    knowledge-lint protocol (`prompts/knowledge-lint.md`) after updating.
+4. **Capture exact output paths.** Write each record at the exact path the PRD's
+   `## Memory Outputs` declares, and make sure that path appears in **both** Memory
+   Outputs and Durable Artifacts before writing the record. An output discovered during
+   implementation is appended to both, with a rationale, before capture — never after.
+   Run the configured validator **after** capture, not before.
 
 ---
 

@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -381,5 +381,73 @@ describe('gate open (live CLI)', () => {
     await expect(
       run(process.execPath, [cliPath, 'open', 'PRD-002'], { cwd: root }),
     ).rejects.toMatchObject({ code: 1 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-6 / W5 — the control-artifact INTRODUCTION transition.
+//
+// `workflow.config.json` and `gates.manifest.json` become worktree control
+// artifacts the moment they exist. A worktree leased BEFORE they existed is
+// therefore stale on its next claim, and must say so rather than run under gate
+// policy the base no longer has. PRD-021 later edits one of these files and
+// proves only the edit case; the introduction is a different transition and it
+// happens exactly once.
+// ---------------------------------------------------------------------------
+
+describe('control-artifact introduction (FR-6, W5)', () => {
+  const git = (root: string, args: string[]): string =>
+    execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+
+  /** A git repo scaffolded WITHOUT the two control files — the state this
+   * repository itself is in until PRD-018 lands. */
+  function repoBeforeControlFiles(): string {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-intro-'));
+    roots.push(root);
+    git(root, ['init', '-b', 'main']);
+    git(root, ['config', 'user.email', 'test@example.invalid']);
+    git(root, ['config', 'user.name', 'Test']);
+    git(root, ['config', 'commit.gpgsign', 'false']);
+    writeFileSync(join(root, 'seed.txt'), 'seed\n');
+    initWorkspace(cfg, root);
+    rmSync(join(root, 'workflow.config.json'));
+    rmSync(join(root, 'gates.manifest.json'));
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'chore: workspace without control artifacts']);
+    return root;
+  }
+
+  it('refuses the leased worktree on reuse, then accepts it after the base merge', () => {
+    const root = repoBeforeControlFiles();
+    const id = prdWithSurface(root, 'intro-case', ['packages/x/**']);
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'docs: prd']);
+
+    const first = claimPrd(cfg, root, id, { worktree: true });
+    expect(first.ok, first.issues.join('; ')).toBe(true);
+    const wtPath = join(root, first.worktree!.relPath);
+    const branch = first.worktree!.branch;
+    expect(existsSync(join(wtPath, 'workflow.config.json'))).toBe(false);
+
+    // The introduction: both control files land on the base.
+    writeFileSync(join(root, 'workflow.config.json'), '{ "memory": { "enabled": true } }\n');
+    writeFileSync(join(root, 'gates.manifest.json'), '{ "phases": { "7": ["node -e \\"0\\""] } }\n');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'feat: introduce control artifacts']);
+
+    const stale = claimPrd(cfg, root, id, { worktree: true });
+    expect(stale.ok).toBe(false);
+    expect(stale.issues.join('; ')).toContain('workflow artifacts differing from');
+    expect(stale.issues.join('; ')).toContain('workflow.config.json');
+    expect(stale.issues.join('; ')).toContain('gates.manifest.json');
+    expect(stale.issues.join('; ')).toContain(`merge or rebase main into ${branch} first`);
+
+    // The remedy the refusal names, performed.
+    git(wtPath, ['merge', '--no-edit', 'main']);
+    expect(existsSync(join(wtPath, 'workflow.config.json'))).toBe(true);
+
+    const after = claimPrd(cfg, root, id, { worktree: true });
+    expect(after.ok, after.issues.join('; ')).toBe(true);
+    expect(after.worktree!.relPath).toBe(first.worktree!.relPath);
   });
 });

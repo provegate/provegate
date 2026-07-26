@@ -10,6 +10,16 @@
 
 ---
 
+## Precondition
+
+Write the record only after the PRD declares its exact path in `## Memory Outputs`. The
+declaration comes first because Phase 7's gate compares the declared paths against the
+merge diff: a record written at a path nothing declared is invisible to that gate, and a
+declared path with no record fails it. Ingest is the second half of a promise, never the
+first half.
+
+---
+
 ## When to Ingest
 
 | Event                         | Source                          | Priority                                        |

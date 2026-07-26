@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { contractView } from '../src/core/memory/artifacts.js';
 
 /** FR-2..5 + W3: prompt census, calibrated-number spot checks vs the snapshot
  * values, codex-starter drift fix, CLI-mention audit. */
@@ -137,6 +138,309 @@ describe('knowledge prompts carry the generic taxonomy (FR-4)', () => {
 });
 
 /**
+ * FR-3 + W3: each prompt states EXACTLY the obligation the PRD's table assigns it.
+ *
+ * The assertion is per file and keyed to that table on purpose. A suite that proved
+ * "the prompts directory mentions memory" would pass with nine files untouched and one
+ * carrying every obligation — which is the failure W3 exists to prevent, and the shape
+ * a directory-level assertion cannot see.
+ */
+/**
+ * Vocabulary that signals a memory instruction, however it is phrased.
+ *
+ * Module scope on purpose: round 4 caught the mutation fixture holding its OWN
+ * copy, so reverting this value to its original four tokens left the fixture
+ * green while the prompts went unguarded. One value, both users.
+ */
+/**
+ * `phase-5-testing.md` as the addendum leaves it. §8 grants phase 5 no memory
+ * obligation, and a deny-vocabulary cannot cover paraphrase, so the file is
+ * pinned by digest: any edit fails here and must be looked at. Update this ONLY
+ * after confirming the change adds no memory instruction.
+ */
+const PHASE_5_DIGEST = '55cab84570da8ef05a7cbcf6c2dda7acfcad320d5e019f4419db1cd16763facc';
+
+const MEMORY_VOCABULARY =
+  /Memory Input|Memory Output|memory-derived|selected record|_brain|memory index|memory store|durable memory|`INDEX\.md`|detail file|capture protocol|record's watch/i;
+
+/** Obligations live in the numbered constraint list, so that is what the
+ * vocabulary is applied to. Scanning the whole file made ordinary prose — "write
+ * fixtures outside `_brain`" — read as an obligation it does not impose. */
+const constraintsOf = (file: string): string => {
+  // The executable view: a heading inside a comment or a fence is not a
+  // heading, so hiding `## Agent Constraints` in one and putting a visible
+  // obligation outside it made the obligation look authorized.
+  const body = contractView(prompt(file));
+  const start = body.search(/^ {0,3}## Agent Constraints[ \t]*$/m);
+  if (start === -1) return '';
+  const rest = body.slice(start + 1);
+  // The next H2 ends it, not the `---` rule. Deleting that rule would have made
+  // this consume the rest of the file, so everything after it would have counted
+  // as authorized — the boundary must be the thing that actually ends a section.
+  // Every valid ATX H2 ends it, not just `## ` — `##\tExecution Loop` is a
+  // heading, and treating it as body text made an obligation below it count as
+  // authorized.
+  const end = rest.search(/^ {0,3}##(?:[ \t]|\r?$)/m);
+  return end === -1 ? rest : rest.slice(0, end);
+};
+
+/** Numbered constraint entries in a prompt's Agent Constraints list. */
+/** Numbered constraint entries in a block of prompt text — bold or not.
+ * Matching `^\d+\. \*\*` let an unstyled `5. Reopen every prior learning...`
+ * ship without moving the count. ONE implementation: the mutation fixture must
+ * exercise the value the production assertion uses, or reverting the production
+ * regex leaves the fixture green. */
+const constraintCountIn = (content: string): number =>
+  (content.match(/^\d+\.[ \t]/gm) ?? []).length;
+
+const constraintCount = (file: string): number => constraintCountIn(constraintsOf(file));
+
+describe('FR-3 per-file prompt obligations (W3)', () => {
+  /** Prose wraps, and a formatter may re-wrap it; the obligation is the sentence, not
+   * its line breaks. Comparing on collapsed whitespace keeps this suite measuring
+   * content rather than `prettier`'s column budget. */
+  const flat = (value: string): string => value.replace(/\s+/g, ' ').trim();
+
+  const OBLIGATIONS: Array<{ file: string; anchors: string[] }> = [
+    {
+      file: 'phase-1-prd-generator.md',
+      anchors: [
+        'Select Memory Inputs',
+        '`applied`, `reviewed`, or `not-applicable`',
+        'Emit `none` only with a reason',
+      ],
+    },
+    {
+      file: 'phase-2-readiness-scorer.md',
+      anchors: [
+        'Challenge each Memory Input',
+        "Challenge each input's relevance",
+        'Score a ceremonial or unexamined `none` down',
+      ],
+    },
+    {
+      file: 'phase-3-task-generator.md',
+      anchors: ['Carry the selected slugs', '`## Memory Context`', 're-opening each'],
+    },
+    {
+      file: 'phase-4-implementation.md',
+      anchors: [
+        'Re-open each selected record',
+        'confirm the paths and commands it names still exist',
+      ],
+    },
+    {
+      file: 'phase-6-final-auditing.md',
+      anchors: [
+        'Audit the memory contract',
+        'whether each Memory Input was actually applied',
+        '`none` is a finding',
+      ],
+    },
+    {
+      file: 'phase-7-learning.md',
+      anchors: [
+        'Capture exact output paths',
+        'Memory Outputs and Durable Artifacts before writing the record',
+        'validator **after** capture',
+      ],
+    },
+    {
+      file: 'knowledge-ingest.md',
+      anchors: ['only after the PRD declares its exact path'],
+    },
+    {
+      file: 'knowledge-lint.md',
+      anchors: ['Validate the declared grammar, not prose quality'],
+    },
+    {
+      file: 'orchestration-runner.md',
+      anchors: ['refuse a Phase 7 close whose declared Memory Outputs are absent'],
+    },
+  ];
+
+  it('covers every file the obligation table names, and no more', () => {
+    // phase-5 is absent BY THE ADDENDUM: §8 grants it no obligation, so there is
+    // nothing for this table to assert about it.
+    expect(OBLIGATIONS.map((o) => o.file).sort()).toEqual(
+      [...PHASE_PROMPTS, 'knowledge-ingest.md', 'knowledge-lint.md', 'orchestration-runner.md']
+        .filter((f) => f !== 'phase-5-testing.md')
+        .sort(),
+    );
+  });
+
+  for (const { file, anchors } of OBLIGATIONS) {
+    it(`${file} states its obligation`, () => {
+      const content = flat(prompt(file));
+      for (const anchor of anchors) {
+        expect(content, `${file}: ${anchor}`).toContain(flat(anchor));
+      }
+    });
+  }
+
+  it('adapters stay vendor-neutral and gain no obligation of their own', () => {
+    for (const name of ['adapters/cursor-bootstrap.md', 'adapters/codex-starter.md']) {
+      const content = prompt(name);
+      expect(/Memory Inputs|Memory Outputs/.test(content), name).toBe(false);
+    }
+  });
+
+  /** The addendum's §8 row for each phase — the ONLY source a phase prompt's
+   * memory obligation may trace to. `null` means the row grants none. */
+  const ADDENDUM_SOURCE: Array<{ file: string; source: string | null }> = [
+    {
+      file: 'phase-1-prd-generator.md',
+      source: 'select relevant records, write Memory Inputs with dispositions and rationales',
+    },
+    { file: 'phase-2-readiness-scorer.md', source: 'challenge an unreasoned `none`' },
+    {
+      file: 'phase-3-task-generator.md',
+      source: 'Carry the selected slugs into executable task context',
+    },
+    {
+      file: 'phase-4-implementation.md',
+      source: 'confirm the paths and commands it names still exist before relying on it',
+    },
+    { file: 'phase-5-testing.md', source: null },
+    {
+      file: 'phase-6-final-auditing.md',
+      source: 'Audit whether the selected records were actually applied',
+    },
+    {
+      file: 'phase-7-learning.md',
+      source: 'Capture the actual outputs at their exact declared paths',
+    },
+  ];
+
+  const addendumText = (): string =>
+    readFileSync(
+      join(
+        pkgRoot,
+        '../../docs/research/provegate-bootstrap/source-snapshot',
+        'addenda/agent-memory-closed-loop-2026-07-25.md',
+      ),
+      'utf8',
+    );
+
+  it('each phase obligation traces to its own §8 row, and §8 is quoted exactly', () => {
+    // Asserting that some addendum phrases exist proves nothing about the file
+    // that carries them: the previous version of this test passed while
+    // `phase-5-testing.md` shipped an obligation §8 explicitly denies. Bind per
+    // file, and hold the source row to the phase it belongs to.
+    const addendum = flat(addendumText());
+    for (const { source } of ADDENDUM_SOURCE) {
+      if (source === null) continue;
+      expect(addendum, source).toContain(flat(source));
+    }
+    expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
+  });
+
+  it('phase 5 carries NO memory instruction — §8 denies it one', () => {
+    // The row is a stated position, not an omission: "Verification is
+    // verification." A prompt that adds an instruction §8 does not name is out
+    // of scope for the addendum, which makes it fabricated method content.
+    // WHOLE FILE for the denied phase. Scoping the scan to the constraint list
+    // created an escape: an obligation written after that section's `---` would
+    // have passed. §8 denies phase 5 a memory obligation anywhere, not just in
+    // one section.
+    expect(MEMORY_VOCABULARY.test(prompt('phase-5-testing.md'))).toBe(false);
+  });
+
+  it('no phase prompt carries a memory instruction its §8 row does not grant', () => {
+    for (const { file, source } of ADDENDUM_SOURCE) {
+      expect(MEMORY_VOCABULARY.test(constraintsOf(file)), `${file} vs addendum §8`).toBe(
+        source !== null,
+      );
+    }
+  });
+
+  it('every phase prompt has exactly one Agent Constraints section', () => {
+    // `constraintsOf` returns '' for a file without one, which would make the
+    // scoped assertions vacuously true. The assumption is now checked.
+    for (const file of PHASE_PROMPTS) {
+      const headings =
+        contractView(prompt(file)).match(/^ {0,3}## Agent Constraints[ \t]*$/gm) ?? [];
+      expect(headings.length, file).toBe(1);
+      expect(constraintsOf(file).length, file).toBeGreaterThan(0);
+    }
+  });
+
+  it('no memory obligation lives OUTSIDE the authorized constraints section', () => {
+    // Scoping the granted-phase check to Agent Constraints left an escape: an
+    // obligation added after that section's `---` satisfied nothing and broke
+    // nothing. The authorized section is where an obligation may live; anywhere
+    // else in the prompt it is unauthorized wherever it appears.
+    for (const { file } of ADDENDUM_SOURCE) {
+      const constraints = constraintsOf(file);
+      const outside = prompt(file).split(constraints).join(' ');
+      expect(MEMORY_VOCABULARY.test(outside), `${file}: memory instruction outside constraints`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('phase 5 carries exactly its four non-memory constraints', () => {
+    // A vocabulary scan cannot catch every paraphrase — "reopen every prior
+    // learning the work item chose" imposes the obligation §8 denies while
+    // matching no listed term. Counting the constraints closes that: §8 grants
+    // phase 5 none, so ANY fifth entry, however phrased, fails here.
+    expect(constraintCount('phase-5-testing.md')).toBe(4);
+  });
+
+  it('phase 5 is byte-pinned: §8 grants it no obligation, so any edit is a decision', () => {
+    // A deny-vocabulary cannot cover paraphrase — "reopen every prior learning
+    // chosen by the work item" imposes the forbidden obligation while matching
+    // no listed term. The addendum gives this file no memory obligation at all,
+    // so the honest guard is a digest: any edit fails here and has to be looked
+    // at. Update the digest ONLY after confirming the change adds no memory
+    // instruction.
+    const digest = createHash('sha256').update(prompt('phase-5-testing.md')).digest('hex');
+    expect(digest).toBe(PHASE_5_DIGEST);
+  });
+
+  it('the phase-5 denial is discriminating, not merely satisfied', () => {
+    // The checked-in prompt is clean, so the assertion above cannot distinguish
+    // a working scanner from a broken one. Inject the exact mutation the scanner
+    // exists to catch, in the place the earlier scoped version missed.
+    const clean = prompt('phase-5-testing.md');
+    const mutated = `${clean}\n\n## Extra\n\nBefore testing, open every \`_brain\` detail file.\n`;
+    expect(MEMORY_VOCABULARY.test(clean)).toBe(false);
+    expect(MEMORY_VOCABULARY.test(mutated)).toBe(true);
+  });
+
+  it('a granted phase carries ITS OWN obligation, not another phase clause', () => {
+    // A boolean "mentions memory" cannot tell phase 4's obligation from phase
+    // 7's. Each granted file must contain its own §8 clause, and must not carry
+    // the distinctive clause of a different phase.
+    const OWN: Record<string, RegExp> = {
+      'phase-1-prd-generator.md': /Select Memory Inputs/,
+      'phase-2-readiness-scorer.md': /Challenge each Memory Input/,
+      'phase-3-task-generator.md': /Carry the selected slugs/,
+      'phase-4-implementation.md': /Re-open each selected record/,
+      'phase-6-final-auditing.md': /Audit the memory contract/,
+      'phase-7-learning.md': /Capture exact output paths/,
+    };
+    for (const [file, own] of Object.entries(OWN)) {
+      const content = prompt(file);
+      expect(own.test(content), `${file}: own clause`).toBe(true);
+      for (const [other, clause] of Object.entries(OWN)) {
+        if (other === file) continue;
+        expect(clause.test(content), `${file} must not carry ${other}'s clause`).toBe(false);
+      }
+    }
+  });
+
+  it('every placeholder token the new content introduces is registered', () => {
+    const registry = prompt('PLACEHOLDERS.md');
+    for (const { file } of OBLIGATIONS) {
+      for (const match of prompt(file).matchAll(/\{\{[A-Z_]+\}\}/g)) {
+        expect(registry, `${file}: ${match[0]}`).toContain(match[0]);
+      }
+    }
+  });
+});
+
+/**
  * FR-1 (PRD-017): method provenance. Shipped method content may trace to the frozen
  * snapshot or to an owner-approved addendum beside it — nothing else. Freezing is only
  * meaningful if something notices when it breaks, so the snapshot's bytes are pinned by
@@ -208,5 +512,47 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
     expect(addendum).toContain('A non-empty output set may not contain `none`');
     expect(addendum).toContain('as committed on the configured base');
     expect(addendum).toContain('review trigger, not a staleness verdict');
+  });
+});
+
+describe('phase 6 round 3 — the provenance oracle is tested, not trusted', () => {
+  /** The deny-list is only worth its comment if a violation actually trips it.
+   * The value under test is the module-level one the prompts are judged by. */
+  it('catches an obligation phrased without the original four tokens', () => {
+    const paraphrased = [
+      '5. **Reopen the store.** Before choosing fixtures, open every `_brain` detail file',
+      '   the work item selected and confirm it still holds.',
+    ].join('\n');
+    expect(MEMORY_VOCABULARY.test(paraphrased)).toBe(true);
+    for (const phrasing of [
+      'run the capture protocol before verifying',
+      'consult the memory index for prior constraints',
+      "honour each record's watch when picking a fixture",
+    ]) {
+      expect(MEMORY_VOCABULARY.test(phrasing), phrasing).toBe(true);
+    }
+  });
+
+  it('does not fire on verification prose that mentions no store at all', () => {
+    for (const phrasing of [
+      'Every command in the §11 table is executed and its output pasted into the ledger.',
+      'Integration commands run against the real environment, not mocks.',
+      'Write at least one deny-path test where the PRD touches permissions.',
+    ]) {
+      expect(MEMORY_VOCABULARY.test(phrasing), phrasing).toBe(false);
+    }
+  });
+});
+
+describe('phase 6 round 8 — the constraint count is discriminating', () => {
+  const countIn = constraintCountIn;
+
+  it('[R8-P2-6] an UNSTYLED numbered constraint moves the count', () => {
+    // `^\d+\. \*\*` counted only bold entries, so a plain
+    // `5. Reopen every prior learning...` shipped without moving the number the
+    // phase-5 guard rests on.
+    const four = ['1. **A**', '2. **B**', '3. **C**', '4. **D**'].join('\n');
+    expect(countIn(four)).toBe(4);
+    expect(countIn(`${four}\n5. Reopen every prior learning before running tests.`)).toBe(5);
   });
 });

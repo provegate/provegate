@@ -17,3 +17,5 @@ Durable, non-derivable knowledge lives in `_brain/` (committed, agent-agnostic).
 - At phase/PRD close, if you hit something not derivable from the code, add
   `_brain/learnings/<slug>.md` (see `_brain/_templates/learning.md`) and its `INDEX.md`
   pointer. Never store what the repo already records.
+- When memory is enabled, a PRD declares `## Memory Inputs` and `## Memory Outputs`; see
+  `@AGENT_BOOTSTRAP.md` "Memory contract". `gate check` parses both.

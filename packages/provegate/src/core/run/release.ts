@@ -53,6 +53,31 @@ function resolveAgent(config: WorkflowConfig, agent?: string): string {
   return trimmed !== undefined && trimmed !== '' ? trimmed : (config.owners[0] ?? 'operator');
 }
 
+/**
+ * The agent named on the lease for `id`, or null when there is none to read.
+ *
+ * A close must release the lease it is closing AS THE HOLDER: guessing the first
+ * configured owner made every non-default `--agent` claim unreleasable by its
+ * own successful close.
+ */
+export function leaseHolder(config: WorkflowConfig, root: string, id: string): string | null {
+  const normalized = id.toUpperCase();
+  for (const entry of listLockFiles(config, root)) {
+    // IDENTITY, not filename. A valid lease in `claim.json` was invisible here
+    // while `releaseLease` found it by content, so a close acted as the default
+    // owner and left its own lease behind; a decoy named with this id's prefix
+    // could equally have supplied the wrong holder.
+    if (entry.data === undefined) continue;
+    if (String(entry.data['prd']).toUpperCase() !== normalized) continue;
+    if (validateLock(config, entry.data, { now: 0 }).some((i) => !i.startsWith('stale lock'))) {
+      continue;
+    }
+    const agent = entry.data['agent'];
+    if (typeof agent === 'string' && agent.length > 0) return agent;
+  }
+  return null;
+}
+
 export function releaseLease(
   config: WorkflowConfig,
   root: string,

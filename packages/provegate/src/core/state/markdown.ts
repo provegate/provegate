@@ -5,6 +5,8 @@
  * table writes) that must not drift.
  */
 
+import { scanDocument } from '../memory/scan.js';
+
 export function stripMarkdown(value: string): string {
   return value
     .replace(/\*\*/g, '')
@@ -46,20 +48,66 @@ export function sectionAfter(content: string, heading: string): string {
   return sectionMatching(content, escapeRegExp(heading));
 }
 
+/**
+ * EVERY section under a heading matching `headingPattern`, read from the
+ * executable document.
+ *
+ * The old reader took the first raw `^## ` match, and a heading inside a fenced
+ * example is code to every renderer. A fenced `## Operator Handoff` holding
+ * `none`, placed above the real section, was therefore selected — and the merge
+ * gate's precondition IS that row count, so an owner-gated PRD passed with no
+ * acceptance at all. The same primitive under-read a real Conflict Surface.
+ *
+ * All matches are returned, not the first, because these callers are gates: two
+ * sections with the same heading is an ambiguity, and the fail-closed reading of
+ * an ambiguity is to honour every one of them.
+ */
+export function sectionsMatching(content: string, headingPattern: string): string[] {
+  const lines = scanDocument(content).lines;
+  // CommonMark's ATX form, not `^## `: up to three leading spaces and an
+  // optional closing run of hashes are both ordinary. `   ## Operator Handoff`
+  // and `## Operator Handoff ##` render as the H2 a maintainer wrote and
+  // returned no section at all, so the merge gate read zero rows and skipped the
+  // owner acceptance. The memory scanner already spelled this correctly; two
+  // heading grammars over one document is the defect this file just fixed at the
+  // other end.
+  const heading = new RegExp(`^ {0,3}##[ \\t]+${headingPattern}(?:[ \\t]+#*)?[ \\t]*$`, 'i');
+  const bodies: string[] = [];
+  for (const [index, line] of lines.entries()) {
+    if (line.kind !== 'text' || !heading.test(line.text)) continue;
+    const body: string[] = [];
+    for (let i = index + 1; i < lines.length; i += 1) {
+      const next = lines[i]!;
+      if (next.kind === 'text' && /^ {0,3}#{1,2}(?:[ \t]|$)/.test(next.text)) break;
+      body.push(next.kind === 'text' ? next.text : '');
+    }
+    bodies.push(`\n${body.join('\n')}`);
+  }
+  return bodies;
+}
+
 /** Like `sectionAfter`, but the heading is a regex source (e.g. `.*Verification Commands.*`). */
 export function sectionMatching(content: string, headingPattern: string): string {
-  const pattern = new RegExp(`^##\\s+${headingPattern}\\s*$`, 'im');
-  const match = pattern.exec(content);
-  if (!match) return '';
-  const rest = content.slice(match.index + match[0].length);
-  const next = rest.search(/^##\s+/m);
-  return next === -1 ? rest : rest.slice(0, next);
+  return sectionsMatching(content, headingPattern)[0] ?? '';
 }
 
 export function countTaskChecks(content: string): { checkedCount: number; uncheckedCount: number } {
-  const checkedCount = (content.match(/^\s*-\s*\[[xX]\]/gm) ?? []).length;
-  const uncheckedCount = (content.match(/^\s*-\s*\[\s\]/gm) ?? []).length;
+  // The EXECUTABLE document. A `- [ ] example` written inside a fenced template
+  // is an illustration, and counting it recorded an unchecked task that no one
+  // had to do — the queue then reported the work item resumable forever.
+  const executable = executableTextOf(content);
+  // `*` and `+` are task-list markers too, and a plan written with them
+  // reported zero tasks — no progress, and no work item ever resumable.
+  const checkedCount = (executable.match(/^\s*(?:[-*+]|\d{1,9}[.)])\s*\[[xX]\]/gm) ?? []).length;
+  const uncheckedCount = (executable.match(/^\s*(?:[-*+]|\d{1,9}[.)])\s*\[\s\]/gm) ?? []).length;
   return { checkedCount, uncheckedCount };
+}
+
+/** The document with everything a renderer does not execute blanked. */
+function executableTextOf(content: string): string {
+  return scanDocument(content)
+    .lines.map((line) => (line.kind === 'text' ? line.text : ''))
+    .join('\n');
 }
 
 /**
@@ -79,15 +127,37 @@ export function countTaskChecks(content: string): { checkedCount: number; unchec
  * is not a row — an empty section legitimately means zero operator rows.
  */
 export function countOperatorHandoff(content: string): number {
-  const section = sectionAfter(content, 'Operator Handoff');
+  // Summed across EVERY section with this heading. One row anywhere is enough
+  // to require an acceptance, so counting only the first section was the
+  // permissive reading of a document that says the same thing twice.
+  return sectionsMatching(content, escapeRegExp('Operator Handoff')).reduce(
+    (total, section) => total + operatorRowsIn(section),
+    0,
+  );
+}
+
+function operatorRowsIn(section: string): number {
   if (!section) return 0;
-  const lines = section.split('\n');
+  const lines = section.split('\n').map((line) => line.trim());
   const tableRows = lines
-    .filter((line) => line.trim().startsWith('|'))
-    .filter((line) => !/^\|\s*-+/.test(line))
+    .filter((line) => line.startsWith('|'))
+    // A SEPARATOR in any of its spellings. `^\|\s*-+` missed the aligned forms
+    // `| :--- |` and `| ---: |`, so a table with a header and no data rows
+    // counted one row and demanded an acceptance nobody owed. Indentation
+    // defeated this filter and the header filter together, which is why the
+    // lines are trimmed above.
+    .filter((line) => !/^\|[\s:|-]*$/.test(line))
     .filter((line) => !/^\|\s*Task\s*\|/i.test(line))
     .filter((line) => line.split('|').some((cell) => cell.trim().length > 0)).length;
-  const checkboxRows = lines.filter((line) => /^\s*-\s*\[[ xX]\]/.test(line)).length;
+  // `*` and `+` open a task list exactly as `-` does. Recognizing only `-` let
+  // `* [ ] owner approves` read as zero operator rows, and the merge gate passed
+  // without the acceptance that row exists to require.
+  // ORDERED markers too. GFM writes `1. [ ] …`, and recognizing only the bullet
+  // forms read a numbered handoff table as zero rows — the merge gate then
+  // passed with no owner acceptance.
+  const checkboxRows = lines.filter((line) =>
+    /^(?:[-*+]|\d{1,9}[.)])\s*\[[ xX]\]/.test(line),
+  ).length;
   return tableRows + checkboxRows;
 }
 
@@ -161,16 +231,27 @@ export function writeTableValue(content: string, label: string, value: string): 
  * `{ }` template tokens, bare `none` lines, and non-path tokens.
  */
 export function declaredGlobs(content: string): string[] {
-  const section = sectionAfter(content, 'Conflict Surface');
+  // Unioned across every section with this heading, for the same reason the
+  // operator rows are summed: a claim written twice is still a claim.
   const globs: string[] = [];
-  for (const line of section.split('\n')) {
+  for (const line of sectionsMatching(content, escapeRegExp('Conflict Surface'))
+    .join('\n')
+    .split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;
-    if (/\bnone\b/i.test(line) && !line.includes('`')) continue;
-    for (const match of line.matchAll(/`([^`]+)`/g)) {
+    if (/^\s*-\s+none\b/i.test(line)) continue;
+    // The segment BEFORE the em dash, for the same reason Durable Artifacts
+    // reads one: a Conflict Surface bullet explains itself after the dash, and
+    // the explanation quotes paths it does not claim.
+    const declared = line.split('—')[0]!;
+    for (const match of declared.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
-      if (!value.includes('/')) continue;
+      // A ROOT-LEVEL claim is a claim. Requiring a `/` discarded
+      // `workflow.config.json` and `gates.manifest.json` — the entries this
+      // repository's own PRDs use — so two agents could claim the same control
+      // file and no conflict was detected.
+      if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
-      if (/\bnone\b/i.test(value)) continue;
+      if (/^none$/i.test(value)) continue;
       globs.push(value);
     }
   }

@@ -209,6 +209,13 @@ skipped:
 
 2. **Generalize filter.** _Would this be true for anyone, or is it a one-off for this
    task?_ One-off → discard. Generalizable → continue.
+2b. **Declare before you write.** The record's exact path must appear in the PRD's
+   `## Memory Outputs` **and** its Durable Artifacts before the file is created. Both
+   lists are compared against the merge diff at Phase 7, so a record written at an
+   undeclared path is invisible to the gate and a declared path with no record fails it.
+   An output discovered mid-implementation is appended to both — appending is always
+   allowed; removing or retyping one is weakening, and is compared against the PRD as
+   committed on the base branch.
 3. **Write the record.** Create `learnings/<slug>.md` per §4. Terse. Include **Why** +
    **How to apply** for gotchas.
 4. **Index it.** Add the one-line pointer to `INDEX.md`.

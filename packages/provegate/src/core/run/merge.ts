@@ -3,7 +3,10 @@ import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
 import { normalizedWorktreeDir } from '../config/index.js';
+import { listLockFiles, validateLock } from '../locks/index.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
+import { withWorkspaceMutex } from './mutex.js';
+import { claimMutexPath } from './open.js';
 
 /**
  * Local no-ff merge with post-merge verification and auto-revert. Two
@@ -180,9 +183,69 @@ export function mergePreconditions(
 }
 
 /**
+ * Unexpired leases belonging to some OTHER work item, by lock filename.
+ *
+ * A lock that will not parse counts as a blocker. It cannot be shown to be
+ * expired or to belong to this item, and "unreadable" is not "absent" — the one
+ * direction a barrier may never guess in is the permissive one.
+ */
+export function foreignActiveLeases(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+  { now = Date.now() }: { now?: number } = {},
+): string[] {
+  const blockers: string[] = [];
+  for (const entry of listLockFiles(config, root)) {
+    // Unreadable FIRST, and the filename is not identity. Skipping on a name
+    // prefix before parsing meant a lock nobody could read was ignored whenever
+    // its filename happened to start with this PRD's id — an attacker-free but
+    // entirely reachable way to hide a foreign lease behind a chosen name.
+    if (entry.error !== undefined || entry.data === undefined) {
+      blockers.push(`${entry.name} (unreadable: ${entry.error ?? 'no data'})`);
+      continue;
+    }
+    // SCHEMA, then ownership, then expiry. Reading `expiresAt` out of a lock
+    // that never passed validation treated `{"expiresAt":"2020-01-01"}` as an
+    // expired lease, though nothing in it establishes whose lease it is. A
+    // barrier may not guess in the permissive direction, and "I cannot tell who
+    // holds this" is the permissive direction's clearest case.
+    // Staleness is dropped from the schema verdict: `validateLock` reports an
+    // expired lock as an ISSUE, and this barrier makes its own expiry decision
+    // below. Keeping it would have turned every expired lease into a blocker,
+    // which is the opposite mistake and just as wrong.
+    const invalid = validateLock(config, entry.data, { now }).filter(
+      (issue) => !issue.startsWith('stale lock expired'),
+    );
+    if (invalid.length > 0) {
+      blockers.push(`${entry.name} (invalid: ${invalid.join(', ')})`);
+      continue;
+    }
+    // Identity comes from the VALIDATED `prd`, never the filename.
+    if (String(entry.data['prd']).toLowerCase() === id.toLowerCase()) continue;
+    const expiresAt = Date.parse(String(entry.data['expiresAt']));
+    // An unparseable expiry is not an expired one.
+    if (Number.isFinite(expiresAt) && expiresAt < now) continue;
+    const holder = typeof entry.data['agent'] === 'string' ? entry.data['agent'] : 'unknown agent';
+    blockers.push(`${entry.name} (${holder})`);
+  }
+  return blockers;
+}
+
+/**
  * Merge the current feature branch into the local base branch, verify, and
  * auto-revert on failure. Preconditions: not on base, not detached; feature
  * checkout clean of non-coordination dirt.
+ *
+ * In a memory-enabled repository the merge additionally runs inside the claim
+ * mutex and refuses while a foreign lease is active (FR-6). Reading the lock
+ * table outside that mutex would be a check-then-merge race, not a barrier: a
+ * claim could install itself in the window. The scope is honest and narrow —
+ * this is a `gate land` precondition, NOT a git-level invariant. A direct
+ * `git merge` bypasses it exactly as it bypasses every other gate here, and a
+ * worktree that survives the merge does not re-check control artifacts, because
+ * only a new claim revalidates them (PRD-022's scope, stated rather than
+ * claimed away).
  */
 export function mergeToLocalBase(options: {
   config: WorkflowConfig;
@@ -201,17 +264,68 @@ export function mergeToLocalBase(options: {
   const branch = pre.branch!;
   const source = sourceSha ?? branch;
 
-  const worktreeDir = findBaseWorktree(root, base);
-  if (worktreeDir !== null && worktreeDir !== root) {
-    return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
-  }
+  const merge = (): MergeOutcome => {
+    const worktreeDir = findBaseWorktree(root, base);
+    if (worktreeDir !== null && worktreeDir !== root) {
+      return mergeInWorktree({ config, manifest, baseDir: worktreeDir, base, branch, source, id });
+    }
+    try {
+      git(root, ['rev-parse', '--verify', base]);
+    } catch {
+      return { ok: false, why: `no local branch '${base}' to merge into` };
+    }
+    return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
+  };
 
+  // The barrier belongs to the ACTIVATION transition, not to every merge that
+  // happens after it. It refused any memory-enabled PRD while any unrelated
+  // lease was active, and told each one "this merge changes gate policy" — false
+  // for an ordinary PRD, and a refusal that names something that is not
+  // happening. Activation is the merge that turns memory ON: enabled here and
+  // not yet enabled on the base.
+  if (!config.memory.enabled || !activatesMemory(root, base)) return merge();
+
+  return withWorkspaceMutex(claimMutexPath(config, root), (): MergeOutcome => {
+    const blockers = foreignActiveLeases(config, root, id);
+    if (blockers.length > 0) {
+      return {
+        ok: false,
+        why:
+          `a foreign lease is active — ${blockers.join(', ')}; this merge ACTIVATES the memory ` +
+          `contract and so changes gate policy, so it refuses rather than land under another ` +
+          `agent's feet. Wait for the lease to expire or have its holder release it, then re-run`,
+      };
+    }
+    return merge();
+  });
+}
+
+/**
+ * Does this merge turn the memory contract ON?
+ *
+ * True when the working configuration enables it and the base's committed
+ * configuration does not — including the case where the base has no
+ * configuration file at all, which is the first-adoption shape. Unreadable base
+ * config counts as activation: the barrier is cheap and guessing "already on"
+ * would skip it exactly when the state is unclear.
+ */
+function activatesMemory(root: string, base: string): boolean {
+  let committed: string;
   try {
-    git(root, ['rev-parse', '--verify', base]);
+    committed = execFileSync('git', ['show', `${base}:workflow.config.json`], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
   } catch {
-    return { ok: false, why: `no local branch '${base}' to merge into` };
+    return true;
   }
-  return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
+  try {
+    const parsed = JSON.parse(committed) as { memory?: { enabled?: unknown } };
+    return parsed.memory?.enabled !== true;
+  } catch {
+    return true;
+  }
 }
 
 function mergeInWorktree(options: {
