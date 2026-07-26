@@ -428,14 +428,21 @@ Records to open and confirm still accurate before the dependent task starts (tas
             fix for that same gate: `operatorGateOk` checked a committed blob existed and
             then authorized from the working tree. 830 tests; five regressions, all
             mutation-checked; two test defects repaired.
-      - [ ] 10.17 **Twenty-five rounds is a measurement, not an anecdote.** Adjacent-case
-            rate 5/8, 9/11, 13/13; overshoot rate 9 of 20; and this round's worst finding
-            was created by the previous round's fix for the same gate. Calibration proved
-            the findings are real, which is exactly why the loop does not terminate: each
-            remediation is competent and each creates the next round's work. Nothing
-            further is learned by a twenty-sixth round. Verdict stays `fail`; the owner
-            decides: accept the residual and close, scope the engine half to a follow-up
-            item, or keep running rounds.
+      - [x] 10.17 Round 26 changed the QUESTION instead of running a twenty-sixth defect
+            hunt: scoped to PRD-018's own code, assess the five guarantees, rate each break
+            by realistic likelihood, and return a close decision. It answered
+            `DO NOT CLOSE` with four blocking defects — two `plausible`, two
+            `adversarial` — which is the actionable input twenty-five rounds of lists never
+            produced. Three fixed; the fourth (validator implementation not pinned,
+            `adversarial`) is on the deferral board with an owner and a due date.
+            833 tests; three regressions, all mutation-checked.
+      - [ ] 10.18 **Re-run the readiness assessment against the current code.** After this
+            remediation its own criteria read: guarantees 1/2/4 hold against everything
+            short of a deliberate attack visible in the diff, 3 holds, and 5's known break
+            is closed — so the artifact now supports `CLOSE WITH FOLLOW-UP`. That is a
+            recommendation, not a verdict. One assessment run confirms or refutes it, and
+            it is the only remaining question worth asking; further defect-hunting rounds
+            have a measured, non-terminating yield.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -607,5 +614,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.17 | manual-qa | owner | **Decide the review verdict.** Twenty-five independent rounds ran; calibration confirmed the findings are real, which is why the loop does not terminate — each competent remediation creates the next round's work at a comparable rate; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.18 | manual-qa | owner | **Decide the review verdict.** The readiness assessment's blocking defects are closed or deferred with owners, and the artifact now supports CLOSE WITH FOLLOW-UP; one confirming assessment run against the current code settles it; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |

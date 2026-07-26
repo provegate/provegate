@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 124
-> **High:** 25
+> **Critical:** 126
+> **High:** 27
 > **Medium:** 68
 > **Low:** 4
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 25
+> **Rounds:** 26
 
 ## How this review was run
 
@@ -616,28 +616,61 @@ Two tests were findings: the manifest fixture returned on an invalid empty `run`
 reaching the check it existed to exercise, and the CLI option test omitted the two mutating
 commands whose absence it could not detect.
 
+### Round 26 — a readiness assessment, not a defect hunt
+
+Twenty-five rounds produced defect lists. None answered the question actually pending, so
+round 26 asked a different one: scoped strictly to PRD-018's own code, assess the five
+guarantees the feature must provide, rate each break by **realistic likelihood** — `routine`,
+`plausible`, or `adversarial` — and return a decision: `CLOSE`, `CLOSE WITH FOLLOW-UP`, or
+`DO NOT CLOSE`.
+
+It returned **DO NOT CLOSE**, with four blocking defects. The likelihood ratings are what
+made the round worth running:
+
+| Guarantee | Status | Likelihood |
+|---|---|---|
+| 1 — promises cannot be silently weakened | held except via a committed symlink | adversarial |
+| 2 — promised records exist, indexed and valid | held except via a no-op validator body | adversarial |
+| 3 — a branch cannot erase a watch obligation | **broken** | **plausible** |
+| 4 — enforcement cannot be switched off by its own merge | held except via a no-op validator body | adversarial |
+| 5 — correct work is not refused | **broken** | **plausible** |
+
+Three are now fixed:
+
+- **`baseStore.issues` was produced and discarded.** Round 25 made the base loader report an
+  unreadable index rather than return a silent empty store — and nobody consumed the report,
+  so repairing an already-broken base index while omitting a watcher closed cleanly. Rated
+  `plausible` because repairing a broken index is ordinary maintenance.
+- **The validator-removal gate called every base Phase 7 command a store validator**, so
+  dropping `pnpm lint` from a custom Phase 7 while keeping the real validator was
+  unclosable — and the refusal named an owner-acceptance path that had never been built. It
+  names a Phase 7 *gate* now, and the acceptance path exists.
+- **A committed symlink** at `_state/acceptances.json` passed every "is the evidence
+  committed" check while the merge carried only the link.
+
+The fourth is a deferral rather than a fix: the gate compares a command's script *identity*,
+not what the script does, so keeping `pnpm verify:brain` while rewriting its body to a no-op
+bypasses it. Pinning means hashing script bodies across base and branch — a `gates/wiring.ts`
+and manifest-schema change outside this PRD's surface. Rated `adversarial`, and the same
+commit is visible in review.
+
 ### Open
 
-**No round has run against the current code.** The verdict stays `fail`.
+**No round has run against the current code**, and the verdict stays `fail`.
 
-Round 25 sharpens what round 24 established rather than changing it. The measurable facts
-now on record:
+What changed is the *shape* of what is known. For twenty-five rounds the open question was
+"are there more defects", which has a permanent answer: yes, at a steady rate, and each
+remediation adds its own. Round 26 replaced it with a question that terminates — "which
+guarantees hold, and how likely is each break" — and produced an actionable answer in one
+round.
 
-- adjacent-case rate, rounds 21-23: **5/8, 9/11, 13/13**
-- overshoot rate, round 24: **9 of 20 fixes refusing correct work**
-- round 25: the single worst finding was a defect created by round 24's fix **for that same
-  gate**, and a second was created by round 23's fix for a neighbouring one
+After this remediation, the assessment's own criteria read: guarantees 1, 2, 4 hold against
+everything short of a deliberate attack that is visible in the diff; guarantee 3 holds; and
+guarantee 5's known break is closed. The residual named by the assessment is one
+`adversarial` defect, recorded on the deferral board with an owner and a due date.
 
-Requiring calibration worked — thirteen for thirteen, no padding — so the findings are real
-and the loop is not producing noise. That is precisely why it does not terminate: each
-remediation is competent, and each remediation creates the next round's work at a comparable
-rate. Twenty-five rounds is now a measurement, not an anecdote.
-
-The three options stand unchanged, and nothing further will be learned by running a
-twenty-sixth round:
-
-1. **Accept the residual and close.** Every known hole is closed; what remains is a rate.
-2. **Scope the engine findings to a follow-up work item** and close PRD-018 on its own code.
-3. Keep running rounds, knowing each one both finds and creates defects.
-
-An agent may not flip the ledger row, and this one has not.
+**The recommendation this artifact can now support is `CLOSE WITH FOLLOW-UP`** — close
+PRD-018 on its own code, with the validator-implementation pin and the engine-scope findings
+carried as follow-up work. That is a recommendation, not a verdict: an agent may not flip the
+ledger row, and this one has not. Re-running the assessment against the current code would
+confirm or refute it in a single round, which is the one remaining question worth asking.
