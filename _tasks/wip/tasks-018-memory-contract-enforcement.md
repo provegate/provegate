@@ -368,12 +368,19 @@ Records to open and confirm still accurate before the dependent task starts (tas
             refusals naming constructs the page does not contain — and those are the ones
             worth recording, because the narrowing only holds if refusals are as honest as
             reads. All eight remediated; 767 tests.
-      - [ ] 10.10 **No round has run against the current code, and the rate is not
-            falling.** Trend across rounds 14-18: 7, 4, 4, 3, 5. What the rounds now hit is
-            not the narrowed grammar but the parts of the SCANNER the narrowing has not
-            reached — line model, fence closers, span lookahead. Verdict stays `fail`.
-            Closing needs an owner decision: keep running rounds, narrow further so the
-            scanner has less to do, or accept the residual.
+      - [x] 10.10 Round 19, aimed at the scanner. Five CRITICAL and seven MEDIUM, and
+            eleven of the twelve traced to ONE fault: the scanner and the container check
+            derived block state independently from the same document. Remedied
+            structurally — `scanDocument` classifies each line once and every downstream
+            reader asks it. The scanner also gained indented code, complete-inline-comment
+            rules, the short comment forms, and a comment stop in the span lookahead.
+            Backslash escapes honored; the entity rule settled on an enumerated invisible
+            set. 778 tests; every PRD still parses clean.
+      - [ ] 10.11 **No round has run against the current code.** Rounds 14-19: 7, 4, 4, 3,
+            5, 12 — the largest count of the run, but eleven of twelve shared one
+            architectural cause, and the fix changed the shape of the code rather than
+            adding a rule. Whether that holds is what an unaimed round would measure.
+            Verdict stays `fail`; closing needs an owner decision.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -545,5 +552,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.10 | manual-qa | owner | **Decide the review verdict.** Eighteen independent rounds ran; the rate is not falling (7, 4, 4, 3, 5 across rounds 14-18) and what they now find is scanner approximation rather than grammar; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.11 | manual-qa | owner | **Decide the review verdict.** Nineteen independent rounds ran; round 19's twelve findings shared one architectural cause, now fixed structurally rather than by another rule; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |

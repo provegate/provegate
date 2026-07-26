@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 69
+> **Critical:** 74
 > **High:** 0
-> **Medium:** 48
+> **Medium:** 55
 > **Low:** 3
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 18
+> **Rounds:** 19
 
 ## How this review was run
 
@@ -295,20 +295,61 @@ Measured before narrowing, across 239 Markdown files: no separator, no tab-inden
 section line, no setext contract heading, no named entity, and no inline HTML in a real
 contract section. Every PRD in the repository still parses with no issue. 767 tests.
 
+### Round 19 — the cause behind two rounds of findings
+
+Round 19 was aimed at the scanner, because that is where round 18's findings had moved. It
+returned five CRITICAL and seven MEDIUM, and the largest group had a single cause worth
+stating plainly:
+
+**The scanner derived block state from the document, and the container check derived it
+again from the raw text.** Two passes, one input, no shared answer. A `## Other` written
+inside an HTML comment ended the *raw* section early, so the section-level inline-HTML
+defense round 18 had just added never saw the rest of the section and was bypassed
+entirely. In the other direction, a `>` written inside a comment was refused as a block
+quote the page does not contain. This is `two-parsers-wrong-together` with both parsers in
+one file — the repository already held the record, and the code still had the defect.
+
+The remedy is structural rather than another rule. `scanDocument` classifies every line
+once — `text`, `fence`, `in-fence`, `html`, `in-html`, `indented-code` — and the section
+slicer, the container check and the setext diagnostic all read that classification instead
+of re-deriving it. The slicer walks lines rather than running `/m` over the document, which
+retires the U+2028 forgery structurally and let round 18's document-wide refusal go: that
+refusal had been rejecting a separator sitting harmlessly inside a fenced example.
+
+The scanner also gained the block model it never had:
+
+- **indented code**, whose absence ran both ways. `paragraphActive` stayed set across one,
+  so a type-7 tag below it could not open the raw HTML block a renderer opens; and a `<!--`
+  written inside one was read as a real comment opener, masking a heading and declaration
+  the page displays.
+- **inline comments must be complete.** `Prose <!-- open` followed by a heading renders the
+  opener literally and shows the heading, because an ATX heading interrupts a paragraph.
+  Comment state used to run straight across it and lose the declaration.
+- `<!-->` and `<!--->` are complete comments. Searching only for `-->` ran to end of file
+  and reported an unclosed comment the document had closed.
+- the code-span lookahead stops at a comment, which is HTML block type 2 — the round 18
+  exploit with `<!--` substituted for `<div>`.
+
+Backslash escapes are honored, so `\<span>` is literal text rather than raw inline HTML.
+
+**The entity rule settles.** It moved in three consecutive rounds: counting an unknown name
+invisible let `&Tab;` stand in for a rationale and refused `&AElig;`, which renders; then
+refusing unknown names by name invented a character reference out of `&bogus;`, which a
+renderer displays literally. The answer is to enumerate the small set of names that render
+as blank or zero-width and treat everything else as ink — visible is visible whether the
+glyph is `Æ` or the literal text `&bogus;`. No entity table, honest in both directions.
+
 ### Open
 
-**No round has run against the current code.** The verdict stays `fail`, and that is the
-honest reading: this artifact records eighteen rounds in which every finding was closed,
-not a round that found nothing. Round 17 was commissioned as the confirming round and
-found three; round 18 found five more, four of them fail-open.
+**No round has run against the current code.** The verdict stays `fail`; this artifact
+records nineteen rounds in which every finding was closed, not a round that found nothing.
 
-The trend across rounds 14-18 is 7, 4, 4, 3, 5 — it is not converging. That is the
-finding, and it is the same one `narrow-the-grammar-not-the-parser` already records from
-the other side: what round 18 hit was not the narrowed grammar failing but the parts of
-the reader the narrowing has not reached — the scanner's line model, its fence closers,
-its span lookahead. Those are still an approximation of CommonMark, and rounds keep
-finding defects there at a steady rate.
+The count went 7, 4, 4, 3, 5, 12 across rounds 14-19 — the last number is the largest of
+the run, and it is the most encouraging one here, because eleven of the twelve traced to
+one architectural fault rather than to eleven separate approximations. Rounds 18 and 19
+were both aimed at the scanner and both hit it; the fix this time changed the shape of the
+code rather than adding a rule to it.
 
-Closing the PRD needs an explicit owner decision: keep running rounds against the scanner,
-narrow further so the scanner has less to do, or accept the residual. An agent may not
-flip the ledger row, and this one has not.
+Whether that holds is exactly what an unaimed round would now measure. Closing the PRD
+needs an explicit owner decision: run another round, or accept the residual. An agent may
+not flip the ledger row, and this one has not.
