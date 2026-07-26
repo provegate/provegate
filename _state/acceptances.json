@@ -112,6 +112,17 @@
       "reason": "owner directed the close in chat after the twelve-round independent audit; accepting autonomous close via gate land - push stays human",
       "date": "2026-07-25",
       "method": "agent-directed by owner in chat; not an interactive owner confirmation"
+    },
+    {
+      "prd": "PRD-018",
+      "owner": "owner",
+      "items": [
+        "11.3 accept activation: from this merge every future PRD passes through the memory lint",
+        "6.5 clear or wait out any foreign lease before landing"
+      ],
+      "reason": "owner accepted the stated residual after 26 independent rounds: 126 critical + 27 high + 68 medium + 4 low found and all remediated, 0 outstanding. Round 26's readiness assessment rated its four blocking defects two plausible and two adversarial - three fixed with mutation-checked regressions, one adversarial item (a validator's script identity does not pin its implementation) deferred in STATUS.md with an owner and a due date. No confirming assessment was run against the current code and the review artifact says so. Activation is one-way",
+      "date": "2026-07-26",
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     }
   ]
 }
