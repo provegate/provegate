@@ -291,27 +291,33 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Record every result in the ledger with evidence. A row marked `passed` with no evidence is a `pending` row that lies.
 
 
-- [ ] 8.0 Phase 6 — Final Auditing
-  - [ ] 8.1 Independent adversarial review by a different model; write
-        `_docs/reviews/review-022-control-artifact-revalidation.md`.
-  - [ ] 8.2 Point the review at the two things the tests cannot self-check: that the
-        claim refusal bytes are genuinely unchanged (not that a test was adjusted to
-        match), and that the fixture's negative assertions are assert-absent rather than
-        greps that pass on empty input.
-  - [ ] 8.3 Spec-vs-code audit: every FR target file in PRD §4 appears in the diff, and
-        every file in the diff appears in the Conflict Surface.
-  - [ ] 8.4 `git add` the review artifact — an untracked durable artifact fails the close
-        gate (`durable-artifact-must-commit`).
+- [x] 8.0 Phase 6 — Final Auditing
+  - [x] 8.1 One adversarial round by Codex (a different model), read-only, scoped to the diff. Round 1 returned **DO NOT CLOSE** with four blockers; all four taken, three further findings recorded as out-of-surface or adversarial deferrals. `_docs/reviews/review-022-control-artifact-revalidation.md`, verdict pass, Critical 0.
+        Original: Independent adversarial review by a different model; write `_docs/reviews/review-022-control-artifact-revalidation.md`.
 
-- [ ] 9.0 Phase 7 — Learning
-  - [ ] 9.1 Run the `_brain` capture protocol (`_brain/PROTOCOL.md` §7). The likely
-        candidate: a check inserted at a shared dispatch point covers two commands, and
-        finding that seam is worth more than the check itself — but only write it if it
-        is not derivable from the code.
-  - [ ] 9.2 `pnpm verify:brain` and `pnpm verify:durable-artifacts`.
-  - [ ] 9.3 Update `STATUS.md` and `_state/prds.json`.
-  - [ ] 9.4 Leave the Operator Handoff acceptance row for the owner to sign
-        (`operator-acceptance-no-self-accept`); the merge gate refuses until it exists.
+  - [x] 8.2 Both were pointed at explicitly and both produced real findings — the refusal bytes were NOT unconditionally unchanged (my fail-closed branch introduced a second sentence on a path the claim can reach), and one negative assertion was vacuous while another test could not distinguish first-wins from last-wins dedup. This is the single highest-yield instruction in the brief.
+        Original: Point the review at the two things the tests cannot self-check: that the claim refusal bytes are genuinely unchanged (not that a test was adjusted to match), and that the fixture's negative assertions are assert-absent rather than greps that pass on empty input.
+
+  - [x] 8.3 Every FR target in PRD §4 appears in the diff; every code/docs file in the diff appears in the Conflict Surface. The rest of the diff is workflow artifacts — see the 8.3 finding above for the two (`STATUS.md`, `_brain/**`) that are neither coordination paths nor declared surface.
+        Original: Spec-vs-code audit: every FR target file in PRD §4 appears in the diff, and every file in the diff appears in the Conflict Surface.
+
+  - [x] 8.4 `git add`ed with the rest of the close-out; `verify:durable-artifacts` PASS.
+        Original: `git add` the review artifact — an untracked durable artifact fails the close gate (`durable-artifact-must-commit`).
+
+
+- [x] 9.0 Phase 7 — Learning
+  - [x] 9.1 Two records written, both non-derivable and both found by measurement rather than anticipated: `assert-absent-needs-an-independent-cause` and `strictness-added-during-extraction-is-a-behavior-change`. The plan's own candidate (a shared dispatch point covering two commands) was NOT written — it is derivable from `cli.ts:1203`.
+        Original: Run the `_brain` capture protocol (`_brain/PROTOCOL.md` §7). The likely candidate: a check inserted at a shared dispatch point covers two commands, and finding that seam is worth more than the check itself — but only write it if it is not derivable from the code.
+
+  - [x] 9.2 `pnpm verify:brain` PASS, `pnpm verify:durable-artifacts` PASS.
+        Original: `pnpm verify:brain` and `pnpm verify:durable-artifacts`.
+
+  - [x] 9.3 STATUS.md updated (active agent row, next candidates, a dated entry); `_state/prds.json` rebuilt by `gate status`.
+        Original: Update `STATUS.md` and `_state/prds.json`.
+
+  - [x] 9.4 Left for the owner. The Operator Handoff table carries two pending rows — the 6.2 migration acceptance (with the affected leases enumerated) and the close acceptance. The agent signs neither.
+        Original: Leave the Operator Handoff acceptance row for the owner to sign (`operator-acceptance-no-self-accept`); the merge gate refuses until it exists.
+
 
 ---
 
@@ -331,7 +337,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | workflow | `pnpm verify:workflow` | repo | passed | `pnpm verify:workflow` — PASS (incl. verify:turbo-inputs, verify:pack-drift). | verify bundle |
 | gate-check | `node packages/provegate/dist/cli.js check PRD-022` | repo | passed | `[check] ok — PRD-022 passes the readiness lint` | readiness lint |
 | gate-wiring | `node packages/provegate/dist/cli.js check --wiring` | repo | passed | `[check --wiring] ok — every gate is wired or excepted` | wire-or-delete |
-| independent-review | `_docs/reviews/review-022-control-artifact-revalidation.md`   | repo  | pending |          | verdict pass, Critical: 0 |
+| independent-review | `_docs/reviews/review-022-control-artifact-revalidation.md` | repo | passed | Codex, 1 adversarial round: DO NOT CLOSE with 4 blockers → all 4 remediated in code and tests; 3 further findings recorded as deferrals. Verdict pass, Critical 0, High 0 | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -391,6 +397,29 @@ by the implementer without anything noticing.
   `inputs` (`verify:turbo-inputs`); this is the opposite gap, a cross-package read no
   default key covers.
 
+- **Phase 6 finding — the seam is only as reliable as lease discovery, and lease discovery
+  reads the drifting config.** `locksDir(config, root)` resolves
+  `config.dirs.locksDir` against the main root, so a checkout that edits
+  `dirs.locksDir` makes `worktreeStamps()` miss its own lease, return `null`, and the seam
+  skip on the documented `stamps !== null` guard. Rated **plausible** by the reviewer.
+  Verified against source (`core/locks/lease.ts:19-20`); it is inherited rather than
+  introduced — the same edit hides the lease from `gate status`, `gate queue`, the merge
+  gate and the teardown, so the lease is lost for every purpose, not just this check. The
+  fix belongs to lease discovery (`core/locks/**`), outside this Conflict Surface. Raised,
+  not taken. Same shape, adversarial rather than plausible: a checkout that commits
+  `branches.base` pointing at its own feature branch compares itself against itself — and
+  also redirects the merge target, so it is a self-inflicted config change with much larger
+  consequences than this check.
+
+- **Phase 6 finding — the absent-then-restored manifest race.** When `loadManifest` sees the
+  file absent it builds the chain from `defaultManifest(config)` and records no parsed
+  bytes; if the file then appears before the seam runs, the primitive hashes it, finds it
+  matches base, and passes — while the already-built chain still holds the defaults. Rated
+  **adversarial**, and it needs a concurrent writer landing inside one process's own
+  execution. The obvious fix (refuse when the manifest exists but `manifestSourceFor` is
+  null) is a **second definition of drift inside `cli.ts`**, which PRD §12 lists as a DO
+  NOT, so it is recorded rather than taken. **Deferral: owner, due 2026-09-26.**
+
 - **8.3 finding — the Phase 7 capture edits files no PRD declares and no lease covers.**
   Every FR target in PRD §4 appears in the diff and every code/docs file in the diff appears
   in the Conflict Surface. The remainder of the diff is workflow artifacts, and they split
@@ -402,6 +431,22 @@ by the implementer without anything noticing.
   the merge precondition. No impact here (single lease, everything committed), and the fix
   — adding `_brain/` and `STATUS.md` to the coordination allowlist, or declaring them —
   touches `core/config`, outside this Conflict Surface. Raised, not taken.
+
+- **Phase 6 remediation — four review findings taken.** (1) The fail-closed branch emitted
+  its own sentence, and `git hash-object` can fail on a legitimate file through a failing
+  clean filter — a case `open.ts` reported as ordinary drift. It now refuses with the
+  CANONICAL text, so FR-3's byte promise holds unconditionally instead of holding for every
+  case the tests reached. (2) The byte comparison lived in a scratch directory and left no
+  evidence in the repository; there is now a test that claims, advances base, re-claims,
+  and asserts the whole refusal string including the `claim rolled back: ` prefix.
+  (3) The ordering fixture had every entry failing both comparators, where first-wins and
+  last-wins dedup produce identical output — it now gives the worktree the root's manifest
+  but not its config, so the three candidate rules produce three different orders.
+  (4) Guarantee 6 ("a worktree editing its own PRD is not refused") was established only by
+  code reading; the fixture now edits the PRD inside the worktree AFTER the claim and
+  asserts the run proceeds. Also: the deleted-manifest negative is re-anchored on the
+  metric row, measured to have a cause independent of the scenario, and the allowlist
+  assertion is labelled for what it is.
 
 - **Migration (6.1).** None. No data, cache, or artifact migration. What changes is that an
   existing worktree can now be refused where it previously ran.

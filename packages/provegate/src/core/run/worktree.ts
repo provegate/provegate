@@ -346,18 +346,25 @@ export function revalidateControlArtifacts(input: RevalidateInput): RevalidateRe
   // which refuses rather than passes.
   const baseRef =
     input.baseRef ?? resolveRef(mainRoot, `refs/heads/${displayBase}`) ?? `refs/heads/${displayBase}`;
-  const unusable = (rel: string, reason: string): RevalidateResult => ({
-    // Never an empty drifted list next to a refusal: a caller that reports the
-    // list instead of the text would otherwise print "nothing is wrong".
-    drifted: [rel],
-    refusal: `the checkout at ${relPath} has an unusable workflow artifact (${rel}): ${reason} — restore it from '${displayBase}' before running`,
+  const refuseWith = (drifted: string[]): RevalidateResult => ({
+    drifted,
+    refusal: `the checkout at ${relPath} carries workflow artifacts differing from '${displayBase}' (${drifted.join(', ')}) — merge or rebase ${displayBase} into ${branch} first`,
+  });
+  // A lease whose worktree path escapes the main checkout is a broken lease,
+  // not drift, and it gets its own sentence. Structurally unreachable from
+  // both call sites — `open.ts` only calls this once `containedPath` has
+  // already succeeded, and `stamps.worktree` is schema-validated against
+  // `worktree.dir` — so it never competes with the canonical text.
+  const brokenLease = (reason: string): RevalidateResult => ({
+    drifted: [relPath],
+    refusal: `the checkout at ${relPath} is not inside this workspace (${reason}) — the lease names a path the runner cannot validate`,
   });
 
   let checkoutDir: string;
   try {
     checkoutDir = containedPath(mainRoot, relPath);
   } catch (error) {
-    return unusable(relPath, firstLine(error));
+    return brokenLease(firstLine(error));
   }
 
   const snapshots: ArtifactSnapshot[] = [...(input.extra ?? [])];
@@ -376,7 +383,15 @@ export function revalidateControlArtifacts(input: RevalidateInput): RevalidateRe
     // Fail closed on the one case the comparators read as agreement: a file
     // present but unhashable, with nothing committed on base to disagree with,
     // makes both comparators see null === null and report no drift.
-    if (present && sha === null) return unusable(control, 'unreadable');
+    //
+    // It refuses with the CANONICAL text, not a message of its own. An earlier
+    // draft said "unusable workflow artifact" here, and an independent review
+    // found the divergence: `git hash-object` can fail on a legitimate file
+    // through a failing clean filter, which `open.ts` used to report as
+    // ordinary drift — so a second sentence broke FR-3's byte promise on a
+    // path the claim can reach. The remedy is the same either way: restore the
+    // file from base.
+    if (present && sha === null) return refuseWith([control]);
     snapshots.push({ rel: control, sha, ...(parsed !== null ? { content: parsed } : {}) });
   }
 
@@ -389,13 +404,7 @@ export function revalidateControlArtifacts(input: RevalidateInput): RevalidateRe
     ...snapshotsMissingFrom(checkoutDir, snapshots),
   ].filter((rel, i, all) => all.indexOf(rel) === i);
 
-  return {
-    drifted,
-    refusal:
-      drifted.length === 0
-        ? null
-        : `the checkout at ${relPath} carries workflow artifacts differing from '${displayBase}' (${drifted.join(', ')}) — merge or rebase ${displayBase} into ${branch} first`,
-  };
+  return drifted.length === 0 ? { drifted, refusal: null } : refuseWith(drifted);
 }
 
 /** The branch currently registered at `path` (realpath-compared), or null. */

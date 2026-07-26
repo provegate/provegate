@@ -1,11 +1,24 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
-import { revalidateControlArtifacts } from '../src/core/run/index.js';
+import {
+  claimPrd,
+  createPrd,
+  initWorkspace,
+  revalidateControlArtifacts,
+} from '../src/core/run/index.js';
 
 /**
  * PRD-022 — a worktree must still carry the control artifacts base carries.
@@ -108,14 +121,24 @@ describe('revalidateControlArtifacts — derivation (FR-1)', () => {
     expect(check(u).drifted).toEqual(['gates.manifest.json']);
   });
 
-  it('a present but unhashable control file refuses instead of reporting agreement', () => {
+  it('a present but unhashable control file refuses, in the canonical words', () => {
     // Both comparators read null === null as "equal", so this is the one case
-    // that could pass an unknowable file as clean. Fail closed.
+    // that could pass an unknowable file as clean. Fail closed — and say it in
+    // the SAME sentence as ordinary drift, because `git hash-object` can fail
+    // on a legitimate file (a failing clean filter) that `open.ts` used to
+    // report as drift, and a second sentence would change bytes FR-3 promises.
+    //
+    // The directory here is a defensive stand-in, not a modelled production
+    // state: the CLI's loaders reject an unreadable config before the primitive
+    // is reached. What IS production-reachable is the filter case, which this
+    // same branch covers and which no fixture can create portably.
     const u = unitRepo('unreadable', []);
     mkdirSync(join(u.root, 'workflow.config.json'));
     const result = check(u);
-    expect(result.refusal).toContain('unusable workflow artifact (workflow.config.json)');
     expect(result.drifted).toEqual(['workflow.config.json']);
+    expect(result.refusal).toBe(
+      `the checkout at ${u.relPath} carries workflow artifacts differing from 'main' (workflow.config.json) — merge or rebase main into ${u.branch} first`,
+    );
   });
 
   it('drifted order is extra, then config, then manifest — deduplicated by FIRST occurrence', () => {
@@ -124,20 +147,68 @@ describe('revalidateControlArtifacts — derivation (FR-1)', () => {
     // gates.manifest.json first; a Set built ref-side-then-checkout-side would
     // still pass a membership assertion. Both must fail here.
     const u = unitRepo('order', ['workflow.config.json', 'gates.manifest.json']);
+    // Both differ from base, so both enter the REF-side half in derivation
+    // order. Then the worktree is given the root's manifest but not its
+    // config, so only the config also enters the CHECKOUT-side half. Raw:
+    // [prd, config, manifest, prd, config]. First-occurrence → prd, config,
+    // manifest. Last-occurrence → manifest, prd, config. A sort → manifest
+    // before config. All three differ, which is the only construction that can
+    // tell the rules apart — an earlier version had every entry failing both
+    // comparators, where first-wins and last-wins produce identical output
+    // (found by independent review).
     writeFileSync(join(u.root, 'workflow.config.json'), '{ "owners": ["x"] }\n');
     writeFileSync(join(u.root, 'gates.manifest.json'), '{ "phases": {} }\n');
+    copyFileSync(
+      join(u.root, 'gates.manifest.json'),
+      join(u.root, u.relPath, 'gates.manifest.json'),
+    );
     const result = check(u, [{ rel: '_prds/wip/prd-001-x.md', sha: 'f'.repeat(40) }]);
     expect(result.drifted).toEqual([
       '_prds/wip/prd-001-x.md',
       'workflow.config.json',
       'gates.manifest.json',
     ]);
-    // Every entry mismatches on BOTH sides, so a dedup that kept last-wins
-    // would produce the same three names in the same order — the length is
-    // what proves first-occurrence dedup ran at all.
-    expect(result.drifted).toHaveLength(3);
     expect(result.refusal).toBe(
       `the checkout at ${u.relPath} carries workflow artifacts differing from 'main' (_prds/wip/prd-001-x.md, workflow.config.json, gates.manifest.json) — merge or rebase main into ${u.branch} first`,
+    );
+  });
+});
+
+describe('the claim path emits the canonical refusal, byte for byte (FR-3)', () => {
+  it('drift on reuse: prefix + core, asserted as a whole string', () => {
+    // The extraction was verified during implementation by capturing this text
+    // from a real run before the edit and comparing after. That comparison
+    // lived in a scratch directory and left nothing behind — an independent
+    // review pointed out that the repository therefore held no evidence for it.
+    // This test IS the evidence: the exact bytes, pinned where a future edit to
+    // the shared primitive has to walk past them.
+    const root = newRepo('claimbytes');
+    writeFileSync(join(root, 'seed.txt'), 'seed\n');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'seed']);
+    initWorkspace(cfg, root);
+    const { id, path } = createPrd(cfg, root, { slug: 'bytes' });
+    writeFileSync(
+      path,
+      readFileSync(path, 'utf8').replace(
+        /## Conflict Surface\n[\s\S]*?(?=\n## |$)/,
+        '## Conflict Surface\n\n- `src/bytes/**`\n\n',
+      ),
+    );
+    writeFileSync(join(root, 'gates.manifest.json'), '{ "phases": {} }\n');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'workflow artifacts']);
+
+    expect(claimPrd(cfg, root, id, { worktree: true }).ok).toBe(true);
+    writeFileSync(join(root, 'gates.manifest.json'), '{ "phases": {}, "hardCaps": [] }\n');
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'advance base']);
+
+    const stale = claimPrd(cfg, root, id, { worktree: true });
+    expect(stale.ok).toBe(false);
+    const slug = `${id.toLowerCase()}-bytes`;
+    expect(stale.issues[0]).toBe(
+      `claim rolled back: the checkout at .worktrees/${slug} carries workflow artifacts differing from 'main' (gates.manifest.json) — merge or rebase main into feat/${slug} first`,
     );
   });
 });
@@ -233,7 +304,11 @@ function fixture(tag: string, opts: { advanceBase?: boolean } = {}): Fixture {
 }
 
 describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
-  it('the fixture command prefix is actually allowlisted', () => {
+  it('the fixture command prefix is still allowlisted', () => {
+    // Not proof that the command runs — the recovery test's marker file is
+    // that. This exists so that removing `node ` from the allowlist fails here,
+    // naming the cause, instead of failing three fixtures with a safety refusal
+    // that reads like a drift bug.
     expect(cfg.commands.allowedPrefixes).toContain('node ');
   });
 
@@ -275,7 +350,12 @@ describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
     // and the marker is absent because nothing was configured to write it.
     expect(result.stderr).toContain('carries workflow artifacts differing');
     expect(result.stderr).toContain('gates.manifest.json');
-    expect(existsSync(fx.marker)).toBe(false);
+    // The metric row, NOT the marker file. Measured with the seam disabled and
+    // the manifest deleted: `_state/prd-metrics.jsonl` is written (the fallback
+    // manifest's own gates run) while `ran.txt` is not (the fallback has no
+    // marker command). Only the metric row has a cause independent of this
+    // scenario, so only it is evidence that nothing ran.
+    expect(existsSync(fx.metrics)).toBe(false);
   });
 
   it('precedence: a malformed lease is named before drift', () => {
@@ -327,6 +407,19 @@ describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
       );
     }
     expect(existsSync(fx.marker)).toBe(false);
+  });
+
+  it('a worktree that edits its own PRD is not refused', () => {
+    // The normal state of a worktree mid-phase, and the reason the seam passes
+    // no `extra`. Established by code reading until an independent review
+    // pointed out no fixture actually did it — the seeding edits the PRD BEFORE
+    // the claim, which proves nothing about the check.
+    const fx = fixture('ownprd', { advanceBase: false });
+    const prd = join(fx.wt, '_prds/wip/prd-001-drift-case.md');
+    writeFileSync(prd, `${readFileSync(prd, 'utf8')}\n<!-- edited mid-phase -->\n`);
+    const result = cli(fx.wt, ['run', 'PRD-001']);
+    expect(result.stderr).not.toContain('carries workflow artifacts');
+    expect(existsSync(fx.marker)).toBe(true);
   });
 
   it('a lease with no worktree stamps runs its chain normally', () => {
