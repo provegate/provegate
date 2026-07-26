@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-019-memory-adoption-cli.md](../../_prds/wip/prd-019-memory-adoption-cli.md)
 > **Readiness**: [readiness-019-memory-adoption-cli.md](../../_readiness/wip/readiness-019-memory-adoption-cli.md)
-> **Status**: Not Started
+> **Status**: Ship Verified
 > **Readiness Score**: 8.985/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-25
@@ -228,13 +228,13 @@ Records to open and confirm still accurate before the dependent task starts (tas
         matches the cached run; a divergence means 4.6 is incomplete.
 
 - [x] 9.0 Phase 6 — Independent adversarial audit
-  - [ ] 9.1 After Phase 5 is green, obtain an independent review (different model family,
+  - [x] 9.1 After Phase 5 is green, obtain an independent review (different model family,
         never the implementing agent) of the merge diff against the PRD and watch items
         W1–W7. Point it at the two attacks that matter: find a broken wiring mode doctor
         reports green, and find a repository state either command mutates.
-  - [ ] 9.2 Save the verdict to `_docs/reviews/review-019-memory-adoption-cli.md`; the
+  - [x] 9.2 Saved to `_docs/reviews/review-019-memory-adoption-cli.md`; the
         ledger row may read `passed` only with verdict `pass` and `Critical: 0`.
-  - [ ] 9.3 For each finding, append remediation sub-tasks here, fix under the same lease,
+  - [x] 9.3 All 6 blockers and 8 test defects remediated under the same lease,
         re-run the affected Phase 5 gates, and obtain a fresh verdict.
 
 - [x] 10.0 Phase 7 — Durable learning and close preparation
@@ -260,7 +260,12 @@ Records to open and confirm still accurate before the dependent task starts (tas
         non-mutation proven on both the passing and the failing path; the readiness
         assessment returned DO NOT CLOSE with six blockers, four `routine`, all six now
         fixed and mutation-checked; 898 tests and the full floor green.
-  - [ ] 10.4 After owner acceptance only, run `gate land PRD-019`; verify the post-merge
+  - [x] 10.4 Owner acceptance recorded, then `gate land PRD-019`: 26 files, 3206
+        insertions. Every Phase 7 memory gate, the operator gate, the archive and the
+        post-merge floor passed, and the teardown line read `worktree removed + branch
+        deleted + lease released` — this PRD's own scope deviation working on its own
+        close, which is the thing PRD-018 had to clean up by hand. Not pushed. Original
+        text: verify the post-merge
         gates and worktree cleanup. Never push.
 
 ---
