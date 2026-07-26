@@ -300,6 +300,37 @@ describe('FR-2 memory readiness gate', () => {
       ]);
     });
 
+    it('[R20-5] a fenced Functional Requirements section cannot shadow the real one', () => {
+      // `sectionMatching` takes the FIRST heading it finds. A fenced copy — code
+      // to every renderer — was selected over the real section below it, so the
+      // real section's watched targets were never seen and the watch gate had
+      // nothing to fire on. The reader consumes the executable view now, which
+      // is the same scan the contract grammar uses.
+      const root = fixture([
+        { slug: 'sample-record', content: record() },
+        {
+          slug: 'watcher-record',
+          content: record({ name: 'watcher-record', watch: 'packages/x/src/**' }),
+        },
+      ]);
+      const shadowed = VALID.replace(
+        '## 4. Functional Requirements',
+        [
+          '```markdown',
+          '## 4. Functional Requirements',
+          '',
+          '1. **FR-9 — decoy.**',
+          '   **Targets:** `packages/unrelated/decoy.ts`',
+          '```',
+          '',
+          '## 4. Functional Requirements',
+        ].join('\n'),
+      );
+      expect(lintPrd(on, manifest, shadowed, root).issues).toContainEqual(
+        expect.stringContaining("'watcher-record' watches packages/x/src/a.ts"),
+      );
+    });
+
     it('a `::SymbolName` target still matches a path-scoped watch', () => {
       const root = fixture([
         {

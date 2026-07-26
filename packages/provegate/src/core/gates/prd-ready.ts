@@ -1,6 +1,7 @@
 import type { WorkflowConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
-import { lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
+import { contractView,
+  lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
 import { declaredArtifactsStrict } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
@@ -179,10 +180,22 @@ export function lintPrd(
           '`## Durable Artifacts` is declared more than once — exactly one section is parseable',
         );
       }
+      // Targets for the memory watch gate are read from the EXECUTABLE view, not
+      // the raw document. `sectionMatching` takes the first heading it finds, so
+      // a `## 4. Functional Requirements` written inside a fence — code to every
+      // renderer — was selected over the real one below it, and the real
+      // section's watched targets were never seen. The same scan the contract
+      // grammar uses answers this, so the two cannot disagree about which
+      // headings are on the page.
+      //
+      // The HARD CAP engine above still reads the raw content deliberately: it
+      // runs in memory-disabled repositories too, and changing what it sees
+      // would fire caps a previous release did not.
+      const executable = contractView(content);
       issues.push(
         ...lintMemoryContract(
           content,
-          frs.flatMap((fr) => frTargetEntries(fr.body)),
+          frBlocks(executable).flatMap((fr) => frTargetEntries(fr.body)),
           loadMemoryStore(root, config.memory),
           durable.paths,
           config.memory,

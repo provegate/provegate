@@ -254,7 +254,18 @@ export function initWorkspace(
   const rootAbs = resolve(root);
   // Validate the WHOLE plan before writing anything: a config with one bad
   // path must not leave a partial scaffold behind.
-  const planned = [...planInit(config, { memory: practices }), ...extra].map((action) => ({
+  // ACTIVATION IS WRITTEN LAST. `workflow.config.json` with `memory.enabled` and
+  // the Phase 7 manifest are what turn the contract on, and `extra` is the store
+  // and validator they activate. Writing the switch first meant an interrupted
+  // install — or any later write failure — left a repository that demands a
+  // memory contract and has no `_brain` to satisfy it.
+  const activation = new Set(['workflow.config.json', 'gates.manifest.json']);
+  const scaffold = planInit(config, { memory: practices });
+  const planned = [
+    ...scaffold.filter((action) => !activation.has(action.path)),
+    ...extra,
+    ...scaffold.filter((action) => activation.has(action.path)),
+  ].map((action) => ({
     ...action,
     full: containedPath(rootAbs, action.path),
   }));

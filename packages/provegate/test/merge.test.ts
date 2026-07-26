@@ -349,6 +349,24 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
     expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('feat/x');
   });
 
+  it('[R20-7] the barrier is the ACTIVATION transition, not every later merge', () => {
+    // It refused any memory-enabled PRD while any unrelated lease was active,
+    // and told each one "this merge changes gate policy" — false for an ordinary
+    // PRD, and a refusal naming something that is not happening. Activation is
+    // the merge that turns memory ON: enabled here, not yet enabled on the base.
+    const root = fixtureRepo();
+    // The base already has it on, so this merge activates nothing.
+    git(root, ['checkout', '-q', 'main']);
+    writeFileSync(resolve(root, 'workflow.config.json'), JSON.stringify({ memory: { enabled: true } }));
+    git(root, ['add', '.']);
+    git(root, ['commit', '-q', '-m', 'chore: memory already on']);
+    git(root, ['checkout', '-q', 'feat/x']);
+    lease(root, 'prd-009-other-work');
+    const after = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(after.ok).toBe(true);
+    expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
+  });
+
   it('ignores this work item’s own lease', () => {
     const root = fixtureRepo();
     lease(root, 'prd-002-x', { prd: 'PRD-002' });

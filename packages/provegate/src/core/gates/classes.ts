@@ -21,11 +21,18 @@ function gitLines(root: string, args: string[]): string[] {
 }
 
 /**
- * Changed files vs the base branch: merge-base against `origin/<base>`, then
- * local `<base>`, then a plain working-diff fallback. Array-arg git only.
+ * Changed files vs the base branch: merge-base against the LOCAL `<base>`, then
+ * `origin/<base>`, then a plain working-diff fallback. Array-arg git only.
+ *
+ * The local base comes first because that is what the close is about: `gate
+ * land` merges into the LOCAL branch, and the origin range answers a different
+ * question. When the local base is behind its remote and the feature is based on
+ * the remote tip, the origin-based range OMITS the commits the merge is about to
+ * introduce — so a watched file changed by one of them raised no obligation, and
+ * a record promised by one of them read as this PRD's capture. Both fail open.
  */
 export function collectDiffFiles(root: string, base: string): string[] {
-  for (const ref of [`origin/${base}`, base]) {
+  for (const ref of [base, `origin/${base}`]) {
     try {
       const mergeBase = execFileSync('git', ['merge-base', 'HEAD', ref], {
         cwd: root,

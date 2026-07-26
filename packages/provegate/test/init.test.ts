@@ -255,3 +255,33 @@ describe('FR-6 memory-enabled scaffold (practices only)', () => {
     expect(config.memory).toBeUndefined();
   });
 });
+
+describe('phase 6 round 20 — activation is written last', () => {
+  it('[R20-8] the store and validator land before the config that demands them', () => {
+    // `planInit` ran before `extra`, so `workflow.config.json` with
+    // `memory.enabled` and the Phase 7 manifest were written BEFORE the `_brain`
+    // store and the validator they activate. An interrupted install left a
+    // repository that demands a memory contract and has nothing to satisfy it.
+    const order: string[] = [];
+    const root = tempRoot();
+    const config = { ...DEFAULT_CONFIG, memory: { ...DEFAULT_CONFIG.memory, enabled: true } };
+    const extra = [
+      { kind: 'file' as const, path: '_brain/INDEX.md', content: '# INDEX\n' },
+      { kind: 'file' as const, path: 'scripts/verify/verify-brain.mjs', content: '// noop\n' },
+    ];
+    const report = initWorkspace(config, root, { extra });
+    for (const path of report.created) order.push(path);
+    const configAt = order.indexOf('workflow.config.json');
+    const manifestAt = order.indexOf('gates.manifest.json');
+    const storeAt = order.indexOf('_brain/INDEX.md');
+    const validatorAt = order.indexOf('scripts/verify/verify-brain.mjs');
+    expect(storeAt).toBeGreaterThanOrEqual(0);
+    expect(validatorAt).toBeGreaterThanOrEqual(0);
+    expect(configAt).toBeGreaterThan(storeAt);
+    expect(configAt).toBeGreaterThan(validatorAt);
+    if (manifestAt >= 0) {
+      expect(manifestAt).toBeGreaterThan(storeAt);
+      expect(manifestAt).toBeGreaterThan(validatorAt);
+    }
+  });
+});

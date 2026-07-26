@@ -8,6 +8,7 @@ import {
   baselineProblem,
   changelogApproves,
   loadMemoryStore,
+  loadMemoryStoreFromBlobs,
   memoryCloseIssues,
   outputWeakenings,
 } from '../memory/artifacts.js';
@@ -19,7 +20,7 @@ import {
 import { resolveClassGates, mergeGateCommands } from '../gates/classes.js';
 import { validateTasksReviewRow } from '../gates/review.js';
 import type { StateRecord } from '../state/build.js';
-import { loadAcceptance, operatorGateOk, validAcceptance } from './acceptance.js';
+import { loadAcceptanceChecked, operatorGateOk, validAcceptance } from './acceptance.js';
 import { declaredArtifacts, declaredArtifactsStrict, durableArtifactsOk } from './durable.js';
 import { appendMetric } from './metrics.js';
 import type { GateResultRow } from './cards.js';
@@ -47,6 +48,16 @@ export interface ChainGate {
   /** A required command gate STOPs when empty (the §11 gate); an emptied
    * manifest phase is legal and simply contributes nothing. */
   required?: boolean;
+  /**
+   * Never skipped, whatever `--from-phase` says.
+   *
+   * `gate land` is `--from-phase=merge`, which skipped every phase gate. The
+   * operator gate was already exempt for exactly this reason, and the memory
+   * close gates need the same exemption for a stronger one: they are the checks
+   * that bind the merge to the capture. Skippable, they let an operator-gated
+   * PRD remove every baseline output, declare `none`, capture nothing, and land.
+   */
+  nonSkippable?: boolean;
 }
 
 export type FromPhase = 4 | 5 | 6 | 7 | 'merge' | null;
@@ -71,6 +82,7 @@ export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
   // The operator merge gate is NEVER skippable — `gate land` must not become
   // an acceptance bypass (codex P1 finding).
   if (gate.phase === 'merge gate') return false;
+  if (gate.nonSkippable === true) return false;
   if (fromPhase === 'merge') return true;
   return gatePhaseNumber(gate) < fromPhase;
 }
@@ -84,7 +96,7 @@ export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
  * status cannot be read, and the caller then falls back to the name list rather
  * than silently treating every output as uncaptured.
  */
-function capturedDiffFiles(root: string, base: string): string[] | null {
+function capturedDiffFiles(root: string, base: string): { captured: string[]; touched: string[] } | null {
   try {
     // The LOCAL base, and only the local base. `collectDiffFiles` prefers
     // `origin/<base>`, which is the wrong question here: `mergeToLocalBase`
@@ -106,18 +118,29 @@ function capturedDiffFiles(root: string, base: string): string[] | null {
     });
     const fields = out.split('\0').filter((field) => field.length > 0);
     const captured: string[] = [];
+    // Every path the diff TOUCHES, deletions included. A watch is a review
+    // trigger, and deleting a watched file is exactly the kind of change it
+    // exists to trigger on — so this list, not the capture list, is what the
+    // watch gate reads.
+    const touched: string[] = [];
     for (let i = 0; i < fields.length; i += 1) {
       const status = fields[i]!;
       if (/^[RC]/.test(status)) {
         // Rename or copy: source then DESTINATION. The destination is what this
         // diff wrote; the source is a deletion.
+        const source = fields[i + 1];
         const destination = fields[i + 2];
-        if (destination !== undefined) captured.push(destination);
+        if (destination !== undefined) {
+          captured.push(destination);
+          touched.push(destination);
+        }
+        if (source !== undefined) touched.push(source);
         i += 2;
         continue;
       }
       const path = fields[i + 1];
       i += 1;
+      if (path !== undefined) touched.push(path);
       // A, M, and T are candidates; the regular-file test and the indexed-record
       // check downstream decide whether the object is acceptable. T matters
       // because replacing a placeholder symlink with the real record is a
@@ -125,7 +148,7 @@ function capturedDiffFiles(root: string, base: string): string[] | null {
       // never a capture, and an unknown status must not read as one.
       if (/^[AMT]/.test(status) && path !== undefined) captured.push(path);
     }
-    return captured;
+    return { captured, touched };
   } catch {
     // Fail closed: the caller refuses rather than falling back to the weaker
     // name-only evidence that includes deletions.
@@ -136,6 +159,19 @@ function capturedDiffFiles(root: string, base: string): string[] | null {
 /** The PRD exactly as committed on the base ref, or null when it is not there.
  * Never the working copy: the whole point of the comparison is a baseline the
  * editing agent does not control. */
+/** A committed blob at `ref`, or null when the path is not there. */
+function blobAt(root: string, ref: string, path: string): string | null {
+  try {
+    return execFileSync('git', ['show', `${ref}:${path}`], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return null;
+  }
+}
+
 function baselinePrd(root: string, base: string, prdPath: string): string | null {
   try {
     // stderr is swallowed on purpose: "no such path in main" is an EXPECTED
@@ -165,7 +201,7 @@ function memoryWeakeningGate(options: {
   record: StateRecord;
   prdContent: string;
 }): FnGateResult {
-  const { config, root, record, prdContent } = options;
+  const { config, root, record } = options;
   const base = config.branches.base;
   const prdPath = record.artifacts.prd;
   if (!prdPath) {
@@ -174,6 +210,29 @@ function memoryWeakeningGate(options: {
       why: `${record.prd} has no PRD artifact in state — nothing to compare against \`${base}\``,
     };
   }
+  // The evidence must be COMMITTED, because the merge lands HEAD and
+  // `ensureCheckoutClean` resets tracked coordination paths — `_prds/` among
+  // them — on its way there. Reading the working copy let a committed weakening
+  // be waived by a Changelog approval that was never committed and was discarded
+  // seconds later: the gate passed on text the merge then threw away.
+  const committed = blobAt(root, 'HEAD', prdPath);
+  if (committed === null) {
+    return {
+      ok: false,
+      why:
+        `${record.prd}'s PRD is not committed on this branch, so the weakening check has no ` +
+        `evidence the merge will actually carry — commit \`${prdPath}\` and re-run`,
+    };
+  }
+  if (committed !== options.prdContent) {
+    return {
+      ok: false,
+      why:
+        `${record.prd}'s working PRD differs from the committed one, and the merge lands the ` +
+        `COMMITTED copy — commit \`${prdPath}\` so this gate judges what will land`,
+    };
+  }
+  const prdContent = committed;
   const baseline = baselinePrd(root, base, prdPath);
   if (baseline === null) {
     return {
@@ -218,7 +277,16 @@ function memoryWeakeningGate(options: {
         `Changelog naming ${unapproved.map((w) => `'${w.path}'`).join(', ')}: ${detail}`,
     };
   }
-  const acceptance = loadAcceptance(config, root, record.prd);
+  const loaded = loadAcceptanceChecked(config, root, record.prd);
+  if (loaded.problem !== null) {
+    return {
+      ok: false,
+      why:
+        `Memory Outputs weakened against \`${base}\`; the owner acceptance store cannot ` +
+        `authorize it — ${loaded.problem}: ${detail}`,
+    };
+  }
+  const acceptance = loaded.entry;
   if (!validAcceptance(config, acceptance)) {
     return {
       ok: false,
@@ -316,10 +384,11 @@ export function buildGateChain(options: {
   if (config.memory.enabled) {
     chain.push({
       phase: '7 Learning',
+      nonSkippable: true,
       label: 'memory: declared outputs in Durable Artifacts and the merge diff',
       fn: () => {
-        const captured = capturedDiffFiles(root, config.branches.base);
-        if (captured === null) {
+        const diff = capturedDiffFiles(root, config.branches.base);
+        if (diff === null) {
           // Without the status list there is no way to tell a capture from a
           // deletion, and guessing in the permissive direction is the defect
           // this gate exists to prevent.
@@ -334,9 +403,16 @@ export function buildGateChain(options: {
           content: prdContent,
           changedFiles,
           store: loadMemoryStore(root, config.memory),
+          // The store as the BASE holds it, so deleting a watching record and
+          // its pointer together cannot erase the trigger the deletion should
+          // have fired.
+          baseStore: loadMemoryStoreFromBlobs(
+            (path) => blobAt(root, config.branches.base, path),
+            config.memory,
+          ),
           durable: declaredArtifactsStrict(prdContent).paths,
           memory: config.memory,
-          capturedFiles: captured,
+          capturedFiles: diff.captured,
           // lstat, and a regular-file test: a directory named `x.md`, an added
           // submodule (gitlink), or a symlink pointing at an existing record all
           // satisfy `existsSync` without anything having been captured at the
@@ -354,6 +430,7 @@ export function buildGateChain(options: {
     });
     chain.push({
       phase: '7 Learning',
+      nonSkippable: true,
       label: `memory: no weakening against ${config.branches.base}`,
       fn: () => memoryWeakeningGate({ config, root, record, prdContent }),
     });
@@ -369,6 +446,7 @@ export function buildGateChain(options: {
   if (config.memory.enabled && config.memory.verifyCommand.trim().length > 0) {
     chain.push({
       phase: '7 Learning',
+      nonSkippable: true,
       label: 'memory: configured validator',
       cmds: [checked(config.memory.verifyCommand.trim())],
     });

@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node
 import { dirname, join, resolve } from 'node:path';
 import type { MemoryConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
-import { readRecord, type MemoryRecord } from './parse.js';
+import { readRecord, validateRecord, type MemoryRecord } from './parse.js';
 
 /**
  * The PRD memory contract (addendum A1 §5): two sections, fixed grammar, parsed
@@ -1259,6 +1259,15 @@ export interface MemoryCloseOptions {
    */
   capturedFiles?: readonly string[];
   exists?: (path: string) => boolean;
+  /**
+   * The record store as committed on the BASE ref.
+   *
+   * A branch that deletes a watching record along with its INDEX pointer leaves
+   * a store that is smaller and perfectly consistent, and the watch it removed
+   * cannot fire on the change that should have triggered it. The base copy is
+   * the version the branch does not control.
+   */
+  baseStore?: MemoryStore;
 }
 
 /** A declared output is satisfied by the file itself, never by a sibling. The
@@ -1357,14 +1366,37 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
     }
   }
 
+  // Watches are read from the BASE store as well as the working one.
+  //
+  // Deriving obligations only from the branch's own store let a branch erase its
+  // trigger: change a watched file, then delete the watching record AND its
+  // INDEX pointer — or drop its `watch:`, or mark it `superseded` — and what is
+  // left is a smaller, entirely self-consistent store with no obligation in it.
+  // Every downstream check agrees, because they are all asked about the store
+  // the branch just wrote. The base ref is the one version the branch does not
+  // control, which is the same reason the weakening comparison uses it.
+  const watchers = new Map<string, readonly string[]>();
   for (const indexed of activeRecords(store)) {
     const watch = indexed.record.watch;
-    if (watch === undefined || watch.length === 0) continue;
-    if (declaredInputs.has(indexed.slug)) continue;
+    if (watch !== undefined && watch.length > 0) watchers.set(indexed.slug, watch);
+  }
+  if (options.baseStore !== undefined) {
+    for (const indexed of activeRecords(options.baseStore)) {
+      const watch = indexed.record.watch;
+      if (watch === undefined || watch.length === 0) continue;
+      // The working store wins when both carry the record: a branch may legally
+      // WIDEN a watch, and reporting the base's narrower globs would name paths
+      // the current record does not watch.
+      if (!watchers.has(indexed.slug)) watchers.set(indexed.slug, watch);
+    }
+  }
+
+  for (const [slug, watch] of watchers) {
+    if (declaredInputs.has(slug)) continue;
     const matched = watchMatches(watch, options.changedFiles);
     if (matched.length === 0) continue;
     issues.push(
-      `${INPUTS_HEADING}: '${indexed.slug}' watches ${matched.join(', ')} — the merge diff ` +
+      `${INPUTS_HEADING}: '${slug}' watches ${matched.join(', ')} — the merge diff ` +
         `changes it, so it needs an input disposition`,
     );
   }
@@ -1548,6 +1580,43 @@ const POINTER = /^- \[[^\]]*\]\(((?:learnings|adr)\/[^)]+\.md)\)/gm;
  * Load the records the index points at. Read-only, and it never infers
  * enablement: the caller decides whether memory is on, per invariant 4.
  */
+/**
+ * The record store as some COMMITTED ref holds it, read through an injected blob
+ * reader rather than the filesystem.
+ *
+ * Only the watching records matter to the caller, so this deliberately skips the
+ * orphan scan and the store-completeness issues: a base-ref store's problems are
+ * not this branch's to answer for. What it must not lose is a record the branch
+ * deleted, because that record's watch is the trigger the deletion would
+ * otherwise erase.
+ */
+export function loadMemoryStoreFromBlobs(
+  readBlob: (repoRelativePath: string) => string | null,
+  memory: MemoryConfig,
+): MemoryStore {
+  const store: MemoryStore = { records: [], unreadable: [], issues: [] };
+  const indexRel = repoRelative(memory.index);
+  const rawIndex = readBlob(indexRel);
+  if (rawIndex === null) return store;
+  if (contractViewProblem(rawIndex) !== null) return store;
+  const dir = indexRel.split('/').slice(0, -1).join('/');
+  const indexText = contractView(rawIndex);
+  const seen = new Set<string>();
+  for (const match of indexText.matchAll(POINTER)) {
+    const pointer = match[1]!;
+    if (seen.has(pointer)) continue;
+    seen.add(pointer);
+    const content = readBlob(dir.length > 0 ? `${dir}/${pointer}` : pointer);
+    if (content === null) continue;
+    const slug = pointer.replace(/^(?:learnings|adr)\//, '').replace(/\.md$/, '');
+    const { record } = validateRecord(content, pointer, slug, {
+      isAdr: pointer.startsWith('adr/'),
+    });
+    if (record !== null) store.records.push({ slug, pointer, record });
+  }
+  return store;
+}
+
 export function loadMemoryStore(root: string, memory: MemoryConfig): MemoryStore {
   const store: MemoryStore = { records: [], unreadable: [], issues: [] };
   // Separators are normalized before any filesystem call: config validation

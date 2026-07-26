@@ -354,6 +354,38 @@ const STORE = (watch?: string): Record<string, string> => ({
     : { '_brain/learnings/watcher-record.md': RECORD_MD('watcher-record', watch) }),
 });
 
+/**
+ * Commit `prdContent` on a FEATURE branch, so the fixture models what the close
+ * actually judges.
+ *
+ * The weakening gate compares against the base ref and reads the COMMITTED
+ * working copy, because `ensureCheckoutClean` resets tracked `_prds/` on the way
+ * to the merge — an approval that is only in the working tree is discarded
+ * before it can land. Passing `prdContent` as a bare argument used to model a
+ * PRD nobody had committed, which is precisely the state the gate now refuses.
+ */
+function commitPrdOnBranch(root: string, prdContent: string): void {
+  const run = (args: string[]): void => {
+    execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+  };
+  const branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: root,
+    encoding: 'utf8',
+  }).trim();
+  if (branch === 'main') run(['checkout', '-b', 'feat/x']);
+  mkdirSync(join(root, '_prds/wip'), { recursive: true });
+  writeFileSync(join(root, '_prds/wip/p.md'), prdContent);
+  // ONLY the PRD. `add -A` would sweep up whatever else a fixture arranged on
+  // disk — a record replaced by a directory, a deliberately uncommitted store —
+  // and commit away the very state the test is about.
+  run(['add', '--', '_prds/wip/p.md']);
+  try {
+    run(['commit', '-m', 'working prd', '--no-verify']);
+  } catch {
+    // nothing to commit — the branch already carries this exact content
+  }
+}
+
 function chainFor(options: {
   root: string;
   prdContent: string;
@@ -361,6 +393,7 @@ function chainFor(options: {
   config?: typeof cfg;
   rec?: StateRecord;
 }) {
+  commitPrdOnBranch(options.root, options.prdContent);
   return buildGateChain({
     config: options.config ?? memOn,
     manifest: defaultManifest(options.config ?? memOn),
@@ -560,6 +593,7 @@ describe('FR-5 base-ref weakening', () => {
     const root = gitRepo({
       '_prds/wip/p.md': baseline,
       '_state/acceptances.json': JSON.stringify({
+        schemaVersion: 1,
         acceptances: [
           {
             prd: 'PRD-002',
@@ -613,6 +647,7 @@ describe('phase 6 round 1 regressions', () => {
 
   const acceptance = (items: string[]): string =>
     JSON.stringify({
+      schemaVersion: 1,
       acceptances: [
         {
           prd: 'PRD-002',
@@ -756,6 +791,7 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
       {
         '_prds/wip/p.md': baseline,
         '_state/acceptances.json': JSON.stringify({
+          schemaVersion: 1,
           acceptances: [
             {
               prd: 'PRD-002',
@@ -791,6 +827,7 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
         {
           '_prds/wip/p.md': baseline,
           '_state/acceptances.json': JSON.stringify({
+            schemaVersion: 1,
             acceptances: [
               {
                 prd: 'PRD-002',
@@ -922,6 +959,7 @@ describe('phase 6 round 2 regressions', () => {
       {
         '_prds/wip/p.md': baseline,
         '_state/acceptances.json': JSON.stringify({
+          schemaVersion: 1,
           acceptances: [
             {
               prd: 'PRD-002',
@@ -1113,6 +1151,7 @@ describe('phase 6 round 3 regressions', () => {
       {
         '_prds/wip/p.md': baseline,
         '_state/acceptances.json': JSON.stringify({
+          schemaVersion: 1,
           acceptances: [
             {
               prd: 'PRD-002',
@@ -1239,5 +1278,146 @@ describe('phase 6 round 7 regressions (integration)', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('declared more than once');
+  });
+});
+
+describe('phase 6 round 20 regressions — the enforcement machinery', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const SECOND_OUTPUT = '_brain/adr/ADR-0001-x.md';
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    `- adr: \`${SECOND_OUTPUT}\` — the decision.`,
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    `- \`${SECOND_OUTPUT}\` — the decision`,
+  ];
+
+  it('[R20-1] `gate land` cannot skip the memory close gates', () => {
+    // `--from-phase=merge` skipped every phase gate. The operator gate was
+    // already exempt; the memory gates need the same exemption for a stronger
+    // reason — they are what binds the merge to the capture, so skippable they
+    // let an operator-gated PRD remove every promise, capture nothing, and land.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED });
+    const memoryGates = chain.filter((g) => (g.label ?? '').startsWith('memory:'));
+    expect(memoryGates.length).toBeGreaterThanOrEqual(2);
+    for (const g of memoryGates) {
+      expect(shouldSkipGate(g, 'merge'), g.label).toBe(false);
+    }
+    // And the plan for `gate land` still prints them.
+    const plan = planChain(chain, 'merge').join('\n');
+    expect(plan).toContain('no weakening');
+    expect(plan).toContain('declared outputs');
+  });
+
+  it('[R20-2] deleting a watching record and its pointer cannot erase the trigger', () => {
+    // The obligation used to be derived only from the branch's own store, so a
+    // branch could change a watched file, delete the watcher AND its INDEX
+    // pointer, and leave a smaller store that is perfectly self-consistent.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      { '_prds/wip/p.md': content, ...STORE('packages/x/**') },
+      { ...CAPTURED_RECORD },
+    );
+    // The branch removes the watcher and the pointer that names it.
+    rmSync(join(root, '_brain/learnings/watcher-record.md'));
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# INDEX\n\n- [new thing](learnings/new-thing.md) — hook\n',
+    );
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/src/a.ts");
+  });
+
+  it('[R20-3] an uncommitted approval cannot waive a committed weakening', () => {
+    // `ensureCheckoutClean` resets tracked `_prds/` on the way to the merge, so
+    // an approval that lives only in the working tree is read by the gate and
+    // then discarded before it can land.
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() }, CAPTURED_RECORD);
+    const chain = buildGateChain({
+      config: memOn,
+      manifest: defaultManifest(memOn),
+      root,
+      record: record(),
+      // The working copy the gate is handed, never committed anywhere.
+      prdContent: prd(),
+      tasksContent: '| independent-review | x | passed |',
+      changedFiles: CHANGED,
+      prdClass: 'infra',
+    });
+    const found = chain.find((g) => (g.label ?? '').includes('no weakening'))!;
+    const result = found.fn!();
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('the merge lands the COMMITTED copy');
+  });
+
+  it('[R20-6] a schema-invalid acceptance store cannot authorize a weakening', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        `| 2026-07-25 | owner | removed \`${SECOND_OUTPUT}\` — the decision moved to PRD-022 |`,
+      ],
+    });
+    const entry = {
+      prd: 'PRD-002',
+      owner: 'owner',
+      items: [`memory output removal: \`${SECOND_OUTPUT}\``],
+      reason: 'the decision moved to PRD-022',
+      date: '2026-07-25',
+      method: 'interactive',
+    };
+    // No `schemaVersion` — the store the documented schema rejects.
+    const noVersion = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({ acceptances: [entry] }),
+      ...STORE(),
+    });
+    const missing = gate(
+      chainFor({ root: noVersion, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(missing.ok).toBe(false);
+    expect(missing.why).toContain('schemaVersion');
+
+    // An entry missing a required field, in an otherwise valid store.
+    const withoutMethod: Record<string, unknown> = { ...entry };
+    delete withoutMethod.method;
+    const noMethod = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({
+        schemaVersion: 1,
+        acceptances: [withoutMethod],
+      }),
+      ...STORE(),
+    });
+    const incomplete = gate(
+      chainFor({ root: noMethod, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(incomplete.ok).toBe(false);
+    expect(incomplete.why).toContain('`method`');
+
+    // An unexpected top-level key is refused too.
+    const extraKey = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({
+        schemaVersion: 1,
+        acceptances: [entry],
+        notes: 'anything',
+      }),
+      ...STORE(),
+    });
+    const unexpected = gate(
+      chainFor({ root: extraKey, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(unexpected.ok).toBe(false);
+    expect(unexpected.why).toContain('unexpected top-level field');
   });
 });

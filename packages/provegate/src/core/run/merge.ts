@@ -257,7 +257,13 @@ export function mergeToLocalBase(options: {
     return mergeSingleCheckout({ config, manifest, root, base, branch, source, id });
   };
 
-  if (!config.memory.enabled) return merge();
+  // The barrier belongs to the ACTIVATION transition, not to every merge that
+  // happens after it. It refused any memory-enabled PRD while any unrelated
+  // lease was active, and told each one "this merge changes gate policy" — false
+  // for an ordinary PRD, and a refusal that names something that is not
+  // happening. Activation is the merge that turns memory ON: enabled here and
+  // not yet enabled on the base.
+  if (!config.memory.enabled || !activatesMemory(root, base)) return merge();
 
   return withWorkspaceMutex(claimMutexPath(config, root), (): MergeOutcome => {
     const blockers = foreignActiveLeases(config, root, id);
@@ -265,13 +271,41 @@ export function mergeToLocalBase(options: {
       return {
         ok: false,
         why:
-          `a foreign lease is active — ${blockers.join(', ')}; this merge changes gate policy, ` +
-          `so it refuses rather than land under another agent's feet. Wait for the lease to ` +
-          `expire or have its holder release it, then re-run`,
+          `a foreign lease is active — ${blockers.join(', ')}; this merge ACTIVATES the memory ` +
+          `contract and so changes gate policy, so it refuses rather than land under another ` +
+          `agent's feet. Wait for the lease to expire or have its holder release it, then re-run`,
       };
     }
     return merge();
   });
+}
+
+/**
+ * Does this merge turn the memory contract ON?
+ *
+ * True when the working configuration enables it and the base's committed
+ * configuration does not — including the case where the base has no
+ * configuration file at all, which is the first-adoption shape. Unreadable base
+ * config counts as activation: the barrier is cheap and guessing "already on"
+ * would skip it exactly when the state is unclear.
+ */
+function activatesMemory(root: string, base: string): boolean {
+  let committed: string;
+  try {
+    committed = execFileSync('git', ['show', `${base}:workflow.config.json`], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return true;
+  }
+  try {
+    const parsed = JSON.parse(committed) as { memory?: { enabled?: unknown } };
+    return parsed.memory?.enabled !== true;
+  } catch {
+    return true;
+  }
 }
 
 function mergeInWorktree(options: {
