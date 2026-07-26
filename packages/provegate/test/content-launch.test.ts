@@ -303,6 +303,26 @@ describe('adoption docs promise what the commands actually do (FR-5)', () => {
     }
   });
 
+  it('the byte-stability claim is TRUE: ordering is not locale-dependent', () => {
+    // This one has to be asserted against the SOURCE, and the reason is the
+    // finding itself: a behavioural test cannot portably tell `localeCompare`
+    // from code-point ordering, because whether they differ depends on the
+    // locale the test happens to run under. That is exactly why `localeCompare`
+    // is wrong here — "the same bytes on any machine" cannot be built on a
+    // comparison whose result varies by machine.
+    // The CALL, not the word: the comparator's comment names `localeCompare` as
+    // the thing it is avoiding, which is exactly the sort of note that should
+    // survive. A denylist that cannot tell a call from a mention would delete it.
+    const find = read('src/core/memory/find.ts');
+    expect(find).not.toContain('.localeCompare(');
+    expect(find).not.toContain('new Intl.Collator');
+    // And the docs promise it, so the two move together.
+    for (const { name, text } of surfaces()) {
+      if (!text.includes('memory find')) continue;
+      expect(text.toLowerCase(), name).toMatch(/same bytes|byte-stable/);
+    }
+  });
+
   it('the local-only claim is TRUE: find reaches nothing outside the store', () => {
     const find = read('src/core/memory/find.ts');
     for (const escape of ['fetch(', 'http', 'child_process', 'execFileSync']) {

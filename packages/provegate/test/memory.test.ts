@@ -799,7 +799,16 @@ describe('FR-1 — read-only memory doctor', () => {
     );
     writeFileSync(join(root, '_brain/learnings/sample-record.md'), RECORD);
     writeFileSync(join(root, 'CLAUDE.md'), 'Read `_brain/INDEX.md` before any work.\n');
-    writeFileSync(join(root, 'package.json'), JSON.stringify({ scripts: { 'verify:brain': 'node x' } }));
+    // A COMPLETE install means the validator's implementation is on disk too.
+    // The first version wrote `node x` and never created `x`, so the fixture the
+    // suite called "complete" was itself a broken install — and every assertion
+    // built on it was measuring the wrong thing.
+    mkdirSync(join(root, 'scripts/verify'), { recursive: true });
+    writeFileSync(join(root, 'scripts/verify/verify-brain.mjs'), '// noop\n');
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ scripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' } }),
+    );
     const config = deepMerge(DEFAULT_CONFIG, {
       memory: {
         enabled: true,
@@ -819,7 +828,7 @@ describe('FR-1 — read-only memory doctor', () => {
       config: o.config,
       manifest: o.manifest,
       root: o.root,
-      packageScripts: { 'verify:brain': 'node x' },
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
     });
 
   const check = (r: ReturnType<typeof memoryDoctor>, id: string) =>
@@ -851,7 +860,71 @@ describe('FR-1 — read-only memory doctor', () => {
     expect(report.checks).toHaveLength(1);
   });
 
-  it('every mandatory check FAILS on absence rather than skipping', () => {
+  it('a validator whose script body names a missing file FAILS', () => {
+    // "the script key exists" and "the script runs" are different facts. The
+    // first version checked only the key, so `"verify:brain": "node x"` with no
+    // `x` reported a healthy install that failed the moment Phase 7 ran it.
+    const site = install();
+    rmSync(join(site.root, 'scripts/verify/verify-brain.mjs'));
+    const report = run(site);
+    expect(check(report, 'memory.verify.script.wired')[0]!.severity).toBe('fail');
+    expect(check(report, 'memory.verify.script.wired')[0]!.detail).toContain('verify-brain.mjs');
+    expect(report.code).toBe(1);
+  });
+
+  it('every mandatory check fails on absence — all seven of them', () => {
+    // The earlier version of this test named "every mandatory check" and
+    // exercised two. Each row below removes exactly one thing and asserts the
+    // check that owns it.
+    const cases: [string, (root: string, site: ReturnType<typeof install>) => unknown][] = [
+      ['memory.index.resolvable', (root) => rmSync(join(root, '_brain/INDEX.md'))],
+      ['memory.root.resolvable', (root) => rmSync(join(root, '_brain'), { recursive: true })],
+      [
+        'memory.records.valid',
+        (root) => writeFileSync(join(root, '_brain/learnings/sample-record.md'), 'broken\n'),
+      ],
+      [
+        'memory.entrypoint.pointer',
+        (root) => writeFileSync(join(root, 'CLAUDE.md'), 'no pointer here\n'),
+      ],
+      ['memory.verify.script.wired', (root) => rmSync(join(root, 'scripts/verify/verify-brain.mjs'))],
+    ];
+    for (const [id, breakIt] of cases) {
+      const site = install();
+      breakIt(site.root, site);
+      const report = run(site);
+      expect(check(report, id).some((c) => c.severity === 'fail'), id).toBe(true);
+      expect(report.code, id).toBe(1);
+    }
+    // And the two that live in the manifest rather than on disk.
+    const site = install();
+    const bare: GatesManifest = { ...site.manifest, phases: { ...site.manifest.phases, '7': [] } };
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: bare,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+    expect(check(report, 'memory.phase7.reachable')[0]!.severity).toBe('fail');
+  });
+
+  it('a backslash-spelled configured path resolves like a slash-spelled one', () => {
+    // The config validator and the store loader both accept it, so a doctor that
+    // passed the raw string to `resolve` failed a legitimate portable config.
+    const site = install();
+    const windows = deepMerge(site.config, {
+      memory: { index: '_brain\\INDEX.md', root: '_brain' },
+    } as PartialWorkflowConfig) as typeof DEFAULT_CONFIG;
+    const report = memoryDoctor({
+      config: windows,
+      manifest: site.manifest,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+    expect(check(report, 'memory.index.resolvable')[0]!.severity).toBe('pass');
+  });
+
+  it('a legacy check that a single removal still fails closed', () => {
     // `false-green-on-missing-file` from the other end: a doctor that skips what
     // it cannot find reports a broken install as healthy.
     const site = install();
@@ -923,7 +996,7 @@ describe('FR-1 — read-only memory doctor', () => {
       config: site.config,
       manifest: bare,
       root: site.root,
-      packageScripts: { 'verify:brain': 'node x' },
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
     });
     expect(check(report, 'memory.phase7.reachable')[0]!.severity).toBe('fail');
   });
@@ -934,7 +1007,7 @@ describe('FR-1 — read-only memory doctor', () => {
       config: site.config,
       manifest: site.manifest,
       root: site.root,
-      packageScripts: { 'verify:brain': 'node x' },
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
       ciTexts: [],
     });
     const ci = check(report, 'memory.ci.reachable')[0]!;
@@ -950,7 +1023,7 @@ describe('FR-1 — read-only memory doctor', () => {
       config: site.config,
       manifest: site.manifest,
       root: site.root,
-      packageScripts: { 'verify:brain': 'node x' },
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
       ciTexts: ['jobs:\n  gates:\n    steps:\n      - run: pnpm verify:brain\n'],
     });
     expect(check(report, 'memory.ci.reachable')[0]!.severity).toBe('pass');

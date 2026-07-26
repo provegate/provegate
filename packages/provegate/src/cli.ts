@@ -691,7 +691,10 @@ interface WorktreeStamps {
    * and an injected clock, and a rival's refreshed claim must never be torn
    * down (codex r28+r29 P1). */
   identity: string;
+  /** Basename, used for identity comparison across a refresh. */
   file: string;
+  /** Absolute path, used to unlink. */
+  leasePath: string;
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
@@ -766,6 +769,11 @@ function worktreeStamps(
       // same writer reproduces it, and ANY field change breaks equality.
       identity: JSON.stringify(live.data),
       file: live.name,
+      // The ABSOLUTE path, kept apart from `file`. `file` is a basename and is
+      // compared for identity; teardown needs something it can unlink, and
+      // passing the basename made `unlinkSync` resolve against the process cwd,
+      // fail with ENOENT, and report the lease released while it survived.
+      leasePath: live.path,
     },
     malformed,
   };
@@ -1074,7 +1082,7 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
         // `stamps.file` is the lease this close owns — identity-revalidated
         // immediately above, inside the same mutex hold. Teardown unlinks it, so
         // the work item stops being IN-FLIGHT the moment its checkout is gone.
-        const removal = removeWorktree(config, root, { ...stamps, lease: stamps.file });
+        const removal = removeWorktree(config, root, { ...stamps, lease: stamps.leasePath });
         cleanupDone = removal.removed;
         if (removal.removed) {
           outcome.results.push([

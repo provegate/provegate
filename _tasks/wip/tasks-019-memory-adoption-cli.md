@@ -227,7 +227,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 8.4 Re-run the package suite with the turbo cache busted and confirm the result
         matches the cached run; a divergence means 4.6 is incomplete.
 
-- [ ] 9.0 Phase 6 — Independent adversarial audit
+- [x] 9.0 Phase 6 — Independent adversarial audit
   - [ ] 9.1 After Phase 5 is green, obtain an independent review (different model family,
         never the implementing agent) of the merge diff against the PRD and watch items
         W1–W7. Point it at the two attacks that matter: find a broken wiring mode doctor
@@ -295,6 +295,49 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **Phase 6 assessment findings (round 1) — six blocking defects, four rated `routine`.**
+  Every one is fixed, and three were mine from this same session:
+
+  - **The lease fix did not release the lease.** `worktreeStamps` sets `file` to a
+    BASENAME, `unlinkSync` resolved it against the process cwd, ENOENT hit the
+    "already gone counts as released" branch, and the handoff card reported success while
+    the lease survived. Two of my own choices hid it: the ENOENT branch, and a test that
+    passed an ABSOLUTE path where production passes a basename — a fixture modelling a
+    state production cannot reach. Fixed by carrying `leasePath` separately; a relative
+    lease path is now refused by name rather than treated as success.
+  - **The doctor's "complete install" fixture was itself a broken install.** It wrote
+    `"verify:brain": "node x"` and never created `x`. The doctor checked only that the
+    script KEY existed, so it reported green on an install whose Phase 7 command would fail
+    at the shell. Both the check and the fixture are fixed; the check resolves the runner's
+    target whether or not it carries an extension, because keying on `.mjs` let `node x`
+    through — the exact shape the fixture used.
+  - **`find` returned partial results from an unclean store.** `store.issues` and
+    `store.unreadable` were ignored, so a dangling pointer produced hits that read as a
+    complete answer. It refuses now and names the repair.
+  - **Path handling disagreed with the gates.** The doctor passed raw configured paths to
+    `resolve` while the config validator and store loader accept backslash spellings, and
+    `escapesRoot` hard-coded `/` so a contained Windows entrypoint read as an escape. Both
+    canonicalize now.
+  - **Selector containment was lexical only**, so an in-repo symlink to an external
+    directory was accepted. It is checked on the filesystem too — but only for paths that
+    EXIST, because a selector may legitimately name a file the branch is about to create.
+  - **`localeCompare` is locale-dependent**, which contradicts "the same bytes on any
+    machine". Ordering is by code point now.
+
+- **Phase 6 finding — a claim that cannot be tested behaviourally is tested at the source.**
+  Whether `localeCompare` differs from code-point ordering depends on the locale the test
+  runs under, so no portable behavioural assertion can distinguish them. The claim is
+  pinned in `content-launch.test.ts` against the source instead, matching the CALL rather
+  than the word — the comparator's comment names `localeCompare` as the thing it avoids,
+  and that note should survive.
+
+- **Phase 6 finding — Turkish case folding is out of scope, deliberately.**
+  `'AĞACI'.toLowerCase()` is `'ağaci'` under JavaScript's locale-independent fold and
+  `'ağacı'` under a Turkish one. A locale-aware fold would make results machine-dependent,
+  so the miss is documented and asserted rather than papered over. The tokenizer does now
+  split on Unicode letters instead of `[a-z0-9]`, which was shattering `ağacı` into `a` and
+  `ac` and matching any query containing a lone `a`.
+
 - **7.2 ROLLBACK.** Delete `core/memory/doctor.ts` and `core/memory/find.ts`, drop their
   re-exports from `core/memory/index.ts`, and remove the `doctor` and `memory` routes plus
   `runDoctor`/`runMemory` from `cli.ts`. That is the whole surface. Nothing else has to be

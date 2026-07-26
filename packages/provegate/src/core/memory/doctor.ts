@@ -114,7 +114,19 @@ function realOrNull(path: string): string | null {
 }
 
 function escapesRoot(rootReal: string, targetReal: string): boolean {
-  return targetReal !== rootReal && !targetReal.startsWith(`${rootReal}/`);
+  // Compared on ONE separator. Hard-coding `/` reported a perfectly contained
+  // Windows entrypoint as outside the repository, because a native realpath
+  // comes back with backslashes.
+  const root = canonicalRel(rootReal);
+  const target = canonicalRel(targetReal);
+  return target !== root && !target.startsWith(`${root}/`);
+}
+
+/** One spelling for one path. The config validator and the store loader both
+ * accept a backslash-spelled configured path, so a doctor that passed the raw
+ * string to `resolve` failed a legitimate `_brain\\INDEX.md` on POSIX. */
+function canonicalRel(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 }
 
 export interface DoctorOptions {
@@ -174,7 +186,7 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
     add('memory.config.contained', 'pass', 'every configured memory path is repo-relative');
   }
 
-  const rootAbs = resolve(root, memory.root);
+  const rootAbs = resolve(root, canonicalRel(memory.root));
   if (isDir(rootAbs)) {
     add('memory.root.resolvable', 'pass', `record store at \`${memory.root}\``);
   } else {
@@ -188,7 +200,7 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
     );
   }
 
-  const indexAbs = resolve(root, memory.index);
+  const indexAbs = resolve(root, canonicalRel(memory.index));
   const indexPresent = isFile(indexAbs);
   if (indexPresent) {
     add('memory.index.resolvable', 'pass', `index at \`${memory.index}\``);
@@ -232,7 +244,7 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
   let satisfied = 0;
   const entrypointDetails: string[] = [];
   for (const entry of memory.entrypoints) {
-    const abs = resolve(root, entry);
+    const abs = resolve(root, canonicalRel(entry));
     const real = realOrNull(abs);
     if (real === null) {
       entrypointDetails.push(`\`${entry}\` does not exist`);
@@ -305,7 +317,7 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
         : 'no validator script path to resolve — see `memory.phase7.reachable`',
     );
   } else {
-    const missing = scriptPaths.filter((p) => !isFile(resolve(root, p)));
+    const missing = scriptPaths.filter((p) => !isFile(resolve(root, canonicalRel(p))));
     if (missing.length === 0) {
       add('memory.verify.script.present', 'pass', `validator script(s): ${scriptPaths.join(', ')}`);
     } else {
@@ -340,7 +352,41 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
   } else {
     const unwired = namedScripts.filter((name) => scripts[name] === undefined);
     if (unwired.length === 0) {
-      add('memory.verify.script.wired', 'pass', `package script(s) ${namedScripts.join(', ')} exist`);
+      // The script EXISTS. Whether its body resolves is a separate fact and the
+      // doctor was not checking it: `"verify:brain": "node x"` with no `x` on
+      // disk reported a healthy install and then failed the moment Phase 7 ran
+      // it. A doctor that disagrees with the gate is worse than no doctor.
+      const brokenBodies: string[] = [];
+      for (const name of namedScripts) {
+        const body = scripts[name]!;
+        // The first argument after a RUNNER is the file it executes, extension
+        // or not. Keying on `.mjs`/`.js` alone let `node x` through, which is
+        // precisely the shape the shipped fixture used — so the check passed the
+        // one install it most needed to fail.
+        const tokens = body.trim().split(/\s+/);
+        const runner = tokens.findIndex((t) => ['node', 'tsx', 'bun', 'ts-node'].includes(t));
+        const target =
+          runner === -1
+            ? tokens.find((t) => /\.(mjs|cjs|js|ts)$/.test(t))
+            : tokens.slice(runner + 1).find((t) => !t.startsWith('-'));
+        if (target !== undefined && !isFile(resolve(root, canonicalRel(target)))) {
+          brokenBodies.push(`${name} → ${target}`);
+        }
+      }
+      if (brokenBodies.length === 0) {
+        add(
+          'memory.verify.script.wired',
+          'pass',
+          `package script(s) ${namedScripts.join(', ')} exist and their files resolve`,
+        );
+      } else {
+        add(
+          'memory.verify.script.wired',
+          'fail',
+          `package script(s) name a file that is not there: ${brokenBodies.join(', ')}`,
+          'the script is defined but its implementation is missing — Phase 7 would fail at the shell',
+        );
+      }
     } else {
       add(
         'memory.verify.script.wired',

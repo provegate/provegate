@@ -7,7 +7,7 @@ import {
   realpathSync,
   unlinkSync,
 } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { isAbsolute, join, resolve, sep } from 'node:path';
 import { normalizedWorktreeDir, type WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 import { containedPath } from './init.js';
@@ -689,7 +689,20 @@ export function removeWorktree(
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           // Already gone — someone released it between the merge and here.
-          leaseReleased = true;
+          //
+          // This branch HID a defect once and the lesson is worth keeping: the
+          // caller passed a basename, `unlinkSync` resolved it against the
+          // process cwd, and ENOENT read as success while the real lease
+          // survived. An absolute path is now required, so a relative one is a
+          // caller bug rather than a silent no-op.
+          if (!isAbsolute(lease)) {
+            warnings.push(
+              `lease path '${lease}' is not absolute — refusing to guess what it resolves ` +
+                `against; release it with \`gate release\``,
+            );
+          } else {
+            leaseReleased = true;
+          }
         } else {
           warnings.push(`lease ${lease} not released — release it with \`gate release\``);
         }

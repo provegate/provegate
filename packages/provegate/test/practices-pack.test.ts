@@ -451,8 +451,18 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
     write('_brain/INDEX.md', '# INDEX\n\n- [sample](learnings/sample-record.md) — hook\n');
     write('_brain/learnings/sample-record.md', RECORD);
     write('CLAUDE.md', 'Read `_brain/INDEX.md` before any work.\n');
-    write('package.json', JSON.stringify({ name: 'fixture', scripts: { 'verify:brain': 'node x' } }));
     write('scripts/verify/verify-brain.mjs', '// noop\n');
+    // The script BODY names the file that was just written. The first version
+    // said `node x` and never created `x`, so the fixture this whole matrix
+    // calls its known-good baseline was itself a broken install — every row that
+    // measured "one thing broken" was measuring two.
+    write(
+      'package.json',
+      JSON.stringify({
+        name: 'fixture',
+        scripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+      }),
+    );
     write(
       'workflow.config.json',
       JSON.stringify({ memory: { enabled: true, entrypoints: ['CLAUDE.md'] } }, null, 2),

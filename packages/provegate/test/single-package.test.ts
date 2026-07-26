@@ -17,6 +17,7 @@ import { auditWiring } from '../src/core/gates/wiring.js';
 import { buildGateChain, runChain } from '../src/core/run/chain.js';
 import { initWorkspace } from '../src/core/run/init.js';
 import { memoryFind } from '../src/core/memory/index.js';
+import { symlinkSync } from 'node:fs';
 import { mergeToLocalBase, mergeMessage } from '../src/core/run/merge.js';
 import type { StateRecord } from '../src/core/state/build.js';
 
@@ -389,6 +390,95 @@ describe('FR-4 — find bounds, portability, and safety', () => {
       paths: ['packages/x/a.ts'],
     });
     expect(result.hits.map((h) => h.slug)).toEqual(['live']);
+  });
+
+  it('an unclean store REFUSES rather than returning what happened to parse', () => {
+    // A partial result reads as a complete one: the caller sees hits and never
+    // learns that a dangling pointer or an unreadable record was skipped.
+    const { root, config } = storeOf([['good', rec('good', { description: 'about caching' })]]);
+    writeFileSync(join(root, '_brain/learnings/broken.md'), 'no frontmatter at all\n');
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# INDEX\n\n- [good](learnings/good.md) — h\n- [broken](learnings/broken.md) — h\n',
+    );
+    const result = memoryFind(config, root, { query: 'caching' });
+    expect(result.ok).toBe(false);
+    expect(result.hits).toEqual([]);
+    expect(result.problem).toContain('partial');
+  });
+
+  it('a selector that symlinks OUT of the repository refuses', () => {
+    // Lexically clean and still an escape: containment has to be checked on the
+    // filesystem, not only on the string.
+    const { root, config } = storeOf([['w', rec('w', { watch: 'linked/**' })]]);
+    const outside = mkdtempSync(join(tmpdir(), 'provegate-outside-'));
+    findRoots.push(outside);
+    mkdirSync(join(outside, 'secret'), { recursive: true });
+    writeFileSync(join(outside, 'secret/a.ts'), 'x\n');
+    symlinkSync(join(outside, 'secret'), join(root, 'linked'));
+    const result = memoryFind(config, root, { paths: ['linked/a.ts'] });
+    expect(result.ok).toBe(false);
+    expect(result.problem).toContain('outside the repository');
+  });
+
+  it('a UNC or rooted-backslash selector refuses', () => {
+    const { root, config } = storeOf([['w', rec('w', { watch: 'packages/**' })]]);
+    for (const bad of ['\\\\server\\share\\a.ts', '\\rooted\\a.ts']) {
+      const result = memoryFind(config, root, { paths: [bad] });
+      expect(result.ok, bad).toBe(false);
+      expect(result.problem, bad).toContain('repo-relative');
+    }
+  });
+
+  it('a selector naming a file that does not exist yet is ACCEPTED', () => {
+    // The containment check resolves only existing paths on purpose: a branch
+    // may legitimately ask about a file it is about to create, and refusing that
+    // would refuse correct work.
+    const { root, config } = storeOf([['w', rec('w', { watch: 'packages/x/**' })]]);
+    const result = memoryFind(config, root, { paths: ['packages/x/not-yet.ts'] });
+    expect(result.ok).toBe(true);
+    expect(result.hits.map((h) => h.slug)).toEqual(['w']);
+  });
+
+  it('ordering is by CODE POINT, not by locale collation', () => {
+    // `localeCompare` is locale-dependent: under some collations `aa` and `a-a`
+    // compare equal and the input order survives, which contradicts "same bytes
+    // on any machine".
+    const { root, config } = storeOf([
+      ['aa', rec('aa', { description: 'about caching' })],
+      ['a-a', rec('a-a', { description: 'about caching' })],
+    ]);
+    // `-` (0x2D) sorts before `a` (0x61) by code point, whatever the locale.
+    expect(memoryFind(config, root, { query: 'caching' }).hits.map((h) => h.slug)).toEqual([
+      'a-a',
+      'aa',
+    ]);
+  });
+
+  it('a non-ASCII QUERY is matched, not just a non-ASCII record', () => {
+    // The earlier version claimed Unicode coverage and searched the record by
+    // its ASCII slug, which proved nothing about the query path.
+    const { root, config } = storeOf([
+      ['turkish', rec('turkish', { description: 'çalışma ağacı ve görev' })],
+      ['other', rec('other', { description: 'unrelated' })],
+    ]);
+    expect(memoryFind(config, root, { query: 'ağacı' }).hits.map((h) => h.slug)).toEqual([
+      'turkish',
+    ]);
+    // And it matches the WHOLE word rather than an ASCII fragment of it: the
+    // earlier tokenizer split `ağacı` into `a` and `ac`, so any query carrying a
+    // lone `a` matched and the real word never did.
+    expect(memoryFind(config, root, { query: 'a' }).hits).toEqual([]);
+    // ASCII case folding, deliberately. `'AĞACI'.toLowerCase()` is `'ağaci'` in
+    // JavaScript's locale-independent fold and `'ağacı'` under a Turkish one —
+    // the dotted/dotless i. A locale-aware fold would make results depend on the
+    // machine's locale, which is exactly the property this command promises not
+    // to have. So the miss is real, documented, and preferred over a
+    // machine-dependent hit.
+    expect(memoryFind(config, root, { query: 'AĞACI' }).hits).toEqual([]);
+    expect(memoryFind(config, root, { query: 'GÖREV' }).hits.map((h) => h.slug)).toEqual([
+      'turkish',
+    ]);
   });
 
   it('two identical runs produce byte-identical JSON, and write nothing', () => {

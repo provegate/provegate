@@ -1453,6 +1453,25 @@ describe('worktree teardown releases its lease (PRD-019 scope deviation)', () =>
     expect(existsSync(dir)).toBe(true);
   });
 
+  it('refuses a RELATIVE lease path instead of reporting a silent success', async () => {
+    // The production caller once passed a basename. `unlinkSync` resolved it
+    // against the process cwd, ENOENT read as "already released", and the real
+    // lease survived while the handoff card said otherwise. A relative path is a
+    // caller bug now, and it says so.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const file = lease(root, 'PRD-001');
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: 'prd-001-round-trip.json',
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(false);
+    expect(removal.warnings.join('; ')).toContain('not absolute');
+    expect(existsSync(file)).toBe(true);
+  });
+
   it('treats an already-gone lease as released, not as a failure', async () => {
     // Someone released it between the merge and the teardown. Nothing is wrong
     // and the card should not carry a warning about it.

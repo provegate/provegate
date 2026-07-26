@@ -1,3 +1,6 @@
+import { realpathSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
+
 import type { MemoryConfig, WorkflowConfig } from '../config/index.js';
 import { activeRecords, canonicalPath, loadMemoryStore, watchMatches } from './artifacts.js';
 import type { LearningType, Scope } from './parse.js';
@@ -71,9 +74,13 @@ export const FIND_MAX_LIMIT = 1000;
 /** Words worth matching on. Splitting on non-word characters keeps `gate-open`
  * and `gate open` searchable the same way. */
 function tokenize(text: string): string[] {
+  // UNICODE letters and digits, not `[a-z0-9]`. The ASCII rule shattered
+  // `ağacı` into `a` and `ac`, so a Turkish description matched any query
+  // containing a lone `a` and missed the word the author actually wrote. A
+  // record store is written in whatever language its authors use.
   return text
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
+    .split(/[^\p{L}\p{N}]+/u)
     .filter((t) => t.length > 0);
 }
 
@@ -127,17 +134,65 @@ export function memoryFind(
   // watches, so accepting it would return an empty list for a question that was
   // actually malformed.
   for (const path of paths) {
-    if (path.startsWith('/') || /^[A-Za-z]:/.test(path) || path.split(/[/\\]/).includes('..')) {
+    // Lexical first: absolute, drive-rooted, UNC, and `..` forms are all
+    // non-repo-relative and none of them can match a watch glob.
+    if (
+      /^[/\\]/.test(path) ||
+      /^[A-Za-z]:/.test(path) ||
+      path.split(/[/\\]/).includes('..')
+    ) {
       return refuse(
         `--paths entry '${path}' is not a repo-relative path`,
         'watch globs are repo-relative, so a selector must be too',
         limit,
       );
     }
+    // Then the FILESYSTEM, because a lexically clean selector can still name an
+    // in-repository symlink whose target is outside it. Only an existing path is
+    // resolved — a selector may legitimately name a file the branch is about to
+    // create, and refusing that would be refusing correct work.
+    const abs = resolve(root, canonicalPath(path));
+    let real: string | null;
+    try {
+      real = realpathSync(abs);
+    } catch {
+      real = null;
+    }
+    if (real !== null) {
+      const rootReal = (() => {
+        try {
+          return realpathSync(root);
+        } catch {
+          return resolve(root);
+        }
+      })();
+      if (real !== rootReal && !real.startsWith(`${rootReal}${sep}`)) {
+        return refuse(
+          `--paths entry '${path}' resolves outside the repository`,
+          'a selector may be a symlink, but its target must stay in the repo',
+          limit,
+        );
+      }
+    }
   }
 
   const memory: MemoryConfig = config.memory;
   const store = loadMemoryStore(root, memory);
+  // A store that does not load cleanly cannot answer a question. Returning the
+  // records that DID parse is a partial result, and a partial result reads as a
+  // complete one: the caller sees hits and never learns that a dangling pointer
+  // or an unreadable record was skipped. The refusal names the repair.
+  if (store.issues.length > 0 || store.unreadable.length > 0) {
+    const problems = [
+      ...store.issues,
+      ...store.unreadable.map((slug) => `record '${slug}' does not validate`),
+    ];
+    return refuse(
+      `the record store does not load cleanly, so recall would be partial — ${problems.join('; ')}`,
+      'run `gate doctor --memory` for the full diagnosis, repair the store, then search again',
+      limit,
+    );
+  }
   // ACTIVE and INDEXED only, decided before ranking. Recall must never surface a
   // record the validator would reject: an agent acting on a superseded or
   // unreadable record is worse off than one that found nothing.
@@ -198,7 +253,11 @@ export function memoryFind(
       const diff = (a.rank[i] ?? 0) - (b.rank[i] ?? 0);
       if (diff !== 0) return diff;
     }
-    return a.hit.slug.localeCompare(b.hit.slug);
+    // CODE-POINT order, not `localeCompare`. Collation is locale-dependent —
+    // under some locales `aa` and `a-a` compare equal and the input order
+    // survives — which contradicts the "same bytes on any machine" promise this
+    // command is built on.
+    return a.hit.slug < b.hit.slug ? -1 : a.hit.slug > b.hit.slug ? 1 : 0;
   });
 
   return {
