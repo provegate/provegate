@@ -1646,11 +1646,28 @@ describe('phase 6 round 18 regressions', () => {
     expect(parseMemoryDeclarations(crlf).outputs.none).toBe(true);
   });
 
-  it('[R18-4] a U+2028 separator is refused, because only JavaScript ends a line there', () => {
+  it('[R18-4] a U+2028 does not end a line, so the heading after one is not a heading', () => {
+    // Round 18 refused any document containing one, because `/m` anchored a
+    // heading where CommonMark shows none. Round 19 showed the refusal was too
+    // wide — a separator inside a fenced example refused a good contract — so
+    // the section slicer walks scanned LINES instead and the regex is gone.
     const doc = 'intro' + LINE_SEPARATOR + '## Memory Outputs\n- none — forged.\n';
     const decl = parseMemoryDeclarations(doc);
-    expect(decl.issues).toContainEqual(expect.stringContaining('U+2028 or U+2029'));
     expect(decl.outputs.present).toBe(false);
+    expect(decl.outputs.none).toBe(false);
+    // And one inside displayed code refuses nothing at all.
+    const fenced = [
+      '```',
+      'ordinary' + LINE_SEPARATOR + 'text',
+      '```',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — reasoned.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(fenced).issues).toEqual([]);
+    expect(parseMemoryDeclarations(fenced).outputs.none).toBe(true);
   });
 
   it('[R18-5] raw inline HTML anywhere in a section is refused, not only in a rationale', () => {
@@ -1671,12 +1688,16 @@ describe('phase 6 round 18 regressions', () => {
     }
   });
 
-  it('[R18-7] an unrecognized character reference is refused by name, not read either way', () => {
-    // Counting an unknown name visible let `&Tab;` stand in for a rationale;
-    // counting it invisible refused `&AElig;`, which renders. There is no third
-    // answer without the entity table, so the reader declines to pick one.
-    const doc = ['## Memory Outputs', '', '- none — &AElig;', ''].join('\n');
-    expect(parseMemoryDeclarations(doc).issues).toContainEqual(expect.stringContaining('&AElig;'));
+  it('[R18-7] only the KNOWN-invisible names are invisible; everything else is ink', () => {
+    // Three rounds moved this rule. Counting an unknown name invisible let
+    // `&Tab;` stand in for a rationale AND refused `&AElig;`; refusing unknown
+    // names by name then invented a character reference out of `&bogus;`, which
+    // a renderer displays literally. Enumerating the small invisible set and
+    // treating everything else as ink is honest in both directions.
+    for (const rationale of ['&AElig;', '&bogus;', '\\&AElig;']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, rationale).toEqual([]);
+    }
     // A known-invisible name keeps its round 17 behavior.
     const tab = ['## Memory Outputs', '', '- none — &Tab;', ''].join('\n');
     expect(parseMemoryDeclarations(tab).issues).toContainEqual(
@@ -1720,5 +1741,144 @@ describe('phase 6 round 18 regressions', () => {
     expect(parseMemoryDeclarations(doc).issues).toContainEqual(
       expect.stringContaining('an indented code block'),
     );
+  });
+});
+
+describe('phase 6 round 19 regressions — one scan, one authority', () => {
+  const SEPARATOR = '\u2028';
+
+  it('[R19-1] a commented-out heading cannot cut the section short', () => {
+    // The scanner masked the comment and the container check re-sliced the RAW
+    // document, so the raw section ended at `## Other` and the inline-HTML
+    // defense never saw the rest of it. Both now read the same scanned lines.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<!--',
+      '## Other',
+      '-->',
+      'note <div hidden>',
+      '- none — forged.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toContainEqual(expect.stringContaining('raw inline HTML'));
+    expect(decl.outputs.none).toBe(false);
+  });
+
+  it('[R19-2] the code-span lookahead stops at an HTML comment too', () => {
+    // Comments are block type 2 and live in the scanner's own state rather than
+    // in `htmlBlockEnd`, so the round 18 fix missed them — the same exploit with
+    // `<!--` substituted for `<div>`.
+    const doc = [
+      'Prose `open',
+      '<!-- `',
+      '## Memory Outputs',
+      '- none — forged.',
+      '-->',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.present).toBe(false);
+    expect(decl.outputs.none).toBe(false);
+  });
+
+  it('[R19-3] indented code closes no paragraph, so a type-7 tag under it opens a block', () => {
+    const doc = ['    code', '<x-note>', '## Memory Outputs', '- none — forged.', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.present).toBe(false);
+    expect(decl.outputs.none).toBe(false);
+  });
+
+  it('[R19-4] an unterminated inline comment is literal text, and a heading interrupts it', () => {
+    // `Prose <!-- open` has no closer before the paragraph ends, so a renderer
+    // shows the opener and the heading below it. Comment state used to run
+    // across the heading and lose a declaration the page displays.
+    const doc = ['Prose <!-- open', '## Memory Outputs', '- none — shown.', '-->', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(true);
+    expect(decl.issues).toEqual([]);
+    // A comment that OPENS a line is an HTML block and still runs to its closer.
+    const block = ['<!-- open', '## Memory Outputs', '- none — hidden.', '-->', ''].join('\n');
+    expect(parseMemoryDeclarations(block).outputs.present).toBe(false);
+  });
+
+  it('[R19-5] a comment opener inside indented code is literal text', () => {
+    const doc = ['    <!--', '## Memory Outputs', '- none — shown.', '-->', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(true);
+    expect(decl.issues).toEqual([]);
+  });
+
+  it('[R19-6] a block marker written inside a comment is not a block', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<!--',
+      '> not a quote',
+      '-->',
+      '- none — shown.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+    expect(parseMemoryDeclarations(doc).outputs.none).toBe(true);
+  });
+
+  it('[R19-7] `<!-->` and `<!--->` are complete comments', () => {
+    for (const short of ['<!-->', '<!--->']) {
+      const doc = [short, '## Memory Outputs', '', '- none — shown.', ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, short).toEqual([]);
+      expect(parseMemoryDeclarations(doc).outputs.none, short).toBe(true);
+    }
+  });
+
+  it('[R19-8] a backslash escapes the character after it', () => {
+    const doc = ['## Memory Outputs', '', '- none — write \\<span> literally.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+    // The escape does not smuggle a real tag past the refusal.
+    const real = ['## Memory Outputs', '', '- none — <span hidden>x</span>', ''].join('\n');
+    expect(parseMemoryDeclarations(real).issues).toContainEqual(
+      expect.stringContaining('raw inline HTML'),
+    );
+  });
+
+  it('[R19-10] a setext heading written inside a fence is code, not a heading', () => {
+    const doc = ['```', 'Memory Outputs', '--------------', '```', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+    // The real setext form is still named.
+    const setext = ['Memory Outputs', '--------------', '', '- none — shown.', ''].join('\n');
+    expect(parseMemoryDeclarations(setext).issues).toContainEqual(
+      expect.stringContaining('setext heading'),
+    );
+  });
+
+  it('[R19-11] a separator inside displayed code refuses nothing', () => {
+    const doc = [
+      '```',
+      'ordinary' + SEPARATOR + 'text',
+      '```',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — reasoned.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R19-12] a `+` list is named, and its indented line is not called code', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '+ item',
+      '',
+      '\tcontinuation',
+      '',
+      '- none — rationale.',
+      '',
+    ].join('\n');
+    const issues = parseMemoryDeclarations(doc).issues;
+    expect(issues).toContainEqual(expect.stringContaining('`+` or `*` bullet list'));
+    expect(issues.join('; ')).not.toContain('an indented code block');
   });
 });

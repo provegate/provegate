@@ -133,16 +133,6 @@ function normalizeLineEndings(content: string): string {
   return content.replace(/\r\n|\r/g, '\n');
 }
 
-/**
- * U+2028 and U+2029 are line terminators to JavaScript and ORDINARY CHARACTERS
- * to CommonMark. `/m` therefore anchors a heading after one where a renderer
- * shows a single continuing paragraph, so a U+2028 before `## Memory Outputs` forged
- * a section that is not on the page. Rather than teach every regex a second line
- * model, a document containing one is refused by name. Measured across 239
- * Markdown files in this repository: none contains either.
- */
-const UNICODE_SEPARATOR = /[\u2028\u2029]/;
-const UNICODE_SEPARATOR_G = /[\u2028\u2029]/g;
 
 /** Does a backtick run of `length` close on this line's remainder, or on a
  * later line of the SAME paragraph? A blank line ends the paragraph, and a span
@@ -178,6 +168,10 @@ function closesBeforeParagraphEnd(
     const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (fence !== null && !(fence[1]![0] === '`' && fence[2]!.includes('`'))) return false;
     if (htmlBlockEnd(line, true) !== null) return false;
+    // And at an HTML COMMENT, which is block type 2 and lives in the scanner's
+    // own comment state rather than in `htmlBlockEnd` — the omission was the
+    // round 18 exploit with `<!--` substituted for `<div>`.
+    if (/^ {0,3}<!--/.test(line)) return false;
     if (closer.test(line)) return true;
   }
   return false;
@@ -238,7 +232,77 @@ function htmlBlockEnd(line: string, paragraphActive: boolean): RegExp | null {
 }
 htmlBlockEnd.CLOSES_ON_OPEN = /^ {0,3}<(?:script|pre|style|textarea|!\[CDATA\[|\?|![A-Za-z])/i;
 
-function executableView(content: string): { view: string; unreliable: string | null } {
+/**
+ * What the scanner decided a line IS.
+ *
+ * Rounds 18 and 19 both landed here rather than in the narrowed grammar, and for
+ * one reason: the scanner derived block state from the document and the
+ * container check derived it AGAIN from the raw text, so the two could disagree.
+ * A commented-out `## Other` ended the raw section early and the whole
+ * inline-HTML defense was bypassed; a `>` written inside a comment was refused
+ * as a block quote that is not on the page. That is `two-parsers-wrong-together`
+ * with both parsers in one file.
+ *
+ * So the scan is the single authority now. It classifies every line once, and
+ * everything downstream — the section slicer, the container check, the setext
+ * diagnostic — reads that classification instead of re-deriving it.
+ */
+type LineKind =
+  /** Executable Markdown. `text` carries the comment-masked content. */
+  | 'text'
+  /** A fence's opening or closing line. */
+  | 'fence'
+  /** Inside a fenced code block. */
+  | 'in-fence'
+  /** A raw HTML block's opening line. */
+  | 'html'
+  /** Inside a raw HTML block. */
+  | 'in-html'
+  /** An indented code block's line. */
+  | 'indented-code';
+
+interface ScannedLine {
+  kind: LineKind;
+  /** Comment-masked content for `text`; the raw line otherwise. */
+  text: string;
+}
+
+interface Scan {
+  lines: ScannedLine[];
+  unreliable: string | null;
+}
+
+/** Does the comment opened at `from` close before its paragraph ends?
+ *
+ * An INLINE `<!--` — one with text before it on the line — is raw inline HTML,
+ * and inline HTML must be complete. `Prose <!-- open` followed by a heading
+ * renders the opener literally and shows the heading, because an ATX heading
+ * interrupts a paragraph; the scanner instead stayed in comment state across the
+ * heading and lost a declaration the page displays. A comment that OPENS a line
+ * is an HTML block and is exempt: that one really does run to its closer. */
+function commentClosesBeforeParagraphEnd(
+  lines: readonly string[],
+  from: number,
+  restOfLine: string,
+): boolean {
+  if (restOfLine.includes('-->')) return true;
+  for (let i = from + 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (line.trim().length === 0) return false;
+    if (/^ {0,3}#{1,6}(?:[ \t]|$)/.test(line)) return false;
+    if (/^ {0,3}[-+*][ \t]+\S/.test(line)) return false;
+    if (/^ {0,3}(?:`{3,}|~{3,})/.test(line)) return false;
+    if (line.includes('-->')) return true;
+  }
+  return false;
+}
+
+/** A list marker opens an item whose indented lines are item content, not an
+ * indented code block. Bullet and ordered forms both, because the indentation
+ * rule does not care which one it is. */
+const LIST_MARKER = /^ {0,3}(?:[-+*]|\d{1,9}[.)])[ \t]+\S/;
+
+function scanDocument(content: string): Scan {
   interface Fence {
     char: string;
     length: number;
@@ -264,7 +328,10 @@ function executableView(content: string): { view: string; unreliable: string | n
   /** Open code-span delimiter run in backticks, or 0 outside one. Only ever
    * opened when a matching run closes it on the same line. */
   let span = 0;
-  const out: string[] = [];
+  /** Inside a list item, where an indented line is item content rather than an
+   * indented code block. Cleared by a non-blank line at the left margin. */
+  let inListItem = false;
+  const out: ScannedLine[] = [];
 
   const lines = normalizeLineEndings(content).split('\n');
   for (const [lineIndex, raw] of lines.entries()) {
@@ -281,8 +348,11 @@ function executableView(content: string): { view: string; unreliable: string | n
         /^\r?$/.test(closer[3]!)
       ) {
         fence = null;
+        out.push({ kind: 'fence', text: raw });
+        paragraphActive = false;
+        continue;
       }
-      out.push('');
+      out.push({ kind: 'in-fence', text: raw });
       paragraphActive = false;
       continue;
     }
@@ -294,7 +364,7 @@ function executableView(content: string): { view: string; unreliable: string | n
     if (htmlBlock !== null) {
       const ends: boolean = htmlBlock.test(raw);
       if (ends) htmlBlock = null;
-      out.push('');
+      out.push({ kind: 'in-html', text: raw });
       // Raw HTML is never a paragraph, so nothing it contains can block the
       // next line from opening one.
       paragraphActive = false;
@@ -306,8 +376,20 @@ function executableView(content: string): { view: string; unreliable: string | n
       const opener = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(raw);
       if (opener !== null && !(opener[2]![0] === '`' && opener[3]!.includes('`'))) {
         fence = { char: opener[2]![0]!, length: opener[2]!.length };
-        out.push('');
+        out.push({ kind: 'fence', text: raw });
         paragraphActive = false;
+        continue;
+      }
+      // An INDENTED CODE BLOCK, which the scanner did not model at all. Its
+      // absence ran both ways: `paragraphActive` stayed set across one, so a
+      // type-7 tag below it could not open the raw HTML block a renderer opens;
+      // and a `<!--` written inside one was read as a real comment opener, which
+      // masked the visible heading and declaration that followed. Indented code
+      // cannot interrupt a paragraph, and inside a list item the same
+      // indentation is item content — when in doubt this stays FALSE, which
+      // keeps comment masking on and errs toward refusing.
+      if (!paragraphActive && !inListItem && /^(?: {4,}|\t)[ \t]*\S/.test(raw)) {
+        out.push({ kind: 'indented-code', text: raw });
         continue;
       }
       // A raw HTML block is not executed either, and blanking it here is what
@@ -317,7 +399,7 @@ function executableView(content: string): { view: string; unreliable: string | n
       if (htmlBlock !== null) {
         // A types-1-5 opener may also close on its own line.
         if (htmlBlockEnd.CLOSES_ON_OPEN.test(raw) && htmlBlock.test(raw)) htmlBlock = null;
-        out.push('');
+        out.push({ kind: 'html', text: raw });
         paragraphActive = false;
         continue;
       }
@@ -391,8 +473,28 @@ function executableView(content: string): { view: string; unreliable: string | n
         continue;
       }
       if (span === 0 && raw.startsWith('<!--', i)) {
+        // `<!-->` and `<!--->` are COMPLETE comments in CommonMark. Searching
+        // only for `-->` ran past them to end of file and reported the document
+        // as having an unclosed comment it had in fact closed.
+        const short = /^<!--->|^<!-->/.exec(raw.slice(i));
+        if (short !== null) {
+          line += COMMENT_MASK.repeat(short[0].length);
+          i += short[0].length;
+          continue;
+        }
+        const atLineStart = /^ {0,3}$/.test(raw.slice(0, i));
+        // Inline raw HTML must be COMPLETE. An unterminated `<!--` mid-paragraph
+        // is literal text to a renderer, and a heading below it interrupts the
+        // paragraph — so keeping comment state open across that heading lost a
+        // declaration the page shows. A comment that opens a line is an HTML
+        // block and does run to its closer, blank lines and all.
+        if (!atLineStart && !commentClosesBeforeParagraphEnd(lines, lineIndex, raw.slice(i + 4))) {
+          line += raw[i];
+          i += 1;
+          continue;
+        }
         inComment = true;
-        blockComment = /^ {0,3}$/.test(raw.slice(0, i));
+        blockComment = atLineStart;
         line += COMMENT_MASK.repeat(4);
         i += 4;
         continue;
@@ -400,7 +502,7 @@ function executableView(content: string): { view: string; unreliable: string | n
       line += raw[i];
       i += 1;
     }
-    out.push(line);
+    out.push({ kind: 'text', text: line });
     // Derived from the MASKED line, not the raw one: a completed `<!-- note -->`
     // renders as nothing and closes no paragraph, but its raw text is non-blank
     // and left the flag set — which stopped the NEXT line's type-7 tag from
@@ -410,6 +512,10 @@ function executableView(content: string): { view: string; unreliable: string | n
       visible.length > 0 &&
       !/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(raw) &&
       !/^ {0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*\r?$/.test(raw);
+    // A list item's indented lines are its content. The item ends at a non-blank
+    // line back at the left margin that is not itself a marker.
+    if (LIST_MARKER.test(raw)) inListItem = true;
+    else if (visible.length > 0 && !/^[ \t]/.test(raw)) inListItem = false;
   }
 
   // State left open at EOF means the document and this scanner disagree about
@@ -418,20 +524,31 @@ function executableView(content: string): { view: string; unreliable: string | n
   // no longer opens a span at all, so it cannot leave one dangling — and
   // refusing on it would have rejected four real artifacts in this repository
   // that render perfectly well.
-  const dangling = UNICODE_SEPARATOR.test(content)
-    ? 'a U+2028 or U+2029 separator, which JavaScript treats as a line ending and CommonMark does not'
-    : fence !== null
-      ? 'an unclosed code fence'
-      : inComment
-        ? 'an unclosed HTML comment'
-        : null;
+  const dangling =
+    fence !== null ? 'an unclosed code fence' : inComment ? 'an unclosed HTML comment' : null;
 
-  // The separator is MASKED in the view as well as refused above. The refusal
-  // only protects the PRD reader; the INDEX, the Changelog and Durable Artifacts
-  // read this same view through their own `/m` regexes, and a forged heading
-  // there would be just as invisible on the page. Masking makes them safe by
-  // construction rather than by the order the callers happen to run in.
-  return { view: out.join('\n').replace(UNICODE_SEPARATOR_G, COMMENT_MASK), unreliable: dangling };
+  return { lines: out, unreliable: dangling };
+}
+
+/**
+ * The scanned document, or the reason it cannot be read.
+ *
+ * U+2028 and U+2029 no longer refuse the document. Round 18 added that refusal
+ * because `/m` anchored a heading where CommonMark shows none — but the fix was
+ * scoped to the whole file, so a separator inside a fenced example refused a
+ * contract that renders perfectly well. The section slicer works on scanned
+ * LINES now and never runs `/m` over the document at all, so the forgery has no
+ * regex left to exploit and the refusal has nothing left to protect.
+ */
+function executableView(content: string): { view: string; unreliable: string | null } {
+  const scan = scanDocument(content);
+  return { view: viewOf(scan.lines), unreliable: scan.unreliable };
+}
+
+/** The executable text: everything the renderer does not execute is blanked, so
+ * a line's content survives only when the scan called it `text`. */
+function viewOf(lines: readonly ScannedLine[]): string {
+  return lines.map((line) => (line.kind === 'text' ? line.text : '')).join('\n');
 }
 
 /**
@@ -457,11 +574,7 @@ export function contractView(content: string): string {
 export function contractViewProblem(content: string): string | null {
   const { unreliable } = executableView(content);
   if (unreliable === null) return null;
-  // "ends with" is true of the two dangling states and false of the separator,
-  // which may sit anywhere — a refusal that misdescribes what it saw sends the
-  // author to the wrong end of the file.
-  const verb = UNICODE_SEPARATOR.test(content) ? 'contains' : 'ends with';
-  return `the document ${verb} ${unreliable}, so its contract sections cannot be read reliably`;
+  return `the document ends with ${unreliable}, so its contract sections cannot be read reliably`;
 }
 
 /**
@@ -478,20 +591,49 @@ export function contractViewProblem(content: string): string | null {
  * `##` on one line with the text on the next is not a heading.
  */
 export function contractSection(content: string, heading: string): { count: number; body: string } {
+  const found = sectionBounds(scanDocument(content).lines, heading);
+  return { count: found.count, body: found.body.map((line) => line.text).join('\n') };
+}
+
+/**
+ * The section's scanned LINES, found by walking the scan rather than by running
+ * `/m` over the document.
+ *
+ * `/m` breaks on U+2028 and U+2029, which CommonMark treats as ordinary
+ * characters, so a separator could anchor a heading that is not on the page.
+ * Round 18 met that by refusing any document containing one — which then refused
+ * a separator sitting harmlessly inside a fenced example. Walking lines removes
+ * the regex, and with it both the forgery and the over-broad refusal.
+ */
+function sectionBounds(
+  lines: readonly ScannedLine[],
+  heading: string,
+): { count: number; body: ScannedLine[] } {
   // Up to three leading spaces and an optional closing run of hashes are both
   // ordinary ATX — `   ## Memory Outputs ##` renders as the required heading,
   // and reporting it missing refused a document a maintainer can see is correct.
-  const pattern = new RegExp(`^ {0,3}##[ \\t]+${heading}(?:[ \\t]+#*)?[ \\t]*$`, 'gim');
-  const matches = [...content.matchAll(pattern)];
-  if (matches.length !== 1) return { count: matches.length, body: '' };
-  const match = matches[0]!;
-  const rest = content.slice(match.index! + match[0].length);
+  const isHeading = new RegExp(`^ {0,3}##[ \\t]+${heading}(?:[ \\t]+#*)?[ \\t]*$`, 'i');
+  const starts: number[] = [];
+  for (const [index, line] of lines.entries()) {
+    if (line.kind === 'text' && isHeading.test(line.text)) starts.push(index);
+  }
+  if (starts.length !== 1) return { count: starts.length, body: [] };
+  const start = starts[0]! + 1;
   // A section ends at the next heading of rank 1 or 2 — `# Other` closes an H2
   // section just as `## Other` does. Setext headings cannot occur inside a
   // contract section any more: the ambiguous underline is refused outright, so
-  // there is nothing left here to guess about.
-  const atx = rest.search(/^ {0,3}#{1,2}(?:[ \t]|\r?$)/m);
-  return { count: 1, body: atx === -1 ? rest : rest.slice(0, atx) };
+  // there is nothing left here to guess about. A heading written inside a
+  // comment, a fence or an HTML block ends nothing, because the scan already
+  // said that line is not executable text.
+  let end = lines.length;
+  for (let i = start; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (line.kind === 'text' && /^ {0,3}#{1,2}(?:[ \t]|$)/.test(line.text)) {
+      end = i;
+      break;
+    }
+  }
+  return { count: 1, body: lines.slice(start, end) };
 }
 
 /**
@@ -505,77 +647,58 @@ export function contractSection(content: string, heading: string): { count: numb
  * bullets. Measured across 52 real contract sections in this repository: none
  * contains any of them.
  */
-function unsupportedContainer(body: string): string | null {
+function unsupportedContainer(body: readonly ScannedLine[]): string | null {
+  // The scan already decided what each line IS. Re-deriving that from raw text
+  // is what let a `>` written inside an HTML comment be refused as a block quote
+  // the page does not contain, and let a commented-out `## Other` cut the raw
+  // section short so the inline-HTML check never saw the rest of it.
+  for (const line of body) {
+    if (line.kind === 'fence') return 'a code fence';
+    if (line.kind === 'html') return 'a raw HTML block';
+    if (line.kind === 'indented-code') return 'an indented code block';
+  }
+
   let previousBlank = true;
-  let paragraphActive = false;
   let inBullet = false;
-  for (const line of body.split('\n')) {
-    // The SAME opener predicate the scanner uses: a backtick fence's info
-    // string cannot contain backticks, so ` ```markdown``` ` wrapped into a
-    // rationale is an inline code span and refusing it blocked an ordinary
-    // sentence.
-    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if (fence !== null && !(fence[1]![0] === '`' && fence[2]!.includes('`'))) {
-      return 'a code fence';
-    }
-    // An HTML block STARTS a block, so only a line after a blank one can open
-    // it — a `<https://…>` autolink on a rationale's wrapped second line is
-    // paragraph continuation. An autolink is excluded by shape as well, and an
-    // HTML COMMENT is excluded because the shipped template uses one to show
-    // the alternative form and a block comment owns its closing line.
-    // Position-independent: several HTML block kinds interrupt a paragraph, so
-    // requiring a preceding blank let `<div>` under a prose line hide a bullet.
-    // Autolinks are excluded by shape — both the URI form and the email form,
-    // which a maintainer may reasonably write in a rationale.
-    if (!/^ {0,3}<!--/.test(line) && htmlBlockEnd(line, paragraphActive) !== null) {
-      return 'a raw HTML block';
-    }
-    // Four spaces after a blank line opens an indented code block — but NOT
-    // inside a list item, where that indentation is the item's own second
-    // paragraph. Refusing it rejected an ordinary wrapped rationale.
-    // A leading TAB advances to the next four-column stop, so it opens one too.
-    // Only literal spaces were recognized, and a tab-indented bullet fell
-    // through to the useless "declares neither an entry nor a reasoned `none`"
-    // instead of naming the code block the author can see.
-    if (previousBlank && !inBullet && /^(?: {4,}|\t)[ \t]*\S/.test(line)) {
-      return 'an indented code block';
-    }
+  for (const line of body) {
+    // Fenced, HTML-block and indented-code lines were returned on above; what is
+    // left here is executable text, comment interiors already masked.
+    if (line.kind !== 'text') continue;
+    const text = line.text;
     // Containers this reader does not model. The narrowed grammar's whole point
     // is that a section holds bullets, their continuations, prose and blanks —
     // anything that nests content is refused rather than approximated.
-    // Measured across 29 real sections: neither appears.
-    if (/^ {0,3}>/.test(line)) return 'a block quote';
-    if (/^ {0,3}\d+[.)][ \t]/.test(line)) return 'an ordered list';
+    // Measured across 29 real sections: none appears.
+    if (/^ {0,3}>/.test(text)) return 'a block quote';
+    if (/^ {0,3}\d+[.)][ \t]/.test(text)) return 'an ordered list';
+    // `+` and `*` open a list a renderer shows and `bulletBlocks` does not read,
+    // so the section would silently declare nothing. Naming it beats reporting
+    // "declares neither an entry nor a reasoned `none`" about a visible list.
+    if (/^ {0,3}[+*][ \t]+\S/.test(text)) return 'a `+` or `*` bullet list';
     // A line of only dashes or equals after a NON-blank line is a setext
     // underline: it turns the line above into a heading and everything below
     // into a different section. After a blank line the same run is a thematic
     // break, which is what every real PRD writes before its next heading.
     // Refusing the ambiguous case is what retires setext handling here
     // altogether — the reader no longer has to decide which one it is.
-    if (!previousBlank && /^ {0,3}(?:-+|=+)[ \t]*$/.test(line)) {
+    if (!previousBlank && /^ {0,3}(?:-+|=+)[ \t]*$/.test(text)) {
       return 'a setext underline (a line of dashes or equals directly under text)';
     }
-    if (/^-[ \t]+\S/.test(line)) inBullet = true;
-    else if (line.trim().length > 0 && !/^ +\S/.test(line)) inBullet = false;
-    previousBlank = line.trim().length === 0;
-    // Same rule as the scanner's: a completed comment renders as nothing and
-    // closes no paragraph, so it must not keep the flag set for the next line.
-    const visible = line.replace(/<!--[\s\S]*?-->/g, '').trim();
-    paragraphActive =
-      visible.length > 0 &&
-      !/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(line) &&
-      !/^ {0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*\r?$/.test(line);
+    if (/^-[ \t]+\S/.test(text)) inBullet = true;
+    else if (text.trim().length > 0 && !/^ +\S/.test(text)) inBullet = false;
+    previousBlank = text.trim().length === 0;
   }
-  // Raw INLINE HTML, anywhere in the section — not only in a rationale. The
-  // line-anchored block checks above miss `note <div hidden>` written mid-
-  // paragraph, and a renderer's HTML parser closes the `<p>` at that `<div>` and
-  // swallows the list that follows: the declaration below it is on the page's
+  void inBullet;
+
+  // Raw INLINE HTML, anywhere in the section — not only in a rationale. A
+  // renderer's HTML parser closes the paragraph at a mid-sentence `<div hidden>`
+  // and swallows the list that follows, so the declaration below it is in the
   // source and not on the page. Whether a tag displays what follows it is the
   // DOM question the narrowed grammar exists not to answer, so the section is
-  // refused instead. Scanned over the whole body rather than line by line, so a
-  // code span that wraps is skipped as one span. Measured across this
+  // refused instead. Scanned over the executable text as ONE string, so a code
+  // span that wraps across lines is skipped as one span. Measured across this
   // repository's real contract sections: none contains inline HTML.
-  if (rationaleHasRawHtml(body.replace(/<!--[\s\S]*?-->/g, ''))) return 'raw inline HTML';
+  if (rationaleHasRawHtml(viewOf(body))) return 'raw inline HTML';
   return null;
 }
 
@@ -638,6 +761,9 @@ function bulletBlocks(section: string): string[] {
  * refusal that names a construct the reader invented is the same defect as
  * reading a declaration that is not there, pointed the other way.
  */
+/** The punctuation a backslash may escape in CommonMark. */
+const ASCII_PUNCTUATION = /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/;
+
 const INLINE_HTML = new RegExp(
   '^(?:' +
     // open tag
@@ -663,6 +789,13 @@ function rationaleHasRawHtml(rationale: string | null): boolean {
       while (text[i + run] === '`') run += 1;
       const closer = text.indexOf('`'.repeat(run), i + run);
       i = closer === -1 ? i + run : closer + run;
+      continue;
+    }
+    // A backslash escapes the punctuation after it, so `\\<span>` displays the
+    // literal text `<span>` and naming it raw inline HTML refused a rationale a
+    // renderer shows as words.
+    if (text[i] === '\\' && ASCII_PUNCTUATION.test(text[i + 1] ?? '')) {
+      i += 2;
       continue;
     }
     if (text[i] === '<') {
@@ -701,6 +834,12 @@ function visibleLength(rationale: string | null): number {
       // Code renders its contents literally, delimiters excluded.
       visible += text.slice(i + run, closer);
       i = closer + run;
+      continue;
+    }
+    if (char === '\\' && ASCII_PUNCTUATION.test(text[i + 1] ?? '')) {
+      // The escaped character is literal, visible text; the backslash is not.
+      visible += text[i + 1]!;
+      i += 2;
       continue;
     }
     if (char === '<') {
@@ -749,41 +888,6 @@ function visibleLength(rationale: string | null): number {
  * BOM), and the two Unicode separators. */
 const INVISIBLE = /[\p{Cc}\p{Cf}\u00ad\u180e\u200b-\u200f\u2028\u2029\u2060-\u2064\ufeff]/gu;
 
-/**
- * A named character reference the visible-length reader does not know, or null.
- *
- * Assuming an unknown name displays SOMETHING let `&Tab;` stand in for a
- * rationale; assuming it displays NOTHING refuses `&AElig;`, which renders `Æ`.
- * There is no third answer without shipping the entity table this package may
- * not take a dependency on — so an unrecognized name is refused BY NAME, and the
- * author writes the character. The known-invisible names stay invisible, because
- * naming them is the point: they are the ones a forgery would reach for.
- */
-function unknownNamedEntity(rationale: string | null): string | null {
-  if (rationale === null) return null;
-  const text = rationale.split(COMMENT_MASK).join('');
-  let i = 0;
-  while (i < text.length) {
-    if (text[i] === '`') {
-      let run = 0;
-      while (text[i + run] === '`') run += 1;
-      const closer = text.indexOf('`'.repeat(run), i + run);
-      i = closer === -1 ? i + run : closer + run;
-      continue;
-    }
-    if (text[i] === '&') {
-      const named = /^&([a-zA-Z][a-zA-Z0-9]*);/.exec(text.slice(i));
-      if (named !== null) {
-        const name = named[1]!;
-        if (!VISIBLE_NAMED_ENTITIES.has(name) && !INVISIBLE_NAMED_ENTITIES.has(name)) return name;
-        i += named[0].length;
-        continue;
-      }
-    }
-    i += 1;
-  }
-  return null;
-}
 
 /** Index just past the tag starting at `from`, scanning to an UNQUOTED `>`, or
  * -1 when there is none. A quoted attribute may contain `>`. */
@@ -824,14 +928,19 @@ function decodeEntity(body: string): string {
     // something `\s` does not match, so it counted as a visible rationale.
     return /\s|\u00a0/.test(char) || new RegExp(INVISIBLE.source, 'u').test(char) ? ' ' : char;
   }
-  // A NAMED entity is visible only when it is known to be. HTML has hundreds,
-  // several of which are whitespace — `&Tab;`, `&NewLine;`, `&ZeroWidthSpace;` —
-  // and assuming an unknown name displays SOMETHING let a rationale made of one
-  // satisfy the check that exists to reject an unreasoned `none`. A name in
-  // NEITHER set never reaches here: `unknownNamedEntity` refuses it by name
-  // first, because counting `&AElig;` invisible would refuse a rationale that
-  // renders `Æ`, and this reader does not get to guess in either direction.
-  return VISIBLE_NAMED_ENTITIES.has(body) ? 'x' : ' ';
+  // A NAMED entity is INVISIBLE only when it is known to be. The set below is
+  // every HTML5 name that renders as blank or zero-width; anything else is
+  // visible, and it does not matter which way it is visible. `&AElig;` renders
+  // `Æ` and `&bogus;` is not a reference at all, so a renderer displays it
+  // literally — both put ink on the page, which is all this check asks.
+  //
+  // Rounds 17 through 19 each moved this rule. Counting an unknown name
+  // invisible let `&Tab;` stand in for a rationale AND refused `&AElig;`;
+  // refusing unknown names by name then invented a character reference out of
+  // `&bogus;`, which is ordinary text. Enumerating the small invisible set and
+  // treating everything else as ink is the only reading that is honest in both
+  // directions, and it needs no entity table.
+  return INVISIBLE_NAMED_ENTITIES.has(body) ? ' ' : 'x';
 }
 
 /** Named references that render as nothing or as blank space. These are the
@@ -869,39 +978,6 @@ const INVISIBLE_NAMED_ENTITIES = new Set([
   'it',
 ]);
 
-/** Named entities common in this repository's prose that display a character.
- * Everything outside this set counts as invisible — see `decodeEntity`. */
-const VISIBLE_NAMED_ENTITIES = new Set([
-  'amp',
-  'lt',
-  'gt',
-  'quot',
-  'apos',
-  'hellip',
-  'mdash',
-  'ndash',
-  'lsquo',
-  'rsquo',
-  'ldquo',
-  'rdquo',
-  'copy',
-  'reg',
-  'deg',
-  'plusmn',
-  'times',
-  'divide',
-  'micro',
-  'para',
-  'sect',
-  'middot',
-  'bull',
-  'dagger',
-  'permil',
-  'euro',
-  'pound',
-  'yen',
-  'cent',
-]);
 
 function splitRationale(block: string): { head: string; rationale: string | null } {
   const idx = block.indexOf('—');
@@ -937,8 +1013,7 @@ function parseBlock(block: string): ParsedBlock {
 }
 
 function parseSection<T>(
-  content: string,
-  rawContent: string,
+  scanned: readonly ScannedLine[],
   heading: string,
   kinds: readonly string[],
   build: (kind: string, value: string, rationale: string) => T,
@@ -946,7 +1021,8 @@ function parseSection<T>(
   valueNoun: string,
 ): { section: MemorySection<T>; issues: string[] } {
   const issues: string[] = [];
-  const { count, body } = contractSection(content, heading);
+  const { count, body: sectionLines } = sectionBounds(scanned, heading);
+  const body = viewOf(sectionLines);
   const present = count > 0;
   const section: MemorySection<T> = { present, entries: [], none: false };
   if (!present) {
@@ -955,8 +1031,19 @@ function parseSection<T>(
     // can see it on the page is a refusal that names the wrong thing — so the
     // shape is named instead. Measured: no artifact in this repository writes
     // one, and the fix costs nothing it already contains.
-    const setext = new RegExp(`^ {0,3}${heading}[ \\t]*\\n {0,3}(?:=+|-+)[ \\t]*$`, 'm');
-    if (setext.test(rawContent)) {
+    // Read from the SCAN, not from the raw text: the same two lines written
+    // inside a fenced example are code, and reporting them as a setext heading
+    // named a heading the page does not contain.
+    const title = new RegExp(`^ {0,3}${heading}[ \\t]*$`, 'i');
+    const underline = /^ {0,3}(?:=+|-+)[ \t]*$/;
+    const asSetext = scanned.some(
+      (line, index) =>
+        line.kind === 'text' &&
+        title.test(line.text) &&
+        scanned[index + 1]?.kind === 'text' &&
+        underline.test(scanned[index + 1]!.text),
+    );
+    if (asSetext) {
       issues.push(
         `${heading}: written as a setext heading — write it as \`## ${heading}\`, which is ` +
           `the one form this contract reads`,
@@ -973,16 +1060,11 @@ function parseSection<T>(
   // in a list item is code to a renderer and was bullets to `bulletBlocks`, so
   // declarations could be forged inside one. Refusing is cheap: measured across
   // 52 real contract sections in this repository, none contains a fence.
-  // The container check reads the RAW section, because the scanner has already
-  // blanked what it recognized — and "the section is empty" is a true but
-  // useless message when the cause is an HTML block the author can see.
-  // When the raw document and the executable view disagree about how many
-  // headings there are — a `## Memory Outputs` written inside a fence or a
-  // comment — the container check has no single body to read and is skipped.
-  // That is the one path on which the per-rationale raw-HTML rule below is still
-  // load-bearing; everywhere else this check reaches the construct first.
-  const raw = contractSection(rawContent, heading);
-  const container = raw.count === 1 ? unsupportedContainer(raw.body) : null;
+  // The container check reads the SAME scanned lines the body came from. It used
+  // to re-slice the raw document, and the two could disagree: a `## Other`
+  // written inside a comment ended the raw section early, so the check never saw
+  // the rest of it and the whole inline-HTML defense was bypassed.
+  const container = unsupportedContainer(sectionLines);
   if (container !== null) {
     issues.push(
       `${heading}: contains ${container} — a contract section is a plain bullet list, and a ` +
@@ -1015,15 +1097,6 @@ function parseSection<T>(
         );
         continue;
       }
-      const unknownNone = unknownNamedEntity(parsed.rationale);
-      if (unknownNone !== null) {
-        issues.push(
-          `${heading}: \`none\` has a rationale containing the character reference ` +
-            `\`&${unknownNone};\` — write the character itself, this reader does not carry ` +
-            `the HTML entity table`,
-        );
-        continue;
-      }
       if (visibleLength(parsed.rationale) === 0) {
         issues.push(`${heading}: \`none\` requires a rationale after ' — '`);
       }
@@ -1051,15 +1124,6 @@ function parseSection<T>(
       issues.push(
         `${heading}: '${parsed.value}' has a rationale containing raw HTML — whether a tag ` +
           `displays its contents is not something this reader decides`,
-      );
-      continue;
-    }
-    const unknown = unknownNamedEntity(parsed.rationale);
-    if (unknown !== null) {
-      issues.push(
-        `${heading}: '${parsed.value}' has a rationale containing the character reference ` +
-          `\`&${unknown};\` — write the character itself, this reader does not carry the HTML ` +
-          `entity table`,
       );
       continue;
     }
@@ -1095,27 +1159,22 @@ function slugProblem(value: string): string | null {
 /** Parse both sections of a PRD. Absent headings are reported by `present`, not
  * as issues — whether they are required is the caller's configured question. */
 export function parseMemoryDeclarations(input: string): MemoryDeclarations {
-  // ONE line model for the scanner and for every `/m` regex downstream. The raw
-  // content is normalized HERE and the normalized string is what the container
-  // check reads, because a `\r` the scanner ignored was still a line boundary to
-  // the heading matcher — two line models over one document is the same class of
-  // defect as two parsers over one input.
-  const rawContent = normalizeLineEndings(input);
-  // Every contract read happens on the executable view of the document, so a
-  // quoted example or a commented-out block can never stand in for the real
-  // section — and an unreadable document is refused rather than guessed at.
-  const unreadable = contractViewProblem(rawContent);
-  if (unreadable !== null) {
+  // ONE scan, and every read below is a question put to it. Both halves of this
+  // reader used to derive block state independently — the scanner from the
+  // document, the container check from the raw text — and rounds 18 and 19 both
+  // found their disagreement rather than a hole in the grammar.
+  const scan = scanDocument(input);
+  if (scan.unreliable !== null) {
     return {
       inputs: { present: false, entries: [], none: false },
       outputs: { present: false, entries: [], none: false },
-      issues: [unreadable],
+      issues: [
+        `the document ends with ${scan.unreliable}, so its contract sections cannot be read reliably`,
+      ],
     };
   }
-  const content = contractView(rawContent);
   const inputs = parseSection<MemoryInput>(
-    content,
-    rawContent,
+    scan.lines,
     INPUTS_HEADING,
     DISPOSITIONS,
     (kind, value, rationale) => ({
@@ -1127,8 +1186,7 @@ export function parseMemoryDeclarations(input: string): MemoryDeclarations {
     'record slug',
   );
   const outputs = parseSection<MemoryOutput>(
-    content,
-    rawContent,
+    scan.lines,
     OUTPUTS_HEADING,
     OUTPUT_TYPES,
     (kind, value, rationale) => ({ type: kind as OutputType, path: value, rationale }),
