@@ -376,11 +376,20 @@ Records to open and confirm still accurate before the dependent task starts (tas
             rules, the short comment forms, and a comment stop in the span lookahead.
             Backslash escapes honored; the entity rule settled on an enumerated invisible
             set. 778 tests; every PRD still parses clean.
-      - [ ] 10.11 **No round has run against the current code.** Rounds 14-19: 7, 4, 4, 3,
-            5, 12 — the largest count of the run, but eleven of twelve shared one
-            architectural cause, and the fix changed the shape of the code rather than
-            adding a rule. Whether that holds is what an unaimed round would measure.
-            Verdict stays `fail`; closing needs an owner decision.
+      - [x] 10.11 Round 20, deliberately UNAIMED, to measure whether round 19's refactor
+            held. It did: "no defect found in the contract scanner this round" — the first
+            positive evidence in this review that a fix converged. All eight findings (6
+            CRITICAL, 2 HIGH) landed in the enforcement machinery no round had aimed at:
+            `gate land` skipping the memory gates, a branch erasing its own watch trigger,
+            approval evidence read then discarded, an origin-preferring diff, FR targets
+            read from raw Markdown, a schema-invalid acceptance authorizing a weakening,
+            an over-broad land barrier, and activation written before what it activates.
+            Two holes were encoded in the fixtures. 785 tests, each new regression
+            mutation-checked.
+      - [ ] 10.12 **No round has run against the current code.** The machinery has now had
+            exactly ONE round of attention — the scanner had one before rounds 18 and 19
+            found seventeen defects in it. Verdict stays `fail`; closing needs an owner
+            decision: another unaimed round, or accept the residual.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -552,5 +561,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.11 | manual-qa | owner | **Decide the review verdict.** Nineteen independent rounds ran; round 19's twelve findings shared one architectural cause, now fixed structurally rather than by another rule; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.12 | manual-qa | owner | **Decide the review verdict.** Twenty independent rounds ran; round 20 was unaimed and found the scanner clean, which is the first evidence a fix converged, while the machinery it had never examined yielded eight fail-opens; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |

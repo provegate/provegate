@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 74
-> **High:** 0
+> **Critical:** 80
+> **High:** 2
 > **Medium:** 55
 > **Low:** 3
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 19
+> **Rounds:** 20
 
 ## How this review was run
 
@@ -339,17 +339,71 @@ renderer displays literally. The answer is to enumerate the small set of names t
 as blank or zero-width and treat everything else as ink — visible is visible whether the
 glyph is `Æ` or the literal text `&bogus;`. No entity table, honest in both directions.
 
+### Round 20 — unaimed, and the refactor held
+
+Round 19 ended with a claim worth testing: that the scanner refactor changed the shape of
+the code rather than adding a rule to it. Round 20 was written to measure exactly that. It
+was pointed at the whole feature — close gate, weakening, store, readiness lint, chain and
+barrier — and told explicitly *not* to assume the scanner is where the bugs are.
+
+It returned: **"Area 6: no defect found in the contract scanner this round."** Two rounds
+had found twelve and five defects there; an unaimed round found none. That is the first
+positive evidence in this review that a fix converged.
+
+Every finding landed in the machinery around it instead, which no round had aimed at. Six
+CRITICAL and two HIGH, all fail-open:
+
+- **`gate land` skipped every memory gate.** `--from-phase=merge` skips all phase gates;
+  the operator gate had been made exempt for exactly this reason and the memory gates had
+  not. An operator-gated PRD could remove every baseline output, declare `none`, capture
+  nothing, and land. They are non-skippable now, for a stronger reason than the operator
+  gate: they are what binds the merge to the capture.
+- **A branch could erase its own trigger.** Watch obligations came only from the branch's
+  store, so changing a watched file and then deleting the watching record *together with*
+  its INDEX pointer left a smaller store that is perfectly self-consistent — every
+  downstream check agrees, because they are all asked about the store the branch just
+  wrote. The base-ref store is read too now, the one version the branch does not control.
+- **Approval evidence could be read and then discarded.** The weakening gate read the
+  working PRD, and `ensureCheckoutClean` resets tracked `_prds/` on its way to the merge:
+  a committed weakening could be waived by a Changelog approval that was never committed.
+  The gate judges the committed copy, because that is what lands.
+- **`collectDiffFiles` preferred `origin/<base>`** while landing merges into the LOCAL
+  base — so a local base behind its remote omitted the very commits the merge introduces.
+- **Readiness read FR targets from raw Markdown**, so a fenced
+  `## 4. Functional Requirements` was selected over the real section and its watched
+  targets were never seen. It reads the executable view now — the same scan the contract
+  grammar uses, so the two cannot disagree about which headings are on the page.
+- **A schema-invalid acceptance authorized a weakening.** `validAcceptance` checked owner,
+  items and reason; a store with no `schemaVersion` and an entry missing `date` and
+  `method` waived a removal. The documented schema is enforced where the waiver rests on
+  it, rather than depending on the adopter having wired `verify:acceptances`.
+- The land **barrier fired for every memory-enabled merge**, telling each one "this merge
+  changes gate policy" — false for an ordinary PRD. It is scoped to the activation
+  transition the PRD describes.
+- **`gate init` wrote the activation switch first**, so an interrupted install left a
+  repository demanding a contract it had nothing to satisfy.
+
+Two of these holes were **encoded in the fixtures**: acceptance stores written without
+`schemaVersion`, and a PRD handed to the close gate that no branch had committed. A test
+that models an impossible state proves nothing about the possible ones, and both now model
+what production requires.
+
+Each of the six new regressions was mutation-checked — reverting its fix fails that test
+and only that test.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`; this artifact
-records nineteen rounds in which every finding was closed, not a round that found nothing.
+records twenty rounds in which every finding was closed, not a round that found nothing.
 
-The count went 7, 4, 4, 3, 5, 12 across rounds 14-19 — the last number is the largest of
-the run, and it is the most encouraging one here, because eleven of the twelve traced to
-one architectural fault rather than to eleven separate approximations. Rounds 18 and 19
-were both aimed at the scanner and both hit it; the fix this time changed the shape of the
-code rather than adding a rule to it.
+What changed this round is the evidence available to the decision. Rounds 14-20 ran 7, 4,
+4, 3, 5, 12, 8 — but the count was never the useful number. The useful one is that the area
+two consecutive rounds had been hammering came back clean under an unaimed reviewer, while
+the areas no round had aimed at produced eight findings on first contact. That is the
+expected shape: review finds defects where review has been, and this feature has now had
+one round of attention on each of its parts.
 
-Whether that holds is exactly what an unaimed round would now measure. Closing the PRD
-needs an explicit owner decision: run another round, or accept the residual. An agent may
-not flip the ledger row, and this one has not.
+Closing the PRD needs an owner decision. The honest options are to run another unaimed
+round — the machinery has had exactly one, as the scanner had before rounds 18 and 19
+found seventeen defects in it — or to accept the residual. An agent may not flip the
+ledger row, and this one has not.
