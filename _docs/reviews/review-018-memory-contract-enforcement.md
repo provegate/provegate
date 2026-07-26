@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 115
-> **High:** 23
-> **Medium:** 66
+> **Critical:** 124
+> **High:** 25
+> **Medium:** 68
 > **Low:** 4
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 24
+> **Rounds:** 25
 
 ## How this review was run
 
@@ -577,30 +577,67 @@ Three tests were findings in their own right: one asserted half of what its name
 one called itself *"must never mutate"* while asserting nothing about the filesystem, and
 one restated the very allowlist it should have challenged. All three are rewritten.
 
+### Round 25 — calibration, and a gate the previous round made worse
+
+Round 24 produced one finding that was wrong, and applying it would have refused every
+genuine hard-cap evidence line. Round 25 was therefore asked for a `CONFIDENCE:` label on
+every finding and told plainly that an unsubstantiated finding costs a remediation cycle
+which introduces its own defects.
+
+**All thirteen findings came back `high`, and all thirteen were real.** The calibration
+request cost nothing and removed the padding. The round also judged the rejected proposal
+independently and agreed it was correctly rejected — noting that the underlying concern is
+real but needs a parsed evidence-row grammar, not a masked view.
+
+The worst finding was a regression introduced **one round earlier, by the fix for this same
+gate**. Round 24 changed `operatorGateOk` to verify that a committed acceptance blob exists
+and then kept loading the authorization from the working tree: worse than the original,
+because it looked like a committed check while authorizing an entry nobody had committed.
+
+The rest, all `high` and all confirmed:
+
+- `pnpm --help verify:brain` and `pnpm --filter=missing verify:brain` exit successfully
+  without running anything, and both normalized to the validator's identity and counted as
+  CI wiring — while `pnpm --dir . run x` lost its script name to the option's value
+- a base `{"memory":{"enable":true}}` is a malformed policy, not a disabled one, and merging
+  it over disabled defaults switched the contract off **by a typo**
+- an unreadable base record store returned empty silently, so a branch could repair a broken
+  index while omitting a watcher
+- taking every backticked token made each explanation a promised file; measured across this
+  repository, fourteen real bullets carry one, and declared paths always precede the em dash
+- GFM ordered task markers (`1. [ ]`) counted as zero rows and skipped the owner acceptance
+- the PRD commitment check still compared raw bytes — the same dishonest refusal its sibling
+  had just been rewritten to avoid
+- offering every `::` prefix invented a path nobody named and fired a watch on it
+- `gate queue` and `gate check` write state and were missed when the unknown-option rule was
+  written from the verbs that *sound* mutating; `gate status --json` was accepted and ignored
+
+Two tests were findings: the manifest fixture returned on an invalid empty `run` before
+reaching the check it existed to exercise, and the CLI option test omitted the two mutating
+commands whose absence it could not detect.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`.
 
-This round changes what the accumulated evidence says, and it is worth stating plainly.
+Round 25 sharpens what round 24 established rather than changing it. The measurable facts
+now on record:
 
-Rounds 21-23 measured how often a fix fails to generalize: 5/8, 9/11, 13/13. Round 24 asked
-a different question and got a worse answer: **nine of twenty fixes were actively refusing
-correct work.** The remediation loop is not converging on correctness; it is trading
-fail-opens for dishonest refusals and back, and each round's fixes are the next round's
-defects. Two of this round's findings were bugs I introduced one round earlier while fixing
-a bug I introduced two rounds earlier.
+- adjacent-case rate, rounds 21-23: **5/8, 9/11, 13/13**
+- overshoot rate, round 24: **9 of 20 fixes refusing correct work**
+- round 25: the single worst finding was a defect created by round 24's fix **for that same
+  gate**, and a second was created by round 23's fix for a neighbouring one
 
-That is not an argument that the code is bad. It is an argument that **this loop cannot
-terminate by itself**: an adversarial reviewer pointed at a body of code will keep producing
-findings, each remediation will introduce new ones at a comparable rate, and no round will
-ever come back empty. Twenty-four rounds is strong evidence that "run one more round" is not
-a path to a passing verdict.
+Requiring calibration worked — thirteen for thirteen, no padding — so the findings are real
+and the loop is not producing noise. That is precisely why it does not terminate: each
+remediation is competent, and each remediation creates the next round's work at a comparable
+rate. Twenty-five rounds is now a measurement, not an anecdote.
 
-The three options from round 23 stand, and the case for the first two is stronger now:
+The three options stand unchanged, and nothing further will be learned by running a
+twenty-sixth round:
 
-1. **Accept the residual and close.** The known holes are closed; what remains is a rate.
-2. **Scope the engine findings to a follow-up work item** — this round they were again about
-   half — and close PRD-018 on its own code.
-3. Keep running rounds, now knowing that each one both finds and creates defects.
+1. **Accept the residual and close.** Every known hole is closed; what remains is a rate.
+2. **Scope the engine findings to a follow-up work item** and close PRD-018 on its own code.
+3. Keep running rounds, knowing each one both finds and creates defects.
 
 An agent may not flip the ledger row, and this one has not.

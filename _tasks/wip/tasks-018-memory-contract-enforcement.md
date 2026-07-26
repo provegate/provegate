@@ -420,14 +420,22 @@ Records to open and confirm still accurate before the dependent task starts (tas
             inline code for hard-cap evidence would refuse every genuine evidence line.
             Three tests were findings and were rewritten. 825 tests; seven regressions,
             all mutation-checked.
-      - [ ] 10.16 **The loop cannot terminate by itself.** Rounds 21-23 measured how often
-            a fix fails to generalize (5/8, 9/11, 13/13); round 24 asked whether the fixes
-            REFUSE correct work and found 9 of 20 did. Two of its findings were defects
-            introduced one round earlier while fixing defects introduced two rounds
-            earlier. Each remediation creates findings at a comparable rate, so no round
-            comes back empty. Verdict stays `fail`; the owner decides: accept the residual
-            and close, scope the engine half to a follow-up item, or keep running rounds
-            knowing that each both finds and creates defects.
+      - [x] 10.16 Round 25, with a required CONFIDENCE label per finding after round 24
+            produced one that was wrong. All THIRTEEN came back `high` and all thirteen
+            were real — calibration removed the padding without losing anything. The round
+            independently confirmed that rejecting round 24's hard-cap proposal was
+            correct. Its worst finding was a regression created one round earlier by the
+            fix for that same gate: `operatorGateOk` checked a committed blob existed and
+            then authorized from the working tree. 830 tests; five regressions, all
+            mutation-checked; two test defects repaired.
+      - [ ] 10.17 **Twenty-five rounds is a measurement, not an anecdote.** Adjacent-case
+            rate 5/8, 9/11, 13/13; overshoot rate 9 of 20; and this round's worst finding
+            was created by the previous round's fix for the same gate. Calibration proved
+            the findings are real, which is exactly why the loop does not terminate: each
+            remediation is competent and each creates the next round's work. Nothing
+            further is learned by a twenty-sixth round. Verdict stays `fail`; the owner
+            decides: accept the residual and close, scope the engine half to a follow-up
+            item, or keep running rounds.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -599,5 +607,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.16 | manual-qa | owner | **Decide the review verdict.** Twenty-four independent rounds ran; round 24 showed the remediation loop trades fail-opens for dishonest refusals and back — 9 of 20 fixes were refusing correct work — so "one more round" is not a path to a passing verdict; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.17 | manual-qa | owner | **Decide the review verdict.** Twenty-five independent rounds ran; calibration confirmed the findings are real, which is why the loop does not terminate — each competent remediation creates the next round's work at a comparable rate; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |
