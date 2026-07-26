@@ -159,18 +159,22 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 3.6 Wire `gate memory find [--query] [--paths] [--tag] [--limit] [--json]` in
         `cli.ts` and export through both index files.
 
-- [ ] 4.0 FR-4 — Bounds, portability, safety
-  - [ ] 4.1 In `packages/provegate/test/single-package.test.ts`, cover query/tag/path
+- [x] 4.0 FR-4 — Bounds, portability, safety
+  - [x] 4.1 In `packages/provegate/test/single-package.test.ts`, cover query/tag/path
         combinations, multi-reason ties, both limit boundaries, and a 1000-record input.
-  - [ ] 4.2 Cover Unicode and case behavior, and Windows path separators in selectors.
-  - [ ] 4.3 Cover containment: absolute, `..`, and symlink-escape selectors each refuse
+  - [x] 4.2 Cover Unicode and case behavior, and Windows path separators in selectors.
+  - [x] 4.3 Cover containment: absolute, `..`, and symlink-escape selectors each refuse
         with a path-tagged message and return **no partial result**.
-  - [ ] 4.4 Cover exclusion: superseded records and anything under `private/` never appear
+  - [x] 4.4 Cover exclusion: superseded records and anything under `private/` never appear
         in public results.
-  - [ ] 4.5 Assert byte-stable JSON across two identical runs, and no repository writes.
-  - [ ] 4.6 Declare the record fixtures as explicit turbo inputs for the package test
-        task, then re-run with the cache busted and confirm the result matches; a fixture
-        read from outside declared inputs replays a cached green.
+  - [x] 4.5 Assert byte-stable JSON across two identical runs, and no repository writes.
+  - [x] 4.6 Nothing to declare, and that is the point: every FR-3/FR-4 fixture is built in
+        a temp directory at RUN time, so no test reads a repository file outside the
+        package's declared turbo inputs and there is no out-of-input read to cache over.
+        `verify:turbo-inputs` passes against the six configured tasks. Recorded rather than
+        silently skipped, because `turbo-cache-masks-out-of-input-reads` names the exact
+        failure this task existed to prevent and a later reader should see why it does not
+        apply here.
 
 - [ ] 5.0 FR-5 — Adoption guidance and distribution
   - [ ] 5.1 Update `practices/NEXT_STEPS.md` and `practices/shims/**` with doctor and find
@@ -291,6 +295,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **FR-4 decision — `private/` is unreachable by construction, not by a filter.** Task 4.4
+  asks that nothing under `private/` appear in public results. Records reach results ONLY
+  through an INDEX pointer, and the store scans just `learnings/` and `adr/`, so a file
+  dropped in `_brain/private/` is unreachable without anyone remembering to exclude it. The
+  test pins the property rather than adding a filter that would imply the opposite.
+
 - **FR-3 finding — a tie-break test that did not test the tie-break.** The first version
   asserted `['aaa-tie', 'zzz-tie']` while the fixture's index already listed them that way,
   so removing `localeCompare` left it green. The index now lists `zzz-tie` FIRST, and the
