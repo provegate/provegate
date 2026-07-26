@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-26T11:53:18.868Z",
+  "generatedAt": "2026-07-26T12:01:47.185Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -635,7 +635,7 @@
       "prd": "PRD-018",
       "number": 18,
       "slug": "memory-contract-enforcement",
-      "status": "Approved",
+      "status": "Ship Verified",
       "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
@@ -659,14 +659,14 @@
       },
       "task": {
         "status": "In Progress",
-        "checkedCount": 103,
-        "uncheckedCount": 4,
+        "checkedCount": 107,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 3
       },
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-25"
+      "lastUpdated": "2026-07-26"
     },
     {
       "prd": "PRD-019",

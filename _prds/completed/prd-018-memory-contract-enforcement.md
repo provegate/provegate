@@ -1,9 +1,9 @@
 # PRD-018: Closed-Loop Memory Contract and Enforcement
 
-> **Status**: Approved
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-25
-> **Updated**: 2026-07-25
+> **Updated**: 2026-07-26
 > **Author**: Codex, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `memory-contract-enforcement`

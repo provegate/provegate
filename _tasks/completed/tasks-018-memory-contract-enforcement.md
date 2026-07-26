@@ -252,11 +252,11 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 9.4 Run `gate run` against this repo with the new root manifest and confirm
         resolved Phase 4 is exactly the six commands in order, and Phase 7 runs
         `verify:brain`.
-  - [ ] 9.5 Immediately before the merge, re-read `_state/locks` and confirm no foreign
-        lease is active. The 0.x measurement is stale by now, and this is the barrier the
-        activation depends on.
+  - [x] 9.5 Re-read `_state/locks` immediately before the merge: only this PRD's own
+        lease was present, no foreign lease active. The activation barrier passed inside
+        the workspace mutex and `gate land` reported the merge gate green.
 
-- [ ] 10.0 Phase 6 — Independent adversarial audit
+- [x] 10.0 Phase 6 — Independent adversarial audit
   - [x] 10.1 After Phase 5 is green, obtain an independent review (different model family,
         never the implementing agent) of the merge diff against the PRD, the PRD-017
         addendum, and watch items W1–W13. Direct it at the three sharpest attacks: can a
@@ -436,13 +436,12 @@ Records to open and confirm still accurate before the dependent task starts (tas
             produced. Three fixed; the fourth (validator implementation not pinned,
             `adversarial`) is on the deferral board with an owner and a due date.
             833 tests; three regressions, all mutation-checked.
-      - [ ] 10.18 **Re-run the readiness assessment against the current code.** After this
-            remediation its own criteria read: guarantees 1/2/4 hold against everything
-            short of a deliberate attack visible in the diff, 3 holds, and 5's known break
-            is closed — so the artifact now supports `CLOSE WITH FOLLOW-UP`. That is a
-            recommendation, not a verdict. One assessment run confirms or refutes it, and
-            it is the only remaining question worth asking; further defect-hunting rounds
-            have a measured, non-terminating yield.
+      - [x] 10.18 **The owner declined the confirming assessment and closed on 2026-07-26.**
+            The recommendation was to re-run round 26's readiness assessment against the
+            current code, since it is the one cheap test of the close decision. The owner
+            accepted the residual instead. Recorded under "Owner decision" in the review
+            artifact, which states plainly that no confirming run happened — a later
+            reader should weigh the close knowing that.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -454,8 +453,11 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 11.3 Prepare the owner handoff: the activation order evidence, the disabled-path
         proof from 8.2, the reconcile output from 7.4, the lock-table state from 9.5, and
         the independent verdict.
-  - [ ] 11.4 After owner acceptance only, run `gate land PRD-018`; verify the post-merge
-        gates and worktree cleanup. Never push.
+  - [x] 11.4 Owner acceptance recorded, then `gate land PRD-018`: 70 files changed,
+        11055 insertions. Every Phase 7 memory gate, the operator gate, the archive, and
+        the post-merge `check-types`/`build` passed; worktree removed and branch deleted.
+        Not pushed — push is the human's. Worktree cleanup left the LEASE behind, which is
+        a real defect now on the deferral board with an owner and a due date.
 
 ---
 
