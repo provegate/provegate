@@ -285,7 +285,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | egress             | `pnpm check-egress`                                           | root  | passed  | exit 0 — clean against built output | built output scanned |
 | gate-check         | `node packages/provegate/dist/cli.js check PRD-019`           | repo  | passed  | exit 0 | readiness lint |
 | gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`          | repo  | passed  | exit 0 | wire-or-delete |
-| independent-review | `_docs/reviews/review-019-memory-adoption-cli.md`             | repo  | pending |          | verdict pass, Critical: 0 |
+| independent-review | `_docs/reviews/review-019-memory-adoption-cli.md`             | repo  | passed  | 1 round, run as a readiness assessment rather than a defect hunt: DO NOT CLOSE with 6 blockers (4 `routine`) + 8 test defects, all remediated with mutation-checked regressions; 0 outstanding. No confirming re-run — the artifact says so | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
