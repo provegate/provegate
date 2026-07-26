@@ -210,6 +210,16 @@ export function validateLock(
   for (const key of Object.keys(data)) {
     if (!KNOWN_LOCK_FIELDS.has(key)) issues.push(`unexpected field "${key}"`);
   }
+  const prd = data['prd'];
+  // The CONFIGURED id grammar. Accepting any non-empty string let a decoy
+  // carrying `prd: "prd-001"` be matched case-insensitively as the holder while
+  // the real lease went unreleased.
+  if (typeof prd === 'string') {
+    const pattern = new RegExp(
+      `^${config.idPattern.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d{${config.idPattern.width}}$`,
+    );
+    if (!pattern.test(prd)) issues.push(`prd must match ${pattern.source}`);
+  }
   const lockId = data['lockId'];
   // The PUBLISHED pattern, character for character. Inventing a stricter
   // lowercase-slug rule at runtime made a lock the schema permits — and that a

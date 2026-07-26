@@ -374,7 +374,10 @@ function runStatus(args: string[]): number {
   // `status` WRITES `_state/prds.json`, so it is a mutating command and belongs
   // under the same rule as the rest. The first pass at this change listed the
   // obviously-mutating verbs and missed the one whose name sounds read-only.
-  const unknown = unknownOption(args, ['--json']);
+  // `--json` is NOT accepted here: `runStatus` has no JSON branch, and listing an
+  // option the command ignores feeds a human table to automation that asked for
+  // machine output. `gate queue --json` is the command that has it.
+  const unknown = unknownOption(args, []);
   if (unknown !== null) {
     console.error(`[status] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
@@ -488,6 +491,11 @@ function findRecord(
 }
 
 function runCheck(args: string[]): number {
+  const unknown = unknownOption(args, ['--wiring']);
+  if (unknown !== null) {
+    console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const { root, config } = loadConfig();
   const manifest = loadManifest(config, root);
 
@@ -1034,7 +1042,17 @@ export function main(argv: string[]): number {
     if (command === 'renew') return runRenew(rest);
     if (command === 'release') return runRelease(rest);
     if (command === 'status') return runStatus(rest);
-    if (command === 'queue') return runQueue(rest.includes('--json'));
+    if (command === 'queue') {
+      // `queue` writes the state snapshot, and `check` reaches state-writing
+      // `findRecord` — both are mutating and both were missed when the rule was
+      // written by listing the verbs that sound mutating.
+      const unknown = unknownOption(rest, ['--json']);
+      if (unknown !== null) {
+        console.error(`[queue] unknown option ${unknown} — refusing rather than guessing what it meant`);
+        return 1;
+      }
+      return runQueue(rest.includes('--json'));
+    }
     if (command === 'check') return runCheck(rest);
     if (command === 'run') return runRun(rest);
     if (command === 'land') return runRun(rest, { mergeOnly: true });

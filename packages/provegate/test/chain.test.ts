@@ -1354,8 +1354,20 @@ describe('phase 6 round 20 regressions — the enforcement machinery', () => {
     });
     const found = chain.find((g) => (g.label ?? '').includes('no weakening'))!;
     const result = found.fn!();
-    expect(result.ok).toBe(false);
-    expect(result.why).toContain('the merge lands the COMMITTED copy');
+    // An uncommitted weakening is not a weakening: the gate judges the copy the
+    // merge will land, so what lives only in the working tree is a non-event in
+    // BOTH directions.
+    expect(result).toEqual({ ok: true });
+
+    // The case that matters: the weakening IS committed, and the approval that
+    // would have waived it lives nowhere in the landed history.
+    const committedWeakening = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() }, CAPTURED_RECORD);
+    const armed = gate(
+      chainFor({ root: committedWeakening, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(armed.ok).toBe(false);
+    expect(armed.why).toContain('no owner approval row in the Changelog');
   });
 
   it('[R20-6] a schema-invalid acceptance store cannot authorize a weakening', () => {
@@ -1865,7 +1877,7 @@ describe('phase 6 round 23 — the enforcement machinery, one step over', () => 
     );
     const merge = chain.find((g) => g.phase === 'merge gate')!.fn!();
     expect(merge.ok).toBe(false);
-    expect(merge.why).toContain('is not committed as it stands');
+    expect(merge.why).toContain('is not committed');
   });
 
   it('[R23-15] an impossible date and a metacharacter prefix are both refused', () => {

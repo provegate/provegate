@@ -98,8 +98,8 @@ export function countTaskChecks(content: string): { checkedCount: number; unchec
   const executable = executableTextOf(content);
   // `*` and `+` are task-list markers too, and a plan written with them
   // reported zero tasks — no progress, and no work item ever resumable.
-  const checkedCount = (executable.match(/^\s*[-*+]\s*\[[xX]\]/gm) ?? []).length;
-  const uncheckedCount = (executable.match(/^\s*[-*+]\s*\[\s\]/gm) ?? []).length;
+  const checkedCount = (executable.match(/^\s*(?:[-*+]|\d{1,9}[.)])\s*\[[xX]\]/gm) ?? []).length;
+  const uncheckedCount = (executable.match(/^\s*(?:[-*+]|\d{1,9}[.)])\s*\[\s\]/gm) ?? []).length;
   return { checkedCount, uncheckedCount };
 }
 
@@ -152,7 +152,12 @@ function operatorRowsIn(section: string): number {
   // `*` and `+` open a task list exactly as `-` does. Recognizing only `-` let
   // `* [ ] owner approves` read as zero operator rows, and the merge gate passed
   // without the acceptance that row exists to require.
-  const checkboxRows = lines.filter((line) => /^[-*+]\s*\[[ xX]\]/.test(line)).length;
+  // ORDERED markers too. GFM writes `1. [ ] …`, and recognizing only the bullet
+  // forms read a numbered handoff table as zero rows — the merge gate then
+  // passed with no owner acceptance.
+  const checkboxRows = lines.filter((line) =>
+    /^(?:[-*+]|\d{1,9}[.)])\s*\[[ xX]\]/.test(line),
+  ).length;
   return tableRows + checkboxRows;
 }
 
@@ -234,7 +239,11 @@ export function declaredGlobs(content: string): string[] {
     .split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;
     if (/^\s*-\s+none\b/i.test(line)) continue;
-    for (const match of line.matchAll(/`([^`]+)`/g)) {
+    // The segment BEFORE the em dash, for the same reason Durable Artifacts
+    // reads one: a Conflict Surface bullet explains itself after the dash, and
+    // the explanation quotes paths it does not claim.
+    const declared = line.split('—')[0]!;
+    for (const match of declared.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
       // A ROOT-LEVEL claim is a claim. Requiring a `/` discarded
       // `workflow.config.json` and `gates.manifest.json` — the entries this
@@ -242,7 +251,7 @@ export function declaredGlobs(content: string): string[] {
       // file and no conflict was detected.
       if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
-      if (/\bnone\b/i.test(value)) continue;
+      if (/^none$/i.test(value)) continue;
       globs.push(value);
     }
   }

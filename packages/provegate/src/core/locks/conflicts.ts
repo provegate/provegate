@@ -38,7 +38,7 @@ export interface PathConflict {
 /** One spelling for one path, so two claims on the same tree collide. Mirrors
  * `canonicalPath` in the memory reader; both exist because a glob and a target
  * must be compared after the same normalization, never before it. */
-function canonicalGlob(glob: string): string {
+export function canonicalGlob(glob: string): string {
   const slashed = glob.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
   const parts: string[] = [];
   for (const part of slashed.split('/')) {

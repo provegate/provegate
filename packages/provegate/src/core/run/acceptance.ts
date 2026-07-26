@@ -140,9 +140,25 @@ export function loadAcceptanceChecked(
 ): { entry: AcceptanceEntry | null; problem: string | null } {
   const path = acceptancesPath(config, root);
   if (!existsSync(path)) return { entry: null, problem: null };
+  return acceptanceFrom(config, readFileSync(path, 'utf8'), id);
+}
+
+/**
+ * The entry for `id` inside a store's TEXT, plus why the store is unusable.
+ *
+ * Split out so a caller can validate the COMMITTED blob rather than whatever is
+ * on disk. The two are different questions, and answering the second while
+ * claiming to answer the first is how an uncommitted acceptance authorized a
+ * merge.
+ */
+export function acceptanceFrom(
+  config: WorkflowConfig,
+  text: string,
+  id: string,
+): { entry: AcceptanceEntry | null; problem: string | null } {
   let data: unknown;
   try {
-    data = JSON.parse(readFileSync(path, 'utf8'));
+    data = JSON.parse(text);
   } catch {
     return { entry: null, problem: 'the acceptance store is not valid JSON' };
   }
@@ -221,26 +237,34 @@ export function operatorGateOk(
   // merge and an untracked one is simply not in the source commit, so an
   // acceptance that lives only in the working tree authorized a merge whose
   // landed history then contains no authorization at all.
+  // The COMMITTED blob IS the authorization, not merely evidence that some
+  // committed file exists. Checking existence and then reading the working tree
+  // was worse than reading the working tree alone: it looked like a committed
+  // check and authorized an entry nobody had committed.
+  let acceptance: AcceptanceEntry | null;
   if (readCommitted !== undefined) {
     const rel = acceptancesRelativePath(config);
     const committed = readCommitted(rel);
-    const onDisk = existsSync(resolve(root, rel));
-    // Byte equality called a CLEAN checkout dirty: with `core.autocrlf` or any
-    // other clean filter the working file legitimately differs from its blob.
-    // What the gate needs to know is whether the evidence is committed AT ALL,
-    // which is a question about the blob, not about the bytes on disk.
-    if (onDisk && committed === null) {
+    if (committed === null) {
       return {
         ok: false,
         why:
-          `${operatorRows} operator-owned row(s), and \`${rel}\` is not committed as it ` +
-          `stands — the merge lands the COMMITTED copy, so commit the acceptance that ` +
-          `authorizes this close and re-run`,
+          `${operatorRows} operator-owned row(s), and \`${rel}\` is not committed — the merge ` +
+          `lands the COMMITTED copy, so commit the acceptance that authorizes this close and ` +
+          `re-run`,
       };
     }
+    const parsed = acceptanceFrom(config, committed, record.prd);
+    if (parsed.problem !== null) {
+      return {
+        ok: false,
+        why: `${operatorRows} operator-owned row(s), and \`${rel}\` ${parsed.problem}`,
+      };
+    }
+    acceptance = parsed.entry;
+  } else {
+    acceptance = loadAcceptance(config, root, record.prd);
   }
-
-  const acceptance = loadAcceptance(config, root, record.prd);
   if (validAcceptance(config, acceptance)) {
     return {
       ok: true,

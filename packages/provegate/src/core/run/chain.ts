@@ -3,6 +3,7 @@ import { existsSync, lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CONFIG_FILENAME, DEFAULT_CONFIG } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
+import { packageScriptOf } from '../gates/wiring.js';
 import type { MemoryConfig, WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import {
@@ -175,6 +176,29 @@ function capturedDiffFiles(root: string, base: string): { captured: string[]; to
  * when its config will not parse, because an unreadable base policy must not
  * read as a weaker one.
  */
+/** Why a base `memory` block is not a policy, or null when it is one. Unknown
+ * keys count: `enable` is not `enabled`, and reading the typo as "disabled" is
+ * the permissive direction. */
+function baseMemoryShapeProblem(memory: Record<string, unknown>): string | null {
+  const types: Record<string, string> = {
+    enabled: 'boolean',
+    root: 'string',
+    index: 'string',
+    verifyCommand: 'string',
+    entrypoints: 'object',
+  };
+  for (const [key, value] of Object.entries(memory)) {
+    const expected = types[key];
+    if (expected === undefined) return `unknown key "${key}"`;
+    if (key === 'entrypoints') {
+      if (!Array.isArray(value)) return '`entrypoints` must be an array';
+      continue;
+    }
+    if (typeof value !== expected) return `\`${key}\` must be a ${expected}`;
+  }
+  return null;
+}
+
 function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig & {
   malformed?: boolean;
 } {
@@ -192,6 +216,13 @@ function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig & 
     if (parsed.memory === null || typeof parsed.memory !== 'object' || Array.isArray(parsed.memory)) {
       return { ...DEFAULT_CONFIG.memory, enabled: true, malformed: true };
     }
+    // The FIELDS are checked, not just the container. `{"memory":{"enable":true}}`
+    // and `{"memory":{"enabled":0}}` are malformed policies, and merging them
+    // over disabled defaults produced a confident `enabled: false` — the
+    // contract switched off by a typo. A wrong-typed `verifyCommand` went
+    // further and crashed the gate at `.trim()`.
+    const shape = baseMemoryShapeProblem(parsed.memory as Record<string, unknown>);
+    if (shape !== null) return { ...DEFAULT_CONFIG.memory, enabled: true, malformed: true };
     // Missing base fields fall back to the DEFAULTS, never to the branch. A real
     // config is sparse — `{memory:{enabled:true,entrypoints:[…]}}` names no
     // `index` — so overlaying it on the branch's memory config handed the branch
@@ -251,13 +282,13 @@ function baselinePrd(root: string, base: string, prdPath: string): string | null
  * reason `packageScriptOf` drops them.
  */
 function validatorIdentity(command: string): string {
-  const parts = command.trim().split(/\s+/);
-  if (parts.length === 0) return command.trim();
-  const manager = parts[0] ?? '';
-  if (!['pnpm', 'npm', 'yarn', 'bun'].includes(manager)) return command.trim();
-  const rest = parts.slice(1).filter((part) => !part.startsWith('-'));
-  if (rest[0] === 'run') rest.shift();
-  return rest.length === 0 ? command.trim() : `${manager}:${rest.join(' ')}`;
+  const script = packageScriptOf(command);
+  // The SAME parser the wiring audit uses. Stripping anything that starts with
+  // `-` was wrong twice over: `pnpm --help verify:brain` and
+  // `pnpm --filter=missing verify:brain` exit successfully without running the
+  // validator and normalized to its identity, while `pnpm --dir . run x` lost
+  // its script name to the option's value and read as a different validator.
+  return script === null ? command.trim() : `script:${script}`;
 }
 
 /**
@@ -321,7 +352,11 @@ function memoryWeakeningGate(options: {
         `evidence the merge will actually carry — commit \`${prdPath}\` and re-run`,
     };
   }
-  if (committed !== options.prdContent) {
+  // GIT decides whether the working copy differs, not a byte comparison. Under
+  // `core.autocrlf` a clean checkout legitimately holds CRLF while the blob
+  // holds LF, and the raw compare called that PRD uncommitted — the same
+  // dishonest refusal this gate's sibling check was rewritten to avoid.
+  if (differsFromHead(root, prdPath)) {
     return {
       ok: false,
       why:
@@ -329,6 +364,7 @@ function memoryWeakeningGate(options: {
         `COMMITTED copy — commit \`${prdPath}\` so this gate judges what will land`,
     };
   }
+  // And the COMMITTED text is what it judges, for the same reason.
   const prdContent = committed;
   const baseline = baselinePrd(root, base, prdPath);
   if (baseline === null) {

@@ -56,7 +56,15 @@ function artifactPaths(section: string): string[] {
     // `- none — revisit in a \`follow-up\`` declared an artifact named
     // "follow-up" and refused every close until a file by that name changed.
     if (/^\s*-\s+none\b/i.test(line)) continue;
-    for (const match of line.matchAll(/`([^`]+)`/g)) {
+    // Only the segment BEFORE the em dash. Every real bullet is
+    // `- \`path\`[, \`path\`…] — prose`, and the prose quotes things freely:
+    // `run`/`land`/`check`, `gate new`, `--worktree`, `workflow.config.json`.
+    // Taking every backticked token made each of those a promised file and
+    // refused the close until a file by that name changed. Measured across this
+    // repository: fourteen real bullets carry an explanation token, and the one
+    // bullet with several real paths lists them all before the dash.
+    const declared = line.split('—')[0]!;
+    for (const match of declared.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
       // A ROOT-LEVEL artifact is still an artifact. Requiring a `/` silently
       // dropped every `RELEASING.md`, so a PRD could promise one and close
@@ -77,7 +85,9 @@ function artifactPaths(section: string): string[] {
       // prose appears in this section, so shape is all that is left to check.
       if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
-      if (/\bnone\b/i.test(value)) continue;
+      // The EXACT token, not a substring: `_docs/none.md` and `none-file` are
+      // real paths, and dropping them hid a promised output entirely.
+      if (/^none$/i.test(value)) continue;
       paths.push(value);
     }
   }

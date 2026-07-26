@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, validateResolvedConfig } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
+import { packageScriptOf } from '../src/core/gates/wiring.js';
 import { validateRecord } from '../src/core/memory/parse.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
 import {
@@ -2121,5 +2122,75 @@ describe('phase 6 round 24 — the overshoots, and what they were hiding', () =>
     expect(withStateFile('~state.json')).toEqual([]);
     expect(withStateFile('~/state.json')).not.toEqual([]);
     expect(withStateFile('../outside/state.json')).not.toEqual([]);
+  });
+});
+
+describe('phase 6 round 25 — the fixes that made things worse', () => {
+  it('[R25-5] declared paths live before the em dash, and `none` is an exact token', () => {
+    // Taking every backticked token made each explanation a promised file:
+    // `run`, `--worktree`, `gate new`. Measured across this repository, fourteen
+    // real bullets carry one.
+    const explained = [
+      '## Durable Artifacts',
+      '',
+      '- `_docs/reviews/r.md` — audits `watchMatches` and `run`/`land`',
+      '',
+    ].join('\n');
+    expect(declaredArtifactsStrict(explained).paths).toEqual(['_docs/reviews/r.md']);
+    // Several real paths before the dash are all claims.
+    const several = [
+      '## Durable Artifacts',
+      '',
+      '- `scripts/a.mjs`, `.github/workflows/ci.yml` — both updated',
+      '',
+    ].join('\n');
+    expect(declaredArtifactsStrict(several).paths).toEqual([
+      'scripts/a.mjs',
+      '.github/workflows/ci.yml',
+    ]);
+    // A path whose NAME contains "none" is a path.
+    const nonePath = '## Durable Artifacts\n\n- `_docs/none.md` — the file\n';
+    expect(declaredArtifactsStrict(nonePath).paths).toEqual(['_docs/none.md']);
+    // The same rules for a Conflict Surface.
+    const surface = [
+      '## Conflict Surface',
+      '',
+      '- `packages/x/**` — also PRD-019 (`gate doctor`)',
+      '',
+    ].join('\n');
+    expect(declaredGlobs(surface)).toEqual(['packages/x/**']);
+  });
+
+  it('[R25-6] an ordered task marker counts', () => {
+    const doc = ['## Operator Handoff', '', '1. [ ] owner approves the migration', ''].join('\n');
+    expect(countOperatorHandoff(doc)).toBe(1);
+    expect(countTaskChecks('1. [x] done\n2. [ ] not done')).toEqual({
+      checkedCount: 1,
+      uncheckedCount: 1,
+    });
+  });
+
+  it('[R25-8] only an identifier-shaped suffix is a symbol selector', () => {
+    // Offering every `::` prefix invented `src/a` for `src/a::b.ts::doThing`,
+    // firing a watch on a path the diff never touched.
+    expect(watchMatches(['src/a'], ['src/a::b.ts::doThing'])).toEqual([]);
+    expect(watchMatches(['src/a::b.ts'], ['src/a::b.ts::doThing'])).toEqual(['src/a::b.ts']);
+    // Nested symbols still resolve to the file.
+    expect(watchMatches(['src/parser.ts'], ['src/parser.ts::Parser::parse'])).toEqual([
+      'src/parser.ts',
+    ]);
+  });
+
+  it('[R25-2] a manager mode that runs nothing is not an invocation', () => {
+    // `pnpm --help verify:brain` exits successfully without running the script,
+    // and normalized to the validator's identity.
+    expect(packageScriptOf('pnpm --help verify:brain')).toBeNull();
+    expect(packageScriptOf('npm --dry-run run verify:brain')).toBeNull();
+    // An option that takes a separate value consumes it rather than losing the
+    // script name to it.
+    expect(packageScriptOf('pnpm --dir . run verify:brain')).toBe('verify:brain');
+    // Ordinary forms still resolve.
+    expect(packageScriptOf('pnpm verify:brain')).toBe('verify:brain');
+    expect(packageScriptOf('pnpm --silent run verify:brain')).toBe('verify:brain');
   });
 });

@@ -79,6 +79,19 @@ describe('validateManifest', () => {
     });
     expect(issues.map((i) => i.path)).toContain('classDefaults.infra[0]');
   });
+
+  it('[R25-13] flags an unknown key inside a VALID rule’s `when`', () => {
+    // The fixture above pairs the unknown key with an empty `run`, and
+    // validation returns on that first — so removing the `when` unknown-key
+    // check could not fail it. This rule is otherwise valid, so the only thing
+    // left to report is the typo that silently uncapped its paths.
+    const issues = validateManifest(cfg, {
+      classDefaults: {
+        infra: [{ run: ['pnpm test'], when: { diffMatch: ['src/**'] } }],
+      },
+    });
+    expect(issues.map((i) => i.path)).toContain('classDefaults.infra[0].when.diffMatch');
+  });
 });
 
 describe('loadManifest', () => {

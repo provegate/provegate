@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { formatId } from './artifacts.js';
-import { structuralOverlap } from '../locks/conflicts.js';
+import { canonicalGlob, structuralOverlap } from '../locks/conflicts.js';
 import { declaredGlobs } from './markdown.js';
 import { UNKNOWN_STATUS } from './status.js';
 import type { StateRecord } from './build.js';
@@ -187,15 +187,18 @@ export function readyOverlaps(
       // warning for `src/**` beside `src/a.ts`, while a claim on both would be
       // refused at `gate open` — so the queue said "schedule these together" and
       // the very next command said otherwise.
-      const exact = surfaces[i]!.paths.filter((path) => surfaces[j]!.paths.includes(path));
+      // The shared exception applies to EXACT matches as well. Adding them
+      // before the exception warned that two PRDs claiming `package.json` may
+      // not run together, which is precisely what `sharedAppendOnly` exists to
+      // permit — queue advice contradicting the command it advises about.
+      const sharedSet = new Set<string>(config.sharedAppendOnly.map(canonicalGlob));
+      const exact = surfaces[i]!.paths.filter(
+        (path) => surfaces[j]!.paths.includes(path) && !sharedSet.has(canonicalGlob(path)),
+      );
       // With the CONFIGURED shared set. Calling `structuralOverlap` without it
       // warned about pairs the lock engine deliberately allows — a queue that
       // contradicts the command it is advising about.
-      const structural = structuralOverlap(
-        surfaces[i]!.paths,
-        surfaces[j]!.paths,
-        new Set(config.sharedAppendOnly),
-      );
+      const structural = structuralOverlap(surfaces[i]!.paths, surfaces[j]!.paths, sharedSet);
       const shared = [...new Set([...exact, ...structural])];
       if (shared.length > 0) {
         warnings.push({ a: surfaces[i]!.prd, b: surfaces[j]!.prd, shared });

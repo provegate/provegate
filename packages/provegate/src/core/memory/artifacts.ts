@@ -740,12 +740,24 @@ function targetCandidates(target: string): string[] {
   // `packages/x/a.ts::doThing` alike — the reported path must be the file, not
   // the selector, which is the path a maintainer wrote the watch against. The
   // literal is the fallback that rescues a real filename containing `::`.
+  // Only IDENTIFIER-shaped trailing segments are stripped, from the right. Every
+  // `::` prefix was offered before, which invented candidates nobody named: for
+  // a real file `src/a::b.ts` with target `src/a::b.ts::doThing`, the prefix
+  // `src/a` fired a watch on a path the diff never touched and refused a correct
+  // PRD. A symbol selector looks like a symbol; `b.ts` does not.
   const candidates: string[] = [];
-  let idx = trimmed.indexOf('::');
-  while (idx > 0) {
-    candidates.push(canonicalPath(trimmed.slice(0, idx)));
-    idx = trimmed.indexOf('::', idx + 2);
+  let rest = trimmed;
+  for (;;) {
+    const idx = rest.lastIndexOf('::');
+    if (idx <= 0) break;
+    const suffix = rest.slice(idx + 2);
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(suffix)) break;
+    rest = rest.slice(0, idx);
+    candidates.push(canonicalPath(rest));
   }
+  // Shortest first, whole literal last: when a glob matches more than one, the
+  // reported path must be the file rather than the selector.
+  candidates.reverse();
   candidates.push(canonicalPath(trimmed));
   return [...new Set(candidates.filter((c) => c.length > 0))];
 }
@@ -1158,8 +1170,20 @@ export function loadMemoryStoreFromBlobs(
   const store: MemoryStore = { records: [], unreadable: [], issues: [] };
   const indexRel = repoRelative(memory.index);
   const rawIndex = readBlob(indexRel);
-  if (rawIndex === null) return store;
-  if (contractViewProblem(rawIndex) !== null) return store;
+  // UNREADABLE is not EMPTY. Returning a silent empty store let a branch repair
+  // a broken base index while omitting a watcher, change what that watcher
+  // covered, and declare nothing: both the current and the reconstructed base
+  // watch sets looked empty and Phase 7 passed. The caller decides what to do
+  // with the issue, but it must be told.
+  if (rawIndex === null) {
+    store.issues.push(`the base memory index '${memory.index}' is not readable on that ref`);
+    return store;
+  }
+  const problem = contractViewProblem(rawIndex);
+  if (problem !== null) {
+    store.issues.push(`the base memory index '${memory.index}': ${problem}`);
+    return store;
+  }
   const dir = indexRel.split('/').slice(0, -1).join('/');
   const indexText = contractView(rawIndex);
   const seen = new Set<string>();

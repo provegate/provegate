@@ -204,9 +204,11 @@ describe('phase 6 round 23 — a misspelled option must never mutate', () => {
       ['new', 'thing', '--clas=infra'],
       ['renew', 'PRD-001', '--hrs=2'],
       ['release', 'PRD-001', '--forc'],
-      // `status` WRITES the state file, and the first pass at this rule missed
-      // it because its name sounds read-only.
+      // `status`, `queue` and `check` all write state, and each was missed in
+      // turn by writing the rule from the verbs that SOUND mutating.
       ['status', '--dry-rnu'],
+      ['queue', '--dry-rnu'],
+      ['check', 'PRD-001', '--dry-rnu'],
     ]) {
       // The property this test is NAMED for: nothing on disk changed. Exit code
       // and stderr alone were satisfied by an implementation that mutates and
