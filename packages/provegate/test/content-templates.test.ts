@@ -1023,8 +1023,10 @@ describe('phase 6 round 10 regressions', () => {
       '    ```',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('contains a code fence'),
+    // The declaration inside it is not a column-zero bullet, so nothing is read
+    // from it — the section declares neither form and says so.
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /contains a code fence|declares neither/,
     );
   });
 
@@ -1196,10 +1198,11 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
 });
 
 describe('phase 6 round 13 regressions (leads the round named before it was cut off)', () => {
-  it('[R13-1] a declaration inside a real multiline code span is not a declaration', () => {
-    // A span whose closer is on a later line of the same paragraph is legal, and
-    // treating its contents as live text let a `- none —` line inside one be
-    // read as a declaration.
+  it('[R13-1] a multiline span cannot reach across a rendered list item', () => {
+    // A span whose closer is on a later line of the same paragraph is legal —
+    // but a column-zero bullet INTERRUPTS the paragraph, so the renderer shows
+    // that line as a list item and the reader must too. Round 13 masked it as
+    // span interior; round 14 measured the renderer and corrected the rule.
     const doc = [
       '## Memory Outputs',
       '',
@@ -1210,10 +1213,9 @@ describe('phase 6 round 13 regressions (leads the round named before it was cut 
       'bar` and the span closes here.',
       '',
     ].join('\n');
-    const decl = parseMemoryDeclarations(doc);
-    expect(decl.outputs.none).toBe(false);
-    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
-    expect(decl.issues).toEqual([]);
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('mutually exclusive'),
+    );
   });
 
   it('[R13-2] a link reference definition over dashes is not a setext heading', () => {
@@ -1308,5 +1310,72 @@ describe('phase 6 round 13 (reframed) regressions', () => {
     const decl = parseMemoryDeclarations(doc);
     expect(decl.outputs.present).toBe(true);
     expect(decl.outputs.none).toBe(true);
+  });
+});
+
+describe('phase 6 round 14 regressions', () => {
+  it('[R14-P1-2] a `<script>` block runs to its closing tag, blank lines included', () => {
+    const doc = [
+      '<script>',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — hidden inside a script block.',
+      '</script>',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.present).toBe(false);
+  });
+
+  it('[R14-P1-3] an HTML block that interrupts a paragraph still refuses', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      'Contract note',
+      '<div>',
+      '- none — hidden.',
+      '</div>',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R14-P1-4] closing hashes need whitespace before them', () => {
+    expect(parseMemoryDeclarations('## Memory Outputs###\n\n- none — x.\n').outputs.present).toBe(
+      false,
+    );
+    expect(parseMemoryDeclarations('## Memory Outputs ###\n\n- none — x.\n').outputs.present).toBe(
+      true,
+    );
+  });
+
+  it('[R14-P2-5] a second paragraph inside a declaration is not indented code', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — no durable output is expected.',
+      '',
+      '    Additional rationale, indented under the item.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R14-P2-6] backticks inside a rationale are not a fence', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — examples are irrelevant;',
+      '  ```markdown``` is only mentioned as syntax.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R14-P2-7] an email autolink is an autolink', () => {
+    const doc = ['## Memory Outputs', '', '- none — ask <owner@example.com>.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
   });
 });

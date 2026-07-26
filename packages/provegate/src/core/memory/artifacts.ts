@@ -138,10 +138,34 @@ function closesBeforeParagraphEnd(
     // pulled the next section's bullets into this one.
     if (line.trim().length === 0) return false;
     if (/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(line)) return false;
+    // A column-zero list marker interrupts a paragraph too, so a span cannot
+    // reach across it — masking one as span interior hid a rendered list item.
+    if (/^-[ \t]+\S/.test(line)) return false;
     if (closer.test(line)) return true;
   }
   return false;
 }
+
+/**
+ * The terminator for the raw HTML block this line opens, or null when it opens
+ * none. `previousBlank` distinguishes the kinds that may interrupt a paragraph
+ * (types 1-5, which are recognizable by their opener) from the generic tag form
+ * (types 6-7), which may not.
+ */
+function htmlBlockEnd(line: string, previousBlank: boolean): RegExp | null {
+  if (/^ {0,3}<(?:script|pre|style|textarea)\b/i.test(line)) {
+    return /<\/(?:script|pre|style|textarea)>/i;
+  }
+  if (/^ {0,3}<!\[CDATA\[/.test(line)) return /\]\]>/;
+  if (/^ {0,3}<\?/.test(line)) return /\?>/;
+  if (/^ {0,3}<![A-Za-z]/.test(line)) return />/;
+  // The generic tag form ends at a blank line and cannot interrupt a paragraph.
+  if (previousBlank && /^ {0,3}<\/?[a-zA-Z][a-zA-Z0-9-]*(?:[ \t>]|\/>|$)/.test(line)) {
+    return /^[ \t]*$/;
+  }
+  return null;
+}
+htmlBlockEnd.CLOSES_ON_OPEN = /^ {0,3}<(?:script|pre|style|textarea|!\[CDATA\[|\?|![A-Za-z])/i;
 
 function executableView(content: string): { view: string; unreliable: string | null } {
   interface Fence {
@@ -150,9 +174,15 @@ function executableView(content: string): { view: string; unreliable: string | n
   }
   let fence: Fence | null = null;
   let inComment = false;
-  /** Inside a raw HTML block, which a renderer passes through rather than
-   * parsing as Markdown. Ends at a blank line. */
-  let htmlBlock = false;
+  /**
+   * The open raw HTML block's end condition, or null outside one.
+   *
+   * CommonMark gives HTML blocks five different terminators, and ending them
+   * all at a blank line was a hole: a `<script>` region with a blank inside it
+   * continues to `</script>`, so a heading and a declaration written between
+   * them are raw text to a renderer and were a live section to this reader.
+   */
+  let htmlBlock: RegExp | null = null;
   /** The previous line was blank, so this one starts a block. */
   let previousBlank = true;
   /** The open comment began a line, so it is an HTML block and owns its closing
@@ -192,15 +222,22 @@ function executableView(content: string): { view: string; unreliable: string | n
       // A raw HTML block is not executed either, and blanking it here is what
       // covers the INDEX as well as a contract section: a pointer written
       // inside `<? … ?>` renders as nothing and must not count.
-      if (previousBlank && /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(raw)) {
-        htmlBlock = true;
+      // Only OPEN when none is open: assigning unconditionally reset an open
+      // block on its very next line, which is how `<script>` stopped covering
+      // the lines it contains.
+      if (htmlBlock === null) htmlBlock = htmlBlockEnd(raw, previousBlank);
+      if (htmlBlock !== null) {
+        // The opening line may also close the block.
+        if (htmlBlockEnd.CLOSES_ON_OPEN.test(raw) && htmlBlock.test(raw)) htmlBlock = null;
+        out.push('');
+        previousBlank = false;
+        continue;
       }
     }
-    if (htmlBlock) {
-      // A blank line ends every HTML block kind this scanner recognizes.
-      if (raw.trim().length === 0) htmlBlock = false;
+    if (htmlBlock !== null) {
+      if (htmlBlock.test(raw)) htmlBlock = null;
       out.push('');
-      previousBlank = raw.trim().length === 0;
+      previousBlank = false;
       continue;
     }
 
@@ -341,7 +378,7 @@ export function contractSection(content: string, heading: string): { count: numb
   // Up to three leading spaces and an optional closing run of hashes are both
   // ordinary ATX — `   ## Memory Outputs ##` renders as the required heading,
   // and reporting it missing refused a document a maintainer can see is correct.
-  const pattern = new RegExp(`^ {0,3}##[ \\t]+${heading}[ \\t]*#*[ \\t]*$`, 'gim');
+  const pattern = new RegExp(`^ {0,3}##[ \\t]+${heading}(?:[ \\t]+#*)?[ \\t]*$`, 'gim');
   const matches = [...content.matchAll(pattern)];
   if (matches.length !== 1) return { count: matches.length, body: '' };
   const match = matches[0]!;
@@ -367,23 +404,36 @@ export function contractSection(content: string, heading: string): { count: numb
  */
 function unsupportedContainer(body: string): string | null {
   let previousBlank = true;
+  let inBullet = false;
   for (const line of body.split('\n')) {
-    if (/^[ \t]*(?:```|~~~)/.test(line)) return 'a code fence';
+    // The SAME opener predicate the scanner uses: a backtick fence's info
+    // string cannot contain backticks, so ` ```markdown``` ` wrapped into a
+    // rationale is an inline code span and refusing it blocked an ordinary
+    // sentence.
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence !== null && !(fence[1]![0] === '`' && fence[2]!.includes('`'))) {
+      return 'a code fence';
+    }
     // An HTML block STARTS a block, so only a line after a blank one can open
     // it — a `<https://…>` autolink on a rationale's wrapped second line is
     // paragraph continuation. An autolink is excluded by shape as well, and an
     // HTML COMMENT is excluded because the shipped template uses one to show
     // the alternative form and a block comment owns its closing line.
+    // Position-independent: several HTML block kinds interrupt a paragraph, so
+    // requiring a preceding blank let `<div>` under a prose line hide a bullet.
+    // Autolinks are excluded by shape — both the URI form and the email form,
+    // which a maintainer may reasonably write in a rationale.
     if (
-      previousBlank &&
       /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(line) &&
-      !/^ {0,3}<[a-zA-Z][a-zA-Z0-9+.-]*:[^ >]*>[ \t]*$/.test(line)
+      !/^ *<[a-zA-Z][a-zA-Z0-9+.-]*:[^ <>]*>/.test(line) &&
+      !/^ *<[^ <>@]+@[^ <>@]+>/.test(line)
     ) {
       return 'a raw HTML block';
     }
-    // Four spaces after a blank line opens an indented code block; the same
-    // indentation directly under a bullet is that bullet's continuation.
-    if (previousBlank && /^ {4,}\S/.test(line)) return 'an indented code block';
+    // Four spaces after a blank line opens an indented code block — but NOT
+    // inside a list item, where that indentation is the item's own second
+    // paragraph. Refusing it rejected an ordinary wrapped rationale.
+    if (previousBlank && !inBullet && /^ {4,}\S/.test(line)) return 'an indented code block';
     // A line of only dashes or equals after a NON-blank line is a setext
     // underline: it turns the line above into a heading and everything below
     // into a different section. After a blank line the same run is a thematic
@@ -393,6 +443,8 @@ function unsupportedContainer(body: string): string | null {
     if (!previousBlank && /^ {0,3}(?:-+|=+)[ \t]*$/.test(line)) {
       return 'a setext underline (a line of dashes or equals directly under text)';
     }
+    if (/^-[ \t]+\S/.test(line)) inBullet = true;
+    else if (line.trim().length > 0 && !/^ +\S/.test(line)) inBullet = false;
     previousBlank = line.trim().length === 0;
   }
   return null;
