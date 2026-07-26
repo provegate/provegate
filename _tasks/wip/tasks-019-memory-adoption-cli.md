@@ -127,17 +127,17 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 1.6 Wire `gate doctor --memory [--json]` in `cli.ts` and export the typed result
         through `core/memory/index.ts` and `src/index.ts`.
 
-- [ ] 2.0 FR-2 — Stable output and the partial-install matrix
-  - [ ] 2.1 Human output names the failing check and its repair; JSON exposes `ok`,
+- [x] 2.0 FR-2 — Stable output and the partial-install matrix
+  - [x] 2.1 Human output names the failing check and its repair; JSON exposes `ok`,
         `checks[]`, `code`, `severity`, `detail`. Both render from one typed result so an
         adapter cannot change semantics.
-  - [ ] 2.2 In `packages/provegate/test/practices-pack.test.ts`, build the matrix: fresh
+  - [x] 2.2 In `packages/provegate/test/practices-pack.test.ts`, build the matrix: fresh
         practices, existing config/manifest, missing index, missing script, missing
         package script, missing Phase 7 wiring, several entrypoint combinations,
         placeholder residue, disabled memory, and the CI warning.
-  - [ ] 2.3 Add the three W1 symlink cases to the same matrix, using this repository's own
+  - [x] 2.3 Add the three W1 symlink cases to the same matrix, using this repository's own
         `AGENTS.md` → `CLAUDE.md` as the fixture.
-  - [ ] 2.4 Prove non-mutation by before/after tree hash — the assertion that converts
+  - [x] 2.4 Prove non-mutation by before/after tree hash — the assertion that converts
         "doctor never writes" from a claim into a gate. Cover both the passing and the
         failing paths; a diagnostic that writes only when it fails is still a writer.
 
@@ -291,6 +291,27 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **FR-2 finding — one cause must report one failure.** The matrix caught the doctor
+  reporting BOTH `memory.phase7.reachable` and `memory.verify.script.present` when a
+  manifest had no Phase 7 command at all. Two checks for one cause sends an adopter to two
+  files; `phase7.reachable` owns that fact now and the other says so.
+
+- **FR-2 finding — an absolute in-repo symlink is refused (deferred).** W1 says an in-repo
+  symlinked entrypoint is valid. It is, written RELATIVELY — which is how this repository
+  ships `AGENTS.md`. Written with an ABSOLUTE path it is refused by config load wherever
+  the workspace root itself sits behind a link, because containment compares a realpath'd
+  target against a non-realpath'd root; macOS `/var → /private/var` makes that the everyday
+  case. `containedPath` in `run/init.ts` already documents avoiding exactly this. The fix
+  is in `core/config/**`, outside this PRD's Conflict Surface, so it is on the deferral
+  board with an owner rather than taken here. The fixture uses the relative form, matching
+  what the repository actually ships.
+
+- **FR-2 finding — the escape case never reaches the doctor.** Config load refuses an
+  escaping entrypoint before any command runs, which is the better answer: an invalid
+  configuration should stop everything rather than produce a diagnosis. The doctor keeps
+  its own escape guard for callers that build a config directly, unit-tested in
+  `memory.test.ts`; the end-to-end test asserts the refusal instead.
+
 - **Scope deviation (owner-approved) — the worktree-close lease leak.** `removeWorktree`
   deleted the checkout and the branch and never unlinked the lease, so a worktree-stamped
   close left its work item IN-FLIGHT until the TTL expired and blocked every overlapping

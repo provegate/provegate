@@ -294,15 +294,15 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
     .flatMap((cmd) => cmd.split(/\s+/))
     .filter((token) => token.endsWith('.mjs') || token.endsWith('.js') || token.endsWith('.cjs'));
   if (scriptPaths.length === 0) {
+    // "There is no validator at all" is ONE fact and `memory.phase7.reachable`
+    // owns it. Reporting it here as well sent an adopter to two checks for one
+    // cause, which is the failure mode this whole matrix exists to catch.
     add(
       'memory.verify.script.present',
-      validatorCommands.length > 0 ? 'pass' : 'fail',
+      'pass',
       validatorCommands.length > 0
         ? 'the validator runs through a package script rather than a file path'
-        : 'no Phase 7 validator is configured',
-      validatorCommands.length > 0
-        ? undefined
-        : 'wire one in `phases.7` or `memory.verifyCommand` — capture is not validated without it',
+        : 'no validator script path to resolve — see `memory.phase7.reachable`',
     );
   } else {
     const missing = scriptPaths.filter((p) => !isFile(resolve(root, p)));

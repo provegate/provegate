@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  mkdirSync,
+  symlinkSync,
   accessSync,
   constants,
   mkdtempSync,
@@ -15,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { practicesPackDir } from '../src/core/run/init.js';
+import type { DoctorReport } from '../src/core/memory/doctor.js';
 
 const CLI = resolve(dirname(fileURLToPath(import.meta.url)), '../dist/cli.js');
 
@@ -402,5 +406,275 @@ describe('gate init --practices (real temp repos)', () => {
     chmodSync(join(repo, '.githooks/pre-commit'), 0o644);
     gateInit(repo, '--practices');
     expect(statSync(join(repo, '.githooks/pre-commit')).mode & 0o111).toBe(0);
+  });
+});
+
+/**
+ * FR-2 — the partial-install matrix, run against the REAL CLI in a REAL repo.
+ *
+ * A doctor is only worth having if it is right about installs that are broken in
+ * ONE place, which is how installs actually arrive. Each row below breaks
+ * exactly one thing from a known-good baseline and asserts which check fails and
+ * that the others do not — a diagnostic that reports six failures for one cause
+ * sends an adopter to five wrong files.
+ */
+describe('FR-2 — doctor output and the partial-install matrix', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  const RECORD = [
+    '---',
+    'name: sample-record',
+    'description: a record the doctor resolves',
+    'type: convention',
+    'scope: workflow',
+    'status: active',
+    '---',
+    '',
+    'Body.',
+    '',
+    '**Why:** a reason.',
+    '**How to apply:** a method.',
+    '',
+  ].join('\n');
+
+  /** A complete, passing install. Every row starts here and breaks one thing. */
+  function site(): string {
+    const root = makeRepo();
+    roots.push(root);
+    const write = (rel: string, body: string): void => {
+      mkdirSync(join(root, dirname(rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    };
+    write('_brain/INDEX.md', '# INDEX\n\n- [sample](learnings/sample-record.md) — hook\n');
+    write('_brain/learnings/sample-record.md', RECORD);
+    write('CLAUDE.md', 'Read `_brain/INDEX.md` before any work.\n');
+    write('package.json', JSON.stringify({ name: 'fixture', scripts: { 'verify:brain': 'node x' } }));
+    write('scripts/verify/verify-brain.mjs', '// noop\n');
+    write(
+      'workflow.config.json',
+      JSON.stringify({ memory: { enabled: true, entrypoints: ['CLAUDE.md'] } }, null, 2),
+    );
+    write('gates.manifest.json', JSON.stringify({ phases: { '7': ['pnpm verify:brain'] } }, null, 2));
+    return root;
+  }
+
+  /** Run the real binary and return the parsed report plus the exit code. */
+  function doctor(root: string): { code: number; report: DoctorReport } {
+    try {
+      const out = execFileSync(process.execPath, [CLI, 'doctor', '--memory', '--json'], {
+        cwd: root,
+        encoding: 'utf8',
+      });
+      return { code: 0, report: JSON.parse(out) as DoctorReport };
+    } catch (error) {
+      const e = error as { status?: number; stdout?: string; stderr?: string };
+      // Surface the real failure. A bare JSON parse error here hides whatever the
+      // CLI actually said, which is the only thing that explains it.
+      if (!(e.stdout ?? '').trim().startsWith('{')) {
+        throw new Error(
+          `doctor did not emit JSON (exit ${e.status ?? '?'}):\n${e.stdout ?? ''}\n${e.stderr ?? ''}`,
+          { cause: error },
+        );
+      }
+      return { code: e.status ?? -1, report: JSON.parse(e.stdout!) as DoctorReport };
+    }
+  }
+
+  const failing = (r: DoctorReport): string[] =>
+    r.checks.filter((c) => c.severity === 'fail').map((c) => c.id);
+
+  /** Every file's bytes, so non-mutation is a measurement rather than a claim. */
+  function treeHash(dir: string): string {
+    const parts: string[] = [];
+    const walk = (current: string): void => {
+      for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      )) {
+        if (entry.name === '.git') continue;
+        const full = join(current, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else parts.push(`${full}:${readFileSync(full, 'utf8')}`);
+      }
+    };
+    walk(dir);
+    return createHash('sha256').update(parts.join(' ')).digest('hex');
+  }
+
+  it('a complete install passes, and the JSON exposes the documented shape', () => {
+    const { code, report } = doctor(site());
+    expect(code).toBe(0);
+    expect(report.ok).toBe(true);
+    expect(report.disabled).toBe(false);
+    expect(report.code).toBe(0);
+    // FR-2's contract: these keys are the machine surface an adopter scripts on.
+    for (const check of report.checks) {
+      expect(Object.keys(check).sort()).toEqual(
+        check.remedy === undefined ? ['detail', 'id', 'severity'] : ['detail', 'id', 'remedy', 'severity'],
+      );
+      expect(['pass', 'warn', 'fail']).toContain(check.severity);
+    }
+  });
+
+  it('human output names the failing check AND its repair', () => {
+    // The two renderers come from one typed result, so an adapter cannot change
+    // semantics — but the HUMAN one must still be actionable on its own.
+    const root = site();
+    rmSync(join(root, '_brain/INDEX.md'));
+    let text = '';
+    try {
+      execFileSync(process.execPath, [CLI, 'doctor', '--memory'], { cwd: root, encoding: 'utf8' });
+    } catch (error) {
+      text = (error as { stdout?: string }).stdout ?? '';
+    }
+    expect(text).toContain('memory.index.resolvable');
+    expect(text).toContain('_brain/INDEX.md');
+    expect(text).toMatch(/→ .+/);
+  });
+
+  const matrix: [string, (root: string) => void, string[]][] = [
+    [
+      'missing index',
+      (root) => rmSync(join(root, '_brain/INDEX.md')),
+      ['memory.index.resolvable', 'memory.records.valid'],
+    ],
+    [
+      'missing store root',
+      (root) => rmSync(join(root, '_brain'), { recursive: true }),
+      ['memory.root.resolvable', 'memory.index.resolvable', 'memory.records.valid'],
+    ],
+    [
+      'missing package script',
+      (root) =>
+        writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'fixture', scripts: {} })),
+      ['memory.verify.script.wired'],
+    ],
+    [
+      'missing Phase 7 wiring',
+      (root) => writeFileSync(join(root, 'gates.manifest.json'), JSON.stringify({ phases: {} })),
+      ['memory.phase7.reachable'],
+    ],
+    [
+      'entrypoint without the pointer',
+      (root) => writeFileSync(join(root, 'CLAUDE.md'), 'nothing useful here\n'),
+      ['memory.entrypoint.pointer'],
+    ],
+    [
+      'record that does not validate',
+      (root) => writeFileSync(join(root, '_brain/learnings/sample-record.md'), 'no frontmatter\n'),
+      ['memory.records.valid'],
+    ],
+  ];
+
+  for (const [name, breakIt, expected] of matrix) {
+    it(`matrix: ${name} fails exactly its own check(s)`, () => {
+      const root = site();
+      breakIt(root);
+      const { code, report } = doctor(root);
+      expect(code).toBe(1);
+      expect(report.ok).toBe(false);
+      // Exactly these, in any order: one broken thing must not implicate others.
+      expect([...new Set(failing(report))].sort()).toEqual([...expected].sort());
+    });
+  }
+
+  it('matrix: memory disabled reports one skipped check and exits 0', () => {
+    const root = site();
+    writeFileSync(join(root, 'workflow.config.json'), JSON.stringify({ memory: { enabled: false } }));
+    const { code, report } = doctor(root);
+    expect(code).toBe(0);
+    expect(report.disabled).toBe(true);
+    expect(report.checks).toHaveLength(1);
+  });
+
+  it('matrix: no CI workflow warns without changing the exit code', () => {
+    const { code, report } = doctor(site());
+    expect(code).toBe(0);
+    const ci = report.checks.find((c) => c.id === 'memory.ci.reachable')!;
+    expect(ci.severity).toBe('warn');
+  });
+
+  it('matrix: a placeholder left in the index warns without blocking', () => {
+    const root = site();
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# {{PROJECT_NAME}}\n\n- [sample](learnings/sample-record.md) — hook\n',
+    );
+    const { code, report } = doctor(root);
+    expect(code).toBe(0);
+    expect(report.checks.find((c) => c.id === 'memory.placeholders.filled')!.severity).toBe('warn');
+  });
+
+  it('[W1] the symlink cases, against a real symlinked entrypoint', () => {
+    // This repository ships `AGENTS.md -> CLAUDE.md`; the fixture reproduces it
+    // rather than synthesizing something the repo does not do.
+    const root = site();
+    // RELATIVE, which is what this repository actually ships. An ABSOLUTE
+    // in-repo symlink is refused by config load on macOS, where the root is
+    // `/var/...` and realpath returns `/private/var/...` — the same
+    // `/var → /private/var` trap `containedPath` documents avoiding. That is a
+    // real defect in `core/config` containment, outside this PRD's surface, and
+    // it is on the deferral board rather than fixed here.
+    symlinkSync('CLAUDE.md', join(root, 'AGENTS.md'));
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      JSON.stringify({ memory: { enabled: true, entrypoints: ['AGENTS.md'] } }),
+    );
+    expect(doctor(root).code).toBe(0);
+
+    // Both spellings of one real file are ONE satisfied entrypoint.
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      JSON.stringify({ memory: { enabled: true, entrypoints: ['CLAUDE.md', 'AGENTS.md'] } }),
+    );
+    const both = doctor(root);
+    expect(both.code).toBe(0);
+    expect(both.report.checks.find((c) => c.id === 'memory.entrypoint.pointer')!.detail).toContain(
+      '1 entrypoint',
+    );
+
+    // A link out of the repository never reaches the doctor: CONFIG LOAD refuses
+    // it first, and that is the better answer — an invalid configuration should
+    // stop every command, not produce a diagnosis. The doctor keeps its own
+    // escape guard for callers that build a config directly, and `memory.test.ts`
+    // exercises it there; here the end-to-end truth is the refusal.
+    const outside = mkdtempSync(join(tmpdir(), 'provegate-outside-'));
+    roots.push(outside);
+    writeFileSync(join(outside, 'elsewhere.md'), 'Read `_brain/INDEX.md`.\n');
+    rmSync(join(root, 'AGENTS.md'));
+    symlinkSync(join(outside, 'elsewhere.md'), join(root, 'AGENTS.md'));
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      JSON.stringify({ memory: { enabled: true, entrypoints: ['AGENTS.md'] } }),
+    );
+    let refusal = '';
+    let refused = false;
+    try {
+      execFileSync(process.execPath, [CLI, 'doctor', '--memory'], { cwd: root, encoding: 'utf8' });
+    } catch (error) {
+      refused = true;
+      const e = error as { stdout?: string; stderr?: string };
+      refusal = `${e.stdout ?? ''}${e.stderr ?? ''}`;
+    }
+    expect(refused).toBe(true);
+    expect(refusal).toContain('resolves outside the workspace through a symlink');
+  });
+
+  it('[FR-2] the doctor writes nothing — on the passing path AND the failing one', () => {
+    // A diagnostic that writes only when it fails is still a writer, and the
+    // failing path is exactly when an adopter can least afford a surprise edit.
+    const clean = site();
+    const beforeClean = treeHash(clean);
+    expect(doctor(clean).code).toBe(0);
+    expect(treeHash(clean)).toBe(beforeClean);
+
+    const broken = site();
+    rmSync(join(broken, '_brain/INDEX.md'));
+    writeFileSync(join(broken, 'package.json'), JSON.stringify({ name: 'fixture', scripts: {} }));
+    const beforeBroken = treeHash(broken);
+    expect(doctor(broken).code).toBe(1);
+    expect(treeHash(broken)).toBe(beforeBroken);
   });
 });
