@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 101
-> **High:** 21
-> **Medium:** 63
+> **Critical:** 115
+> **High:** 23
+> **Medium:** 66
 > **Low:** 4
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 23
+> **Rounds:** 24
 
 ## How this review was run
 
@@ -536,29 +536,71 @@ the very capitalization heuristic it should have challenged. Both are rewritten.
 round's own regressions were rewritten too, after their first mutation showed they were not
 isolating the line they named.
 
+### Round 24 — the fixes themselves were the defect
+
+Round 23's remediation changed behaviour repository-wide, and its fixtures were written by
+the same author in the same sitting. Round 24 was therefore asked to rank **dishonest
+refusal** — rejecting work a maintainer would call correct — as high as fail-open.
+
+That was the right question. Of the twenty changes: **nine OVERSHOOT, one generalizes
+correctly**, the rest had adjacent cases. Nine fixes made to close fail-opens had begun
+refusing correct work:
+
+- `~state.json` is an ordinary filename; only `~/` is home-relative
+- the runtime `lockId` grammar contradicted the **published schema**, so a lock the schema
+  permits read as malformed and could block activation or release
+- `pnpm run verify:brain` was called a REMOVAL of `pnpm verify:brain`
+- byte equality called a clean checkout dirty under `core.autocrlf`
+- `ROOT_FILENAMES` dropped `BUILD` and `WORKSPACE` while punctuation admitted prose like
+  `follow-up`
+- code-span stripping paired backticks **across a blank line** and deleted a real
+  `**Why:**` section — a valid record refused for a marker it contains
+- `wiredIn` refused `pnpm --silent run verify:brain` while still accepting
+  `echo pnpm verify:brain` — wrong in both directions at once
+- `readyOverlaps` ignored `sharedAppendOnly` and warned about pairs the lock engine allows
+- a malformed base policy was reported as "`memory.enabled` is true on `main`", which the
+  base does not say
+
+One of the round's own proposals was **rejected**: masking inline code for hard-cap
+evidence. A real cap's evidence line is written with its command in backticks, so that fix
+would reject every genuine one. The reasoning is recorded in the code, because a review
+finding is a claim to be checked, not an instruction.
+
+Still fail-open, and fixed: `* [ ]` and `+ [ ]` operator rows read as zero rows and skipped
+the owner acceptance; **root-level Conflict Surface entries were discarded**, so two agents
+could claim `workflow.config.json` — the entry this repository's own PRDs write — with no
+conflict detected; an aligned `| :--- |` separator counted as a data row; `gate status`
+writes state and was omitted from the unknown-option rule; a namespace-qualified
+`src/parser.ts::Parser::parse` matched no watch.
+
+Three tests were findings in their own right: one asserted half of what its name claimed,
+one called itself *"must never mutate"* while asserting nothing about the filesystem, and
+one restated the very allowlist it should have challenged. All three are rewritten.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`.
 
-The adjacent-case rate across the three rounds that measured it is **5/8, 9/11, 13/13**. It
-is not falling as scrutiny sharpens; it is rising. The honest reading is that asking "what
-is one step over this fix" will keep producing findings for as long as it is asked, and that
-no number of further rounds will produce a round that finds nothing.
+This round changes what the accumulated evidence says, and it is worth stating plainly.
 
-The second number is what should decide this. **Ten of twenty-three findings this round were
-in engine code PRD-018 did not write** — path containment, glob canonicalization, manifest
-key validation, the wiring audit, queue overlap, task counting, CLI argument handling. That
-work is real and it is now the majority of what each round surfaces, but it is not this work
-item's scope, and closing PRD-018 is not the thing standing between the repository and those
-fixes.
+Rounds 21-23 measured how often a fix fails to generalize: 5/8, 9/11, 13/13. Round 24 asked
+a different question and got a worse answer: **nine of twenty fixes were actively refusing
+correct work.** The remediation loop is not converging on correctness; it is trading
+fail-opens for dishonest refusals and back, and each round's fixes are the next round's
+defects. Two of this round's findings were bugs I introduced one round earlier while fixing
+a bug I introduced two rounds earlier.
 
-Three honest options, and the choice is the owner's:
+That is not an argument that the code is bad. It is an argument that **this loop cannot
+terminate by itself**: an adversarial reviewer pointed at a body of code will keep producing
+findings, each remediation will introduce new ones at a comparable rate, and no round will
+ever come back empty. Twenty-four rounds is strong evidence that "run one more round" is not
+a path to a passing verdict.
 
-1. **Accept the residual and close.** The contract's own machinery has had six rounds of
-   direct attack; the scanner has been clean for four. What remains is a rate, not a known
-   hole.
-2. **Scope the engine findings to a follow-up work item** and close PRD-018 on its own code.
-3. **Keep running rounds**, understanding that the measured rate says they will keep
-   finding things, increasingly outside this PRD.
+The three options from round 23 stand, and the case for the first two is stronger now:
+
+1. **Accept the residual and close.** The known holes are closed; what remains is a rate.
+2. **Scope the engine findings to a follow-up work item** — this round they were again about
+   half — and close PRD-018 on its own code.
+3. Keep running rounds, now knowing that each one both finds and creates defects.
 
 An agent may not flip the ledger row, and this one has not.

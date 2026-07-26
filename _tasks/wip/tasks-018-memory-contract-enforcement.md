@@ -413,13 +413,21 @@ Records to open and confirm still accurate before the dependent task starts (tas
             disabling every gate, and configured paths outside `memory.*` writing outside
             the repository. Two findings were about this suite; both tests rewritten.
             818 tests, eight regressions, all mutation-checked.
-      - [ ] 10.15 **The adjacent-case rate is RISING: 5/8, 9/11, 13/13.** Asking "what is
-            one step over this fix" will keep producing findings for as long as it is
-            asked; no number of further rounds produces a round that finds nothing. And
-            10 of 23 findings this round were in ENGINE code PRD-018 did not write. The
-            owner decides among three honest options: accept the residual and close; scope
-            the engine findings to a follow-up item and close PRD-018 on its own code; or
-            keep running rounds knowing the measured rate.
+      - [x] 10.15 Round 24, with DISHONEST REFUSAL ranked as high as fail-open because
+            round 23's remediation changed behaviour repository-wide. Of its twenty
+            changes, NINE overshot — refusing correct work — and one generalized cleanly.
+            Twenty findings, all remediated except one that was REJECTED on review: masking
+            inline code for hard-cap evidence would refuse every genuine evidence line.
+            Three tests were findings and were rewritten. 825 tests; seven regressions,
+            all mutation-checked.
+      - [ ] 10.16 **The loop cannot terminate by itself.** Rounds 21-23 measured how often
+            a fix fails to generalize (5/8, 9/11, 13/13); round 24 asked whether the fixes
+            REFUSE correct work and found 9 of 20 did. Two of its findings were defects
+            introduced one round earlier while fixing defects introduced two rounds
+            earlier. Each remediation creates findings at a comparable rate, so no round
+            comes back empty. Verdict stays `fail`; the owner decides: accept the residual
+            and close, scope the engine half to a follow-up item, or keep running rounds
+            knowing that each both finds and creates defects.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -591,5 +599,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.15 | manual-qa | owner | **Decide the review verdict.** Twenty-three independent rounds ran; the adjacent-case rate is rising (5/8, 9/11, 13/13) and 10 of 23 findings were engine-scope, so the choice is accept-and-close, scope the engine work to a follow-up, or keep running rounds; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.16 | manual-qa | owner | **Decide the review verdict.** Twenty-four independent rounds ran; round 24 showed the remediation loop trades fail-opens for dishonest refusals and back — 9 of 20 fixes were refusing correct work — so "one more round" is not a path to a passing verdict; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |
