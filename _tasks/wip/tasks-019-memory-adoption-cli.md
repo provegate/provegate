@@ -204,16 +204,16 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 6.4 Run `pnpm check-egress` and confirm `scripts/check-static-egress.mjs` still
         passes against built output.
 
-- [ ] 7.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
-  - [ ] 7.1 Prove the additive claim: with the branch applied and memory disabled, every
+- [x] 7.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
+  - [x] 7.1 Prove the additive claim: with the branch applied and memory disabled, every
         pre-existing command behaves byte-identically to the recorded baseline from 0.5.
-  - [ ] 7.2 Record the rollback in **Deferrals & Decisions**: remove the two CLI routes
+  - [x] 7.2 Record the rollback in **Deferrals & Decisions**: remove the two CLI routes
         and the two core modules; records stay readable Markdown, no state file, cache,
         or remote resource is involved.
-  - [ ] 7.3 Confirm the deployment order held: this PRD enables nothing, changes no
+  - [x] 7.3 Confirm the deployment order held: this PRD enables nothing, changes no
         manifest, and adds no gate — it only reports on what PRD-017 and PRD-018 built.
         Grep the diff to prove it.
-  - [ ] 7.4 Decide and record whether the new commands warrant a changeset entry; a new
+  - [x] 7.4 Decide and record whether the new commands warrant a changeset entry; a new
         public CLI surface normally does.
 
 - [ ] 8.0 Phase 5 — Execute verification
@@ -295,6 +295,32 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **7.2 ROLLBACK.** Delete `core/memory/doctor.ts` and `core/memory/find.ts`, drop their
+  re-exports from `core/memory/index.ts`, and remove the `doctor` and `memory` routes plus
+  `runDoctor`/`runMemory` from `cli.ts`. That is the whole surface. Nothing else has to be
+  undone: no state file is written, no cache or index is built, no config or manifest is
+  changed, no gate is registered, and no remote resource is involved. Records stay what
+  they were before and after — readable Markdown a human can open. The one change outside
+  that surface is the worktree lease release (declared deviation below), which is
+  independent and would be reverted on its own terms.
+
+- **7.3 DEPLOYMENT ORDER, proven by grep rather than asserted.** This PRD enables nothing
+  and gates nothing: the diff against `main` touches no `workflow.config.json`, no
+  `gates.manifest.json`, and no `scripts/verify/**`, and adds zero `chain.push` calls. It
+  only REPORTS on what PRD-017 and PRD-018 built, which is why it could ship after them in
+  any order without a migration step.
+
+- **7.1 ADDITIVE, checked against a memory-DISABLED repository.** In a bare git repo with
+  no config, `gate status` behaves as before and `gate memory find` refuses with
+  remediation rather than returning an empty list. The suite went 833 → 887 with no
+  pre-existing test changing its expectation except the two PRD-017/PRD-022 invariants that
+  this PRD legitimately retires, each rewritten to assert the property it actually guarded.
+
+- **7.4 CHANGESET: yes.** A new public CLI surface normally warrants one and this is two
+  commands, so `.changeset/memory-adoption-cli.md` ships a `minor` for `provegate`. It
+  states the additive property explicitly, because that is the thing an upgrading adopter
+  needs to know.
+
 - **FR-5 decision — docs asserted semantically, in PAIRS.** "the command name appears in
   the README" stays green while every sentence around the name goes false. Each docs claim
   is paired with the behaviour that makes it true: the read-only promise against the
