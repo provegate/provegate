@@ -284,7 +284,33 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
-- (none deferred yet)
+- **Scope deviation (owner-approved) — the worktree-close lease leak.** `removeWorktree`
+  deleted the checkout and the branch and never unlinked the lease, so a worktree-stamped
+  close left its work item IN-FLIGHT until the TTL expired and blocked every overlapping
+  candidate. The plain-close path releases its lease (PRD-018 round 23); this branch of the
+  same if/else was never changed with it. PRD-018's first real close hit it — twenty-six
+  review rounds did not.
+
+  Fixed here rather than deferred, and the reasons are worth keeping: this PRD's own close
+  leaks the same lease, and the fix belongs inside `removeWorktree` where the teardown
+  already happens rather than bolted onto the caller. The Conflict Surface was extended by
+  three files (`core/run/worktree.ts`, `test/worktree.test.ts`, `test/cli-state.test.ts`)
+  and re-claimed, so the fix could carry a regression instead of a promise.
+
+  Five regressions in `test/worktree.test.ts`, mutation-checked both ways: removing the
+  unlink fails three of them, and releasing the lease when removal REFUSED fails the fourth.
+  That second direction matters — a lease outliving a worktree still on disk would orphan
+  the claim on the directory someone is working in, which is `locks-on-main-not-worktree`
+  from the other side. `leaseReleased` is reported on the removal result and printed on the
+  handoff card.
+
+  **Retires the `Worktree close leaks its lease` deferral row**, removed from `STATUS.md`.
+
+  Cost, recorded honestly: re-claiming needed a release first, and releasing destroyed the
+  stamps that make worktree REUSE possible — so the checkout had to be torn down and
+  rebuilt, and the in-progress work re-applied from a patch. `gate open --worktree` on a
+  PRD whose lease was just released cannot reuse its own checkout. Not fixed here; noted
+  because the next agent to widen a surface mid-flight will hit it.
 
 ---
 

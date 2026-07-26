@@ -941,11 +941,16 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
           ];
           return;
         }
-        const removal = removeWorktree(config, root, stamps);
+        // `stamps.file` is the lease this close owns — identity-revalidated
+        // immediately above, inside the same mutex hold. Teardown unlinks it, so
+        // the work item stops being IN-FLIGHT the moment its checkout is gone.
+        const removal = removeWorktree(config, root, { ...stamps, lease: stamps.file });
         cleanupDone = removal.removed;
         if (removal.removed) {
           outcome.results.push([
-            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}${
+              removal.leaseReleased ? ' + lease released' : ''
+            }`,
             'passed',
           ]);
         }

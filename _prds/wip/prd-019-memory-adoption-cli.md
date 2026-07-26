@@ -311,6 +311,22 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - `apps/docs/content/docs/cli.mdx`
 - `scripts/check-static-egress.mjs`
 - `scripts/verify/pack-drift-ledger.json` — claimed defensively for FR-5's conditional
+- `packages/provegate/src/core/run/worktree.ts` — **scope deviation**, see below
+- `packages/provegate/test/worktree.test.ts` — **scope deviation**, see below
+- `packages/provegate/test/cli-state.test.ts` — **scope deviation**, see below
+
+**Scope deviation — the worktree-close lease leak.** These last three are not this PRD's
+subject. `removeWorktree` deletes the checkout and the branch and never unlinks the lease,
+so a worktree-stamped close leaves its work item IN-FLIGHT until the TTL expires and blocks
+every overlapping candidate. PRD-018's first real close hit it — twenty-six review rounds
+did not. The plain-close path releases its lease (added in PRD-018 round 23) and this branch
+of the same if/else was not changed with it.
+
+It is fixed here rather than deferred because **this PRD's own close leaks the same lease**,
+and because the fix belongs in `removeWorktree` — where the worktree and branch are already
+being torn down — rather than bolted onto the caller. The two test files are claimed so the
+fix can carry a regression instead of a promise. Recorded in the task plan's Deferrals &
+Decisions with the deferral row it retires.
   new-packed-file case; no unconditional write is planned
 
 ---
