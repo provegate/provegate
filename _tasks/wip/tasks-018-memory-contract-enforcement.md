@@ -354,9 +354,15 @@ Records to open and confirm still accurate before the dependent task starts (tas
             VALID Markdown. A contract section now declares its own shape — column-zero
             bullets, continuations, prose, blank lines — and anything else refuses with a
             message naming the construct. Every rule measured against the corpus first.
-      - [ ] 10.8 **No round has run against the current code.** Round 16's findings are
-            remediated but unconfirmed, so the review verdict stays `fail`. Closing needs
-            one confirming round or an explicit owner decision to accept the residual.
+      - [x] 10.8 Round 17, commissioned as the CONFIRMING round. It reconstructed every
+            round-16 counterexample and found them fixed, then found three more in the
+            recording category — each a generalization not carried far enough — plus three
+            refuse-only. All six remediated. It confirmed the three statements the close
+            rests on: template and PRD-017/018/019 satisfy the grammar, none of 108
+            artifacts is unreadable, and a memory-disabled repo is untouched.
+      - [ ] 10.9 **The confirming round did not confirm, and no round has run against the
+            current code.** Verdict stays `fail`. Trend across rounds 14-17: 7, 4, 4, 3.
+            Closing needs an owner decision — another round, or accept the residual.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -528,5 +534,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.8 | manual-qa | owner | **Decide the review verdict.** Sixteen independent rounds ran; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.9 | manual-qa | owner | **Decide the review verdict.** Seventeen independent rounds ran, the last one commissioned to confirm and finding three more; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |

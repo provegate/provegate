@@ -6,11 +6,11 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 61
+> **Critical:** 64
 > **High:** 0
-> **Medium:** 45
+> **Medium:** 48
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 16
+> **Rounds:** 17
 
 ## How this review was run
 
@@ -227,12 +227,42 @@ which is what narrowing was for: it concentrates the risk somewhere a reviewer c
 at. That classifier now implements the specification's seven block types rather than an
 approximation of them.
 
-### Open at round 16
+### Round 17 — the confirming round, which did not confirm
 
-Round 16's four findings are remediated, but **no round has yet run against the current
-code**. The verdict therefore stays `fail`: this artifact records sixteen rounds in which
-every finding was closed, not a round that found nothing. Closing the PRD needs either one
-confirming round or an explicit owner decision to accept the residual.
+Round 17 was commissioned to answer two questions: are round 16's remediations correct,
+and does anything still record what a renderer does not display. It reconstructed every
+round-16 counterexample and found them all fixed. It then found **three more** in the same
+category, and all three were generalizations that had not been carried far enough:
+
+- `paragraphActive` was inferred from the raw line, so a completed `<!-- note -->` kept it
+  set and the next line's type-7 tag could not open a block — leaving the bullet that block
+  was hiding to be read.
+- A named whitespace entity such as `&Tab;` decoded to a visible character, because only
+  four lowercase names were recognized out of the hundreds HTML defines.
+- Whether a tag displays its contents is a DOM question — `<span hidden>x</span>` shows
+  nothing — and the reader was answering it by counting what it stripped.
+
+All three are fixed, and the last one by applying the narrowing decision one level deeper:
+raw inline HTML in a rationale is refused by name rather than having its rendered
+visibility inferred. Two containers the round named, block quotes and ordered lists, are
+refused inside a contract section for the same reason.
+
+Round 17 also confirmed the three statements the close rests on: the shipped template and
+PRD-017/018/019 satisfy the narrowed grammar; none of the 108 artifacts under `_prds/`,
+`_tasks/`, `_readiness/`, `_docs/` is refused as unreadable; and a memory-DISABLED
+repository retains its legacy behavior in `lintPrd`, the gate chain, and
+`declaredArtifacts`.
+
+### Open
+
+**No round has run against the current code.** The verdict stays `fail`, and that is the
+honest reading: this artifact records seventeen rounds in which every finding was closed,
+not a round that found nothing. The confirming round was asked to be that round and
+instead found three more, which is itself the most useful fact here — the trend across
+rounds 14-17 is 7, 4, 4, 3 findings, narrowing but not yet zero.
+
+Closing the PRD therefore needs an explicit owner decision: commission another round, or
+accept the residual. An agent may not flip the ledger row, and this one has not.
 
 Two residuals are recorded on the deferral board rather than fixed here, both because
 their fix spans files outside this PRD's Conflict Surface: the package and standalone
