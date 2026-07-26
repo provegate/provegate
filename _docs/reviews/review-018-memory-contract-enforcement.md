@@ -6,18 +6,18 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 41
+> **Critical:** 61
 > **High:** 0
-> **Medium:** 32
+> **Medium:** 45
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 10
+> **Rounds:** 16
 
 ## How this review was run
 
-Ten adversarial rounds, each pointed at the PREVIOUS round's repairs rather than at the
-original code — because that is where every round after the first found its defects.
-Round 1 attacked the implementation; rounds 2-10 each attacked the preceding round's
-fixes. All ten returned FAIL.
+Sixteen adversarial rounds, each pointed at the PREVIOUS round's repairs rather than at
+the original code — because that is where every round after the first found its defects.
+Round 1 attacked the implementation; rounds 2-16 each attacked the preceding round's
+fixes. All sixteen returned findings, and every finding was remediated.
 
 Every finding was re-verified against source by the implementer before being recorded,
 and several were confirmed by direct measurement on this repository rather than by
@@ -187,3 +187,56 @@ Recurring classes, each closed and each worth naming:
   Conflict Surface, so it is on the deferral board rather than half-fixed here.
 - A legitimate code span wrapping across lines is read literally, and a `<!--` inside one
   refuses the document. Fail-closed, named, deferred.
+
+---
+
+## Rounds 11-16 — and where this stopped
+
+Counts by round: 11 (5 CRITICAL, 1 MEDIUM), 12 (5, 1), 13 (5, 4), 14 (4, 3), 15 (1, 3),
+16 (2, 2). Round 11 is the one worth naming: **all five of its criticals were fail-open** —
+a crafted document made a gate ACCEPT a declaration a renderer never displayed. From
+round 14 the reviewer was asked to report three numbers each round — findings, how many
+RECORD something the renderer does not show, how many only REFUSE something it does — so
+the trend could be seen rather than argued about. It went 7/4/3, then 4/1/3, then 4/2/2.
+
+Round 13 did not complete: the reviewer's provider flagged the request as a possible
+cybersecurity risk and killed the turn. That is an infrastructure refusal, not a verdict,
+and it is recorded as one. Rephrasing the same review in first-party correctness terms —
+"where does the reader disagree with a renderer" rather than "craft a document that
+bypasses the gate" — ran to completion. Before it was cut off the round named two
+candidate defects; both were reproduced independently and both were real.
+
+### The decision this review produced
+
+By round thirteen the pattern was unarguable: a hand-rolled Markdown reader was being
+asked to match an entire specification, the package may take no runtime dependency to
+defer to, and four of that round's nine findings were the reader REFUSING valid Markdown —
+the hardening had begun costing what it bought. The owner's call was to stop matching
+CommonMark and NARROW what a contract section may contain, so the reader has less to
+understand:
+
+- a declaration is a column-zero bullet, and nothing else is one;
+- a line of dashes or equals directly under text is refused rather than interpreted,
+  which retires setext handling altogether;
+- fences, raw HTML blocks, and indented code refuse the section outright.
+
+Every rule was measured against the corpus before it shipped — 23 PRDs, 52 sections, 312
+bullets, 85 artifacts — so none of them cost anything already written. Rounds 14-16 then
+found their remaining defects almost entirely in one place, the HTML block classifier,
+which is what narrowing was for: it concentrates the risk somewhere a reviewer can point
+at. That classifier now implements the specification's seven block types rather than an
+approximation of them.
+
+### Open at round 16
+
+Round 16's four findings are remediated, but **no round has yet run against the current
+code**. The verdict therefore stays `fail`: this artifact records sixteen rounds in which
+every finding was closed, not a round that found nothing. Closing the PRD needs either one
+confirming round or an explicit owner decision to accept the residual.
+
+Two residuals are recorded on the deferral board rather than fixed here, both because
+their fix spans files outside this PRD's Conflict Surface: the package and standalone
+`verify-brain.mjs` disagree about what an INDEX pointer is (the fail-OPEN half of that is
+closed — an unindexed record file is now a blocking store issue), and the two deliberate
+parser splits, `frTargets` and `declaredArtifacts`, each keep a legacy reader so a
+memory-DISABLED repository stays byte-identical.

@@ -18,6 +18,7 @@
 - [known-red ledger must expire](learnings/known-red-ledger-must-expire.md) — an acknowledged-failure allowlist must fail on stale/unknown entries or it becomes a permanent bypass
 - [unparseable command must fail loudly](learnings/unparseable-command-must-fail-loudly.md) — a runner must never silently drop a command it can't classify as runnable; report or fail
 - [adr section blank line reads empty](learnings/adr-section-blank-line-reads-empty.md) — `$` under `/m` ends the capture at the first newline, so a blank line after `## Context` reads as empty
+- [narrow the grammar not the parser](learnings/narrow-the-grammar-not-the-parser.md) — a hand-rolled Markdown reader never reaches renderer parity; restrict what the document may contain instead
 
 ## Orchestration & close gotchas
 

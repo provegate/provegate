@@ -348,6 +348,9 @@ so that learning capture cannot be ceremonial or silently weakened.
 - applied: `adr-section-blank-line-reads-empty` — written during Phase 4 and immediately
   binding on it: ADR-0001 is formatted with each section's first line directly under its
   heading, because a blank line there reads as an empty section.
+- applied: `narrow-the-grammar-not-the-parser` — written at this PRD's own Phase 7 close
+  and binding on the code it describes: the contract sections declare their shape and
+  refuse the rest, rather than the reader modelling more Markdown each round.
 
 ---
 
@@ -359,6 +362,10 @@ so that learning capture cannot be ceremonial or silently weakened.
 - learning: `_brain/learnings/adr-section-blank-line-reads-empty.md` — the ADR section
   check anchors on `$` under `/m`, so a blank line after the heading reads as an empty
   section; appended during Phase 4, when writing this PRD's own ADR hit it.
+- learning: `_brain/learnings/narrow-the-grammar-not-the-parser.md` — sixteen review
+  rounds found ~5 renderer disagreements each in a hand-rolled Markdown reader and never
+  converged; narrowing what a contract section may contain retired the class. Appended at
+  the Phase 7 capture, which is where the lesson finished forming.
 
 ---
 
@@ -398,6 +405,7 @@ per the configured shared-file rule.
 
 - Decision: `_brain/adr/ADR-0001-closed-loop-agent-memory.md`
 - Learning: `_brain/learnings/adr-section-blank-line-reads-empty.md`
+- Learning: `_brain/learnings/narrow-the-grammar-not-the-parser.md`
 - Method docs: `apps/docs/content/docs/method.mdx`
 - Review: `_docs/reviews/review-018-memory-contract-enforcement.md`
 

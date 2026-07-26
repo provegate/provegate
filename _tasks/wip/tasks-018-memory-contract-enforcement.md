@@ -337,15 +337,35 @@ Records to open and confirm still accurate before the dependent task starts (tas
             tests inject `changedFiles` and `existsSync` did the rejecting. A fixture now
             names an EXISTING file in `changedFiles` that the feature branch never touched,
             so only the real diff status can refuse it.
+      - [x] 10.5 Rounds 5-16, each aimed at the previous round's fixes. Counts:
+            5 (4 CRITICAL, 3 MEDIUM), 6 (4,3), 7 (4,3), 8 (3,3), 9 (2,4), 10 (3,2),
+            11 (5,1), 12 (5,1), 13 (5,4), 14 (4,3), 15 (1,3), 16 (2,2). Every finding
+            re-verified against source before acceptance; every one remediated with a
+            regression that fails when the fix is reverted. Round 11 is the one to
+            remember: all five of its criticals were fail-OPEN.
+      - [x] 10.6 **Round 13 did not complete** — the reviewer's provider flagged the
+            request as a possible cybersecurity risk and killed the turn. Recorded as an
+            infrastructure refusal, not a verdict. Rephrasing the same review in
+            first-party correctness terms ran to completion; the two candidate defects it
+            named before being cut off were both reproduced and both real.
+      - [x] 10.7 **Owner decision after round 13: narrow the contract grammar instead of
+            matching CommonMark.** Sixteen rounds found ~5 renderer disagreements each and
+            never converged; by round 13 four of nine findings were the reader refusing
+            VALID Markdown. A contract section now declares its own shape — column-zero
+            bullets, continuations, prose, blank lines — and anything else refuses with a
+            message naming the construct. Every rule measured against the corpus first.
+      - [ ] 10.8 **No round has run against the current code.** Round 16's findings are
+            remediated but unconfirmed, so the review verdict stays `fail`. Closing needs
+            one confirming round or an explicit owner decision to accept the residual.
 
-- [ ] 11.0 Phase 7 — Durable learning and close preparation
-  - [ ] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
+- [x] 11.0 Phase 7 — Durable learning and close preparation
+  - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
         ADR-0001; if implementation surfaced a non-derivable trap, append its exact path
         to both Memory Outputs and Durable Artifacts before writing the record.
-  - [ ] 11.2 Confirm every declared Durable Artifact (ADR-0001, `method.mdx`, the review)
+  - [x] 11.2 Confirm every declared Durable Artifact (ADR-0001, `method.mdx`, the review)
         is present in the merge diff — this PRD's own gate now enforces that, so it is
         also the first live test of FR-4.
-  - [ ] 11.3 Prepare the owner handoff: the activation order evidence, the disabled-path
+  - [x] 11.3 Prepare the owner handoff: the activation order evidence, the disabled-path
         proof from 8.2, the reconcile output from 7.4, the lock-table state from 9.5, and
         the independent verdict.
   - [ ] 11.4 After owner acceptance only, run `gate land PRD-018`; verify the post-merge
@@ -508,4 +528,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
+| 10.8 | manual-qa | owner | **Decide the review verdict.** Sixteen independent rounds ran; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |
