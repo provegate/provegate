@@ -1379,3 +1379,62 @@ describe('phase 6 round 14 regressions', () => {
     expect(parseMemoryDeclarations(doc).issues).toEqual([]);
   });
 });
+
+describe('phase 6 round 15 regressions', () => {
+  it('[R15-P1-1] an HTML block ends where the renderer ends it, not at EOF', () => {
+    const doc = [
+      '<div>',
+      'maintainer note',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — no durable output is expected.',
+      '',
+    ].join('\n');
+    // The block ends at the blank line, so the heading and the list are visible.
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.present).toBe(true);
+    expect(decl.outputs.none).toBe(true);
+    expect(decl.issues).toEqual([]);
+  });
+
+  it('[R15-P1-2] a type-6 block tag interrupts a paragraph', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      'Introductory prose',
+      '<div>',
+      '- none — hidden in raw HTML.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R15-P2-3] a wrapped inline tag inside a rationale is not a block', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- none — No durable output is expected.',
+      '  <br>',
+      '  The behavior is fully derivable from tests.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R15-P2-4] an autolink and a decoded entity are visible rationale', () => {
+    for (const rationale of ['<https://example.com/issues/123>', '&#65;', '<owner@example.com>']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, rationale).toEqual([]);
+    }
+  });
+
+  it('[R15-P2-4] but a whitespace entity still renders as nothing', () => {
+    const doc = ['## Memory Outputs', '', '- none — &#32;&nbsp;', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('requires a rationale'),
+    );
+  });
+});

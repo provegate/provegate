@@ -152,15 +152,32 @@ function closesBeforeParagraphEnd(
  * (types 1-5, which are recognizable by their opener) from the generic tag form
  * (types 6-7), which may not.
  */
+/** CommonMark's type-6 block tag names: these interrupt a paragraph. Anything
+ * else in tag form is type 7, which does not. */
+const BLOCK_TAGS =
+  'address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|' +
+  'dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|' +
+  'hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|' +
+  'search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul';
+
 function htmlBlockEnd(line: string, previousBlank: boolean): RegExp | null {
+  // Types 1-5 carry their own terminators and may interrupt a paragraph.
   if (/^ {0,3}<(?:script|pre|style|textarea)\b/i.test(line)) {
     return /<\/(?:script|pre|style|textarea)>/i;
   }
   if (/^ {0,3}<!\[CDATA\[/.test(line)) return /\]\]>/;
   if (/^ {0,3}<\?/.test(line)) return /\?>/;
   if (/^ {0,3}<![A-Za-z]/.test(line)) return />/;
-  // The generic tag form ends at a blank line and cannot interrupt a paragraph.
-  if (previousBlank && /^ {0,3}<\/?[a-zA-Z][a-zA-Z0-9-]*(?:[ \t>]|\/>|$)/.test(line)) {
+  // Type 6 — a known block tag — also interrupts a paragraph, and ends at a
+  // blank line. Requiring a preceding blank let `<div>` under a prose line stay
+  // unrecognized, so a declaration inside it was read as one.
+  if (new RegExp(`^ {0,3}</?(?:${BLOCK_TAGS})(?:[ \t>]|/>|$)`, 'i').test(line)) {
+    return /^[ \t]*$/;
+  }
+  // Type 7 — any other complete tag alone on its line — may NOT interrupt a
+  // paragraph, which is what keeps a wrapped `<br>` inside a rationale from
+  // being read as a block.
+  if (previousBlank && /^ {0,3}<\/?[a-zA-Z][a-zA-Z0-9-]*(?:[ \t]*\/?>[ \t]*)$/.test(line)) {
     return /^[ \t]*$/;
   }
   return null;
@@ -210,6 +227,20 @@ function executableView(content: string): { view: string; unreliable: string | n
       continue;
     }
 
+    // An OPEN html block is consumed first, like a fence. Testing for a new
+    // opener before checking the current block's terminator made that
+    // terminator unreachable, so every block ran to end of file and swallowed
+    // the sections after it.
+    if (htmlBlock !== null) {
+      const ends: boolean = htmlBlock.test(raw);
+      if (ends) htmlBlock = null;
+      out.push('');
+      // A block ended BY a blank line leaves that blank in force, so the next
+      // line can open a block of its own.
+      previousBlank = ends && raw.trim().length === 0;
+      continue;
+    }
+
     // A fence opens only outside a comment and outside a code span.
     if (!inComment && span === 0) {
       const opener = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(raw);
@@ -222,23 +253,14 @@ function executableView(content: string): { view: string; unreliable: string | n
       // A raw HTML block is not executed either, and blanking it here is what
       // covers the INDEX as well as a contract section: a pointer written
       // inside `<? … ?>` renders as nothing and must not count.
-      // Only OPEN when none is open: assigning unconditionally reset an open
-      // block on its very next line, which is how `<script>` stopped covering
-      // the lines it contains.
-      if (htmlBlock === null) htmlBlock = htmlBlockEnd(raw, previousBlank);
+      htmlBlock = htmlBlockEnd(raw, previousBlank);
       if (htmlBlock !== null) {
-        // The opening line may also close the block.
+        // A types-1-5 opener may also close on its own line.
         if (htmlBlockEnd.CLOSES_ON_OPEN.test(raw) && htmlBlock.test(raw)) htmlBlock = null;
         out.push('');
         previousBlank = false;
         continue;
       }
-    }
-    if (htmlBlock !== null) {
-      if (htmlBlock.test(raw)) htmlBlock = null;
-      out.push('');
-      previousBlank = false;
-      continue;
     }
 
     let line = '';
@@ -423,11 +445,7 @@ function unsupportedContainer(body: string): string | null {
     // requiring a preceding blank let `<div>` under a prose line hide a bullet.
     // Autolinks are excluded by shape — both the URI form and the email form,
     // which a maintainer may reasonably write in a rationale.
-    if (
-      /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(line) &&
-      !/^ *<[a-zA-Z][a-zA-Z0-9+.-]*:[^ <>]*>/.test(line) &&
-      !/^ *<[^ <>@]+@[^ <>@]+>/.test(line)
-    ) {
+    if (!/^ {0,3}<!--/.test(line) && htmlBlockEnd(line, previousBlank) !== null) {
       return 'a raw HTML block';
     }
     // Four spaces after a blank line opens an indented code block — but NOT
@@ -509,8 +527,15 @@ function visibleLength(rationale: string | null): number {
         index % 2 === 1
           ? part
           : part
+              // An autolink DISPLAYS its URL or address, so it is visible
+              // rationale — erasing it rejected `- none — <https://…/issues/123>`.
+              .replace(/<([a-zA-Z][a-zA-Z0-9+.-]*:[^ <>]*)>/g, '$1')
+              .replace(/<([^ <>@]+@[^ <>@]+)>/g, '$1')
               .replace(/<[a-zA-Z/!?][^>"']*(?:"[^"]*"|'[^']*')*[^>]*>/g, ' ')
-              .replace(/&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, ' '),
+              // An entity DECODES to a character: `&#65;` displays `A`. Only
+              // the whitespace ones vanish, so they alone stay erased.
+              .replace(/&(?:#0*(?:9|1[0-3]|32)|#x0*(?:9|[aAdD]|20)|nbsp|ensp|emsp|thinsp);/g, ' ')
+              .replace(/&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, 'x'),
       )
       .join('')
       .trim().length
