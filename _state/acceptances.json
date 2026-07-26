@@ -123,6 +123,16 @@
       "reason": "owner accepted the stated residual after 26 independent rounds: 126 critical + 27 high + 68 medium + 4 low found and all remediated, 0 outstanding. Round 26's readiness assessment rated its four blocking defects two plausible and two adversarial - three fixed with mutation-checked regressions, one adversarial item (a validator's script identity does not pin its implementation) deferred in STATUS.md with an owner and a due date. No confirming assessment was run against the current code and the review artifact says so. Activation is one-way",
       "date": "2026-07-26",
       "method": "agent-directed by owner in chat; not an interactive owner confirmation"
+    },
+    {
+      "prd": "PRD-019",
+      "items": [
+        "10.3 run `gate doctor --memory` on a repository you did not scaffold and judge whether its failures are actionable"
+      ],
+      "owner": "owner",
+      "reason": "owner directed the close in chat. 10.3 was discharged by DOGFOOD rather than by owner judgement, and it found a real defect: a fresh `gate init --practices` install reported placeholders clean while its scaffolded AGENT_BOOTSTRAP.md still carried five unfilled tokens, because the check scanned only the index. Fixed with a mutation-checked regression, and the remediation text on a broken validator was verified readable on that same install. The owner did NOT personally run the doctor on a foreign repository; that judgement is accepted on the recorded evidence instead. One round of review, run as a readiness assessment: DO NOT CLOSE with 6 blockers (4 routine) plus 8 test defects, all remediated, 0 outstanding, no confirming re-run. 899 tests and the full floor green",
+      "date": "2026-07-26",
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     }
   ]
 }

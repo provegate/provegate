@@ -437,18 +437,43 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
   // Practice placeholders: shipped templates carry `{{TOKEN}}` markers an
   // adopter is meant to replace. Leaving one is a real install defect, but it
   // does not break a gate today, so it warns.
+  // The INDEX and every ENTRYPOINT. Scanning the index alone reported a fresh
+  // `gate init --practices` install as clean while its scaffolded
+  // `AGENT_BOOTSTRAP.md` still carried five `{{TOKEN}}` markers — a false green
+  // on the one thing this check is named for. Found by running the doctor
+  // against a repository this agent did not hand-build, which is what the
+  // operator row asks for and what no fixture was going to surface.
   const unfilled: string[] = [];
-  if (indexPresent) {
-    const indexText = readFileSync(indexAbs, 'utf8');
-    for (const match of indexText.matchAll(/\{\{([A-Z_]+)\}\}/g)) unfilled.push(match[1]!);
+  const scanned: [string, string][] = [];
+  if (indexPresent) scanned.push([memory.index, indexAbs]);
+  for (const entry of memory.entrypoints) {
+    const abs = resolve(root, canonicalRel(entry));
+    if (isFile(abs)) scanned.push([entry, abs]);
+  }
+  const withPlaceholders: string[] = [];
+  for (const [label, abs] of scanned) {
+    let text: string;
+    try {
+      text = readFileSync(abs, 'utf8');
+    } catch {
+      continue;
+    }
+    const found = [...text.matchAll(/\{\{([A-Z_]+)\}\}/g)].map((m) => m[1]!);
+    if (found.length === 0) continue;
+    unfilled.push(...found);
+    withPlaceholders.push(`\`${label}\`: ${[...new Set(found)].join(', ')}`);
   }
   if (unfilled.length === 0) {
-    add('memory.placeholders.filled', 'pass', 'no unfilled template placeholders in the index');
+    add(
+      'memory.placeholders.filled',
+      'pass',
+      `no unfilled template placeholders in ${scanned.length} scanned file(s)`,
+    );
   } else {
     add(
       'memory.placeholders.filled',
       'warn',
-      `unfilled placeholder(s) in \`${memory.index}\`: ${[...new Set(unfilled)].join(', ')}`,
+      `unfilled placeholder(s) — ${withPlaceholders.join('; ')}`,
       'replace them with real values from your repository',
     );
   }

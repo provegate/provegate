@@ -1029,6 +1029,25 @@ describe('FR-1 — read-only memory doctor', () => {
     expect(check(report, 'memory.ci.reachable')[0]!.severity).toBe('pass');
   });
 
+  it('placeholders are found in ENTRYPOINTS, not only in the index', () => {
+    // A fresh `gate init --practices` install reported clean while its scaffolded
+    // `AGENT_BOOTSTRAP.md` still carried five `{{TOKEN}}` markers — a false green
+    // on the one thing this check is named for. Found by running the doctor
+    // against a repository nobody hand-built, which is what the operator row
+    // asks for and what no fixture here was going to surface.
+    const site = install();
+    writeFileSync(
+      join(site.root, 'CLAUDE.md'),
+      'Read `_brain/INDEX.md`.\n\nOwner: {{PROJECT_OWNER}}\n',
+    );
+    const report = run(site);
+    const ph = check(report, 'memory.placeholders.filled')[0]!;
+    expect(ph.severity).toBe('warn');
+    expect(ph.detail).toContain('PROJECT_OWNER');
+    expect(ph.detail).toContain('CLAUDE.md');
+    expect(report.code).toBe(0);
+  });
+
   it('an unfilled template placeholder warns without blocking', () => {
     const site = install();
     writeFileSync(
