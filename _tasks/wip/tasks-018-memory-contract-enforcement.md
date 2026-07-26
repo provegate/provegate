@@ -406,12 +406,20 @@ Records to open and confirm still accurate before the dependent task starts (tas
             `## Operator Handoff` disarming the owner gate through `sectionMatching`.
             Seven HIGH and two MEDIUM followed. 808 tests; ten regressions, all
             mutation-checked, one rewritten after its mutation was caught by a neighbour.
-      - [ ] 10.14 **No round has run against the current code, and the findings have moved
-            OUTSIDE this PRD.** Round 22's most serious finding was in `sectionMatching`,
-            a shared primitive this work item did not write; others were in `conflicts.ts`
-            and the CLI argument surface. Continuing to run rounds against PRD-018 is now
-            auditing the workflow engine at large. Verdict stays `fail`; the owner decides:
-            another round, accept the residual, or scope the remainder to a follow-up item.
+      - [x] 10.14 Round 23, same design as round 22 and scope-labelled per finding: 13 of
+            13 fixes had an adjacent case. Twenty-three findings (10 CRITICAL, 7 HIGH, 5
+            MEDIUM, 1 LOW), all remediated — including `--dry-run=true` running the live
+            merge, an indented `## Operator Handoff` reading zero rows, `memory: null`
+            disabling every gate, and configured paths outside `memory.*` writing outside
+            the repository. Two findings were about this suite; both tests rewritten.
+            818 tests, eight regressions, all mutation-checked.
+      - [ ] 10.15 **The adjacent-case rate is RISING: 5/8, 9/11, 13/13.** Asking "what is
+            one step over this fix" will keep producing findings for as long as it is
+            asked; no number of further rounds produces a round that finds nothing. And
+            10 of 23 findings this round were in ENGINE code PRD-018 did not write. The
+            owner decides among three honest options: accept the residual and close; scope
+            the engine findings to a follow-up item and close PRD-018 on its own code; or
+            keep running rounds knowing the measured rate.
 
 - [x] 11.0 Phase 7 — Durable learning and close preparation
   - [x] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. This PRD's declared output is
@@ -583,5 +591,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.14 | manual-qa | owner | **Decide the review verdict.** Twenty-two independent rounds ran; nine of eleven fixes had an adjacent case, while the scanner stayed clean for a third round and the findings moved outside this PRD's own code; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.15 | manual-qa | owner | **Decide the review verdict.** Twenty-three independent rounds ran; the adjacent-case rate is rising (5/8, 9/11, 13/13) and 10 of 23 findings were engine-scope, so the choice is accept-and-close, scope the engine work to a follow-up, or keep running rounds; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |

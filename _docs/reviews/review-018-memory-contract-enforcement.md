@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 91
-> **High:** 14
-> **Medium:** 58
-> **Low:** 3
+> **Critical:** 101
+> **High:** 21
+> **Medium:** 63
+> **Low:** 4
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 22
+> **Rounds:** 23
 
 ## How this review was run
 
@@ -486,26 +486,79 @@ the legacy path needs no deferral to justify it.
 Ten regressions, all mutation-checked — including one rewritten after its first mutation
 turned out to be caught by a neighbouring test rather than by itself.
 
+### Round 23 — thirteen fixes, thirteen adjacent cases
+
+Round 23 repeated round 22's design: hand the reviewer the previous round's fixes and ask
+for the input one step over. Round 21 found 5 of 8 incomplete. Round 22 found 9 of 11.
+**Round 23 found 13 of 13.**
+
+Twenty-three findings — ten CRITICAL, seven HIGH, five MEDIUM, one LOW. This round was also
+asked to label each finding `SCOPE: prd-018` or `SCOPE: engine`, and the split is the most
+decision-relevant number in this artifact: **thirteen in this PRD's code, ten in engine code
+it did not write.**
+
+The pattern is now unmistakable, and several of the thirteen are the same fix applied to one
+of two symmetrical places:
+
+- the weakening waiver required a committed acceptance; the **ordinary operator gate** still
+  read the working tree, so a close with operator rows could land with no authorization in
+  its own history
+- `memory: null` in the base config is valid JSON and spread to nothing, so the defaults'
+  `enabled: false` came back and no memory gate was built at all
+- comparing whether *either side is non-empty* let a branch swap `pnpm verify:brain` for
+  `pnpm lint` and keep the validator-removal gate quiet
+- `--dry-run=true` passed the new unknown-option check and then failed the exact-token test
+  that decides dry-run — **the safest spelling a user could reach for ran the live merge**
+- `^## ` is not the ATX heading grammar, so an indented `## Operator Handoff` or one with
+  closing hashes returned no section and the merge gate read zero rows
+- the inline-code stripper handled single backticks only, so a double-backtick span's empty
+  delimiter pairs were removed and the fake rationale marker between them survived
+- splitting a target at the **first** `::` turned `src/a::b.ts::doThing` into `src/a`
+- capitalization was the wrong root-file discriminator in both directions
+- an unescaped configured prefix let `P.D` match `PXD-001`; `2026-02-30` passed the ISO
+  shape and `Date.parse` slid it to March 2
+- every base record rescued a disposition, including a **superseded** one
+- `validateLock` ignored unknown fields, `lockId` shape and array uniqueness, so the barrier
+  trusted an identity it had never established
+- a non-default `--agent` claim was unreleasable by its own successful close
+
+In engine code: configured paths outside `memory.*` had no containment at all, so a
+`dirs.stateFile` of `../victim/prds.json` wrote outside the repository; conflict globs were
+compared without canonicalization; hard-cap evidence counted inside a fence; a one-letter
+typo in a hard cap's `when` key was ignored and left its paths uncapped; the wiring audit
+accepted `echo verify:brain` as evidence of execution; queue warnings used string equality
+where the lock engine uses structural overlap; and a fenced example checkbox counted as an
+unchecked task forever.
+
+Two findings were about **this suite**: `[R22-12]` asserted only that two substrings were
+absent — satisfied by any other failure, and by an undefined message — and `[R22-6]` embedded
+the very capitalization heuristic it should have challenged. Both are rewritten. Two of this
+round's own regressions were rewritten too, after their first mutation showed they were not
+isolating the line they named.
+
 ### Open
 
-**No round has run against the current code.** The verdict stays `fail`; this artifact
-records twenty-two rounds in which every finding was closed, not a round that found nothing.
+**No round has run against the current code.** The verdict stays `fail`.
 
-The strongest evidence available to the decision is now two-sided.
+The adjacent-case rate across the three rounds that measured it is **5/8, 9/11, 13/13**. It
+is not falling as scrutiny sharpens; it is rising. The honest reading is that asking "what
+is one step over this fix" will keep producing findings for as long as it is asked, and that
+no number of further rounds will produce a round that finds nothing.
 
-*Against closing:* asked directly, a reviewer found an adjacent case for nine of eleven
-fixes — including one that reopened the hole its own predecessor had closed. That is not an
-area problem; it is a property of how fixes are made under this workflow, and it means "the
-last round found nothing here" remains weak evidence.
+The second number is what should decide this. **Ten of twenty-three findings this round were
+in engine code PRD-018 did not write** — path containment, glob canonicalization, manifest
+key validation, the wiring audit, queue overlap, task counting, CLI argument handling. That
+work is real and it is now the majority of what each round surfaces, but it is not this work
+item's scope, and closing PRD-018 is not the thing standing between the repository and those
+fixes.
 
-*For closing:* the document scanner has been clean for three consecutive rounds after
-producing seventeen defects, and the findings have moved steadily outward — from the
-grammar, to the scanner, to the enforcement machinery, to shared primitives that predate
-this PRD (`sectionMatching`, `conflicts.ts`, the CLI argument surface). Round 22's most
-serious finding was in code this PRD did not write.
+Three honest options, and the choice is the owner's:
 
-That last point cuts both ways and the owner should weigh it explicitly: continuing to run
-rounds against PRD-018 is now finding defects in the workflow engine at large rather than in
-this work item. Closing needs an owner decision — another round, accept the residual, or
-scope the remaining findings to a follow-up work item. An agent may not flip the ledger row,
-and this one has not.
+1. **Accept the residual and close.** The contract's own machinery has had six rounds of
+   direct attack; the scanner has been clean for four. What remains is a rate, not a known
+   hole.
+2. **Scope the engine findings to a follow-up work item** and close PRD-018 on its own code.
+3. **Keep running rounds**, understanding that the measured rate says they will keep
+   finding things, increasingly outside this PRD.
+
+An agent may not flip the ledger row, and this one has not.
