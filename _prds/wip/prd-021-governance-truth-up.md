@@ -991,6 +991,28 @@ resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019
 
 ---
 
+## Memory Inputs
+
+- applied: `gate-wire-or-delete` — this PRD's subject IS the meta-gate's other direction:
+  a documented claim with no executing check is the same defect as an unwired script.
+- applied: `false-green-on-missing-file` — a doc-claims checker that skips an absent file
+  certifies the very drift it exists to catch.
+- applied: `unparseable-command-must-fail-loudly` — the claims allowlist must refuse an
+  entry it cannot classify rather than silently dropping it.
+- reviewed: `known-red-ledger-must-expire` — the allowlist is an acknowledged-exception
+  list and needs the same staleness rule, or it becomes a permanent bypass.
+- applied: `fixture-must-reach-production-shape` — this PRD edits `cli.ts`, and the record
+  watches it: a regression here must call the gate the way the router does, not with
+  cleaner arguments.
+
+## Memory Outputs
+
+- none — the checker's rules live in its own allowlist and tests. Append an exact learning
+  path only if reconciling the docs surfaces a governance trap that is not derivable from
+  the checker.
+
+---
+
 ## Durable Artifacts
 
 Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none` path

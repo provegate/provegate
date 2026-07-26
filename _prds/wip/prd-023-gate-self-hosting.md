@@ -812,6 +812,31 @@ been untouched through the whole wave, which is part of why its defect survived.
 
 ---
 
+## Memory Inputs
+
+- applied: `gate-wire-or-delete` — self-hosting means every check this repo runs is one
+  the package ships; an orphan on either side is the defect.
+- applied: `durable-artifact-must-commit` — the review and ADR artifacts the gates demand
+  must be committed with the change, which is what self-hosting has to prove end to end.
+- applied: `narrow-the-grammar-not-the-parser` — the readiness lint and durable-artifacts
+  reader are hand-rolled Markdown readers; this PRD must narrow what a document may
+  contain rather than teach them more Markdown.
+- applied: `notes-column-runs-commands` — a per-FR parser that reads the whole row runs
+  backticked commands in Notes too; scope to the Command column.
+- reviewed: `two-parsers-wrong-together` — self-hosting replaces repo scripts with package
+  code, and the two agreeing on a corpus is not evidence either is correct.
+- applied: `fixture-must-reach-production-shape` — self-hosting replaces repo scripts with
+  package code called through `cli.ts`; every substitution's regression must use the
+  caller's real argument shape, which is exactly where PRD-019 was caught.
+
+## Memory Outputs
+
+- none — self-hosting is a substitution proved by the existing gates running green from
+  package code. Append an exact learning path only if the substitution surfaces a trap
+  that is not derivable from the two implementations side by side.
+
+---
+
 ## Durable Artifacts
 
 Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none` path

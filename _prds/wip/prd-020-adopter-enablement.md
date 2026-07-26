@@ -140,9 +140,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 2. **FR-2**: Ship `examples/manifests/monorepo/` — the same for a **generic** pnpm
    workspace (not a copy of this repo's manifest), carrying the canonical values already
    published by the `route-guard-coverage` gallery entry rather than a re-invented
-   contract: `hardCaps[0]` is exactly `{ "id": "route-deny-test", "when": { "targetsMatch":
+   contract: `hardCaps[0]` is exactly ``{ "id": "route-deny-test", "when": { "targetsMatch":
    ["src/routes/**"] }, "requireLine": "Deny test: `[^`]+`", "message": "targets touch
-   routes - name a runnable deny-path test line" }`, and `classDefaults` carries a
+   routes - name a runnable deny-path test line" }``, and `classDefaults` carries a
    `when.diffMatches: ["src/routes/**"]` rule running `pnpm verify:route-guards` for
    `feature` and `hotfix`, plus one `infra` rule. The invoked command is the **adopter's**
    script, not a package-internal path: the README's first step is copying
@@ -344,6 +344,24 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `apps/docs/content/docs/quickstart.mdx`
 - `apps/docs/content/docs/cli.mdx`
 - `apps/docs/content/docs/meta.json`
+
+---
+
+## Memory Inputs
+
+- applied: `append-only-manifest-union-driver` — the example manifests this PRD ships are
+  regenerable, so they are subtracted from conflict surfaces rather than unioned; the
+  record's rule decides how `pack-manifest.json` is treated when two items touch it.
+- applied: `false-green-on-missing-file` — every example must be checked by a gate that
+  exits non-zero when the example file is absent, or a deleted example passes as adopted.
+- reviewed: `turbo-cache-masks-out-of-input-reads` — example fixtures are read by the
+  package test task, so they are declared inputs or a cached green replays over them.
+
+## Memory Outputs
+
+- none — adoption examples and their gates are fully derivable from the manifests and
+  tests this PRD ships. Append an exact learning path only if a brownfield adoption
+  surfaces a trap the examples cannot state.
 
 ---
 
