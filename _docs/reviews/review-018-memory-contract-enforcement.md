@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 87
-> **High:** 7
-> **Medium:** 56
+> **Critical:** 91
+> **High:** 14
+> **Medium:** 58
 > **Low:** 3
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 21
+> **Rounds:** 22
 
 ## How this review was run
 
@@ -444,21 +444,68 @@ The other half went where no round had been:
 Each of the eleven new regressions was mutation-checked: reverting its fix fails that test
 and only that test.
 
+### Round 22 — the adjacent case, checked deliberately
+
+Round 21's result was a finding about method rather than about code: five of eight fixes
+were correct for the case that prompted them and silent one step over. Round 22 turned that
+into the round's design — it was handed the eleven round-21 fixes and asked to find, for
+each, the input one step over.
+
+**Nine of the eleven had one.** Only the rename-source union and the YAML-subset refusals
+generalized cleanly.
+
+Four CRITICAL:
+
+- Round 20 required the PRD to be committed; the **acceptance** — the other half of the
+  same waiver — still read the working tree that `ensureCheckoutClean` resets on the way to
+  the merge.
+- `baseMemoryConfig` overlaid the base's memory object onto the **branch's**. A real base
+  config is sparse and names no `index`, so relocating the index handed the branch its own
+  new path back as "the base" and the base store loaded empty again — **the exact hole
+  round 21 had just closed**, reopened by the shape of its own fix. Missing base fields fall
+  back to defaults now, and an unreadable base policy fails closed.
+- Marking the manifest's Phase 7 commands non-skippable did nothing about **deleting** them.
+- `sectionMatching` took the first raw `## ` match, and a heading inside a fence is code to
+  every renderer. A fenced `## Operator Handoff` holding `none` made the merge gate's
+  precondition read zero rows — **the owner gate disarmed through a shared primitive** that
+  no memory-specific fix had touched.
+
+Seven HIGH and two MEDIUM followed, among them: structural lock overlap skipped whenever a
+sibling pattern matched a tracked file, so two claims could each own every future path under
+one directory; a rationale marker inside inline code validated as a section, because
+`contractView` preserves spans deliberately; a real filename containing `::` was truncated,
+so a watch on that exact path could never fire; acceptance dates took any spelling
+`Date.parse` understands rather than the documented `YYYY-MM-DD`; and
+`gate run PRD-018 --dry-rnu` silently ran the live archive-and-merge, because unknown
+options were ignored.
+
+One deferral closed from the other end: fixing the shared section reader made the legacy
+Durable Artifacts parser stop preferring a fenced forgery. A fix that removes a hole from
+the legacy path needs no deferral to justify it.
+
+Ten regressions, all mutation-checked — including one rewritten after its first mutation
+turned out to be caught by a neighbouring test rather than by itself.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`; this artifact
-records twenty-one rounds in which every finding was closed, not a round that found
-nothing.
+records twenty-two rounds in which every finding was closed, not a round that found nothing.
 
-The most useful fact this round is not a count. It is that a reviewer asked to grade the
-previous round's work found **five of eight fixes incomplete** — every one of them correct
-for the case that prompted it and silent about the case one step over. That is a property
-of how these fixes are made, not of any single area, and it argues that "the last round
-found nothing new here" will keep being weak evidence.
+The strongest evidence available to the decision is now two-sided.
 
-Set against it: rounds 20 and 21 both found the document scanner clean, two rounds after it
-had produced seventeen defects. Convergence is possible; it took a structural change rather
-than a rule to get there.
+*Against closing:* asked directly, a reviewer found an adjacent case for nine of eleven
+fixes — including one that reopened the hole its own predecessor had closed. That is not an
+area problem; it is a property of how fixes are made under this workflow, and it means "the
+last round found nothing here" remains weak evidence.
 
-Closing needs an owner decision: another round, or accept the residual. An agent may not
-flip the ledger row, and this one has not.
+*For closing:* the document scanner has been clean for three consecutive rounds after
+producing seventeen defects, and the findings have moved steadily outward — from the
+grammar, to the scanner, to the enforcement machinery, to shared primitives that predate
+this PRD (`sectionMatching`, `conflicts.ts`, the CLI argument surface). Round 22's most
+serious finding was in code this PRD did not write.
+
+That last point cuts both ways and the owner should weigh it explicitly: continuing to run
+rounds against PRD-018 is now finding defects in the workflow engine at large rather than in
+this work item. Closing needs an owner decision — another round, accept the residual, or
+scope the remaining findings to a follow-up work item. An agent may not flip the ledger row,
+and this one has not.
