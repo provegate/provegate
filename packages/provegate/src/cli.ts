@@ -57,7 +57,7 @@ import {
 } from './core/run/index.js';
 import { handoffCard as buildHandoffCard } from './core/run/index.js';
 import { colorTier, paint, verdictSlot, statusLine } from './core/ui/theme.js';
-import { memoryDoctor } from './core/memory/index.js';
+import { memoryDoctor, memoryFind } from './core/memory/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -113,6 +113,7 @@ function usage(): string {
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
     '  doctor   diagnose an install, read-only (gate doctor --memory [--json])',
+    '  memory   deterministic local recall (gate memory find --query=… | --paths=… | --tag=…)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
     '  land     merge step only (alias for run --from-phase=merge)',
     '  push     (refused — push is always yours)',
@@ -557,6 +558,66 @@ function runDoctor(args: string[]): number {
       : `[doctor --memory] ${fails} blocking problem(s)${warns > 0 ? `, ${warns} warning(s)` : ''}`,
   );
   return report.code;
+}
+
+/**
+ * `gate memory find` — deterministic recall.
+ *
+ * `memory` is a NOUN with subcommands, so a bare `gate memory` prints usage and
+ * exits 1 exactly as bare `gate doctor` does. The surface has to be defined
+ * before a second subcommand lands, not after.
+ */
+function runMemory(args: string[]): number {
+  const sub = args.find((a) => !a.startsWith('-'));
+  if (sub !== 'find') {
+    console.error(
+      'usage: gate memory find [--query=<text>] [--paths=<a,b>] [--tag=<slug>] [--limit=N] [--json]',
+    );
+    return 1;
+  }
+  const rest = args.filter((a) => a !== 'find');
+  const unknown = unknownOption(rest, ['--query', '--paths', '--tag', '--limit', '--json']);
+  if (unknown !== null) {
+    console.error(`[memory] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
+  const value = (name: string): string | undefined =>
+    rest.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1);
+  const rawLimit = value('--limit');
+  const selectors = {
+    ...(value('--query') === undefined ? {} : { query: value('--query')! }),
+    ...(value('--tag') === undefined ? {} : { tag: value('--tag')! }),
+    ...(value('--paths') === undefined ? {} : { paths: value('--paths')!.split(',') }),
+    // A non-numeric `--limit` becomes NaN, which the bounds check refuses by
+    // name rather than silently falling back to the default.
+    ...(rawLimit === undefined ? {} : { limit: Number(rawLimit) }),
+  };
+
+  const { root, config } = loadConfig();
+  const result = memoryFind(config, root, selectors);
+  if (rest.includes('--json')) {
+    console.log(JSON.stringify(result, null, 2));
+    return result.ok ? 0 : 1;
+  }
+  if (!result.ok) {
+    console.error(`[memory find] ${result.problem}`);
+    if (result.remedy !== undefined) console.error(`  → ${result.remedy}`);
+    return 1;
+  }
+  if (result.hits.length === 0) {
+    console.log(`[memory find] no active record matched (searched ${result.searched})`);
+    // Deterministic, not relevant — say so, so an empty result is not read as
+    // "there is nothing to know about this".
+    console.log('  → ranking is by watch/name/tag/token overlap; read `_brain/INDEX.md` too');
+    return 0;
+  }
+  console.log(`[memory find] ${result.hits.length} of ${result.searched} active record(s)`);
+  for (const hit of result.hits) {
+    console.log(`  ${hit.slug} (${hit.type}/${hit.scope}) — ${hit.description}`);
+    console.log(`      ${hit.path} · matched: ${hit.reasons.join(', ')}`);
+    if (hit.matchedPaths.length > 0) console.log(`      watches: ${hit.matchedPaths.join(', ')}`);
+  }
+  return 0;
 }
 
 function runCheck(args: string[]): number {
@@ -1129,6 +1190,7 @@ export function main(argv: string[]): number {
     }
     if (command === 'check') return runCheck(rest);
     if (command === 'doctor') return runDoctor(rest);
+    if (command === 'memory') return runMemory(rest);
     if (command === 'run') return runRun(rest);
     if (command === 'land') return runRun(rest, { mergeOnly: true });
   } catch (error) {

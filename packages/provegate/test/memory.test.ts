@@ -21,7 +21,13 @@ import {
   validateResolvedConfig,
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
-import { memoryDoctor, validateRecord } from '../src/core/memory/index.js';
+import {
+  FIND_DEFAULT_LIMIT,
+  FIND_MAX_LIMIT,
+  memoryDoctor,
+  memoryFind,
+  validateRecord,
+} from '../src/core/memory/index.js';
 import { watchMatches } from '../src/core/memory/artifacts.js';
 
 const fixturesDir = fileURLToPath(new URL('./fixtures', import.meta.url));
@@ -961,5 +967,157 @@ describe('FR-1 — read-only memory doctor', () => {
     expect(ph.severity).toBe('warn');
     expect(ph.detail).toContain('PROJECT_NAME');
     expect(report.code).toBe(0);
+  });
+});
+
+describe('FR-3 — deterministic local recall', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  const record = (name: string, over: Record<string, string> = {}): string =>
+    [
+      '---',
+      `name: ${name}`,
+      `description: ${over.description ?? 'a record about nothing in particular'}`,
+      `type: ${over.type ?? 'convention'}`,
+      'scope: workflow',
+      `status: ${over.status ?? 'active'}`,
+      ...(over.superseded === undefined ? [] : [`superseded-by: ${over.superseded}`]),
+      ...(over.watch === undefined ? [] : [`watch: [${over.watch}]`]),
+      ...(over.tags === undefined ? [] : [`tags: [${over.tags}]`]),
+      '---',
+      '',
+      'Body.',
+      '',
+      '**Why:** a reason.',
+      '**How to apply:** a method.',
+      '',
+    ].join('\n');
+
+  /** A store whose records are chosen to separate every ranking tier. */
+  function store(): { root: string; config: typeof DEFAULT_CONFIG } {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-find-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    const files: [string, string][] = [
+      ['watcher', record('watcher', { watch: 'packages/x/**', description: 'guards the x tree' })],
+      ['tagged', record('tagged', { tags: 'caching', description: 'about storage' })],
+      ['described', record('described', { description: 'a note about caching behaviour' })],
+      ['caching', record('caching', { description: 'unrelated words here' })],
+      // ZZZ FIRST in the index, deliberately: if the store's own order decided,
+      // this pair would come back reversed and the tie-break assertion below
+      // would pass without the tie-break existing.
+      ['zzz-tie', record('zzz-tie', { description: 'a note about caching behaviour' })],
+      ['aaa-tie', record('aaa-tie', { description: 'a note about caching behaviour' })],
+      ['retired', record('retired', { status: 'superseded', superseded: 'watcher', description: 'about caching' })],
+    ];
+    for (const [slug, body] of files) {
+      writeFileSync(join(root, `_brain/learnings/${slug}.md`), body);
+    }
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      ['# INDEX', '', ...files.map(([slug]) => `- [${slug}](learnings/${slug}.md) — hook`), ''].join(
+        '\n',
+      ),
+    );
+    const config = deepMerge(DEFAULT_CONFIG, {
+      memory: { enabled: true, entrypoints: ['CLAUDE.md'] },
+    } as PartialWorkflowConfig) as typeof DEFAULT_CONFIG;
+    return { root, config };
+  }
+
+  const slugs = (r: ReturnType<typeof memoryFind>) => r.hits.map((h) => h.slug);
+
+  it('requires a selector — a bare find would be `cat INDEX.md` with extra steps', () => {
+    const { root, config } = store();
+    const result = memoryFind(config, root, {});
+    expect(result.ok).toBe(false);
+    expect(result.problem).toContain('no selector');
+  });
+
+  it('disabled memory REFUSES rather than returning an empty list', () => {
+    // An empty list reads as "nothing relevant", which is a lie about a store
+    // that was never consulted.
+    const { root, config } = store();
+    const off = deepMerge(config, { memory: { enabled: false } } as PartialWorkflowConfig);
+    const result = memoryFind(off as typeof DEFAULT_CONFIG, root, { query: 'caching' });
+    expect(result.ok).toBe(false);
+    expect(result.hits).toEqual([]);
+    expect(result.remedy).toContain('memory.enabled');
+  });
+
+  it('ranks watch overlap above every other signal', () => {
+    const { root, config } = store();
+    const result = memoryFind(config, root, { paths: ['packages/x/a.ts'], query: 'caching' });
+    expect(result.ok).toBe(true);
+    expect(slugs(result)[0]).toBe('watcher');
+    expect(result.hits[0]!.reasons).toContain('watch');
+    expect(result.hits[0]!.matchedPaths).toEqual(['packages/x/a.ts']);
+  });
+
+  it('ranks an exact name or tag above a token match', () => {
+    const { root, config } = store();
+    const byTag = memoryFind(config, root, { tag: 'caching', query: 'caching' });
+    // `caching` matches by exact NAME; `tagged` by exact TAG; both outrank the
+    // records that merely mention the word.
+    expect(slugs(byTag).slice(0, 2).sort()).toEqual(['caching', 'tagged']);
+  });
+
+  it('breaks ties lexically, which is what makes a run byte-stable', () => {
+    const { root, config } = store();
+    const first = memoryFind(config, root, { query: 'caching' });
+    const second = memoryFind(config, root, { query: 'caching' });
+    expect(slugs(first)).toEqual(slugs(second));
+    // `aaa-tie` and `zzz-tie` carry identical signals, so only the slug decides.
+    const tied = slugs(first).filter((s) => s.endsWith('-tie'));
+    expect(tied).toEqual(['aaa-tie', 'zzz-tie']);
+  });
+
+  it('never surfaces a superseded record', () => {
+    // Recall must not hand an agent a record the validator would reject: acting
+    // on a superseded record is worse than finding nothing.
+    const { root, config } = store();
+    const result = memoryFind(config, root, { query: 'caching' });
+    expect(slugs(result)).not.toContain('retired');
+    expect(result.searched).toBe(6);
+  });
+
+  it('bounds the limit, and refuses out of range BEFORE computing anything', () => {
+    const { root, config } = store();
+    expect(memoryFind(config, root, { query: 'caching' }).limit).toBe(FIND_DEFAULT_LIMIT);
+    expect(memoryFind(config, root, { query: 'caching', limit: 2 }).hits).toHaveLength(2);
+    for (const limit of [0, -1, FIND_MAX_LIMIT + 1, 1.5, Number.NaN]) {
+      const bad = memoryFind(config, root, { query: 'caching', limit });
+      expect(bad.ok, String(limit)).toBe(false);
+      expect(bad.hits, String(limit)).toEqual([]);
+      // Nothing was searched: the refusal is free and store-independent.
+      expect(bad.searched, String(limit)).toBe(0);
+    }
+  });
+
+  it('refuses a path selector that is not repo-relative', () => {
+    // A `..` selector cannot match any watch glob, so accepting it would answer
+    // a malformed question with an empty list.
+    const { root, config } = store();
+    for (const path of ['/etc/passwd', '../outside/a.ts', 'C:/x/a.ts']) {
+      const bad = memoryFind(config, root, { paths: [path] });
+      expect(bad.ok, path).toBe(false);
+      expect(bad.problem, path).toContain('repo-relative');
+    }
+  });
+
+  it('every hit carries the reasons it matched', () => {
+    // Ranking is deterministic rather than relevant, so the reasons are how an
+    // author sees WHY a record is here.
+    const { root, config } = store();
+    const result = memoryFind(config, root, { paths: ['packages/x/a.ts'], tag: 'caching' });
+    for (const hit of result.hits) {
+      expect(hit.reasons.length).toBeGreaterThan(0);
+      expect(hit.slug.length).toBeGreaterThan(0);
+      expect(hit.path).toMatch(/^(learnings|adr)\//);
+      expect(typeof hit.description).toBe('string');
+    }
   });
 });

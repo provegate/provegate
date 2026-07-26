@@ -141,22 +141,22 @@ Records to open and confirm still accurate before the dependent task starts (tas
         "doctor never writes" from a claim into a gate. Cover both the passing and the
         failing paths; a diagnostic that writes only when it fails is still a writer.
 
-- [ ] 3.0 FR-3 — Deterministic recall
-  - [ ] 3.1 Create `packages/provegate/src/core/memory/find.ts`. Require at least one
+- [x] 3.0 FR-3 — Deterministic recall
+  - [x] 3.1 Create `packages/provegate/src/core/memory/find.ts`. Require at least one
         selector; validate repo-relative contained path selectors and active indexed
         records **before** ranking, so recall can never surface a record the validator
         would reject.
-  - [ ] 3.2 Implement the ranking exactly as specified: watched-path overlap, then exact
+  - [x] 3.2 Implement the ranking exactly as specified: watched-path overlap, then exact
         name/tag, then case-insensitive description/name token matches, then lexical slug
         as the final tie-break. The tie-break is what makes runs byte-stable.
-  - [ ] 3.3 Implement bounds: default limit 20, allowed 1–1000, out-of-range refused
+  - [x] 3.3 Implement bounds: default limit 20, allowed 1–1000, out-of-range refused
         before any result is computed.
-  - [ ] 3.4 Results carry slug, type, scope, description, path, and the matched reasons —
+  - [x] 3.4 Results carry slug, type, scope, description, path, and the matched reasons —
         the reasons are the honesty mechanism, since ranking is deterministic rather than
         relevant.
-  - [ ] 3.5 Disabled memory refuses with remediation instead of returning an empty list;
+  - [x] 3.5 Disabled memory refuses with remediation instead of returning an empty list;
         an empty list reads as "nothing relevant", which would be a lie.
-  - [ ] 3.6 Wire `gate memory find [--query] [--paths] [--tag] [--limit] [--json]` in
+  - [x] 3.6 Wire `gate memory find [--query] [--paths] [--tag] [--limit] [--json]` in
         `cli.ts` and export through both index files.
 
 - [ ] 4.0 FR-4 — Bounds, portability, safety
@@ -291,6 +291,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **FR-3 finding — a tie-break test that did not test the tie-break.** The first version
+  asserted `['aaa-tie', 'zzz-tie']` while the fixture's index already listed them that way,
+  so removing `localeCompare` left it green. The index now lists `zzz-tie` FIRST, and the
+  mutation fails. Worth recording because the shape is generic: a determinism assertion
+  whose fixture is already in the expected order proves nothing.
+
 - **FR-2 finding — one cause must report one failure.** The matrix caught the doctor
   reporting BOTH `memory.phase7.reachable` and `memory.verify.script.present` when a
   manifest had no Phase 7 command at all. Two checks for one cause sends an adopter to two
