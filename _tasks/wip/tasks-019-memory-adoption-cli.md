@@ -216,15 +216,15 @@ Records to open and confirm still accurate before the dependent task starts (tas
   - [x] 7.4 Decide and record whether the new commands warrant a changeset entry; a new
         public CLI surface normally does.
 
-- [ ] 8.0 Phase 5 — Execute verification
-  - [ ] 8.1 Run every PRD §11 command exactly as written from the repository root and fill
+- [x] 8.0 Phase 5 — Execute verification
+  - [x] 8.1 Run every PRD §11 command exactly as written from the repository root and fill
         the matching Verification Ledger rows with evidence; no substitutions, no
         omissions.
-  - [ ] 8.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
+  - [x] 8.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build`, `pnpm verify:workflow`, `pnpm check-egress`; record exit codes.
-  - [ ] 8.3 Run `node packages/provegate/dist/cli.js check PRD-019` and
+  - [x] 8.3 Run `node packages/provegate/dist/cli.js check PRD-019` and
         `node packages/provegate/dist/cli.js check --wiring`; both must be green.
-  - [ ] 8.4 Re-run the package suite with the turbo cache busted and confirm the result
+  - [x] 8.4 Re-run the package suite with the turbo cache busted and confirm the result
         matches the cached run; a divergence means 4.6 is incomplete.
 
 - [ ] 9.0 Phase 6 — Independent adversarial audit
@@ -254,22 +254,22 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 | Gate               | Command / Check                                             | Scope | Result  | Evidence | Notes |
 | ------------------ | ------------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/memory.test.ts`            | pkg   | pending |          | doctor checks and stable codes |
-| FR-2               | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | pending |          | partial-install matrix, symlinks, non-mutation |
-| FR-3               | `pnpm --filter provegate test test/memory.test.ts`            | pkg   | pending |          | find ranking and JSON |
-| FR-4               | `pnpm --filter provegate test test/single-package.test.ts`    | pkg   | pending |          | bounds, portability, containment |
-| FR-5a              | `pnpm --filter provegate test test/content-launch.test.ts`    | pkg   | pending |          | docs and distribution claims |
-| FR-5b              | `pnpm --filter provegate test test/pack.test.ts`              | pkg   | pending |          | tarball allowlist matches npm pack |
-| FR-5c              | `pnpm verify:pack-drift`                                      | repo  | pending |          | every packed file paired or declared packOnly |
-| FR-6               | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | pending |          | no-overwrite and invariant regression |
-| types              | `pnpm check-types`                                            | root  | pending |          | zero errors |
-| lint               | `pnpm lint`                                                   | root  | pending |          | zero warnings |
-| test               | `pnpm test`                                                   | root  | pending |          | full suite |
-| build              | `pnpm build`                                                  | root  | pending |          | clean build |
-| workflow           | `pnpm verify:workflow`                                        | root  | pending |          | every hygiene check green |
-| egress             | `pnpm check-egress`                                           | root  | pending |          | built output scanned |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-019`           | repo  | pending |          | readiness lint |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`          | repo  | pending |          | wire-or-delete |
+| FR-1               | `pnpm --filter provegate test test/memory.test.ts`            | pkg   | passed  | exit 0 — 71 tests; 13 doctor cases incl. W1 symlink trio, 4 mutation-checked | doctor checks and stable codes |
+| FR-2               | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | passed  | exit 0 — 23 tests; 13-row matrix vs the real binary, tree-hash non-mutation on both paths | partial-install matrix, symlinks, non-mutation |
+| FR-3               | `pnpm --filter provegate test test/memory.test.ts`            | pkg   | passed  | exit 0 — 9 find cases, 4 mutation-checked; tie-break fixture reversed so it tests itself | find ranking and JSON |
+| FR-4               | `pnpm --filter provegate test test/single-package.test.ts`    | pkg   | passed  | exit 0 — 12 tests; 1000 records, both limit bounds, byte-stable JSON, no writes | bounds, portability, containment |
+| FR-5a              | `pnpm --filter provegate test test/content-launch.test.ts`    | pkg   | passed  | exit 0 — 29 tests; each docs claim paired with the behaviour that makes it true | docs and distribution claims |
+| FR-5b              | `pnpm --filter provegate test test/pack.test.ts`              | pkg   | passed  | exit 0 — 9 tests, allowlist matches `npm pack --dry-run` | tarball allowlist matches npm pack |
+| FR-5c              | `pnpm verify:pack-drift`                                      | repo  | passed  | exit 0 — 49 pairs; no new packed file, so no registration owed | every packed file paired or declared packOnly |
+| FR-6               | `pnpm --filter provegate test test/practices-pack.test.ts`    | pkg   | passed  | exit 0 — zero runtime deps, no network/embedding/index/push path added | no-overwrite and invariant regression |
+| types              | `pnpm check-types`                                            | root  | passed  | exit 0 | zero errors |
+| lint               | `pnpm lint`                                                   | root  | passed  | exit 0 | zero warnings |
+| test               | `pnpm test`                                                   | root  | passed  | exit 0 — 887 tests; cache-busted re-run identical (8.4) | full suite |
+| build              | `pnpm build`                                                  | root  | passed  | exit 0 | clean build |
+| workflow           | `pnpm verify:workflow`                                        | root  | passed  | exit 0 — incl. verify:deferred, turbo-inputs, pack-drift | every hygiene check green |
+| egress             | `pnpm check-egress`                                           | root  | passed  | exit 0 — clean against built output | built output scanned |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-019`           | repo  | passed  | exit 0 | readiness lint |
+| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`          | repo  | passed  | exit 0 | wire-or-delete |
 | independent-review | `_docs/reviews/review-019-memory-adoption-cli.md`             | repo  | pending |          | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
