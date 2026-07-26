@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-26T10:56:05.310Z",
+  "generatedAt": "2026-07-26T11:53:18.868Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -640,15 +640,15 @@
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-018-memory-contract-enforcement.md",
-        "readiness": "_readiness/wip/readiness-018-memory-contract-enforcement.md",
-        "tasks": "_tasks/wip/tasks-018-memory-contract-enforcement.md",
+        "prd": "_prds/completed/prd-018-memory-contract-enforcement.md",
+        "readiness": "_readiness/completed/readiness-018-memory-contract-enforcement.md",
+        "tasks": "_tasks/completed/tasks-018-memory-contract-enforcement.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
