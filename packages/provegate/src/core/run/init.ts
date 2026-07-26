@@ -44,7 +44,18 @@ function starterConfig(config: WorkflowConfig, memory: boolean): string {
     {
       branches: { base: config.branches.base },
       idPattern: config.idPattern,
-      ...(memory ? { memory: { enabled: true } } : {}),
+      // `entrypoints` ships WITH the switch. Enabled memory rejects an empty
+      // list, and the default list is empty, so writing only `enabled: true`
+      // produced a repository whose very next command failed configuration
+      // validation — the pack installed a config that cannot load.
+      ...(memory
+        ? {
+            memory: {
+              enabled: true,
+              entrypoints: ['AGENT_BOOTSTRAP.md', 'CLAUDE.md'],
+            },
+          }
+        : {}),
     },
     null,
     2,

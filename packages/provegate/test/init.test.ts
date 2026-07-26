@@ -216,7 +216,14 @@ describe('FR-6 memory-enabled scaffold (practices only)', () => {
     const root = tempRoot();
     initWorkspace(cfg, root, { extra: practices() });
     const config = JSON.parse(readFileSync(join(root, 'workflow.config.json'), 'utf8'));
-    expect(config.memory).toEqual({ enabled: true });
+    // The switch ships WITH entrypoints. Asserting the raw object alone let the
+    // pack write a config whose very next command failed validation — enabled
+    // memory rejects an empty entrypoint list, and the default list is empty.
+    expect(config.memory.enabled).toBe(true);
+    expect(config.memory.entrypoints.length).toBeGreaterThan(0);
+    // And the generated config must actually RESOLVE, which is the assertion
+    // that would have caught it.
+    expect(validateResolvedConfig(deepMerge(cfg, config))).toEqual([]);
     const manifest = JSON.parse(readFileSync(join(root, 'gates.manifest.json'), 'utf8'));
     // The rule this fixture exists for: the key is ABSENT, not empty.
     expect(Object.keys(manifest.phases)).toEqual(['7']);

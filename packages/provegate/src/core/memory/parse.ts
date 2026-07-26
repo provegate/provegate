@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 
+import { contractView } from './scan.js';
+
 /**
  * The supported record format (addendum A1 §10.6): an explicitly documented
  * subset, not general YAML. Four forms exist in the frontmatter and no others —
@@ -130,11 +132,17 @@ export interface ParsedFrontmatter {
  * validator can report every problem in a file at once; an unparseable form is
  * itself an issue, never a silently dropped line.
  */
-export function parseFrontmatter(content: string, file: string): ParsedFrontmatter {
+export function parseFrontmatter(rawContent: string, file: string): ParsedFrontmatter {
   const issues: RecordIssue[] = [];
   const values = new Map<string, string | string[]>();
   const at = (field: string): string => `${file}:${field}`;
 
+  // CommonMark's three line endings, reduced to one — the same normalization the
+  // contract scanner does at its entry point. The fence pattern required literal
+  // LF, so a valid record saved with CRLF was reported as having no frontmatter
+  // at all, and every required field as missing. Two implementations agreeing on
+  // that refusal did not make it correct.
+  const content = rawContent.replace(/\r\n|\r/g, '\n');
   const fence = /^---\n([\s\S]*?)\n---\n?/.exec(content);
   if (!fence) {
     issues.push({ path: file, message: 'missing frontmatter fence' });
@@ -230,7 +238,40 @@ export function parseFrontmatter(content: string, file: string): ParsedFrontmatt
         issues.push({ path: at(key), message: 'inline list has an empty element' });
         continue;
       }
+      // QUOTED elements were stored WITH their quotes, so `watch: ["packages/**"]`
+      // compiled to a glob containing `"` and matched nothing — a watch that is
+      // present, valid-looking, and permanently dead. The quote is not part of
+      // the value, and a reader that keeps it is not reading YAML.
+      const quoted = elements.find((e) => /^["']|["']$/.test(e));
+      if (quoted !== undefined) {
+        issues.push({
+          path: at(key),
+          message:
+            `inline list element ${quoted} is quoted — the supported subset takes bare ` +
+            `values, and a quoted one is stored with its quotes and matches nothing`,
+        });
+        continue;
+      }
       values.set(key, elements);
+      continue;
+    }
+    // A FLOW MAP is not in the supported subset, and falling through to "it is a
+    // scalar" accepted `description: {nested: map}` as the literal text of a map.
+    // The subset is small on purpose; anything outside it must say so.
+    if (/^\{.*\}$/.test(raw)) {
+      issues.push({
+        path: at(key),
+        message: 'flow mappings are not supported — use a plain scalar or an inline list',
+      });
+      continue;
+    }
+    if (/^["']|["']$/.test(raw)) {
+      issues.push({
+        path: at(key),
+        message:
+          'quoted scalars are not supported — the supported subset takes bare values, and a ' +
+          'quoted one is stored with its quotes',
+      });
       continue;
     }
     values.set(key, raw);
@@ -429,6 +470,14 @@ export function validateRecord(
     }
   }
 
+  // The body a READER sees. A record whose entire rationale lives inside an HTML
+  // comment or a fenced example renders as a heading with nothing under it, and
+  // the raw-text search called it satisfied — the ceremonial record this
+  // validator exists to reject, wearing the validator's own approval. The same
+  // scan the contract grammar uses answers this, so the two cannot disagree
+  // about what is on the page.
+  const visibleBody = contractView(body);
+
   // Rationale sections are what make a record actionable rather than a note.
   // Two exemptions: `reference`, because a pointer to an external resource has
   // no `why`; and an ADR, whose four required sections below ARE its rationale —
@@ -437,7 +486,7 @@ export function validateRecord(
     for (const marker of ['Why', 'How to apply'] as const) {
       const found = new RegExp(
         `\\*\\*${marker}:\\*\\*([\\s\\S]*?)(?=\\n\\s*\\n|\\*\\*[A-Z]|$)`,
-      ).exec(body);
+      ).exec(visibleBody);
       if (found === null) {
         issues.push({
           path: at('body'),
@@ -467,7 +516,7 @@ export function validateRecord(
       const found = new RegExp(
         `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
         'm',
-      ).exec(body);
+      ).exec(visibleBody);
       if (found === null) {
         issues.push({
           path: at('body'),

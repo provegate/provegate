@@ -12,6 +12,7 @@ import {
   runChain,
   shouldSkipGate,
 } from '../src/core/run/chain.js';
+import { declaredArtifactsStrict } from '../src/core/run/durable.js';
 import type { StateRecord } from '../src/core/state/build.js';
 
 const cfg = DEFAULT_CONFIG;
@@ -1419,5 +1420,205 @@ describe('phase 6 round 20 regressions — the enforcement machinery', () => {
     );
     expect(unexpected.ok).toBe(false);
     expect(unexpected.why).toContain('unexpected top-level field');
+  });
+});
+
+describe('phase 6 round 21 regressions — what the round-20 fixes did not reach', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const SECOND_OUTPUT = '_brain/adr/ADR-0001-x.md';
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    `- adr: \`${SECOND_OUTPUT}\` — the decision.`,
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    `- \`${SECOND_OUTPUT}\` — the decision`,
+  ];
+
+  it('[R21-1] a branch cannot switch the contract off on its way through the gate', () => {
+    // Gate policy was decided from the WORKING configuration, so a branch could
+    // set `memory.enabled: false`, drop every baseline output, omit every
+    // watched input, and close with no memory gate built at all — the contract
+    // disabled by the very merge it was meant to govern.
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': prd(),
+        'workflow.config.json': JSON.stringify({ memory: { enabled: true } }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const off = { ...memOn, memory: { ...memOn.memory, enabled: false } };
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, config: off });
+    const guard = chain.find((g) => (g.label ?? '').includes('disabling the contract'));
+    expect(guard, 'no guard gate for the disabling transition').toBeDefined();
+    expect(shouldSkipGate(guard!, 'merge')).toBe(false);
+    const result = guard!.fn!();
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('would disable the memory contract');
+  });
+
+  it('[R21-2] `gate land` cannot skip the validator the pack installs', () => {
+    // The internal gates were made non-skippable and the MANIFEST phase-7
+    // commands were not — and the practices pack wires `verify:brain` there
+    // while leaving `memory.verifyCommand` empty.
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    const withValidator = {
+      ...defaultManifest(memOn),
+      phases: { ...defaultManifest(memOn).phases, '7': ['node -e "process.exit(0)"'] },
+    };
+    const chain = buildGateChain({
+      config: memOn,
+      manifest: withValidator,
+      root,
+      record: record(),
+      prdContent: prd(),
+      tasksContent: '| independent-review | x | passed |',
+      changedFiles: CHANGED,
+      prdClass: 'infra',
+    });
+    const phase7 = chain.filter((g) => g.phase === '7 Learning' && g.cmds !== undefined);
+    expect(phase7.length).toBeGreaterThan(0);
+    for (const g of phase7) expect(shouldSkipGate(g, 'merge')).toBe(false);
+  });
+
+  it('[R21-3] relocating the index cannot erase the base store', () => {
+    // The base store was loaded with the BRANCH's `memory.index`, so a branch
+    // could point the config at a new index, build a valid smaller store there,
+    // and the base loader would look for the NEW path on the base, find nothing,
+    // and return an empty store — every base watch gone in one config edit.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': content,
+        'workflow.config.json': JSON.stringify({
+          memory: { enabled: true, index: '_brain/INDEX.md' },
+        }),
+        ...STORE('packages/x/**'),
+      },
+      CAPTURED_RECORD,
+    );
+    // The branch relocates the store and leaves the watcher behind.
+    const relocated = {
+      ...memOn,
+      memory: { ...memOn.memory, index: '_brain/new/INDEX.md' },
+    };
+    mkdirSync(join(root, '_brain/new/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/new/INDEX.md'),
+      '# INDEX\n\n- [new thing](learnings/new-thing.md) — hook\n',
+    );
+    writeFileSync(join(root, '_brain/new/learnings/new-thing.md'), RECORD_MD('new-thing'));
+    const result = gate(
+      chainFor({
+        root,
+        prdContent: content,
+        changedFiles: [...CHANGED, 'packages/x/src/a.ts'],
+        config: relocated,
+      }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/src/a.ts");
+  });
+
+  it('[R21-4] narrowing a watch does not remove the obligation either', () => {
+    // Round 20 closed deletion; the working store still WON for a slug present
+    // in both, so rewriting `watch: [packages/x/**]` to `watch: [docs/**]` and
+    // then changing `packages/x/a.ts` matched neither glob.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      { '_prds/wip/p.md': content, ...STORE('packages/x/**') },
+      { ...CAPTURED_RECORD },
+    );
+    writeFileSync(
+      join(root, '_brain/learnings/watcher-record.md'),
+      RECORD_MD('watcher-record', 'docs/**'),
+    );
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/src/a.ts");
+  });
+
+  it('[R21-6] acceptance field TYPES are validated, and so is every entry', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        `| 2026-07-25 | owner | removed \`${SECOND_OUTPUT}\` — the decision moved to PRD-022 |`,
+      ],
+    });
+    const good = {
+      prd: 'PRD-002',
+      owner: 'owner',
+      items: [`memory output removal: \`${SECOND_OUTPUT}\``],
+      reason: 'the decision moved to PRD-022',
+      date: '2026-07-25',
+      method: 'interactive',
+    };
+    const store = (acceptances: unknown[]): Record<string, string> => ({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({ schemaVersion: 1, acceptances }),
+      ...STORE(),
+    });
+    // A wrong-typed field in the selected entry.
+    const badTypes = gitRepo(store([{ ...good, date: 123, method: null }]));
+    const typed = gate(
+      chainFor({ root: badTypes, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(typed.ok).toBe(false);
+
+    // A non-string item beside the real one.
+    const badItem = gitRepo(store([{ ...good, items: [42, `\`${SECOND_OUTPUT}\``] }]));
+    const item = gate(
+      chainFor({ root: badItem, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(item.ok).toBe(false);
+
+    // A malformed NEIGHBOUR entry invalidates the store the owner signed.
+    const badNeighbour = gitRepo(store([{ prd: 'PRD-777' }, good]));
+    const neighbour = gate(
+      chainFor({ root: badNeighbour, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(neighbour.ok).toBe(false);
+    expect(neighbour.why).toContain('acceptances[0]');
+  });
+});
+
+describe('phase 6 round 21 — the rename source and the root-level artifact', () => {
+  it('[R21-5] a record watching a renamed file’s SOURCE still fires', () => {
+    // `--name-only` reports a rename as the destination alone, so a record
+    // watching the path the merge moved AWAY from never fired on the merge that
+    // moved it. `capturedDiffFiles` computed both sides and the close then
+    // passed the caller's list instead — evidence gathered and discarded.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      { '_prds/wip/p.md': content, 'packages/x/old.ts': 'export const a = 1;\n', ...STORE('packages/x/old.ts') },
+      CAPTURED_RECORD,
+    );
+    execFileSync('git', ['mv', 'packages/x/old.ts', 'packages/x/new.ts'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-qm', 'rename', '--no-verify'], { cwd: root, stdio: 'ignore' });
+    // The caller's list carries only what `--name-only` reports.
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: ['_brain/learnings/new-thing.md', 'packages/x/new.ts'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/old.ts");
+  });
+
+  it('[R21-11] a root-level Durable Artifact is not silently dropped', () => {
+    expect(declaredArtifactsStrict('## Durable Artifacts\n\n- `RELEASING.md` — the note\n')).toEqual(
+      { paths: ['RELEASING.md'], ambiguous: false },
+    );
+    // A prose word in backticks is still not a path.
+    expect(
+      declaredArtifactsStrict('## Durable Artifacts\n\n- none — `nothing` durable here\n').paths,
+    ).toEqual([]);
   });
 });

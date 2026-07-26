@@ -1,7 +1,8 @@
 import { execFileSync, execSync } from 'node:child_process';
 import { lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { WorkflowConfig } from '../config/index.js';
+import { CONFIG_FILENAME } from '../config/index.js';
+import type { MemoryConfig, WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import {
   acceptanceCoversPath,
@@ -159,6 +160,27 @@ function capturedDiffFiles(root: string, base: string): { captured: string[]; to
 /** The PRD exactly as committed on the base ref, or null when it is not there.
  * Never the working copy: the whole point of the comparison is a baseline the
  * editing agent does not control. */
+/**
+ * The memory configuration as the BASE ref holds it.
+ *
+ * Everything about the close that asks "what did the base promise" must ask the
+ * base's own configuration — which store, at which index. Falls back to the
+ * working configuration when the base has no config file (first adoption) and
+ * when its config will not parse, because an unreadable base policy must not
+ * read as a weaker one.
+ */
+function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
+  const raw = blobAt(root, config.branches.base, CONFIG_FILENAME);
+  if (raw === null) return config.memory;
+  try {
+    const parsed = JSON.parse(raw) as { memory?: Partial<MemoryConfig> };
+    if (parsed.memory === undefined) return config.memory;
+    return { ...config.memory, ...parsed.memory };
+  } catch {
+    return config.memory;
+  }
+}
+
 /** A committed blob at `ref`, or null when the path is not there. */
 function blobAt(root: string, ref: string, path: string): string | null {
   try {
@@ -381,6 +403,27 @@ export function buildGateChain(options: {
   // The memory close gates are separate chain entries rather than one composite,
   // so `--dry-run` prints every check it would perform (FR-4) instead of one
   // opaque label. Each still fails closed on its own.
+  // Policy is read from the BASE as well as the working tree. Deciding purely
+  // from the working configuration let a branch set `memory.enabled: false`,
+  // drop every baseline output, omit every watched input, and close with no
+  // memory gate built at all — the contract disabled by the very merge it was
+  // meant to govern. Turning it OFF is a policy change, and a policy change is
+  // judged under the policy in force.
+  const memoryInForce = config.memory.enabled || baseMemoryConfig(root, config).enabled;
+  if (memoryInForce && !config.memory.enabled) {
+    chain.push({
+      phase: '7 Learning',
+      nonSkippable: true,
+      label: `memory: disabling the contract needs an owner acceptance`,
+      fn: () => ({
+        ok: false,
+        why:
+          `\`memory.enabled\` is true on \`${config.branches.base}\` and false here — this merge ` +
+          `would disable the memory contract for the repository. That is a policy change, not a ` +
+          `close: revert it, or land it as its own owner-accepted work item`,
+      }),
+    });
+  }
   if (config.memory.enabled) {
     chain.push({
       phase: '7 Learning',
@@ -401,14 +444,26 @@ export function buildGateChain(options: {
         }
         const issues = memoryCloseIssues({
           content: prdContent,
-          changedFiles,
+          // The caller's list UNIONED with the local-base diff. `--name-only`
+          // reports a rename as the destination alone, so a record watching the
+          // SOURCE path never fired on the merge that moved it out from under
+          // it; `diff.touched` carries both sides. The union rather than a
+          // replacement, because the caller's list is what every other gate in
+          // this chain is judged against and the two must not diverge silently.
+          changedFiles: [...new Set([...changedFiles, ...diff.touched])],
           store: loadMemoryStore(root, config.memory),
           // The store as the BASE holds it, so deleting a watching record and
           // its pointer together cannot erase the trigger the deletion should
           // have fired.
           baseStore: loadMemoryStoreFromBlobs(
             (path) => blobAt(root, config.branches.base, path),
-            config.memory,
+            // The BASE ref's memory configuration, not this branch's. Loading
+            // the base store with the branch's `index` path let a branch RELOCATE
+            // the index — build a valid smaller store at the new path, change a
+            // file only the old store watched, and omit the input. The base
+            // loader then looked for the new index on the base, found nothing,
+            // and returned an empty store: every watch erased by one config edit.
+            baseMemoryConfig(root, config),
           ),
           durable: declaredArtifactsStrict(prdContent).paths,
           memory: config.memory,
@@ -437,7 +492,17 @@ export function buildGateChain(options: {
   }
 
   const phase7Cmds = manifest.phases['7'] ?? [];
-  if (phase7Cmds.length > 0) chain.push({ phase: '7 Learning', cmds: phase7Cmds.map(checked) });
+  if (phase7Cmds.length > 0) {
+    chain.push({
+      phase: '7 Learning',
+      cmds: phase7Cmds.map(checked),
+      // With memory enabled these ARE the store validator: the practices pack
+      // wires `verify:brain` here and leaves `memory.verifyCommand` empty. The
+      // internal gates were made non-skippable and this one was not, so
+      // `gate land` could still merge a store defect only `verify:brain` sees.
+      nonSkippable: config.memory.enabled,
+    });
+  }
 
   // The configured validator runs AFTER capture, never before — a validator that
   // ran first would certify the store as it was, not as the close left it

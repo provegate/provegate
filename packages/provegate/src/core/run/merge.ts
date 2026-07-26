@@ -3,7 +3,7 @@ import type { WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import { isSafeCommand } from '../gates/safety.js';
 import { normalizedWorktreeDir } from '../config/index.js';
-import { listLockFiles } from '../locks/index.js';
+import { listLockFiles, validateLock } from '../locks/index.js';
 import { RUN_ACTIVE_ENV } from './chain.js';
 import { withWorkspaceMutex } from './mutex.js';
 import { claimMutexPath } from './open.js';
@@ -195,14 +195,34 @@ export function foreignActiveLeases(
   id: string,
   { now = Date.now() }: { now?: number } = {},
 ): string[] {
-  const mine = `${id.toLowerCase()}-`;
   const blockers: string[] = [];
   for (const entry of listLockFiles(config, root)) {
-    if (entry.name.startsWith(mine)) continue;
+    // Unreadable FIRST, and the filename is not identity. Skipping on a name
+    // prefix before parsing meant a lock nobody could read was ignored whenever
+    // its filename happened to start with this PRD's id — an attacker-free but
+    // entirely reachable way to hide a foreign lease behind a chosen name.
     if (entry.error !== undefined || entry.data === undefined) {
       blockers.push(`${entry.name} (unreadable: ${entry.error ?? 'no data'})`);
       continue;
     }
+    // SCHEMA, then ownership, then expiry. Reading `expiresAt` out of a lock
+    // that never passed validation treated `{"expiresAt":"2020-01-01"}` as an
+    // expired lease, though nothing in it establishes whose lease it is. A
+    // barrier may not guess in the permissive direction, and "I cannot tell who
+    // holds this" is the permissive direction's clearest case.
+    // Staleness is dropped from the schema verdict: `validateLock` reports an
+    // expired lock as an ISSUE, and this barrier makes its own expiry decision
+    // below. Keeping it would have turned every expired lease into a blocker,
+    // which is the opposite mistake and just as wrong.
+    const invalid = validateLock(config, entry.data, { now }).filter(
+      (issue) => !issue.startsWith('stale lock expired'),
+    );
+    if (invalid.length > 0) {
+      blockers.push(`${entry.name} (invalid: ${invalid.join(', ')})`);
+      continue;
+    }
+    // Identity comes from the VALIDATED `prd`, never the filename.
+    if (String(entry.data['prd']).toLowerCase() === id.toLowerCase()) continue;
     const expiresAt = Date.parse(String(entry.data['expiresAt']));
     // An unparseable expiry is not an expired one.
     if (Number.isFinite(expiresAt) && expiresAt < now) continue;

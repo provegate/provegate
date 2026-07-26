@@ -21,6 +21,7 @@ import {
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
 import { validateRecord } from '../src/core/memory/index.js';
+import { watchMatches } from '../src/core/memory/artifacts.js';
 
 const fixturesDir = fileURLToPath(new URL('./fixtures', import.meta.url));
 
@@ -617,5 +618,93 @@ describe('configured memory paths against a real tree (FR-2)', () => {
     } else {
       expect(issues).toContain('memory.root');
     }
+  });
+});
+
+describe('phase 6 round 21 regressions — the record validator', () => {
+  const FRONT = [
+    'name: r',
+    'description: d',
+    'type: convention',
+    'scope: workflow',
+    'status: active',
+  ];
+  const RECORD = (body: string, front: string[] = FRONT): string =>
+    ['---', ...front, '---', body].join('\n');
+  const BODY = 'Body.\n\n**Why:** a reason.\n**How to apply:** a method.\n';
+
+  it('[R21-8] a rationale hidden in a comment or a fence is not a rationale', () => {
+    // A record whose entire rationale lives inside an HTML comment renders as a
+    // heading with nothing under it. The raw-text search called it satisfied —
+    // the ceremonial record this validator exists to reject, wearing its
+    // approval. Both readers consume the same scan now.
+    const commented = validateRecord(
+      RECORD('Body.\n\n<!--\n**Why:** hidden\n**How to apply:** hidden\n-->\n'),
+      'learnings/r.md',
+      'r',
+    );
+    expect(commented.record).toBeNull();
+    const fenced = validateRecord(
+      RECORD('Body.\n\n```\n**Why:** hidden\n**How to apply:** hidden\n```\n'),
+      'learnings/r.md',
+      'r',
+    );
+    expect(fenced.record).toBeNull();
+    // A visible one still passes.
+    expect(validateRecord(RECORD(BODY), 'learnings/r.md', 'r').record).not.toBeNull();
+  });
+
+  it('[R21-9] a quoted value is refused, not stored with its quotes', () => {
+    // `watch: ["packages/**"]` compiled to a glob containing a quote character
+    // and matched nothing — a watch that is present, valid-looking and
+    // permanently dead.
+    const quoted = validateRecord(
+      RECORD(BODY, [...FRONT, 'watch: ["packages/**"]']),
+      'learnings/r.md',
+      'r',
+    );
+    expect(quoted.record).toBeNull();
+    expect(quoted.issues.map((i) => i.message).join('; ')).toContain('quoted');
+    // The bare form is what the subset takes, and it matches.
+    const bare = validateRecord(
+      RECORD(BODY, [...FRONT, 'watch: [packages/**]']),
+      'learnings/r.md',
+      'r',
+    );
+    expect(bare.record?.watch).toEqual(['packages/**']);
+  });
+
+  it('[R21-9b] a flow mapping is refused rather than read as a scalar', () => {
+    const flow = validateRecord(
+      RECORD(BODY, ['name: r', 'description: {nested: map}', 'type: convention', 'scope: workflow', 'status: active']),
+      'learnings/r.md',
+      'r',
+    );
+    expect(flow.record).toBeNull();
+    expect(flow.issues.map((i) => i.message).join('; ')).toContain('flow mapping');
+  });
+
+  it('[R21-13] a CRLF record is read, not reported as having no frontmatter', () => {
+    const crlf = RECORD(BODY).replace(/\n/g, '\r\n');
+    const result = validateRecord(crlf, 'learnings/r.md', 'r');
+    expect(result.issues).toEqual([]);
+    expect(result.record).not.toBeNull();
+  });
+});
+
+describe('phase 6 round 21 — one spelling for one path', () => {
+  it('[R21-10] a watch fires whatever spelling either side uses', () => {
+    // `globToRegExp` compiles a backslash as a LITERAL, so a Windows-spelled
+    // watch matched nothing at all; and `./packages/x/a.ts` evaded
+    // `packages/x/**`. A watch that is present, valid-looking and permanently
+    // dead is worse than a missing one, because the record looks covered.
+    expect(watchMatches(['packages/x/**'], ['./packages/x/a.ts'])).toEqual(['packages/x/a.ts']);
+    expect(watchMatches(['packages/x/**'], ['packages//x/a.ts'])).toEqual(['packages/x/a.ts']);
+    expect(watchMatches(['packages\\x\\**'], ['packages/x/a.ts'])).toEqual(['packages/x/a.ts']);
+    expect(watchMatches(['packages/x/**'], ['packages/x/a.ts::doThing'])).toEqual([
+      'packages/x/a.ts',
+    ]);
+    // And it still does NOT match something outside the glob.
+    expect(watchMatches(['packages/x/**'], ['./docs/a.md'])).toEqual([]);
   });
 });

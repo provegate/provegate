@@ -53,7 +53,13 @@ function artifactPaths(section: string): string[] {
     if (/\bnone\b/i.test(line) && !line.includes('`')) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
-      if (!value.includes('/')) continue;
+      // A ROOT-LEVEL artifact is still an artifact. Requiring a `/` silently
+      // dropped every `RELEASING.md`, so a PRD could promise one and close
+      // without touching it — and with memory enabled the same list is what a
+      // Memory Output must appear in, so the drop reaches the close gate too.
+      // The `/`-less tokens this was written to skip are prose words, and those
+      // do not end in a file extension.
+      if (!value.includes('/') && !/\.[A-Za-z0-9]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
       if (/\bnone\b/i.test(value)) continue;
       paths.push(value);

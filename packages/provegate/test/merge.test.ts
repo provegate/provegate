@@ -383,6 +383,34 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
     ).toBe(true);
   });
 
+  it('[R21-7] a parseable but schema-invalid lease blocks, and the filename is not identity', () => {
+    // Expiry was read out of a lock that never passed validation, so
+    // `{"expiresAt":"2020-01-01"}` read as an expired lease though nothing in it
+    // says whose lease it is. And the self-check ran on the FILENAME before any
+    // parsing, so naming a foreign lock with this PRD's prefix hid it entirely.
+    const root = fixtureRepo();
+    mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
+    writeFileSync(
+      join(resolve(root, cfg.dirs.locksDir), 'prd-009-shape.json'),
+      JSON.stringify({ expiresAt: '2020-01-01T00:00:00.000Z' }),
+    );
+    const shaped = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    expect(shaped.ok).toBe(false);
+    expect(shaped.why).toContain('invalid:');
+
+    // A foreign lease wearing this PRD's filename prefix is still foreign.
+    const disguised = fixtureRepo();
+    lease(disguised, 'prd-002-actually-someone-else', { prd: 'PRD-009' });
+    const result = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root: disguised,
+      id: 'PRD-002',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('a foreign lease is active');
+  });
+
   it('treats an unreadable lease as a blocker — unreadable is not absent', () => {
     const root = fixtureRepo();
     mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });

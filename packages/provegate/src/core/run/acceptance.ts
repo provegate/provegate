@@ -58,7 +58,14 @@ function storeProblem(data: unknown): string | null {
   return null;
 }
 
-/** Why one entry is not a well-formed acceptance, or null when it is. */
+/**
+ * Why one entry is not a well-formed acceptance, or null when it is.
+ *
+ * Presence is not shape. Checking only that the keys exist accepted
+ * `date: 123`, `method: null` and `items: [42, '_brain/learnings/x.md']` — and
+ * that last one still authorized the path beside the number, so a store nobody
+ * could validate signed off on a removal.
+ */
 function entryProblem(entry: unknown): string | null {
   if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
     return 'the acceptance entry is not an object';
@@ -71,6 +78,21 @@ function entryProblem(entry: unknown): string | null {
     if (!(ENTRY_FIELDS as readonly string[]).includes(key)) {
       return `unexpected field "${key}" in the acceptance entry`;
     }
+  }
+  for (const field of ['prd', 'owner', 'reason', 'date', 'method'] as const) {
+    const value = record[field];
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      return `the acceptance entry's \`${field}\` must be a non-empty string`;
+    }
+  }
+  if (!Array.isArray(record.items) || record.items.length === 0) {
+    return "the acceptance entry's `items` must be a non-empty array";
+  }
+  if (record.items.some((item) => typeof item !== 'string' || item.trim().length === 0)) {
+    return "every element of the acceptance entry's `items` must be a non-empty string";
+  }
+  if (!Number.isFinite(Date.parse(record.date as string))) {
+    return "the acceptance entry's `date` is not a parseable date";
   }
   return null;
 }
@@ -106,12 +128,16 @@ export function loadAcceptanceChecked(
   const invalid = storeProblem(data);
   if (invalid !== null) return { entry: null, problem: invalid };
   const entries = (data as { acceptances: unknown[] }).acceptances;
-  const found = entries.find(
-    (a) => typeof a === 'object' && a !== null && (a as { prd?: unknown }).prd === id,
-  );
+  // EVERY entry, not just the selected one. A store holding one malformed entry
+  // is a store the documented schema rejects, and a valid-looking neighbour
+  // inside it is not evidence of anything — the file as a whole is what an owner
+  // is taken to have signed.
+  for (const [index, entry] of entries.entries()) {
+    const bad = entryProblem(entry);
+    if (bad !== null) return { entry: null, problem: `acceptances[${index}]: ${bad}` };
+  }
+  const found = entries.find((a) => (a as { prd?: unknown }).prd === id);
   if (found === undefined) return { entry: null, problem: null };
-  const bad = entryProblem(found);
-  if (bad !== null) return { entry: null, problem: bad };
   return { entry: found as AcceptanceEntry, problem: null };
 }
 
