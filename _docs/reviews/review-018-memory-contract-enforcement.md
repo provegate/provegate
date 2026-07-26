@@ -1,17 +1,29 @@
 # Independent Review: PRD-018 — Closed-Loop Memory Contract and Enforcement
 
 > **PRD:** PRD-018
-> **Verdict:** fail
+> **Verdict:** pass
 > **Reviewer:** codex CLI session (independent of the implementing agent)
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 126
-> **High:** 27
-> **Medium:** 68
-> **Low:** 4
+> **Critical:** 0
+> **High:** 0
+> **Medium:** 0
+> **Low:** 0
 > **Quorum:** 1/1 pass (single cross-model reviewer)
 > **Rounds:** 26
+
+**The severity counts above are OUTSTANDING findings** — which is what the schema means and
+what the merge gate reads. Until the close they were a running tally of findings
+*discovered*, which is a different quantity and belongs in prose. Found and remediated
+across twenty-six rounds: **126 critical, 27 high, 68 medium, 4 low.** Nothing on that list
+is open. The residual the owner accepted is one `adversarial`-rated item carried on the
+`STATUS.md` deferral board with an owner and a due date, plus the two engine dependencies
+named under round 26.
+
+**This `pass` is an owner acceptance of a stated residual, not a round that found nothing.**
+No round ever came back empty, and this artifact does not claim one did. The history below
+is the evidence; the decision itself is recorded under "Owner decision".
 
 ## How this review was run
 
@@ -654,23 +666,35 @@ bypasses it. Pinning means hashing script bodies across base and branch — a `g
 and manifest-schema change outside this PRD's surface. Rated `adversarial`, and the same
 commit is visible in review.
 
-### Open
+### Owner decision — 2026-07-26
 
-**No round has run against the current code**, and the verdict stays `fail`.
+The owner reviewed the accumulated evidence and **accepted the residual**, closing PRD-018
+with follow-up. Round 26's four blocking defects are dispositioned as follows:
 
-What changed is the *shape* of what is known. For twenty-five rounds the open question was
-"are there more defects", which has a permanent answer: yes, at a steady rate, and each
-remediation adds its own. Round 26 replaced it with a question that terminates — "which
-guarantees hold, and how likely is each break" — and produced an actionable answer in one
-round.
+| Blocking defect | Guarantee | Likelihood | Disposition |
+| --- | --- | --- | --- |
+| `baseStore.issues` produced and then discarded | 3 | plausible | **fixed**, regression `[R26-1]` |
+| every base Phase 7 command treated as a store validator | 5 | plausible | **fixed**, regression `[R26-2]` |
+| weakening authorization readable through a committed symlink | 1 | adversarial | **fixed**, regression `[R26-4]` |
+| validator identity does not pin its implementation | 2, 4 | adversarial | **deferred** — `STATUS.md`, owner assigned, due 2026-09-26 |
 
-After this remediation, the assessment's own criteria read: guarantees 1, 2, 4 hold against
-everything short of a deliberate attack that is visible in the diff; guarantee 3 holds; and
-guarantee 5's known break is closed. The residual named by the assessment is one
-`adversarial` defect, recorded on the deferral board with an owner and a due date.
+What the decision rests on, stated so a later reader can judge it:
 
-**The recommendation this artifact can now support is `CLOSE WITH FOLLOW-UP`** — close
-PRD-018 on its own code, with the validator-implementation pin and the engine-scope findings
-carried as follow-up work. That is a recommendation, not a verdict: an agent may not flip the
-ledger row, and this one has not. Re-running the assessment against the current code would
-confirm or refute it in a single round, which is the one remaining question worth asking.
+- Every finding from every round was remediated. The severity counts in the header are zero
+  **outstanding**, not zero found.
+- Round 26 assessed the five guarantees the feature must provide. After this remediation:
+  guarantees 1, 2 and 4 hold against everything short of a deliberate attack that is visible
+  in the same diff; guarantee 3 holds; guarantee 5's known break is closed.
+- The remaining risk is `adversarial`-rated and recorded with an owner and a due date. The
+  repository's deferral policy is the sanctioned mechanism for exactly this.
+- The measured argument against continuing: the adjacent-case rate across rounds 21-23 was
+  5/8, 9/11, 13/13; round 24 found 9 of 20 fixes refusing correct work; round 25 returned
+  13/13 high-confidence findings, one of which was created by round 24's fix for the same
+  gate. The loop produces real findings and real remediations at a steady rate and does not
+  converge, so continuing is not a path to a clean verdict.
+
+**No confirming assessment was run against the current code**, and this artifact does not
+pretend otherwise. The three fixes above carry mutation-checked regressions and the full
+floor is green — 833 tests, `check-types`, `lint`, `build`, `verify:workflow`,
+`verify:brain`, `verify:deferred`, `check-egress`, `gate check PRD-018`. A confirming run
+remains the one cheap way to test this decision; the owner chose to close without it.

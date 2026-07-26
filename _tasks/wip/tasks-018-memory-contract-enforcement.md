@@ -481,7 +481,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | egress            | `pnpm check-egress`                                           | root  | passed  | clean — no third-party fetch shape | built output scanned after build |
 | gate-check        | `node packages/provegate/dist/cli.js check PRD-018`           | repo  | passed  | ok — PRD-018 passes the readiness lint | readiness lint |
 | gate-wiring       | `node packages/provegate/dist/cli.js check --wiring`          | repo  | passed  | ok — every gate is wired or excepted | wire-or-delete |
-| independent-review | `_docs/reviews/review-018-memory-contract-enforcement.md`     | repo  | pending |          | verdict pass, Critical: 0 |
+| independent-review | `_docs/reviews/review-018-memory-contract-enforcement.md`     | repo  | passed  | 26 rounds; 126 CRITICAL + 27 HIGH + 68 MEDIUM + 4 LOW found and ALL remediated; 0 outstanding. Owner accepted the residual 2026-07-26 — one `adversarial` item deferred with owner + due date. No confirming round was run | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -614,5 +614,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
 | 11.3 | manual-qa | owner | Accept activation: from this merge every future PRD passes through the memory lint. Confirm you want the contract on repo-wide, and that no other lease is active at merge time | pending | The one-way step in this program; the merge gate refuses until this acceptance is recorded |
-| 10.18 | manual-qa | owner | **Decide the review verdict.** The readiness assessment's blocking defects are closed or deferred with owners, and the artifact now supports CLOSE WITH FOLLOW-UP; one confirming assessment run against the current code settles it; every finding was remediated, but round 16's fixes have not themselves been reviewed, so the artifact honestly reads `fail`. Either commission one confirming round, or accept the residual explicitly — the merge gate refuses until the row reads `passed` with `Critical: 0`, and an agent may not flip it | pending | The residual is two recorded deferrals and an unconfirmed remediation, not an open defect |
+| 10.18 | manual-qa | owner | **Decide the review verdict.** | done | **Decided 2026-07-26: the owner accepted the residual and closed with follow-up.** Recorded under "Owner decision" in the review artifact, with round 26's four blocking defects dispositioned — three fixed with mutation-checked regressions, one `adversarial` item deferred with an owner and a due date. No confirming assessment was run against the current code, and the artifact says so |
 | 6.5  | manual-qa | owner | Clear or wait out any foreign lease before landing. If the workspace mutex holds a stale marker from a crashed holder, it fails closed by design and needs manual recovery | pending | Bounded by lease TTL; recovery is documented in `run/mutex.ts` |
