@@ -62,6 +62,45 @@ required-evidence rules). `--wiring` audits wire-or-delete: manifest commands mu
 real scripts; `verify:*`-pattern scripts must be wired in the manifest/CI or carry a
 shrink-only exception.
 
+### `gate doctor --memory [--json]`
+
+Read-only diagnosis of a memory install: config containment, store root and index, record
+validation, at least one configured entrypoint carrying the index pointer, validator
+presence and package-script wiring, and Phase 7 reachability. Each check has a stable id
+you can grep or branch on.
+
+It never edits config, manifests, entrypoints, scripts, or state — on the failing path as
+well as the passing one. A diagnostic that writes only when it fails is still a writer, and
+the failing path is when you can least afford a surprise edit.
+
+Mandatory failures exit 1. Two checks only warn: **CI reachability**, because workflow
+layouts are user-defined and absence there proves nothing this tool can establish; and
+**unfilled `{{TOKEN}}` placeholders**, a real install defect that breaks no gate today. A
+warning never changes the exit code.
+
+A symlinked entrypoint is valid as long as it stays inside the repository — containment
+rejects escapes, not symlinks — and two entrypoints resolving to one real file count as one
+satisfied entrypoint rather than two.
+
+Bare `gate doctor` prints usage and exits 1 rather than guessing a mode.
+
+### `gate memory find [--query=<text>] [--paths=<a,b>] [--tag=<slug>] [--limit=N] [--json]`
+
+Deterministic local recall over the record store. Ranks by watched-path overlap, then exact
+name or tag, then description and name tokens, with the slug as a final tie-break — so the
+same question returns the same bytes on any machine. Default limit 20, allowed 1–1000.
+
+**Deterministic, not relevant.** No embedding, no persistent index, no model, no network. A
+record that matters but shares no watched path, no exact name or tag, and no description
+token will not be found; `find` augments the always-loaded `_brain/INDEX.md` rather than
+replacing it. Every hit carries the reasons it matched, so you can see which rule fired.
+
+At least one selector is required — a selectorless find would be the whole store in slug
+order. Disabled memory refuses instead of returning an empty list, because an empty list
+reads as "nothing relevant" about a store that was never consulted. Superseded and
+unreadable records never appear: acting on a record the validator would reject is worse than
+finding nothing.
+
 ### `gate init [--dry-run]`
 
 Scaffolds the workflow tree (artifact dirs × lifecycle states, state and locks dirs) plus

@@ -176,32 +176,32 @@ Records to open and confirm still accurate before the dependent task starts (tas
         failure this task existed to prevent and a later reader should see why it does not
         apply here.
 
-- [ ] 5.0 FR-5 — Adoption guidance and distribution
-  - [ ] 5.1 Update `practices/NEXT_STEPS.md` and `practices/shims/**` with doctor and find
+- [x] 5.0 FR-5 — Adoption guidance and distribution
+  - [x] 5.1 Update `practices/NEXT_STEPS.md` and `practices/shims/**` with doctor and find
         behavior, activation order, warnings versus failures, no-overwrite, local-only
         recall, and the explicit stats deferral.
-  - [ ] 5.2 Update `packages/provegate/README.md`, `QUICKSTART.md`, and
+  - [x] 5.2 Update `packages/provegate/README.md`, `QUICKSTART.md`, and
         `apps/docs/content/docs/cli.mdx` with the same, including bare `gate doctor`.
-  - [ ] 5.3 W2/W5 — distribution is **registration, not reconciliation**. If and only if
+  - [x] 5.3 W2/W5 — distribution is **registration, not reconciliation**. If and only if
         a new packed file ships, add it to `packages/provegate/test/pack-manifest.json`
         and declare it in the ledger's `packOnly[]` (or pair it). Editing the existing
         `packOnly` files creates no ledger obligation, and `--reconcile` writes the ledger
         so it is never evidence.
-  - [ ] 5.4 Run the read-only evidence: `pnpm verify:pack-drift` (refuses an undeclared
+  - [x] 5.4 Run the read-only evidence: `pnpm verify:pack-drift` (refuses an undeclared
         packed file by name) and `pnpm --filter provegate test test/pack.test.ts` (the
         allowlist against `npm pack --dry-run`).
-  - [ ] 5.5 Run the root dogfood doctor and record its output in the Progress Log; it must
+  - [x] 5.5 Run the root dogfood doctor and record its output in the Progress Log; it must
         be green against this repository's own wiring.
-  - [ ] 5.6 Assert the docs claims in `packages/provegate/test/content-launch.test.ts`
+  - [x] 5.6 Assert the docs claims in `packages/provegate/test/content-launch.test.ts`
         semantically — the behavior each command promises, not the presence of its name.
 
-- [ ] 6.0 FR-6 — Invariants and compatibility
-  - [ ] 6.1 Assert `packages/provegate/package.json` still declares zero runtime
+- [x] 6.0 FR-6 — Invariants and compatibility
+  - [x] 6.1 Assert `packages/provegate/package.json` still declares zero runtime
         dependencies, and that no new source or packed file contains a network call, an
         embedding, a persistent index, or a push path.
-  - [ ] 6.2 Assert practices init stays additive-only and existing commands are unchanged.
-  - [ ] 6.3 Assert single-package repositories behave identically.
-  - [ ] 6.4 Run `pnpm check-egress` and confirm `scripts/check-static-egress.mjs` still
+  - [x] 6.2 Assert practices init stays additive-only and existing commands are unchanged.
+  - [x] 6.3 Assert single-package repositories behave identically.
+  - [x] 6.4 Run `pnpm check-egress` and confirm `scripts/check-static-egress.mjs` still
         passes against built output.
 
 - [ ] 7.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
@@ -295,6 +295,27 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 7.0)
   because deployment ordering carries 20% of this class's readiness weight, even though
   this PRD is purely additive.
+- **FR-5 decision — docs asserted semantically, in PAIRS.** "the command name appears in
+  the README" stays green while every sentence around the name goes false. Each docs claim
+  is paired with the behaviour that makes it true: the read-only promise against the
+  doctor's source containing no write call, the local-only promise against `find.ts`
+  containing no network or subprocess call, and the documented bare-`gate doctor` behaviour
+  against the real binary's exit code.
+
+- **FR-5 finding — a docs regex that assumed no line wrapping.** The first version required
+  "bare" and `gate doctor` to be adjacent; Markdown wrapped them onto two lines and the
+  test failed on correctly-formatted prose. Whitespace-tolerant now.
+
+- **FR-5 — W2/W5, no ledger obligation incurred.** No NEW packed file ships: the changes
+  are edits to `NEXT_STEPS.md` and `README.md`, which are existing `packOnly` entries with
+  no live counterpart. Registration would be required only for a new packed file, and
+  `--reconcile` writes the ledger so it is never evidence. `verify:pack-drift` (49 pairs)
+  and the `npm pack --dry-run` allowlist both pass unchanged.
+
+- **FR-5 — 5.5 dogfood, recorded:** `gate doctor --memory` against this repository is green
+  on all eleven checks — 27 records parsing, 3 entrypoints carrying the index pointer, CI
+  mentioning `verify:brain`.
+
 - **FR-4 decision — `private/` is unreachable by construction, not by a filter.** Task 4.4
   asks that nothing under `private/` appear in public results. Records reach results ONLY
   through an INDEX pointer, and the store scans just `learnings/` and `adr/`, so a file

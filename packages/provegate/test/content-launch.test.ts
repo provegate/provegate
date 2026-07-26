@@ -1,8 +1,8 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
@@ -252,5 +252,112 @@ describe('package README command audit', () => {
       .split('\n')
       .filter((line) => unbuilt.test(line) && namesACommand(line));
     expect(offenders, 'README calls a shipped command unimplemented').toEqual([]);
+  });
+});
+
+/**
+ * FR-5 — the docs claims, asserted SEMANTICALLY.
+ *
+ * "the command name appears in the README" is the assertion that lets docs rot:
+ * it stays green while every sentence around the name becomes false. Each case
+ * below pairs a promise the docs make with the behaviour that makes it true, and
+ * fails if either side moves.
+ */
+describe('adoption docs promise what the commands actually do (FR-5)', () => {
+  const read = (rel: string): string =>
+    readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', rel), 'utf8');
+  const readRepo = (rel: string): string =>
+    readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../..', rel), 'utf8');
+
+  const surfaces = (): { name: string; text: string }[] => [
+    { name: 'README.md', text: read('README.md') },
+    { name: 'practices/NEXT_STEPS.md', text: read('practices/NEXT_STEPS.md') },
+    { name: 'docs/cli.mdx', text: readRepo('apps/docs/content/docs/cli.mdx') },
+  ];
+
+  it('every surface that documents the doctor also states it is read-only', () => {
+    // The claim is load-bearing: an adopter reaches for a doctor when something
+    // is already broken, and needs to know it will not make things worse.
+    for (const { name, text } of surfaces()) {
+      if (!text.includes('gate doctor')) continue;
+      expect(text.toLowerCase(), name).toMatch(/read-only|never edits/);
+    }
+  });
+
+  it('the read-only claim is TRUE: the doctor has no write call', () => {
+    // The other half of the pair. A docs assertion that nobody checks against
+    // the code is a promise, not a test.
+    const doctor = read('src/core/memory/doctor.ts');
+    for (const writer of ['writeFileSync', 'appendFileSync', 'mkdirSync', 'rmSync', 'unlinkSync']) {
+      expect(doctor, writer).not.toContain(writer);
+    }
+  });
+
+  it('every surface that documents find also states it is local and deterministic', () => {
+    for (const { name, text } of surfaces()) {
+      if (!text.includes('memory find')) continue;
+      expect(text.toLowerCase(), name).toContain('deterministic');
+      // "no network / no embedding / local only" — the property adopters ask
+      // about first, because recall is where tools usually phone home.
+      expect(text.toLowerCase(), name).toMatch(/no network|local only/);
+    }
+  });
+
+  it('the local-only claim is TRUE: find reaches nothing outside the store', () => {
+    const find = read('src/core/memory/find.ts');
+    for (const escape of ['fetch(', 'http', 'child_process', 'execFileSync']) {
+      expect(find, escape).not.toContain(escape);
+    }
+  });
+
+  it('the docs describe warnings and failures as different things', () => {
+    // FR-1's whole design is that split; docs that flatten it teach an adopter
+    // to treat a CI warning as a broken install.
+    for (const { name, text } of surfaces()) {
+      if (!text.includes('gate doctor')) continue;
+      expect(text.toLowerCase(), name).toMatch(/warn/);
+      expect(text.toLowerCase(), name).toMatch(/exit 1|fail/);
+    }
+  });
+
+  it('NEXT_STEPS states the activation ORDER and the stats deferral', () => {
+    const text = read('practices/NEXT_STEPS.md');
+    // Running the doctor before the shims exist reports what you already know.
+    expect(text.toLowerCase()).toMatch(/order matters|do steps 1-5 first/);
+    // The deferral is explicit rather than an unexplained absence.
+    expect(text.toLowerCase()).toMatch(/no usage statistics|deferred on purpose/);
+  });
+
+  it('bare `gate doctor` is documented as usage plus exit 1, and behaves that way', () => {
+    const documented = surfaces().filter((s) => s.text.includes('gate doctor'));
+    expect(documented.length).toBeGreaterThan(0);
+    for (const { name, text } of documented) {
+      // Whitespace-tolerant: Markdown wraps, so "Bare" and the command can land
+      // on different lines. A regex that assumes they are adjacent fails on
+      // correctly-formatted prose.
+      expect(text.toLowerCase(), name).toMatch(/bare\s+`?gate doctor`?/);
+    }
+    let code = 0;
+    let out = '';
+    try {
+      execFileSync(
+        process.execPath,
+        [resolve(dirname(fileURLToPath(import.meta.url)), '../dist/cli.js'), 'doctor'],
+        { encoding: 'utf8' },
+      );
+    } catch (error) {
+      const e = error as { status?: number; stderr?: string };
+      code = e.status ?? -1;
+      out = e.stderr ?? '';
+    }
+    expect(code).toBe(1);
+    expect(out).toContain('usage: gate doctor');
+  });
+
+  it('the package still declares zero runtime dependencies (FR-6)', () => {
+    // Both new commands are pure local computation; the moment either needs a
+    // dependency, the local-only promise above is no longer free.
+    const pkg = JSON.parse(read('package.json')) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies ?? {}).toEqual({});
   });
 });

@@ -60,7 +60,8 @@ New here? [QUICKSTART.md](QUICKSTART.md) walks install → first gated close
   containment, store and index, record validation, entrypoint pointer, validator presence
   and wiring, Phase 7 reachability. Mandatory failures exit 1; CI reachability and unfilled
   placeholders warn, because a workflow layout is user-defined and absence there proves
-  nothing. It never edits config, manifests, entrypoints, scripts, or state.
+  nothing. It never edits config, manifests, entrypoints, scripts, or state. Bare
+  `gate doctor` prints usage and exits 1 rather than guessing a mode.
 - `gate run [--dry-run] [--from-phase=…] PRD-XXX` — the deterministic close: manifest gate
   chain (floor + diff-conditional class defaults), §11 commands through the safety
   allowlist, review-artifact schema gate, durable-artifacts gate, operator-acceptance
