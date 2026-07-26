@@ -1,6 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  unlinkSync,
+} from 'node:fs';
+import { isAbsolute, join, resolve, sep } from 'node:path';
 import { normalizedWorktreeDir, type WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
 import { containedPath } from './init.js';
@@ -31,6 +38,9 @@ export interface WorktreeProvision {
 export interface WorktreeRemoval {
   removed: boolean;
   branchDeleted: boolean;
+  /** The lease was unlinked, so the work item is no longer IN-FLIGHT. False when
+   * no lease path was supplied or the unlink failed — the warning says which. */
+  leaseReleased: boolean;
   warnings: string[];
 }
 
@@ -544,11 +554,12 @@ export function createWorktree(
 export function removeWorktree(
   config: WorkflowConfig,
   root: string,
-  { worktree, branch }: { worktree: string; branch: string },
+  { worktree, branch, lease }: { worktree: string; branch: string; lease?: string },
 ): WorktreeRemoval {
   const warnings: string[] = [];
   const mainRoot = mainRepoRoot(root);
   let removed = false;
+  let leaseReleased = false;
   let branchDeleted = false;
 
   // Stamp values are DATA: option-like or protected branch names refuse the
@@ -561,18 +572,18 @@ export function removeWorktree(
     warnings.push(
       `cleanup refused: stamped branch ${branch} is ${branch.startsWith('-') ? 'option-like' : 'protected'} — clean up manually if intended`,
     );
-    return { removed, branchDeleted, warnings };
+    return { removed, branchDeleted, leaseReleased, warnings };
   }
   const wtDirGuard = normalizedWorktreeDir(config);
   if (wtDirGuard === '.' || wtDirGuard === '') {
     warnings.push('cleanup refused: worktree.dir is the repository root — fix the config');
-    return { removed, branchDeleted, warnings };
+    return { removed, branchDeleted, leaseReleased, warnings };
   }
   try {
     const wtRootProbe = resolve(mainRoot, wtDirGuard);
     if (existsSync(wtRootProbe) && realpathSync(wtRootProbe) === realpathSync(mainRoot)) {
       warnings.push('cleanup refused: worktree.dir resolves to the repository root — fix the config');
-      return { removed, branchDeleted, warnings };
+      return { removed, branchDeleted, leaseReleased, warnings };
     }
   } catch {
     /* probe failure — the containment checks below still gate the removal */
@@ -593,7 +604,7 @@ export function removeWorktree(
     warnings.push(
       `worktree not removed: ${err instanceof Error ? err.message : String(err)}`,
     );
-    return { removed, branchDeleted, warnings };
+    return { removed, branchDeleted, leaseReleased, warnings };
   }
 
   if (existsSync(path)) {
@@ -607,11 +618,11 @@ export function removeWorktree(
         warnings.push(
           `worktree not removed: ${worktree} resolves outside ${config.worktree.dir}/ — remove manually`,
         );
-        return { removed, branchDeleted, warnings };
+        return { removed, branchDeleted, leaseReleased, warnings };
       }
     } catch {
       warnings.push(`worktree not removed: ${worktree} could not be resolved — remove manually`);
-      return { removed, branchDeleted, warnings };
+      return { removed, branchDeleted, leaseReleased, warnings };
     }
     // The path must still hold the STAMPED branch: if the claimed tree was
     // moved and an unrelated checkout now occupies the old path, removing it
@@ -621,7 +632,7 @@ export function removeWorktree(
       warnings.push(
         `worktree at ${worktree} holds ${occupant ?? 'no registered branch'}, not ${branch} — not removed`,
       );
-      return { removed, branchDeleted, warnings };
+      return { removed, branchDeleted, leaseReleased, warnings };
     }
     try {
       git(mainRoot, ['worktree', 'remove', path]);
@@ -639,7 +650,7 @@ export function removeWorktree(
       warnings.push(
         `worktree for ${branch} moved to ${elsewhere} — not removed; clean up manually`,
       );
-      return { removed, branchDeleted, warnings };
+      return { removed, branchDeleted, leaseReleased, warnings };
     }
     try {
       git(mainRoot, ['worktree', 'prune']);
@@ -658,6 +669,45 @@ export function removeWorktree(
         `branch ${branch} not deleted${del.why ? ` (${del.why})` : ''} — delete manually`,
       );
     }
+    // AND the lease. Teardown removed the checkout and deleted the branch and
+    // left the lock file, so a worktree-stamped close kept its work item
+    // IN-FLIGHT until the TTL expired and blocked every overlapping candidate.
+    // The plain-close path releases its own lease; this branch of the same
+    // if/else was never changed with it. PRD-018's first real close found it —
+    // twenty-six review rounds did not.
+    //
+    // Only when the checkout actually went: a lease outliving a worktree that
+    // is still on disk would orphan the claim on the very directory someone is
+    // working in, which is the mistake `locks-on-main-not-worktree` records
+    // from the other side. Unlinked directly rather than through
+    // `releaseLease`, because the caller already holds the claim mutex and
+    // that function takes it itself.
+    if (lease !== undefined) {
+      try {
+        unlinkSync(lease);
+        leaseReleased = true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          // Already gone — someone released it between the merge and here.
+          //
+          // This branch HID a defect once and the lesson is worth keeping: the
+          // caller passed a basename, `unlinkSync` resolved it against the
+          // process cwd, and ENOENT read as success while the real lease
+          // survived. An absolute path is now required, so a relative one is a
+          // caller bug rather than a silent no-op.
+          if (!isAbsolute(lease)) {
+            warnings.push(
+              `lease path '${lease}' is not absolute — refusing to guess what it resolves ` +
+                `against; release it with \`gate release\``,
+            );
+          } else {
+            leaseReleased = true;
+          }
+        } else {
+          warnings.push(`lease ${lease} not released — release it with \`gate release\``);
+        }
+      }
+    }
   }
-  return { removed, branchDeleted, warnings };
+  return { removed, branchDeleted, leaseReleased, warnings };
 }

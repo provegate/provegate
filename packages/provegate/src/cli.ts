@@ -30,7 +30,7 @@ import {
   loadManifest,
   parsePrdClass,
 } from './core/gates/index.js';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { dirname as pathDirname } from 'node:path';
 import {
   RUN_ACTIVE_ENV,
@@ -57,6 +57,7 @@ import {
 } from './core/run/index.js';
 import { handoffCard as buildHandoffCard } from './core/run/index.js';
 import { colorTier, paint, verdictSlot, statusLine } from './core/ui/theme.js';
+import { memoryDoctor, memoryFind } from './core/memory/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -111,6 +112,8 @@ function usage(): string {
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
+    '  doctor   diagnose an install, read-only (gate doctor --memory [--json])',
+    '  memory   deterministic local recall (gate memory find --query=… | --paths=… | --tag=…)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
     '  land     merge step only (alias for run --from-phase=merge)',
     '  push     (refused — push is always yours)',
@@ -490,6 +493,133 @@ function findRecord(
   return { record, id: formatId(config.idPattern, number) };
 }
 
+/**
+ * `gate doctor` — read-only install diagnosis.
+ *
+ * Bare `gate doctor` prints usage and exits 1 rather than guessing a mode. That
+ * is the house style `gate renew` and `gate release` already set, and it is what
+ * keeps the surface defined when a second doctor mode lands: today's bare
+ * invocation must not become tomorrow's silent default.
+ */
+function runDoctor(args: string[]): number {
+  const unknown = unknownOption(args, ['--memory', '--json']);
+  if (unknown !== null) {
+    console.error(`[doctor] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
+  if (!args.includes('--memory')) {
+    console.error('usage: gate doctor --memory [--json]');
+    return 1;
+  }
+  const json = args.includes('--json');
+  const { root, config } = loadConfig();
+  const manifest = loadManifest(config, root);
+
+  const pkgPath = resolve(root, 'package.json');
+  const packageScripts = existsSync(pkgPath)
+    ? ((JSON.parse(readFileSync(pkgPath, 'utf8')) as { scripts?: Record<string, string> })
+        .scripts ?? {})
+    : undefined;
+
+  // CI files are READ, never required: their absence warns rather than fails,
+  // because a repository may run its gates from anywhere.
+  const ciTexts: string[] = [];
+  const workflows = resolve(root, '.github/workflows');
+  if (existsSync(workflows)) {
+    for (const name of readdirSync(workflows)) {
+      if (!/\.ya?ml$/.test(name)) continue;
+      try {
+        ciTexts.push(readFileSync(resolve(workflows, name), 'utf8'));
+      } catch {
+        /* unreadable CI file — absence warns, it does not fail */
+      }
+    }
+  }
+
+  const report = memoryDoctor({ config, manifest, root, packageScripts, ciTexts });
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+    return report.code;
+  }
+
+  const tier = colorTier();
+  const glyph = { pass: '✓', warn: '⚠', fail: '✗' } as const;
+  const slot = { pass: 'green', warn: 'amber', fail: 'red' } as const;
+  console.log(`[doctor --memory] ${config.memory.enabled ? 'contract ON' : 'contract OFF'}`);
+  for (const check of report.checks) {
+    console.log(`  ${paint(slot[check.severity], glyph[check.severity], tier)} ${check.id}: ${check.detail}`);
+    if (check.remedy !== undefined) console.log(`      → ${check.remedy}`);
+  }
+  const fails = report.checks.filter((c) => c.severity === 'fail').length;
+  const warns = report.checks.filter((c) => c.severity === 'warn').length;
+  console.log(
+    report.ok
+      ? `[doctor --memory] reachable${warns > 0 ? ` — ${warns} warning(s)` : ''}`
+      : `[doctor --memory] ${fails} blocking problem(s)${warns > 0 ? `, ${warns} warning(s)` : ''}`,
+  );
+  return report.code;
+}
+
+/**
+ * `gate memory find` — deterministic recall.
+ *
+ * `memory` is a NOUN with subcommands, so a bare `gate memory` prints usage and
+ * exits 1 exactly as bare `gate doctor` does. The surface has to be defined
+ * before a second subcommand lands, not after.
+ */
+function runMemory(args: string[]): number {
+  const sub = args.find((a) => !a.startsWith('-'));
+  if (sub !== 'find') {
+    console.error(
+      'usage: gate memory find [--query=<text>] [--paths=<a,b>] [--tag=<slug>] [--limit=N] [--json]',
+    );
+    return 1;
+  }
+  const rest = args.filter((a) => a !== 'find');
+  const unknown = unknownOption(rest, ['--query', '--paths', '--tag', '--limit', '--json']);
+  if (unknown !== null) {
+    console.error(`[memory] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
+  const value = (name: string): string | undefined =>
+    rest.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1);
+  const rawLimit = value('--limit');
+  const selectors = {
+    ...(value('--query') === undefined ? {} : { query: value('--query')! }),
+    ...(value('--tag') === undefined ? {} : { tag: value('--tag')! }),
+    ...(value('--paths') === undefined ? {} : { paths: value('--paths')!.split(',') }),
+    // A non-numeric `--limit` becomes NaN, which the bounds check refuses by
+    // name rather than silently falling back to the default.
+    ...(rawLimit === undefined ? {} : { limit: Number(rawLimit) }),
+  };
+
+  const { root, config } = loadConfig();
+  const result = memoryFind(config, root, selectors);
+  if (rest.includes('--json')) {
+    console.log(JSON.stringify(result, null, 2));
+    return result.ok ? 0 : 1;
+  }
+  if (!result.ok) {
+    console.error(`[memory find] ${result.problem}`);
+    if (result.remedy !== undefined) console.error(`  → ${result.remedy}`);
+    return 1;
+  }
+  if (result.hits.length === 0) {
+    console.log(`[memory find] no active record matched (searched ${result.searched})`);
+    // Deterministic, not relevant — say so, so an empty result is not read as
+    // "there is nothing to know about this".
+    console.log('  → ranking is by watch/name/tag/token overlap; read `_brain/INDEX.md` too');
+    return 0;
+  }
+  console.log(`[memory find] ${result.hits.length} of ${result.searched} active record(s)`);
+  for (const hit of result.hits) {
+    console.log(`  ${hit.slug} (${hit.type}/${hit.scope}) — ${hit.description}`);
+    console.log(`      ${hit.path} · matched: ${hit.reasons.join(', ')}`);
+    if (hit.matchedPaths.length > 0) console.log(`      watches: ${hit.matchedPaths.join(', ')}`);
+  }
+  return 0;
+}
+
 function runCheck(args: string[]): number {
   const unknown = unknownOption(args, ['--wiring']);
   if (unknown !== null) {
@@ -561,7 +691,10 @@ interface WorktreeStamps {
    * and an injected clock, and a rival's refreshed claim must never be torn
    * down (codex r28+r29 P1). */
   identity: string;
+  /** Basename, used for identity comparison across a refresh. */
   file: string;
+  /** Absolute path, used to unlink. */
+  leasePath: string;
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
@@ -636,6 +769,11 @@ function worktreeStamps(
       // same writer reproduces it, and ANY field change breaks equality.
       identity: JSON.stringify(live.data),
       file: live.name,
+      // The ABSOLUTE path, kept apart from `file`. `file` is a basename and is
+      // compared for identity; teardown needs something it can unlink, and
+      // passing the basename made `unlinkSync` resolve against the process cwd,
+      // fail with ENOENT, and report the lease released while it survived.
+      leasePath: live.path,
     },
     malformed,
   };
@@ -941,11 +1079,16 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
           ];
           return;
         }
-        const removal = removeWorktree(config, root, stamps);
+        // `stamps.file` is the lease this close owns — identity-revalidated
+        // immediately above, inside the same mutex hold. Teardown unlinks it, so
+        // the work item stops being IN-FLIGHT the moment its checkout is gone.
+        const removal = removeWorktree(config, root, { ...stamps, lease: stamps.leasePath });
         cleanupDone = removal.removed;
         if (removal.removed) {
           outcome.results.push([
-            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}`,
+            `cleanup: worktree removed${removal.branchDeleted ? ' + branch deleted' : ''}${
+              removal.leaseReleased ? ' + lease released' : ''
+            }`,
             'passed',
           ]);
         }
@@ -1054,6 +1197,8 @@ export function main(argv: string[]): number {
       return runQueue(rest.includes('--json'));
     }
     if (command === 'check') return runCheck(rest);
+    if (command === 'doctor') return runDoctor(rest);
+    if (command === 'memory') return runMemory(rest);
     if (command === 'run') return runRun(rest);
     if (command === 'land') return runRun(rest, { mergeOnly: true });
   } catch (error) {

@@ -163,6 +163,27 @@ entrypoints (`CLAUDE.md`, `AGENTS.md`) — paste the shims from
 `node_modules/provegate/practices/shims/` yourself. The remaining manual wiring is
 printed after install (also in `practices/NEXT_STEPS.md`). `--dry-run` composes.
 
+### Check the install, and search what you have recorded
+
+Once the pack is wired and `memory.enabled` is on, two read-only commands answer the two
+questions you will actually have:
+
+```sh
+gate doctor --memory        # is this install reachable?
+gate memory find --query=caching
+```
+
+`doctor` reports whether the store, index, records, entrypoint pointer, validator and
+Phase 7 wiring are reachable. Run it AFTER the manual wiring above, not before — it reports
+what is true now. Mandatory failures exit 1; CI reachability and unfilled `{{TOKEN}}`
+placeholders only warn, because a workflow layout is yours and this tool cannot prove
+absence. It never edits anything, on the failing path as well as the passing one.
+
+`memory find` is deterministic local recall — no embedding, no index, no model, no network.
+It ranks by watched-path overlap, then exact name or tag, then description tokens, so the
+same question returns the same bytes on any machine. It augments `_brain/INDEX.md`; it does
+not replace reading it.
+
 ## Where to go next
 
 - `METHOD.md` — the method spec (classes, gates, locks, deferral governance)

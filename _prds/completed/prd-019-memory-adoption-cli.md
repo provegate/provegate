@@ -282,13 +282,26 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - applied: `gate-wire-or-delete` — doctor proves mandatory local reachability.
 - applied: `turbo-cache-masks-out-of-input-reads` — fixtures isolate record trees and
   declare corpus inputs.
+- applied: `false-green-on-missing-file` — every mandatory doctor check fails on absence
+  rather than skipping, and the escape-hatch branches were re-read for the same shape.
+- applied: `fixture-must-reach-production-shape` — this PRD WROTE this record after its own
+  lease fix shipped broken behind five passing regressions; the worktree tests now copy the
+  production call's argument shape, and the relative-path case is refused by name.
+- applied: `pin-the-claim-the-test-cannot-hold` — this PRD wrote it too; the byte-stability
+  promise is asserted at the source with the reason in the test, because whether the two
+  comparators differ depends on the locale the suite happens to run under.
 
 ---
 
 ## Memory Outputs
 
-- none — doctor/find behavior is fully derivable from implementation and tests; append
-  an exact learning path only if implementation exposes a non-derivable trap.
+- learning: `_brain/learnings/fixture-must-reach-production-shape.md` — a regression that
+  calls the fixed function with better arguments than production does cannot detect the
+  defect, and mutation-checking it proves only that the test reaches the line. This PRD's
+  own lease fix shipped broken behind five passing regressions.
+- learning: `_brain/learnings/pin-the-claim-the-test-cannot-hold.md` — when a property is
+  only observable on machines the suite will never run on, assert it against the source and
+  say why; a behavioural test there is green by luck.
 
 ---
 
@@ -311,6 +324,22 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - `apps/docs/content/docs/cli.mdx`
 - `scripts/check-static-egress.mjs`
 - `scripts/verify/pack-drift-ledger.json` — claimed defensively for FR-5's conditional
+- `packages/provegate/src/core/run/worktree.ts` — **scope deviation**, see below
+- `packages/provegate/test/worktree.test.ts` — **scope deviation**, see below
+- `packages/provegate/test/cli-state.test.ts` — **scope deviation**, see below
+
+**Scope deviation — the worktree-close lease leak.** These last three are not this PRD's
+subject. `removeWorktree` deletes the checkout and the branch and never unlinks the lease,
+so a worktree-stamped close leaves its work item IN-FLIGHT until the TTL expires and blocks
+every overlapping candidate. PRD-018's first real close hit it — twenty-six review rounds
+did not. The plain-close path releases its lease (added in PRD-018 round 23) and this branch
+of the same if/else was not changed with it.
+
+It is fixed here rather than deferred because **this PRD's own close leaks the same lease**,
+and because the fix belongs in `removeWorktree` — where the worktree and branch are already
+being torn down — rather than bolted onto the caller. The two test files are claimed so the
+fix can carry a regression instead of a promise. Recorded in the task plan's Deferrals &
+Decisions with the deferral row it retires.
   new-packed-file case; no unconditional write is planned
 
 ---
@@ -320,6 +349,8 @@ so that I can select relevant records without embeddings or vendor-specific stor
 - CLI reference: `apps/docs/content/docs/cli.mdx`
 - Adoption guide: `packages/provegate/QUICKSTART.md`
 - Review: `_docs/reviews/review-019-memory-adoption-cli.md`
+- `_brain/learnings/fixture-must-reach-production-shape.md` — paired with Memory Outputs
+- `_brain/learnings/pin-the-claim-the-test-cannot-hold.md` — paired with Memory Outputs
 
 ---
 

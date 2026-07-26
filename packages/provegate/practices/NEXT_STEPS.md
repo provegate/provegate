@@ -63,3 +63,53 @@ node scripts/verify/verify-workflow.mjs
 ```
 
 Must exit 0 on a fresh install.
+
+## 7. Check the memory install, if you enabled it
+
+```sh
+gate doctor --memory        # add --json for machine output
+```
+
+Read-only: it never edits config, manifests, entrypoints, scripts, or state, on
+either the passing or the failing path.
+
+**Order matters.** Do steps 1-5 first. `doctor` reports what is reachable NOW, so
+running it before the shims and scripts are in place tells you what you already
+know.
+
+**Failures versus warnings.** A failure means something the contract needs is
+unreachable locally — a missing index, a record that will not parse, no
+entrypoint carrying the index pointer, a validator that is named but not wired.
+Those exit 1. Two checks only ever warn: CI reachability, because workflow
+layouts are yours and this tool cannot prove absence; and unfilled `{{TOKEN}}`
+placeholders, which are a real install defect that breaks no gate today. A
+warning never changes the exit code.
+
+Bare `gate doctor` with no mode prints usage and exits 1 rather than guessing.
+
+## 8. Recall, once you have records
+
+```sh
+gate memory find --query=caching
+gate memory find --paths=src/api/handler.ts
+gate memory find --tag=some-record --limit=5 --json
+```
+
+**Local only.** No embedding, no persistent index, no model, no network. Ranking
+is by watched-path overlap, then exact name or tag, then description and name
+tokens, with the slug as a final tie-break — so the same question returns the
+same bytes on any machine.
+
+**Deterministic, not relevant.** A record that matters but shares no watched
+path, no exact name or tag, and no description token will not be found. `find`
+augments `_brain/INDEX.md`; it does not replace reading it. Every result carries
+the reasons it matched so you can see which of those rules fired.
+
+At least one selector is required, and disabled memory refuses rather than
+returning an empty list — an empty list would read as "nothing relevant" about a
+store that was never consulted.
+
+**Deferred on purpose:** there are no usage statistics, no hit counters, and no
+ranking feedback. Recording which records get read would need a write path in a
+read-only command, and tuning a ranking from it would make runs
+machine-dependent — both give up the property that makes this trustworthy.

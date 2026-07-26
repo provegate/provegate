@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -1358,5 +1359,146 @@ describe('merge from a claimed worktree + cleanup (FR-3, W1, W3)', () => {
     expect(removal.removed).toBe(true);
     expect(removal.branchDeleted).toBe(true);
     expect(existsSync(wt.path)).toBe(false);
+  });
+});
+
+describe('worktree teardown releases its lease (PRD-019 scope deviation)', () => {
+  /** Write a lease into the lock dir the way `gate open --worktree` does. */
+  function lease(root: string, id: string, over: Record<string, unknown> = {}): string {
+    const dir = join(root, cfg.dirs.locksDir);
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, `${id.toLowerCase()}-round-trip.json`);
+    writeFileSync(
+      file,
+      JSON.stringify({
+        schemaVersion: 2,
+        lockId: `${id.toLowerCase()}-round-trip`,
+        agent: 'owner',
+        prd: id,
+        phase: 'Phase 4',
+        startedAt: '2026-07-26T00:00:00.000Z',
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        touchedFiles: ['packages/**'],
+        ...over,
+      }),
+    );
+    return file;
+  }
+
+  it('unlinks the lease when the checkout actually went', async () => {
+    // `removeWorktree` deleted the checkout and the branch and left the lock
+    // file, so a worktree-stamped close kept its work item IN-FLIGHT until the
+    // TTL expired and blocked every overlapping candidate. PRD-018's first real
+    // close found it; twenty-six review rounds did not.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const file = lease(root, 'PRD-001');
+    expect(existsSync(file)).toBe(true);
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: file,
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(true);
+    expect(removal.warnings).toEqual([]);
+    // The property the deferral row asked for: no lock file left behind. The
+    // directory itself survives — it is tracked with a `.gitkeep`, and asserting
+    // an empty DIRECTORY would fail for a reason that has nothing to do with
+    // leases.
+    expect(
+      readdirSync(join(root, cfg.dirs.locksDir)).filter((n) => n.endsWith('.json')),
+    ).toEqual([]);
+  });
+
+  it('keeps the lease when the checkout did NOT go', async () => {
+    // A lease outliving a worktree still on disk would orphan the claim on the
+    // very directory someone is working in — the mistake
+    // `locks-on-main-not-worktree` records from the other side. Removal refuses
+    // on a dirty tree, and the lease must survive that refusal.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    writeFileSync(join(made.path, 'dirty.txt'), 'uncommitted\n');
+    const file = lease(root, 'PRD-001');
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: file,
+    });
+    expect(removal.removed).toBe(false);
+    expect(removal.leaseReleased).toBe(false);
+    expect(existsSync(file)).toBe(true);
+    expect(existsSync(made.path)).toBe(true);
+  });
+
+  it('reports leaseReleased false and warns when the unlink fails', async () => {
+    // A DIRECTORY at the lease path cannot be unlinked. The merge has landed by
+    // this point, so the failure degrades to a warning naming the remedy — it
+    // never throws the close away (W3).
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const dir = join(root, cfg.dirs.locksDir, 'prd-001-round-trip.json');
+    mkdirSync(dir, { recursive: true });
+
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: dir,
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(false);
+    expect(removal.warnings.join('; ')).toContain('not released');
+    expect(existsSync(dir)).toBe(true);
+  });
+
+  it('refuses a RELATIVE lease path instead of reporting a silent success', async () => {
+    // The production caller once passed a basename. `unlinkSync` resolved it
+    // against the process cwd, ENOENT read as "already released", and the real
+    // lease survived while the handoff card said otherwise. A relative path is a
+    // caller bug now, and it says so.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const file = lease(root, 'PRD-001');
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: 'prd-001-round-trip.json',
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(false);
+    expect(removal.warnings.join('; ')).toContain('not absolute');
+    expect(existsSync(file)).toBe(true);
+  });
+
+  it('treats an already-gone lease as released, not as a failure', async () => {
+    // Someone released it between the merge and the teardown. Nothing is wrong
+    // and the card should not carry a warning about it.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+      lease: join(root, cfg.dirs.locksDir, 'never-written.json'),
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(true);
+    expect(removal.warnings).toEqual([]);
+  });
+
+  it('leaves the lease alone when no lease path is supplied', async () => {
+    // The parameter is optional, so a caller that does not know its lease gets
+    // exactly the old behaviour rather than a surprise unlink.
+    const root = await gitRoot();
+    const made = createWorktree(cfg, root, { id: 'PRD-001', slug: 'round-trip' });
+    const file = lease(root, 'PRD-001');
+    const removal = removeWorktree(cfg, root, {
+      worktree: made.relPath,
+      branch: made.branch,
+    });
+    expect(removal.removed).toBe(true);
+    expect(removal.leaseReleased).toBe(false);
+    expect(existsSync(file)).toBe(true);
   });
 });

@@ -11,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_CONFIG,
@@ -20,7 +21,13 @@ import {
   validateResolvedConfig,
   type PartialWorkflowConfig,
 } from '../src/core/config/index.js';
-import { validateRecord } from '../src/core/memory/index.js';
+import {
+  FIND_DEFAULT_LIMIT,
+  FIND_MAX_LIMIT,
+  memoryDoctor,
+  memoryFind,
+  validateRecord,
+} from '../src/core/memory/index.js';
 import { watchMatches } from '../src/core/memory/artifacts.js';
 
 const fixturesDir = fileURLToPath(new URL('./fixtures', import.meta.url));
@@ -527,11 +534,17 @@ describe('default-off compatibility (task 6.2)', () => {
     expect(DEFAULT_CONFIG.memory.entrypoints).toEqual([]);
   });
 
-  it('the parser is inert without a caller: nothing in this PRD invokes it', () => {
-    // The substrate ships a capability, not a behaviour change. The runner, the
-    // readiness lint, and the CLI gain their memory obligations in PRD-018/019;
-    // if one of them starts calling this parser here, the default-off argument
-    // stops being true and this assertion is the tripwire.
+  it('the parser is reachable only from the places that earned it', () => {
+    // PRD-017 shipped this parser INERT and asserted that nothing invoked it —
+    // the substrate was a capability, not a behaviour change, and the tripwire
+    // protected the default-off argument.
+    //
+    // PRD-019 is one of the two work items that tripwire named. `gate doctor`
+    // exists to tell an adopter whether their records actually parse, which it
+    // cannot do without calling the parser. So the assertion is not deleted, it
+    // is TIGHTENED: the list of callers is now enumerated, and a new one still
+    // fails here. What the original protected is unchanged and still true —
+    // memory stays off by default, and nothing infers enablement.
     const src = fileURLToPath(new URL('../src', import.meta.url));
     const offenders: string[] = [];
     const walk = (dir: string): void => {
@@ -553,8 +566,17 @@ describe('default-off compatibility (task 6.2)', () => {
       }
     };
     walk(src);
-    // core/index.ts re-exports the barrel; that is publication, not consumption.
-    expect(offenders.map((f) => f.slice(src.length + 1))).toEqual(['core/index.ts']);
+    // `core/index.ts` re-exports the barrel — publication, not consumption.
+    // `cli.ts` consumes it for `gate doctor --memory`, which is PRD-019's whole
+    // subject. Anything else appearing here is a new caller and wants its own
+    // justification, which is what this assertion is for.
+    expect(offenders.map((f) => f.slice(src.length + 1)).sort()).toEqual([
+      'cli.ts',
+      'core/index.ts',
+    ]);
+    // The property the original guarded, asserted directly rather than inferred
+    // from the caller list: reachability is not enablement.
+    expect(DEFAULT_CONFIG.memory.enabled).toBe(false);
   });
 });
 
@@ -737,5 +759,457 @@ describe('phase 6 round 22 — one step over', () => {
     expect(watchMatches(['packages/x/**'], ['packages/x/a.ts::doThing'])).toEqual([
       'packages/x/a.ts',
     ]);
+  });
+});
+
+describe('FR-1 — read-only memory doctor', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  const RECORD = [
+    '---',
+    'name: sample-record',
+    'description: a record the doctor resolves',
+    'type: convention',
+    'scope: workflow',
+    'status: active',
+    '---',
+    '',
+    'Body.',
+    '',
+    '**Why:** a reason.',
+    '**How to apply:** a method.',
+    '',
+  ].join('\n');
+
+  /** A minimal but COMPLETE install: everything the mandatory checks look for. */
+  function install(over: { entrypoints?: string[]; index?: string } = {}): {
+    root: string;
+    config: typeof DEFAULT_CONFIG;
+    manifest: GatesManifest;
+  } {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-doctor-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# INDEX\n\n- [sample](learnings/sample-record.md) — hook\n',
+    );
+    writeFileSync(join(root, '_brain/learnings/sample-record.md'), RECORD);
+    writeFileSync(join(root, 'CLAUDE.md'), 'Read `_brain/INDEX.md` before any work.\n');
+    // A COMPLETE install means the validator's implementation is on disk too.
+    // The first version wrote `node x` and never created `x`, so the fixture the
+    // suite called "complete" was itself a broken install — and every assertion
+    // built on it was measuring the wrong thing.
+    mkdirSync(join(root, 'scripts/verify'), { recursive: true });
+    writeFileSync(join(root, 'scripts/verify/verify-brain.mjs'), '// noop\n');
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ scripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' } }),
+    );
+    const config = deepMerge(DEFAULT_CONFIG, {
+      memory: {
+        enabled: true,
+        entrypoints: over.entrypoints ?? ['CLAUDE.md'],
+        ...(over.index === undefined ? {} : { index: over.index }),
+      },
+    } as PartialWorkflowConfig) as typeof DEFAULT_CONFIG;
+    const manifest: GatesManifest = {
+      ...defaultManifest(config),
+      phases: { ...defaultManifest(config).phases, '7': ['pnpm verify:brain'] },
+    };
+    return { root, config, manifest };
+  }
+
+  const run = (o: { root: string; config: typeof DEFAULT_CONFIG; manifest: GatesManifest }) =>
+    memoryDoctor({
+      config: o.config,
+      manifest: o.manifest,
+      root: o.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+
+  const check = (r: ReturnType<typeof memoryDoctor>, id: string) =>
+    r.checks.filter((c) => c.id === id);
+
+  it('a complete install is reachable, and the doctor writes nothing', () => {
+    const site = install();
+    const before = readdirSync(site.root).sort();
+    const report = run(site);
+    expect(report.ok).toBe(true);
+    expect(report.code).toBe(0);
+    expect(report.checks.some((c) => c.severity === 'fail')).toBe(false);
+    // READ-ONLY is the contract, not an implementation detail: an adopter runs
+    // this when something is already wrong.
+    expect(readdirSync(site.root).sort()).toEqual(before);
+  });
+
+  it('memory OFF is not a failure — every check is skipped and says so', () => {
+    const site = install();
+    const off = deepMerge(site.config, { memory: { enabled: false } } as PartialWorkflowConfig);
+    const report = memoryDoctor({
+      config: off as typeof DEFAULT_CONFIG,
+      manifest: site.manifest,
+      root: site.root,
+    });
+    expect(report.disabled).toBe(true);
+    expect(report.ok).toBe(true);
+    expect(report.code).toBe(0);
+    expect(report.checks).toHaveLength(1);
+  });
+
+  it('a validator whose script body names a missing file FAILS', () => {
+    // "the script key exists" and "the script runs" are different facts. The
+    // first version checked only the key, so `"verify:brain": "node x"` with no
+    // `x` reported a healthy install that failed the moment Phase 7 ran it.
+    const site = install();
+    rmSync(join(site.root, 'scripts/verify/verify-brain.mjs'));
+    const report = run(site);
+    expect(check(report, 'memory.verify.script.wired')[0]!.severity).toBe('fail');
+    expect(check(report, 'memory.verify.script.wired')[0]!.detail).toContain('verify-brain.mjs');
+    expect(report.code).toBe(1);
+  });
+
+  it('every mandatory check fails on absence — all seven of them', () => {
+    // The earlier version of this test named "every mandatory check" and
+    // exercised two. Each row below removes exactly one thing and asserts the
+    // check that owns it.
+    const cases: [string, (root: string, site: ReturnType<typeof install>) => unknown][] = [
+      ['memory.index.resolvable', (root) => rmSync(join(root, '_brain/INDEX.md'))],
+      ['memory.root.resolvable', (root) => rmSync(join(root, '_brain'), { recursive: true })],
+      [
+        'memory.records.valid',
+        (root) => writeFileSync(join(root, '_brain/learnings/sample-record.md'), 'broken\n'),
+      ],
+      [
+        'memory.entrypoint.pointer',
+        (root) => writeFileSync(join(root, 'CLAUDE.md'), 'no pointer here\n'),
+      ],
+      ['memory.verify.script.wired', (root) => rmSync(join(root, 'scripts/verify/verify-brain.mjs'))],
+    ];
+    for (const [id, breakIt] of cases) {
+      const site = install();
+      breakIt(site.root, site);
+      const report = run(site);
+      expect(check(report, id).some((c) => c.severity === 'fail'), id).toBe(true);
+      expect(report.code, id).toBe(1);
+    }
+    // And the two that live in the manifest rather than on disk.
+    const site = install();
+    const bare: GatesManifest = { ...site.manifest, phases: { ...site.manifest.phases, '7': [] } };
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: bare,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+    expect(check(report, 'memory.phase7.reachable')[0]!.severity).toBe('fail');
+  });
+
+  it('a backslash-spelled configured path resolves like a slash-spelled one', () => {
+    // The config validator and the store loader both accept it, so a doctor that
+    // passed the raw string to `resolve` failed a legitimate portable config.
+    const site = install();
+    const windows = deepMerge(site.config, {
+      memory: { index: '_brain\\INDEX.md', root: '_brain' },
+    } as PartialWorkflowConfig) as typeof DEFAULT_CONFIG;
+    const report = memoryDoctor({
+      config: windows,
+      manifest: site.manifest,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+    expect(check(report, 'memory.index.resolvable')[0]!.severity).toBe('pass');
+  });
+
+  it('a legacy check that a single removal still fails closed', () => {
+    // `false-green-on-missing-file` from the other end: a doctor that skips what
+    // it cannot find reports a broken install as healthy.
+    const site = install();
+    rmSync(join(site.root, '_brain/INDEX.md'));
+    rmSync(join(site.root, '_brain/learnings/sample-record.md'));
+    const report = run(site);
+    expect(report.ok).toBe(false);
+    expect(report.code).toBe(1);
+    expect(check(report, 'memory.index.resolvable')[0]!.severity).toBe('fail');
+    expect(check(report, 'memory.records.valid').some((c) => c.severity === 'fail')).toBe(true);
+  });
+
+  it('[W1] an in-repo symlinked entrypoint is VALID', () => {
+    // This repository ships `AGENTS.md` as a symlink to `CLAUDE.md`. Containment
+    // rejects escapes, not symlinks.
+    const site = install({ entrypoints: ['AGENTS.md'] });
+    symlinkSync(join(site.root, 'CLAUDE.md'), join(site.root, 'AGENTS.md'));
+    const report = run(site);
+    expect(check(report, 'memory.entrypoint.pointer')[0]!.severity).toBe('pass');
+  });
+
+  it('[W1] two entrypoints resolving to one real file count as ONE', () => {
+    const site = install({ entrypoints: ['CLAUDE.md', 'AGENTS.md'] });
+    symlinkSync(join(site.root, 'CLAUDE.md'), join(site.root, 'AGENTS.md'));
+    const report = run(site);
+    const entry = check(report, 'memory.entrypoint.pointer')[0]!;
+    expect(entry.severity).toBe('pass');
+    // Counting the link and its target as two would overstate coverage.
+    expect(entry.detail).toContain('1 entrypoint');
+  });
+
+  it('[W1] an entrypoint resolving OUTSIDE the repository fails as an escape', () => {
+    const outside = mkdtempSync(join(tmpdir(), 'provegate-outside-'));
+    roots.push(outside);
+    writeFileSync(join(outside, 'elsewhere.md'), 'Read `_brain/INDEX.md`.\n');
+    const site = install({ entrypoints: ['AGENTS.md'] });
+    symlinkSync(join(outside, 'elsewhere.md'), join(site.root, 'AGENTS.md'));
+    const report = run(site);
+    const entry = check(report, 'memory.entrypoint.pointer');
+    expect(entry.some((c) => c.severity === 'fail')).toBe(true);
+    expect(entry.map((c) => c.detail).join('; ')).toContain('outside the repository');
+  });
+
+  it('an entrypoint that mentions the index only inside a comment does not count', () => {
+    // A commented pointer renders as nothing — the same rule the contract
+    // grammar applies to a declaration.
+    const site = install();
+    writeFileSync(join(site.root, 'CLAUDE.md'), '<!-- read `_brain/INDEX.md` -->\n');
+    const report = run(site);
+    expect(check(report, 'memory.entrypoint.pointer')[0]!.severity).toBe('fail');
+  });
+
+  it('a validator wired to a missing package script fails', () => {
+    const site = install();
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: site.manifest,
+      root: site.root,
+      packageScripts: {},
+    });
+    expect(check(report, 'memory.verify.script.wired')[0]!.severity).toBe('fail');
+    expect(report.code).toBe(1);
+  });
+
+  it('no Phase 7 validator at all is a failure, not a warning', () => {
+    const site = install();
+    const bare: GatesManifest = { ...site.manifest, phases: { ...site.manifest.phases, '7': [] } };
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: bare,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+    });
+    expect(check(report, 'memory.phase7.reachable')[0]!.severity).toBe('fail');
+  });
+
+  it('CI absence WARNS — layouts are user-defined and absence proves nothing', () => {
+    const site = install();
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: site.manifest,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+      ciTexts: [],
+    });
+    const ci = check(report, 'memory.ci.reachable')[0]!;
+    expect(ci.severity).toBe('warn');
+    // A warning must not change the exit code.
+    expect(report.ok).toBe(true);
+    expect(report.code).toBe(0);
+  });
+
+  it('CI presence passes when a workflow mentions the validator', () => {
+    const site = install();
+    const report = memoryDoctor({
+      config: site.config,
+      manifest: site.manifest,
+      root: site.root,
+      packageScripts: { 'verify:brain': 'node scripts/verify/verify-brain.mjs' },
+      ciTexts: ['jobs:\n  gates:\n    steps:\n      - run: pnpm verify:brain\n'],
+    });
+    expect(check(report, 'memory.ci.reachable')[0]!.severity).toBe('pass');
+  });
+
+  it('placeholders are found in ENTRYPOINTS, not only in the index', () => {
+    // A fresh `gate init --practices` install reported clean while its scaffolded
+    // `AGENT_BOOTSTRAP.md` still carried five `{{TOKEN}}` markers — a false green
+    // on the one thing this check is named for. Found by running the doctor
+    // against a repository nobody hand-built, which is what the operator row
+    // asks for and what no fixture here was going to surface.
+    const site = install();
+    writeFileSync(
+      join(site.root, 'CLAUDE.md'),
+      'Read `_brain/INDEX.md`.\n\nOwner: {{PROJECT_OWNER}}\n',
+    );
+    const report = run(site);
+    const ph = check(report, 'memory.placeholders.filled')[0]!;
+    expect(ph.severity).toBe('warn');
+    expect(ph.detail).toContain('PROJECT_OWNER');
+    expect(ph.detail).toContain('CLAUDE.md');
+    expect(report.code).toBe(0);
+  });
+
+  it('an unfilled template placeholder warns without blocking', () => {
+    const site = install();
+    writeFileSync(
+      join(site.root, '_brain/INDEX.md'),
+      '# {{PROJECT_NAME}} INDEX\n\n- [sample](learnings/sample-record.md) — hook\n',
+    );
+    const report = run(site);
+    const ph = check(report, 'memory.placeholders.filled')[0]!;
+    expect(ph.severity).toBe('warn');
+    expect(ph.detail).toContain('PROJECT_NAME');
+    expect(report.code).toBe(0);
+  });
+});
+
+describe('FR-3 — deterministic local recall', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  const record = (name: string, over: Record<string, string> = {}): string =>
+    [
+      '---',
+      `name: ${name}`,
+      `description: ${over.description ?? 'a record about nothing in particular'}`,
+      `type: ${over.type ?? 'convention'}`,
+      'scope: workflow',
+      `status: ${over.status ?? 'active'}`,
+      ...(over.superseded === undefined ? [] : [`superseded-by: ${over.superseded}`]),
+      ...(over.watch === undefined ? [] : [`watch: [${over.watch}]`]),
+      ...(over.tags === undefined ? [] : [`tags: [${over.tags}]`]),
+      '---',
+      '',
+      'Body.',
+      '',
+      '**Why:** a reason.',
+      '**How to apply:** a method.',
+      '',
+    ].join('\n');
+
+  /** A store whose records are chosen to separate every ranking tier. */
+  function store(): { root: string; config: typeof DEFAULT_CONFIG } {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-find-'));
+    roots.push(root);
+    mkdirSync(join(root, '_brain/learnings'), { recursive: true });
+    const files: [string, string][] = [
+      ['watcher', record('watcher', { watch: 'packages/x/**', description: 'guards the x tree' })],
+      ['tagged', record('tagged', { tags: 'caching', description: 'about storage' })],
+      ['described', record('described', { description: 'a note about caching behaviour' })],
+      ['caching', record('caching', { description: 'unrelated words here' })],
+      // ZZZ FIRST in the index, deliberately: if the store's own order decided,
+      // this pair would come back reversed and the tie-break assertion below
+      // would pass without the tie-break existing.
+      ['zzz-tie', record('zzz-tie', { description: 'a note about caching behaviour' })],
+      ['aaa-tie', record('aaa-tie', { description: 'a note about caching behaviour' })],
+      ['retired', record('retired', { status: 'superseded', superseded: 'watcher', description: 'about caching' })],
+    ];
+    for (const [slug, body] of files) {
+      writeFileSync(join(root, `_brain/learnings/${slug}.md`), body);
+    }
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      ['# INDEX', '', ...files.map(([slug]) => `- [${slug}](learnings/${slug}.md) — hook`), ''].join(
+        '\n',
+      ),
+    );
+    const config = deepMerge(DEFAULT_CONFIG, {
+      memory: { enabled: true, entrypoints: ['CLAUDE.md'] },
+    } as PartialWorkflowConfig) as typeof DEFAULT_CONFIG;
+    return { root, config };
+  }
+
+  const slugs = (r: ReturnType<typeof memoryFind>) => r.hits.map((h) => h.slug);
+
+  it('requires a selector — a bare find would be `cat INDEX.md` with extra steps', () => {
+    const { root, config } = store();
+    const result = memoryFind(config, root, {});
+    expect(result.ok).toBe(false);
+    expect(result.problem).toContain('no selector');
+  });
+
+  it('disabled memory REFUSES rather than returning an empty list', () => {
+    // An empty list reads as "nothing relevant", which is a lie about a store
+    // that was never consulted.
+    const { root, config } = store();
+    const off = deepMerge(config, { memory: { enabled: false } } as PartialWorkflowConfig);
+    const result = memoryFind(off as typeof DEFAULT_CONFIG, root, { query: 'caching' });
+    expect(result.ok).toBe(false);
+    expect(result.hits).toEqual([]);
+    expect(result.remedy).toContain('memory.enabled');
+  });
+
+  it('ranks watch overlap above every other signal', () => {
+    const { root, config } = store();
+    const result = memoryFind(config, root, { paths: ['packages/x/a.ts'], query: 'caching' });
+    expect(result.ok).toBe(true);
+    expect(slugs(result)[0]).toBe('watcher');
+    expect(result.hits[0]!.reasons).toContain('watch');
+    expect(result.hits[0]!.matchedPaths).toEqual(['packages/x/a.ts']);
+  });
+
+  it('ranks an exact name or tag above a token match', () => {
+    const { root, config } = store();
+    const byTag = memoryFind(config, root, { tag: 'caching', query: 'caching' });
+    // `caching` matches by exact NAME; `tagged` by exact TAG; both outrank the
+    // records that merely mention the word.
+    expect(slugs(byTag).slice(0, 2).sort()).toEqual(['caching', 'tagged']);
+  });
+
+  it('breaks ties lexically, which is what makes a run byte-stable', () => {
+    const { root, config } = store();
+    const first = memoryFind(config, root, { query: 'caching' });
+    const second = memoryFind(config, root, { query: 'caching' });
+    expect(slugs(first)).toEqual(slugs(second));
+    // `aaa-tie` and `zzz-tie` carry identical signals, so only the slug decides.
+    const tied = slugs(first).filter((s) => s.endsWith('-tie'));
+    expect(tied).toEqual(['aaa-tie', 'zzz-tie']);
+  });
+
+  it('never surfaces a superseded record', () => {
+    // Recall must not hand an agent a record the validator would reject: acting
+    // on a superseded record is worse than finding nothing.
+    const { root, config } = store();
+    const result = memoryFind(config, root, { query: 'caching' });
+    expect(slugs(result)).not.toContain('retired');
+    expect(result.searched).toBe(6);
+  });
+
+  it('bounds the limit, and refuses out of range BEFORE computing anything', () => {
+    const { root, config } = store();
+    expect(memoryFind(config, root, { query: 'caching' }).limit).toBe(FIND_DEFAULT_LIMIT);
+    expect(memoryFind(config, root, { query: 'caching', limit: 2 }).hits).toHaveLength(2);
+    for (const limit of [0, -1, FIND_MAX_LIMIT + 1, 1.5, Number.NaN]) {
+      const bad = memoryFind(config, root, { query: 'caching', limit });
+      expect(bad.ok, String(limit)).toBe(false);
+      expect(bad.hits, String(limit)).toEqual([]);
+      // Nothing was searched: the refusal is free and store-independent.
+      expect(bad.searched, String(limit)).toBe(0);
+    }
+  });
+
+  it('refuses a path selector that is not repo-relative', () => {
+    // A `..` selector cannot match any watch glob, so accepting it would answer
+    // a malformed question with an empty list.
+    const { root, config } = store();
+    for (const path of ['/etc/passwd', '../outside/a.ts', 'C:/x/a.ts']) {
+      const bad = memoryFind(config, root, { paths: [path] });
+      expect(bad.ok, path).toBe(false);
+      expect(bad.problem, path).toContain('repo-relative');
+    }
+  });
+
+  it('every hit carries the reasons it matched', () => {
+    // Ranking is deterministic rather than relevant, so the reasons are how an
+    // author sees WHY a record is here.
+    const { root, config } = store();
+    const result = memoryFind(config, root, { paths: ['packages/x/a.ts'], tag: 'caching' });
+    for (const hit of result.hits) {
+      expect(hit.reasons.length).toBeGreaterThan(0);
+      expect(hit.slug.length).toBeGreaterThan(0);
+      expect(hit.path).toMatch(/^(learnings|adr)\//);
+      expect(typeof hit.description).toBe('string');
+    }
   });
 });
