@@ -6,12 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 80
-> **High:** 2
-> **Medium:** 55
+> **Critical:** 87
+> **High:** 7
+> **Medium:** 56
 > **Low:** 3
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 20
+> **Rounds:** 21
 
 ## How this review was run
 
@@ -391,19 +391,74 @@ what production requires.
 Each of the six new regressions was mutation-checked — reverting its fix fails that test
 and only that test.
 
+### Round 21 — grading the last round's fixes, and the parts never examined
+
+Round 21 was the second unaimed round, and half of it was pointed at round 20's own eight
+fixes. That half produced the sharpest result in this review: **three correct and complete,
+five incomplete.** A correct fix that stops at the case that prompted it is the pattern
+these rounds keep producing, and it is worth naming as a finding in its own right.
+
+What round 20 did not reach:
+
+- **The contract could be switched off on the way through the gate.** Policy was read from
+  the WORKING configuration, so a branch setting `memory.enabled: false` dropped every
+  promise and closed with no memory gate built at all — the contract disabled by the merge
+  it governs. Policy is read from the base too now, and turning it off is refused as the
+  policy change it is.
+- The internal gates were made non-skippable and the **manifest** phase-7 commands were
+  not — and the practices pack wires `verify:brain` exactly there, leaving
+  `memory.verifyCommand` empty.
+- The base store was loaded with the **branch's** `memory.index`, so relocating the index
+  made the base loader look for a path the base does not have and return an empty store:
+  every base watch erased by one config edit.
+- Deletion was closed; **narrowing** was not. Base `watch: [packages/x/**]` rewritten to
+  `watch: [docs/**]` matched neither glob. The two are unioned now.
+- `capturedDiffFiles` computed both sides of a rename and the close passed the caller's
+  list instead — evidence gathered and discarded, so a record watching the path a merge
+  moved away from never fired.
+- Acceptance validation checked key **presence**. `date: 123`, `method: null` and
+  `items: [42, "…"]` still authorized a removal, and only the selected entry was checked.
+- The barrier read `expiresAt` out of leases that never passed validation, so a lock
+  containing only an expiry read as expired though nothing in it establishes whose lease it
+  is — and the self-check ran on the **filename** before parsing, so a foreign lock named
+  with this PRD's prefix was skipped entirely.
+
+The other half went where no round had been:
+
+- **A record's whole rationale could live inside an HTML comment or a fence** — the
+  ceremonial record the validator exists to reject, wearing the validator's approval. The
+  scanner moved to `memory/scan.ts` so `parse.ts` can share it; writing a second scanner to
+  avoid the import cycle would have been the exact defect the single-authority design
+  exists to prevent.
+- `watch: ["packages/**"]` was stored **with its quotes** and matched nothing: present,
+  valid-looking, permanently dead. Flow mappings were read as scalars. A CRLF record was
+  reported as having no frontmatter at all — two implementations agreeing on that refusal
+  did not make it correct.
+- `./packages/x/a.ts` evaded `packages/x/**`, and a backslash-spelled watch compiled to a
+  literal that matches nothing. Both sides canonicalize now.
+- Root-level Durable Artifacts were dropped for having no `/`.
+- `gate init --practices` wrote a configuration that **fails validation** — enabled memory
+  rejects the empty default entrypoint list — and its test asserted the bad object rather
+  than resolving it.
+
+Each of the eleven new regressions was mutation-checked: reverting its fix fails that test
+and only that test.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`; this artifact
-records twenty rounds in which every finding was closed, not a round that found nothing.
+records twenty-one rounds in which every finding was closed, not a round that found
+nothing.
 
-What changed this round is the evidence available to the decision. Rounds 14-20 ran 7, 4,
-4, 3, 5, 12, 8 — but the count was never the useful number. The useful one is that the area
-two consecutive rounds had been hammering came back clean under an unaimed reviewer, while
-the areas no round had aimed at produced eight findings on first contact. That is the
-expected shape: review finds defects where review has been, and this feature has now had
-one round of attention on each of its parts.
+The most useful fact this round is not a count. It is that a reviewer asked to grade the
+previous round's work found **five of eight fixes incomplete** — every one of them correct
+for the case that prompted it and silent about the case one step over. That is a property
+of how these fixes are made, not of any single area, and it argues that "the last round
+found nothing new here" will keep being weak evidence.
 
-Closing the PRD needs an owner decision. The honest options are to run another unaimed
-round — the machinery has had exactly one, as the scanner had before rounds 18 and 19
-found seventeen defects in it — or to accept the residual. An agent may not flip the
-ledger row, and this one has not.
+Set against it: rounds 20 and 21 both found the document scanner clean, two rounds after it
+had produced seventeen defects. Convergence is possible; it took a structural change rather
+than a rule to get there.
+
+Closing needs an owner decision: another round, or accept the residual. An agent may not
+flip the ledger row, and this one has not.
