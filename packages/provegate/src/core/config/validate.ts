@@ -163,7 +163,14 @@ export function validateConfig(value: unknown): ConfigIssue[] {
  * let a typo like `ready: ["Approvd"]` silently break queue semantics.
  */
 export function validateResolvedConfig(config: {
-  dirs: { states: string[]; stateRoles: Record<string, string> };
+  dirs: {
+    states: string[];
+    stateRoles: Record<string, string>;
+    stateFile?: string;
+    locksDir?: string;
+    reviewsDir?: string;
+    metricsFile?: string;
+  };
   statusVocab: {
     canonical: string[];
     aliases: Record<string, string>;
@@ -227,6 +234,28 @@ export function validateResolvedConfig(config: {
   }
 
   if (config.memory !== undefined) validateMemory(config, issues);
+
+  // EVERY configured path, not only the memory ones. `unsafeRelPath` was written
+  // for the memory block and applied there alone, so `dirs.stateFile:
+  // '../victim/prds.json'` resolved and `writeState` overwrote a file outside
+  // the repository — a configuration read at startup, a write with no gate in
+  // front of it. Containment is a property of a configured path, not of which
+  // feature happens to own it.
+  const configuredPaths: [string, string | undefined][] = [
+    ['dirs.stateFile', config.dirs.stateFile],
+    ['dirs.locksDir', config.dirs.locksDir],
+    ['dirs.reviewsDir', config.dirs.reviewsDir],
+    ['dirs.metricsFile', config.dirs.metricsFile],
+    ...config.dirs.states.map((v, i): [string, string] => [`dirs.states[${i}]`, v]),
+    ...Object.entries(config.dirs.stateRoles).map(
+      ([role, v]): [string, string] => [`dirs.stateRoles.${role}`, v],
+    ),
+  ];
+  for (const [path, value] of configuredPaths) {
+    if (value === undefined) continue;
+    const reason = unsafeRelPath(value);
+    if (reason !== null) issues.push({ path, message: reason });
+  }
 
   return issues;
 }

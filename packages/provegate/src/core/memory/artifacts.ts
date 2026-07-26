@@ -685,7 +685,12 @@ export function parseMemoryDeclarations(input: string): MemoryDeclarations {
  * false negative is silent: the record simply never fires.
  */
 export function normalizeTarget(target: string): string {
-  const idx = target.indexOf('::');
+  // The LAST `::`, not the first. `::` is a symbol selector by convention and a
+  // legal filename character by rule, so splitting at the first one turned
+  // `src/a::b.ts::doThing` into `src/a` — a path nobody named, matching a watch
+  // nobody wrote. Splitting at the last leaves the filename intact and takes the
+  // suffix off, which is what the convention means.
+  const idx = target.lastIndexOf('::');
   const path = (idx === -1 ? target : target.slice(0, idx)).trim();
   return canonicalPath(path);
 }
@@ -840,8 +845,13 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   const { declared: declaredInputs, issues: inputIssues } = resolveInputs(
     decl.inputs.entries,
     storeView(store),
+    // ACTIVE base records only. Taking every record the base carried let a
+    // superseded one — which neither store ever considered an input — satisfy a
+    // disposition, which is the opposite of what `superseded` means.
     new Set(
-      (options.baseStore?.records ?? []).map((indexed) => indexed.slug),
+      options.baseStore === undefined
+        ? []
+        : activeRecords(options.baseStore).map((indexed) => indexed.slug),
     ),
   );
   issues.push(...inputIssues);

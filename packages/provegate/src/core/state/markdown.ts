@@ -64,14 +64,21 @@ export function sectionAfter(content: string, heading: string): string {
  */
 export function sectionsMatching(content: string, headingPattern: string): string[] {
   const lines = scanDocument(content).lines;
-  const heading = new RegExp(`^##\\s+${headingPattern}\\s*$`, 'i');
+  // CommonMark's ATX form, not `^## `: up to three leading spaces and an
+  // optional closing run of hashes are both ordinary. `   ## Operator Handoff`
+  // and `## Operator Handoff ##` render as the H2 a maintainer wrote and
+  // returned no section at all, so the merge gate read zero rows and skipped the
+  // owner acceptance. The memory scanner already spelled this correctly; two
+  // heading grammars over one document is the defect this file just fixed at the
+  // other end.
+  const heading = new RegExp(`^ {0,3}##[ \\t]+${headingPattern}(?:[ \\t]+#*)?[ \\t]*$`, 'i');
   const bodies: string[] = [];
   for (const [index, line] of lines.entries()) {
     if (line.kind !== 'text' || !heading.test(line.text)) continue;
     const body: string[] = [];
     for (let i = index + 1; i < lines.length; i += 1) {
       const next = lines[i]!;
-      if (next.kind === 'text' && /^##\s+/.test(next.text)) break;
+      if (next.kind === 'text' && /^ {0,3}#{1,2}(?:[ \t]|$)/.test(next.text)) break;
       body.push(next.kind === 'text' ? next.text : '');
     }
     bodies.push(`\n${body.join('\n')}`);
@@ -85,9 +92,20 @@ export function sectionMatching(content: string, headingPattern: string): string
 }
 
 export function countTaskChecks(content: string): { checkedCount: number; uncheckedCount: number } {
-  const checkedCount = (content.match(/^\s*-\s*\[[xX]\]/gm) ?? []).length;
-  const uncheckedCount = (content.match(/^\s*-\s*\[\s\]/gm) ?? []).length;
+  // The EXECUTABLE document. A `- [ ] example` written inside a fenced template
+  // is an illustration, and counting it recorded an unchecked task that no one
+  // had to do — the queue then reported the work item resumable forever.
+  const executable = executableTextOf(content);
+  const checkedCount = (executable.match(/^\s*-\s*\[[xX]\]/gm) ?? []).length;
+  const uncheckedCount = (executable.match(/^\s*-\s*\[\s\]/gm) ?? []).length;
   return { checkedCount, uncheckedCount };
+}
+
+/** The document with everything a renderer does not execute blanked. */
+function executableTextOf(content: string): string {
+  return scanDocument(content)
+    .lines.map((line) => (line.kind === 'text' ? line.text : ''))
+    .join('\n');
 }
 
 /**

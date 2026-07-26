@@ -47,6 +47,7 @@ import {
   claimMutexPath,
   parseFromPhase,
   planChain,
+  leaseHolder,
   releaseLease,
   removeWorktree,
   runChain,
@@ -136,6 +137,11 @@ function collectLocks(root: string, config: WorkflowConfig): QueueLockInfo[] {
 }
 
 function runInit(args: string[]): number {
+  const unknown = unknownOption(args, ['--dry-run', '--practices']);
+  if (unknown !== null) {
+    console.error(`[init] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const dryRun = args.includes('--dry-run');
   const practices = args.includes('--practices');
   // Init must work before any config exists: root at the nearest .git walking
@@ -179,6 +185,11 @@ function runInit(args: string[]): number {
 }
 
 function runNew(args: string[]): number {
+  const unknown = unknownOption(args, ['--class', '--template']);
+  if (unknown !== null) {
+    console.error(`[new] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const slug = args.find((a) => !a.startsWith('--'));
   if (!slug) {
     console.error('usage: gate new <slug> [--class=X] [--template=path]');
@@ -213,6 +224,11 @@ function parseHoursOpt(args: string[]): number | undefined {
 }
 
 function runOpen(args: string[]): number {
+  const unknown = unknownOption(args, ['--steal', '--worktree', '--hours', '--agent']);
+  if (unknown !== null) {
+    console.error(`[open] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--hours=N] [--agent=identity]');
@@ -271,6 +287,11 @@ function runOpen(args: string[]): number {
 }
 
 function runRenew(args: string[]): number {
+  const unknown = unknownOption(args, ['--hours', '--agent']);
+  if (unknown !== null) {
+    console.error(`[renew] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate renew <PRD-XXX> [--hours=N] [--agent=identity]');
@@ -302,6 +323,11 @@ function runRenew(args: string[]): number {
 }
 
 function runRelease(args: string[]): number {
+  const unknown = unknownOption(args, ['--force', '--agent']);
+  if (unknown !== null) {
+    console.error(`[release] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
     console.error('usage: gate release <PRD-XXX> [--force] [--agent=identity]');
@@ -611,11 +637,28 @@ function worktreeStamps(
 function unknownOption(args: string[], known: readonly string[]): string | null {
   for (const arg of args) {
     if (!arg.startsWith('-')) continue;
-    const name = arg.startsWith('--') ? (arg.split('=')[0] ?? arg) : arg;
-    if (!known.includes(name)) return arg;
+    const [name, ...rest] = arg.split('=');
+    if (!known.includes(name ?? arg)) return arg;
+    // A BOOLEAN flag takes no value. `--dry-run=true` passed the name check and
+    // then failed the exact-token test that decides dry-run, so the safest
+    // spelling a user could reach for ran the live merge. Refusing is the only
+    // answer that cannot be misread: `--dry-run=false` must not silently mean
+    // "dry run" either.
+    if (rest.length > 0 && BOOLEAN_OPTIONS.has(name ?? '')) return arg;
   }
   return null;
 }
+
+/** Options that are present-or-absent. Giving one a value is an error, not a
+ * value. */
+const BOOLEAN_OPTIONS = new Set([
+  '--dry-run',
+  '--practices',
+  '--steal',
+  '--worktree',
+  '--force',
+  '--yes',
+]);
 
 function runRun(args: string[], { mergeOnly = false } = {}): number {
   const unknown = unknownOption(args, ['--dry-run', '--from-phase']);
@@ -908,7 +951,12 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       // `releaseLease` takes the claim mutex itself and fails closed on an
       // unreadable or foreign lease, which is the behaviour wanted here: a
       // refusal becomes a warning naming what remains, never a silent unlink.
-      const release = releaseLease(config, root, id);
+      // As the CLAIMING agent, read from the lease itself. Defaulting to the
+      // first configured owner made `gate open --agent=worker` unreleasable:
+      // release refused its own close's lease as foreign, and the landed work
+      // went on blocking overlapping items until the TTL expired.
+      const holder = leaseHolder(config, root, id);
+      const release = releaseLease(config, root, id, holder === null ? {} : { agent: holder });
       if (release.released.length > 0) {
         outcome.results.push(['cleanup: lease released', 'passed']);
       } else if (release.issues.length > 0) {

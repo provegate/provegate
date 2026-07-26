@@ -53,6 +53,23 @@ function resolveAgent(config: WorkflowConfig, agent?: string): string {
   return trimmed !== undefined && trimmed !== '' ? trimmed : (config.owners[0] ?? 'operator');
 }
 
+/**
+ * The agent named on the lease for `id`, or null when there is none to read.
+ *
+ * A close must release the lease it is closing AS THE HOLDER: guessing the first
+ * configured owner made every non-default `--agent` claim unreleasable by its
+ * own successful close.
+ */
+export function leaseHolder(config: WorkflowConfig, root: string, id: string): string | null {
+  const prefix = `${id.toLowerCase()}-`;
+  for (const entry of listLockFiles(config, root)) {
+    if (!entry.name.startsWith(prefix) || entry.data === undefined) continue;
+    const agent = entry.data['agent'];
+    if (typeof agent === 'string' && agent.length > 0) return agent;
+  }
+  return null;
+}
+
 export function releaseLease(
   config: WorkflowConfig,
   root: string,

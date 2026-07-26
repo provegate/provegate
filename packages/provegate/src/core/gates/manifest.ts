@@ -97,6 +97,10 @@ const KNOWN_KEYS = new Set([
 ]);
 
 /** Shape + semantic validation of a (partial) manifest value. */
+/** Every key a hard cap may carry, and every key inside its `when`. */
+const HARD_CAP_KEYS = new Set(['id', 'when', 'requireLine', 'message']);
+const HARD_CAP_WHEN_KEYS = new Set(['targetsMatch']);
+
 export function validateManifest(config: WorkflowConfig, value: unknown): ManifestIssue[] {
   const issues: ManifestIssue[] = [];
   if (!isPlainObject(value)) {
@@ -186,7 +190,23 @@ export function validateManifest(config: WorkflowConfig, value: unknown): Manife
         if (typeof cap['id'] !== 'string' || cap['id'].length === 0) {
           issues.push({ path: `hardCaps[${i}].id`, message: 'must be a non-empty string' });
         }
+        // Unknown keys are REJECTED here too, not only at the top level. A cap
+        // written with `when.targetMatch` — one letter short — validated, was
+        // ignored, and left the paths its author meant to cap uncapped: a gate
+        // that reports nothing and protects nothing.
+        for (const key of Object.keys(cap)) {
+          if (!HARD_CAP_KEYS.has(key)) {
+            issues.push({ path: `hardCaps[${i}].${key}`, message: 'unknown key' });
+          }
+        }
         const when = cap['when'];
+        if (isPlainObject(when)) {
+          for (const key of Object.keys(when)) {
+            if (!HARD_CAP_WHEN_KEYS.has(key)) {
+              issues.push({ path: `hardCaps[${i}].when.${key}`, message: 'unknown key' });
+            }
+          }
+        }
         if (!isPlainObject(when) || !isNonEmptyCommandArray(when['targetsMatch'])) {
           issues.push({
             path: `hardCaps[${i}].when`,

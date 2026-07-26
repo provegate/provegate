@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
-import { countOperatorHandoff } from '../src/core/state/markdown.js';
+import { countOperatorHandoff, countTaskChecks } from '../src/core/state/markdown.js';
 import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gates/review.js';
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
@@ -1953,7 +1953,9 @@ describe('phase 6 round 22 — the shared section reader', () => {
   });
 
   it('[R22-6] an extensionless root artifact is still an artifact', () => {
-    for (const name of ['LICENSE', 'Makefile', 'CODEOWNERS']) {
+    // Lowercase entries are the point: the first fix used a leading capital as
+    // the discriminator, so this fixture's own data would have hidden it.
+    for (const name of ['LICENSE', 'Makefile', 'CODEOWNERS', 'justfile', 'dockerfile', 'license']) {
       const doc = `## Durable Artifacts\n\n- \`${name}\` — the file\n`;
       expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
     }
@@ -1961,5 +1963,47 @@ describe('phase 6 round 22 — the shared section reader', () => {
     expect(
       declaredArtifactsStrict('## Durable Artifacts\n\n- none — `nothing` durable here\n').paths,
     ).toEqual([]);
+  });
+});
+
+describe('phase 6 round 23 — the adjacent case, again', () => {
+  it('[R23-5] a valid ATX heading spelling still counts its operator rows', () => {
+    // `^## ` is not the heading grammar. `   ## Operator Handoff` and
+    // `## Operator Handoff ##` render as the H2 a maintainer wrote, returned no
+    // section, and the merge gate read zero rows — the owner acceptance skipped.
+    for (const heading of [
+      '## Operator Handoff',
+      '   ## Operator Handoff',
+      '## Operator Handoff ##',
+      '  ## Operator Handoff  ###',
+    ]) {
+      const doc = [heading, '', '- [ ] 1.1 owner signs off', ''].join('\n');
+      expect(countOperatorHandoff(doc), heading).toBe(1);
+    }
+  });
+
+  it('[R23-10] an extensionless root artifact is kept whatever its case', () => {
+    for (const name of ['justfile', 'dockerfile', 'license', 'LICENSE', 'Makefile']) {
+      const doc = `## Durable Artifacts\n\n- \`${name}\` — the file\n`;
+      expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
+    }
+    // Prose in backticks is still not a path.
+    expect(
+      declaredArtifactsStrict('## Durable Artifacts\n\n- none — `nothing` durable here\n').paths,
+    ).toEqual([]);
+  });
+
+  it('[R23-20] a fenced checkbox is an example, not a task', () => {
+    const doc = [
+      '## Tasks',
+      '',
+      '```markdown',
+      '- [ ] example row from the template',
+      '```',
+      '',
+      '- [x] 1.1 the real one',
+      '',
+    ].join('\n');
+    expect(countTaskChecks(doc)).toEqual({ checkedCount: 1, uncheckedCount: 0 });
   });
 });

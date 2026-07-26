@@ -1748,7 +1748,14 @@ describe('phase 6 round 22 regressions — one step over each round-21 fix', () 
     // The base/working union made the base slug's watch fire, and the working
     // store no longer carried that slug — so naming it was rejected and not
     // naming it failed the watch. The obligation was unsatisfiable.
-    const content = prd({ inputs: ['- applied: `watcher-record` — renamed to `watcher-v2`.'] });
+    // BOTH slugs: the base watcher, and the renamed record which watches the
+    // same paths and so raises its own obligation.
+    const content = prd({
+      inputs: [
+        '- applied: `watcher-record` — renamed to `watcher-v2`.',
+        '- applied: `watcher-v2` — the renamed record, same watch.',
+      ],
+    });
     const root = gitRepo(
       { '_prds/wip/p.md': content, ...STORE('packages/x/**') },
       { ...CAPTURED_RECORD },
@@ -1760,13 +1767,171 @@ describe('phase 6 round 22 regressions — one step over each round-21 fix', () 
     );
     writeFileSync(
       join(root, '_brain/INDEX.md'),
-      '# INDEX\n\n- [new thing](learnings/new-thing.md) — hook\n- [watcher](learnings/watcher-v2.md) — hook\n',
+      [
+        '# INDEX',
+        '',
+        '- [sample](learnings/sample-record.md) — hook',
+        '- [new thing](learnings/new-thing.md) — hook',
+        '- [watcher](learnings/watcher-v2.md) — hook',
+        '',
+      ].join('\n'),
     );
     const result = gate(
       chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
       'declared outputs',
     );
-    expect(result.why ?? '').not.toContain('is not an active indexed record');
-    expect(result.why ?? '').not.toContain("'watcher-record' watches");
+    // ASSERT SUCCESS. Two absent substrings were satisfied by any other failure,
+    // and by an undefined `why` — a regression that cannot tell "the rename
+    // closes" from "something else broke" proves neither.
+    expect(result).toEqual({ ok: true });
+  });
+});
+
+describe('phase 6 round 23 — the enforcement machinery, one step over', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const SECOND_OUTPUT = '_brain/adr/ADR-0001-x.md';
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    `- adr: \`${SECOND_OUTPUT}\` — the decision.`,
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    `- \`${SECOND_OUTPUT}\` — the decision`,
+  ];
+  const GOOD_ENTRY = {
+    prd: 'PRD-002',
+    owner: 'owner',
+    items: [`memory output removal: \`${SECOND_OUTPUT}\``],
+    reason: 'the decision moved to PRD-022',
+    date: '2026-07-25',
+    method: 'interactive',
+  };
+
+  it('[R23-2] a base config with `memory: null` fails closed, not open', () => {
+    // Valid JSON is not a valid POLICY: `null` spread to nothing, the defaults'
+    // `enabled: false` came back, and no memory gate was built at all.
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': prd(),
+        'workflow.config.json': JSON.stringify({ memory: null }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const off = { ...memOn, memory: { ...memOn.memory, enabled: false } };
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, config: off });
+    const guard = chain.find((g) => (g.label ?? '').includes('disabling the contract'));
+    expect(guard, 'no guard gate for the disabling transition').toBeDefined();
+    expect(guard!.fn!().ok).toBe(false);
+  });
+
+  it('[R23-3] swapping the validator for an unrelated command is still removing it', () => {
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': prd(),
+        'gates.manifest.json': JSON.stringify({ phases: { '7': ['pnpm verify:brain'] } }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const swapped = {
+      ...defaultManifest(memOn),
+      phases: { ...defaultManifest(memOn).phases, '7': ['pnpm lint'] },
+    };
+    const chain = buildGateChain({
+      config: memOn,
+      manifest: swapped,
+      root,
+      record: record(),
+      prdContent: prd(),
+      tasksContent: '| independent-review | x | passed |',
+      changedFiles: CHANGED,
+      prdClass: 'infra',
+    });
+    const guard = chain.find((g) => (g.label ?? '').includes('validator may not be removed'));
+    expect(guard, 'a swapped validator must still be a removal').toBeDefined();
+    expect(guard!.fn!().why).toContain('verify:brain');
+  });
+
+  it('[R23-1] an ordinary operator acceptance must be committed too', () => {
+    const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
+    const withRows: StateRecord = { ...record(), task: { ...record().task, operatorHandoffCount: 1 } };
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, rec: withRows });
+    // Written only in the working tree, after the branch was committed.
+    mkdirSync(join(root, '_state'), { recursive: true });
+    writeFileSync(
+      join(root, '_state/acceptances.json'),
+      JSON.stringify({ schemaVersion: 1, acceptances: [{ ...GOOD_ENTRY, items: ['1.1'] }] }),
+    );
+    const merge = chain.find((g) => g.phase === 'merge gate')!.fn!();
+    expect(merge.ok).toBe(false);
+    expect(merge.why).toContain('is not committed as it stands');
+  });
+
+  it('[R23-15] an impossible date and a metacharacter prefix are both refused', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        `| 2026-07-25 | owner | removed \`${SECOND_OUTPUT}\` — the decision moved to PRD-022 |`,
+      ],
+    });
+    // `2026-02-30` satisfies the ISO shape and `Date.parse` slides it to March 2.
+    const impossible = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({
+        schemaVersion: 1,
+        acceptances: [{ ...GOOD_ENTRY, date: '2026-02-30' }],
+      }),
+      ...STORE(),
+    });
+    const result = gate(
+      chainFor({ root: impossible, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('real calendar date');
+  });
+
+  it('[R23-14] a SUPERSEDED base record does not rescue a disposition', () => {
+    // The record is SUPERSEDED on the base and ABSENT from the branch, so the
+    // only thing that could rescue the disposition is the base-slug set — which
+    // must contain active records only.
+    const content = prd({ inputs: ['- applied: `retired-record` — long gone.'] });
+    const retired = RECORD_MD('retired-record')
+      .replace('status: active', 'status: superseded')
+      .replace('---\n\nBody.', 'superseded-by: sample-record\n---\n\nBody.');
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': content,
+        ...STORE(),
+        '_brain/learnings/retired-record.md': retired,
+        '_brain/INDEX.md': [
+          '# INDEX',
+          '',
+          '- [sample](learnings/sample-record.md) — hook',
+          '- [retired](learnings/retired-record.md) — hook',
+          '',
+        ].join('\n'),
+      },
+      CAPTURED_RECORD,
+    );
+    // The branch drops it entirely.
+    rmSync(join(root, '_brain/learnings/retired-record.md'));
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      [
+        '# INDEX',
+        '',
+        '- [sample](learnings/sample-record.md) — hook',
+        '- [new thing](learnings/new-thing.md) — hook',
+        '',
+      ].join('\n'),
+    );
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'retired-record' is not an active indexed record");
   });
 });

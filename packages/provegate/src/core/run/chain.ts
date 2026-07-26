@@ -183,6 +183,13 @@ function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
   try {
     const parsed = JSON.parse(raw) as { memory?: Partial<MemoryConfig> };
     if (parsed.memory === undefined) return config.memory;
+    // Valid JSON is not a valid POLICY. `"memory": null` parsed fine and spread
+    // to nothing, so the defaults' `enabled: false` came back and every memory
+    // gate went unbuilt — the unreadable-config path fails closed and this one
+    // walked around it.
+    if (parsed.memory === null || typeof parsed.memory !== 'object' || Array.isArray(parsed.memory)) {
+      return { ...DEFAULT_CONFIG.memory, enabled: true };
+    }
     // Missing base fields fall back to the DEFAULTS, never to the branch. A real
     // config is sparse — `{memory:{enabled:true,entrypoints:[…]}}` names no
     // `index` — so overlaying it on the branch's memory config handed the branch
@@ -547,11 +554,20 @@ export function buildGateChain(options: {
     } catch {
       basePhase7 = [];
     }
-    const baseHadValidator =
-      basePhase7.length > 0 || baseMemoryConfig(root, config).verifyCommand.trim().length > 0;
-    const hasValidator =
-      phase7Cmds.length > 0 || config.memory.verifyCommand.trim().length > 0;
-    if (baseHadValidator && !hasValidator) {
+    const baseVerify = baseMemoryConfig(root, config).verifyCommand.trim();
+    const baseValidators = new Set(
+      [...basePhase7, ...(baseVerify.length > 0 ? [baseVerify] : [])].map((c) => c.trim()),
+    );
+    const branchValidators = new Set(
+      [...phase7Cmds, config.memory.verifyCommand]
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0),
+    );
+    // IDENTITY, not headcount. Comparing "is either side non-empty" let a branch
+    // swap `pnpm verify:brain` for `pnpm lint` and keep the gate quiet: the
+    // store validator was gone and something else stood where it had been.
+    const dropped = [...baseValidators].filter((cmd) => !branchValidators.has(cmd));
+    if (dropped.length > 0) {
       chain.push({
         phase: '7 Learning',
         nonSkippable: true,
@@ -559,9 +575,10 @@ export function buildGateChain(options: {
         fn: () => ({
           ok: false,
           why:
-            `\`${config.branches.base}\` runs a Phase 7 store validator and this branch runs ` +
-            `none — removing it is a policy change, not a close. Restore \`phases.7\` or ` +
-            `\`memory.verifyCommand\`, or land the removal as its own owner-accepted work item`,
+            `\`${config.branches.base}\` runs ${dropped.map((c) => `'${c}'`).join(', ')} after ` +
+            `capture and this branch does not — dropping a store validator is a policy change, ` +
+            `not a close. Restore it in \`phases.7\` or \`memory.verifyCommand\`, or land the ` +
+            `removal as its own owner-accepted work item`,
         }),
       });
     }
@@ -594,7 +611,7 @@ export function buildGateChain(options: {
   chain.push({
     phase: 'merge gate',
     label: 'operator-gated guard + acceptances',
-    fn: () => operatorGateOk(config, root, record),
+    fn: () => operatorGateOk(config, root, record, (path) => blobAt(root, 'HEAD', path)),
   });
 
   return chain;

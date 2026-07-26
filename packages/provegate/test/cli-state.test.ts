@@ -166,3 +166,44 @@ describe('codex round-2: precondition-before-archive ordering (real CLI)', () =>
     expect(gitRun(['rev-parse', 'HEAD']).trim()).toBe(before);
   });
 });
+
+describe('phase 6 round 23 — a misspelled option must never mutate', () => {
+  const attempt = async (args: string[]): Promise<{ code: number; stderr: string }> =>
+    run(process.execPath, [cliPath, ...args], { cwd: root }).then(
+      () => ({ code: 0, stderr: '' }),
+      (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
+    );
+
+  it('refuses an unknown option on every mutating command', async () => {
+    // `gate run PRD-018 --dry-rnu` ran the live archive-and-merge, because
+    // unknown flags were ignored. A misspelled SAFETY flag must never be the
+    // difference between a plan and a mutation.
+    for (const args of [
+      ['run', 'PRD-001', '--dry-rnu'],
+      ['init', '--dry-rnu'],
+      ['open', 'PRD-001', '--worktre'],
+      ['new', 'thing', '--clas=infra'],
+      ['renew', 'PRD-001', '--hrs=2'],
+      ['release', 'PRD-001', '--forc'],
+    ]) {
+      const result = await attempt(args);
+      expect(result.code, args.join(' ')).toBe(1);
+      expect(result.stderr, args.join(' ')).toContain('unknown option');
+    }
+  });
+
+  it('refuses a value given to a boolean option', async () => {
+    // `--dry-run=true` passed the name check and then failed the exact-token
+    // test that decides dry-run, so the safest spelling a user could reach for
+    // ran live.
+    for (const args of [
+      ['run', 'PRD-001', '--dry-run=true'],
+      ['run', 'PRD-001', '--dry-run=false'],
+      ['init', '--practices=yes'],
+    ]) {
+      const result = await attempt(args);
+      expect(result.code, args.join(' ')).toBe(1);
+      expect(result.stderr, args.join(' ')).toContain('unknown option');
+    }
+  });
+});

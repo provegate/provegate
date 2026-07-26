@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { formatId } from './artifacts.js';
+import { structuralOverlap } from '../locks/conflicts.js';
 import { declaredGlobs } from './markdown.js';
 import { UNKNOWN_STATUS } from './status.js';
 import type { StateRecord } from './build.js';
@@ -178,7 +179,13 @@ export function readyOverlaps(root: string, readyRecords: StateRecord[]): QueueO
   const warnings: QueueOverlapWarning[] = [];
   for (let i = 0; i < surfaces.length; i += 1) {
     for (let j = i + 1; j < surfaces.length; j += 1) {
-      const shared = surfaces[i]!.paths.filter((path) => surfaces[j]!.paths.includes(path));
+      // The SAME predicate the lock engine uses. String equality reported no
+      // warning for `src/**` beside `src/a.ts`, while a claim on both would be
+      // refused at `gate open` — so the queue said "schedule these together" and
+      // the very next command said otherwise.
+      const exact = surfaces[i]!.paths.filter((path) => surfaces[j]!.paths.includes(path));
+      const structural = structuralOverlap(surfaces[i]!.paths, surfaces[j]!.paths);
+      const shared = [...new Set([...exact, ...structural])];
       if (shared.length > 0) {
         warnings.push({ a: surfaces[i]!.prd, b: surfaces[j]!.prd, shared });
       }

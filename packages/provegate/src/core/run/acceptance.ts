@@ -105,8 +105,15 @@ function entryProblem(entry: unknown): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date as string)) {
     return "the acceptance entry's `date` must be an ISO `YYYY-MM-DD` date";
   }
-  if (!Number.isFinite(Date.parse(record.date as string))) {
-    return "the acceptance entry's `date` is not a real date";
+  // ROUND-TRIP, not merely parseable. `2026-02-30` satisfies the ISO shape and
+  // `Date.parse` normalizes it to March 2 — a date the owner did not write,
+  // silently accepted as the one they did.
+  const parsedDate = new Date(`${record.date as string}T00:00:00Z`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== (record.date as string)
+  ) {
+    return "the acceptance entry's `date` is not a real calendar date";
   }
   return null;
 }
@@ -147,8 +154,11 @@ export function loadAcceptanceChecked(
   // inside it is not evidence of anything — the file as a whole is what an owner
   // is taken to have signed.
   const owners = new Set(config.owners.map((o) => o.toLowerCase()));
+  // The prefix is DATA, not a pattern. Interpolating it raw let a configured
+  // `P.D` match `PXD-001`, so a store entry naming a work item that does not
+  // exist read as an owner decision about one that does.
   const idPattern = new RegExp(
-    `^${config.idPattern.prefix}-\\d{${config.idPattern.width}}$`,
+    `^${config.idPattern.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d{${config.idPattern.width}}$`,
   );
   for (const [index, entry] of entries.entries()) {
     const bad = entryProblem(entry);
@@ -198,9 +208,38 @@ export function operatorGateOk(
   config: WorkflowConfig,
   root: string,
   record: StateRecord,
+  /** Reads a committed blob, so the gate can tell working-tree evidence from
+   * evidence the merge will actually carry. Absent in callers that have no git
+   * context, and then the check degrades to the old behaviour. */
+  readCommitted?: (repoRelativePath: string) => string | null,
 ): OperatorGateResult {
   const operatorRows = record.task.operatorHandoffCount;
   if (operatorRows === 0) return { ok: true };
+
+  // The acceptance must be COMMITTED, exactly as the weakening waiver requires.
+  // `ensureCheckoutClean` resets tracked coordination paths on the way to the
+  // merge and an untracked one is simply not in the source commit, so an
+  // acceptance that lives only in the working tree authorized a merge whose
+  // landed history then contains no authorization at all.
+  if (readCommitted !== undefined) {
+    const rel = acceptancesRelativePath(config);
+    const committed = readCommitted(rel);
+    let working: string | null;
+    try {
+      working = readFileSync(resolve(root, rel), 'utf8');
+    } catch {
+      working = null;
+    }
+    if (working !== committed) {
+      return {
+        ok: false,
+        why:
+          `${operatorRows} operator-owned row(s), and \`${rel}\` is not committed as it ` +
+          `stands — the merge lands the COMMITTED copy, so commit the acceptance that ` +
+          `authorizes this close and re-run`,
+      };
+    }
+  }
 
   const acceptance = loadAcceptance(config, root, record.prd);
   if (validAcceptance(config, acceptance)) {

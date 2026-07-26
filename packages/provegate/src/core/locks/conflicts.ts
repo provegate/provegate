@@ -35,6 +35,23 @@ export interface PathConflict {
 }
 
 /** Tracked files in the repo, for glob materialization. Empty when git fails. */
+/** One spelling for one path, so two claims on the same tree collide. Mirrors
+ * `canonicalPath` in the memory reader; both exist because a glob and a target
+ * must be compared after the same normalization, never before it. */
+function canonicalGlob(glob: string): string {
+  const slashed = glob.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+  const parts: string[] = [];
+  for (const part of slashed.split('/')) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') {
+      parts.pop();
+      continue;
+    }
+    parts.push(part);
+  }
+  return parts.join('/');
+}
+
 export function trackedFiles(cwd: string): string[] {
   try {
     return execFileSync('git', ['ls-files'], { cwd, encoding: 'utf8' }).split('\n').filter(Boolean);
@@ -94,8 +111,11 @@ export function findConflicts(
     .filter((lock) => Array.isArray(lock.ownedPaths) && lock.ownedPaths.length > 0)
     .map((lock) => ({
       lock,
-      globs: lock.ownedPaths!,
-      mat: materialize(config, lock.ownedPaths!, files),
+      // Canonicalized FIRST. `globToRegExp` compiles a backslash as a literal,
+      // so `src\\api\\**` and `src/api/**` named the same tree and intersected
+      // nowhere — two maintainers claiming one directory, both leases installed.
+      globs: lock.ownedPaths!.map(canonicalGlob),
+      mat: materialize(config, lock.ownedPaths!.map(canonicalGlob), files),
     }));
 
   const conflicts: PathConflict[] = [];

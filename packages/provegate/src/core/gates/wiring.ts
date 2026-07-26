@@ -186,7 +186,18 @@ export function auditWiring(
       wiringText.push(...yamlRunText(readFileSync(resolve(workflowsDir, name), 'utf8')));
     }
   }
-  const wiredIn = (script: string): boolean => wiringText.some((text) => text.includes(script));
+  // An INVOCATION of the exact script, not a substring of it. `includes` counted
+  // `echo verify:brain` and `pnpm verify:brain-old` as wiring, so the audit's
+  // whole claim — every registered check reaches an executing surface — rested
+  // on the script's NAME appearing somewhere in a CI file.
+  const wiredIn = (script: string): boolean => {
+    const escaped = script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const invocation = new RegExp(
+      `(?:^|[;&|]|\\b(?:pnpm|npm|yarn|bun)(?:\\s+run)?\\s+)${escaped}(?![\\w:.-])`,
+      'm',
+    );
+    return wiringText.some((text) => invocation.test(text));
+  };
 
   for (const script of scriptNames) {
     if (!pattern.test(script)) continue;

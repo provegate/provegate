@@ -208,7 +208,9 @@ export function lintPrd(
     const regexes = cap.when.targetsMatch.map(globToRegExp);
     const fires = allTargets.some((t) => regexes.some((re) => re.test(t)));
     if (!fires) continue;
-    if (!new RegExp(cap.requireLine, 'm').test(content)) {
+    // The EXECUTABLE document: a required evidence line written only inside a
+    // fence or an HTML comment renders as an example, and satisfied the cap.
+    if (!new RegExp(cap.requireLine, 'm').test(contractView(content))) {
       issues.push(`hard cap ${cap.id}: ${cap.message}`);
     }
   }

@@ -155,6 +155,23 @@ const REQUIRED_FIELDS = [
  * valid). This is the REAL gate for the lock shape — no schema validator
  * library loads the JSON schema; a malformed surface fails here, loud.
  */
+/** Every field a lock may carry. The schema is `additionalProperties: false`,
+ * and a validator that ignores unknown keys cannot say a file is a lock. */
+const KNOWN_LOCK_FIELDS = new Set([
+  'schemaVersion',
+  'lockId',
+  'agent',
+  'prd',
+  'phase',
+  'startedAt',
+  'expiresAt',
+  'touchedFiles',
+  'ownedPaths',
+  'worktree',
+  'branch',
+  'notes',
+]);
+
 export function validateLock(
   config: WorkflowConfig,
   data: Record<string, unknown>,
@@ -185,6 +202,24 @@ export function validateLock(
     !touched.every((t) => typeof t === 'string' && t.length > 0)
   ) {
     issues.push('touchedFiles must be a non-empty array of non-empty strings');
+  }
+  // Unknown fields, `lockId` shape, and array uniqueness — the schema says
+  // `additionalProperties: false` and names a lock-id pattern, and the barrier
+  // trusts this verdict before it decides whose lease a file is. A lock that
+  // validates without those checks can carry any `prd` it likes.
+  for (const key of Object.keys(data)) {
+    if (!KNOWN_LOCK_FIELDS.has(key)) issues.push(`unexpected field "${key}"`);
+  }
+  const lockId = data['lockId'];
+  if (typeof lockId === 'string' && !/^[a-z0-9][a-z0-9.-]*$/.test(lockId)) {
+    issues.push('lockId must be a lowercase slug');
+  }
+  if (Array.isArray(touched) && new Set(touched).size !== touched.length) {
+    issues.push('touchedFiles must not repeat a path');
+  }
+  const owned = data['ownedPaths'];
+  if (Array.isArray(owned) && new Set(owned).size !== owned.length) {
+    issues.push('ownedPaths must not repeat a path');
   }
   const schemaVersion = data['schemaVersion'];
   if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {

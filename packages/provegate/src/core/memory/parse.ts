@@ -295,6 +295,39 @@ export interface ValidateOptions {
  * without `.md`; the record is returned only when it is completely valid, so a
  * caller can never half-consume a broken record.
  */
+/**
+ * Inline code removed, delimiter runs of ANY length.
+ *
+ * `/`[^`]*`/` matched only single-backtick spans: given a double-backtick span
+ * it consumed the two empty delimiter PAIRS and left the marker between them
+ * standing, so a body made entirely of code snippets validated as rationale.
+ * A span is closed by a run of the same length, which is the rule the contract
+ * grammar's own span reader already uses.
+ */
+function stripCodeSpans(text: string): string {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] !== '`') {
+      out += text[i];
+      i += 1;
+      continue;
+    }
+    let run = 0;
+    while (text[i + run] === '`') run += 1;
+    const closer = text.indexOf('`'.repeat(run), i + run);
+    if (closer === -1) {
+      // Unmatched: the delimiters are literal text.
+      out += text.slice(i, i + run);
+      i += run;
+      continue;
+    }
+    out += ' ';
+    i = closer + run;
+  }
+  return out;
+}
+
 export function validateRecord(
   content: string,
   file: string,
@@ -482,7 +515,7 @@ export function validateRecord(
   // as a code snippet, not a rationale section, and it validated. What the
   // marker search needs is the prose, so the spans come out here rather than
   // in the shared scanner, where other readers depend on them.
-  const visibleBody = contractView(body).replace(/`[^`]*`/g, ' ');
+  const visibleBody = stripCodeSpans(contractView(body));
 
   // Rationale sections are what make a record actionable rather than a note.
   // Two exemptions: `reference`, because a pointer to an external resource has

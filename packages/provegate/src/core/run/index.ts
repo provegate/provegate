@@ -62,6 +62,7 @@ export {
 } from './open.js';
 export { withWorkspaceMutex } from './mutex.js';
 export {
+  leaseHolder,
   releaseLease,
   type ReleaseOptions,
   type ReleaseResult,
