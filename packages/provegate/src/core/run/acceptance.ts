@@ -20,6 +20,13 @@ export interface AcceptanceEntry {
 
 export const ACCEPTANCES_FILENAME = 'acceptances.json';
 
+/** The acceptance store's REPO-RELATIVE path, for callers that must ask git
+ * about it rather than the filesystem. */
+export function acceptancesRelativePath(config: WorkflowConfig): string {
+  const stateDir = config.dirs.stateFile.split('/').slice(0, -1).join('/') || '_state';
+  return `${stateDir}/${ACCEPTANCES_FILENAME}`;
+}
+
 function acceptancesPath(config: WorkflowConfig, root: string): string {
   const stateDir = config.dirs.stateFile.split('/').slice(0, -1).join('/') || '_state';
   return resolve(root, stateDir, ACCEPTANCES_FILENAME);
@@ -91,8 +98,15 @@ function entryProblem(entry: unknown): string | null {
   if (record.items.some((item) => typeof item !== 'string' || item.trim().length === 0)) {
     return "every element of the acceptance entry's `items` must be a non-empty string";
   }
+  // The COMMITTED schema says `YYYY-MM-DD`. `Date.parse` accepts
+  // "July 25, 2026" and a dozen other spellings, so "parseable" was a different
+  // rule from the one the store is validated against elsewhere — and a waiver
+  // may not rest on a looser reading of its own schema.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date as string)) {
+    return "the acceptance entry's `date` must be an ISO `YYYY-MM-DD` date";
+  }
   if (!Number.isFinite(Date.parse(record.date as string))) {
-    return "the acceptance entry's `date` is not a parseable date";
+    return "the acceptance entry's `date` is not a real date";
   }
   return null;
 }
@@ -132,9 +146,29 @@ export function loadAcceptanceChecked(
   // is a store the documented schema rejects, and a valid-looking neighbour
   // inside it is not evidence of anything — the file as a whole is what an owner
   // is taken to have signed.
+  const owners = new Set(config.owners.map((o) => o.toLowerCase()));
+  const idPattern = new RegExp(
+    `^${config.idPattern.prefix}-\\d{${config.idPattern.width}}$`,
+  );
   for (const [index, entry] of entries.entries()) {
     const bad = entryProblem(entry);
     if (bad !== null) return { entry: null, problem: `acceptances[${index}]: ${bad}` };
+    // Shape is not identity. An entry naming an owner outside the allowlist, or
+    // a `prd` that is not a work-item id at all, is not an owner decision about
+    // anything — and it sat in a store the weakening gate treated as signed.
+    const record = entry as Record<string, unknown>;
+    if (!owners.has(String(record.owner).toLowerCase())) {
+      return {
+        entry: null,
+        problem: `acceptances[${index}]: '${String(record.owner)}' is not a configured owner`,
+      };
+    }
+    if (!idPattern.test(String(record.prd))) {
+      return {
+        entry: null,
+        problem: `acceptances[${index}]: '${String(record.prd)}' is not a work-item id`,
+      };
+    }
   }
   const found = entries.find((a) => (a as { prd?: unknown }).prd === id);
   if (found === undefined) return { entry: null, problem: null };

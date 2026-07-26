@@ -105,10 +105,15 @@ export function findConflicts(
       const b = surfaced[j]!;
       if (a.lock.prd === b.lock.prd) continue;
       const shared = [...a.mat].filter((file) => b.mat.has(file));
-      const structural =
-        a.mat.size === 0 || b.mat.size === 0
-          ? structuralOverlap(a.globs, b.globs, new Set(config.sharedAppendOnly))
-          : [];
+      // Structural overlap is checked ALWAYS, not only when a whole surface
+      // materializes to nothing. Two claims of `['src/a.ts','src/new/**']` and
+      // `['src/b.ts','src/new/**']` in a tree where only `a.ts` and `b.ts` exist
+      // share no existing FILE, so the file check found nothing and the
+      // structural check never ran — and both agents installed, each owning
+      // every future path under `src/new/`. The conflict is in the claims, and
+      // whether some sibling pattern happens to match a tracked file today says
+      // nothing about it.
+      const structural = structuralOverlap(a.globs, b.globs, new Set(config.sharedAppendOnly));
       if (shared.length > 0 || structural.length > 0) {
         conflicts.push({
           a: a.lock.prd,

@@ -599,7 +599,30 @@ function worktreeStamps(
   };
 }
 
+/**
+ * Refuse an option this command does not know.
+ *
+ * Flags were detected with `includes`, and anything unrecognized was simply
+ * ignored — so `gate run PRD-018 --dry-rnu` read `dryRun` as false and ran the
+ * live archive-and-merge. A misspelled SAFETY flag must never be the difference
+ * between a plan and a mutation, and silence is the worst possible answer to
+ * "did you mean --dry-run?".
+ */
+function unknownOption(args: string[], known: readonly string[]): string | null {
+  for (const arg of args) {
+    if (!arg.startsWith('-')) continue;
+    const name = arg.startsWith('--') ? (arg.split('=')[0] ?? arg) : arg;
+    if (!known.includes(name)) return arg;
+  }
+  return null;
+}
+
 function runRun(args: string[], { mergeOnly = false } = {}): number {
+  const unknown = unknownOption(args, ['--dry-run', '--from-phase']);
+  if (unknown !== null) {
+    console.error(`[run] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const dryRun = args.includes('--dry-run');
   if (process.env[RUN_ACTIVE_ENV] && !dryRun) {
     console.error(
@@ -872,6 +895,30 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     } catch (error) {
       cleanupWarnings = [
         `worktree cleanup skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; remove ${stamps.worktree} manually`,
+      ];
+    }
+  } else {
+    // A PLAIN `gate open` claims a lease too, and only the worktree path ever
+    // released one — so a successful non-worktree close left its own lease
+    // blocking every overlapping work item until it expired. The merge has
+    // LANDED, so this degrades to a warning rather than a failure (W3), and it
+    // holds the same mutex claims do so a rival cannot slip between the read
+    // and the removal.
+    try {
+      // `releaseLease` takes the claim mutex itself and fails closed on an
+      // unreadable or foreign lease, which is the behaviour wanted here: a
+      // refusal becomes a warning naming what remains, never a silent unlink.
+      const release = releaseLease(config, root, id);
+      if (release.released.length > 0) {
+        outcome.results.push(['cleanup: lease released', 'passed']);
+      } else if (release.issues.length > 0) {
+        cleanupWarnings = [
+          `lease for ${id} was not released (${release.issues[0]}) — the merge is landed; release it with \`gate release ${id}\``,
+        ];
+      }
+    } catch (error) {
+      cleanupWarnings = [
+        `lease release skipped (${error instanceof Error ? error.message.split('\n')[0] : String(error)}) — the merge is landed; release it with \`gate release ${id}\``,
       ];
     }
   }

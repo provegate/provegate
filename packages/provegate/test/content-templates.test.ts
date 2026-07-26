@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
+import { countOperatorHandoff } from '../src/core/state/markdown.js';
 import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gates/review.js';
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
@@ -505,14 +506,16 @@ describe('phase 6 round 4 regressions', () => {
       '- `_brain/learnings/real.md` — the actual declaration',
       '',
     ].join('\n');
-    // The STRICT reader — the one the memory contract uses — reads the live
-    // section. The legacy reader keeps its old answer on purpose: it is the
-    // Phase 7 gate for every repository, including memory-disabled ones, whose
-    // behavior this PRD promises not to change. The split is a recorded
-    // deferral, not an oversight.
+    // BOTH readers see the live section now. The legacy one used to answer
+    // `forged.md` — a recorded deferral, on the argument that its behavior is
+    // the Phase 7 gate for every repository including memory-disabled ones. That
+    // split closed in round 22 from the other end: the shared section reader now
+    // skips headings inside a fence, because a fenced `## Operator Handoff` was
+    // disarming the owner gate through the same primitive. A fix that makes the
+    // legacy reader stop preferring a forgery needs no deferral to justify it.
     expect(declaredArtifactsStrict(doc).paths).toEqual(['_brain/learnings/real.md']);
     expect(declaredArtifactsStrict(doc).ambiguous).toBe(false);
-    expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/forged.md']);
+    expect(declaredArtifacts(doc)).toEqual(['_brain/learnings/real.md']);
   });
 
   it('[R5-P1-2] the strict reader also refuses a forged split heading', () => {
@@ -1880,5 +1883,83 @@ describe('phase 6 round 19 regressions — one scan, one authority', () => {
     const issues = parseMemoryDeclarations(doc).issues;
     expect(issues).toContainEqual(expect.stringContaining('`+` or `*` bullet list'));
     expect(issues.join('; ')).not.toContain('an indented code block');
+  });
+});
+
+describe('phase 6 round 22 — the shared section reader', () => {
+  it('[R22-4] a fenced Operator Handoff cannot disarm the owner gate', () => {
+    // `sectionMatching` took the first RAW `## ` match, and a heading inside a
+    // fence is code to every renderer. A fenced section holding `none`, above
+    // the real one, made the merge gate's precondition read zero rows.
+    const doc = [
+      '# Tasks',
+      '',
+      '```markdown',
+      '## Operator Handoff',
+      '',
+      'none',
+      '```',
+      '',
+      '## Operator Handoff',
+      '',
+      '| Task | Kind | Who | What |',
+      '| ---- | ---- | --- | ---- |',
+      '| 1.1 | manual-qa | owner | sign off on the release |',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(doc)).toBe(1);
+    // And the other direction: rows written inside a FENCE are an example, not
+    // an obligation, so they must not be counted at all.
+    const exampleOnly = [
+      '## Operator Handoff',
+      '',
+      '```markdown',
+      '| Task | Kind | Who | What |',
+      '| ---- | ---- | --- | ---- |',
+      '| 1.1 | manual-qa | owner | this is the template, not a row |',
+      '```',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(exampleOnly)).toBe(0);
+    // A fenced heading INSIDE the section does not end it either, or the rows
+    // written below the example would fall outside the section entirely.
+    const fencedHeadingInside = [
+      '## Operator Handoff',
+      '',
+      '```markdown',
+      '## Some Other Heading',
+      '```',
+      '',
+      '- [ ] 1.1 owner signs off',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(fencedHeadingInside)).toBe(1);
+  });
+
+  it('[R22-4b] rows are summed across every section with the heading', () => {
+    const doc = [
+      '## Operator Handoff',
+      '',
+      '- [ ] 1.1 owner signs off',
+      '',
+      '## Other',
+      '',
+      '## Operator Handoff',
+      '',
+      '- [ ] 2.1 owner signs off again',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(doc)).toBe(2);
+  });
+
+  it('[R22-6] an extensionless root artifact is still an artifact', () => {
+    for (const name of ['LICENSE', 'Makefile', 'CODEOWNERS']) {
+      const doc = `## Durable Artifacts\n\n- \`${name}\` — the file\n`;
+      expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
+    }
+    // Prose in backticks is still not a path.
+    expect(
+      declaredArtifactsStrict('## Durable Artifacts\n\n- none — `nothing` durable here\n').paths,
+    ).toEqual([]);
   });
 });

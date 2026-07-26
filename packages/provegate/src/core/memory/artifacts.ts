@@ -722,9 +722,22 @@ export function watchMatches(watch: readonly string[], targets: readonly string[
   // Both sides are canonicalized, never one: normalizing the target alone still
   // left a backslash-spelled GLOB compiling to a literal that matches nothing.
   const regexes = watch.map((glob) => globToRegExp(canonicalPath(glob)));
-  const matched = targets
-    .map(normalizeTarget)
-    .filter((target) => target.length > 0 && regexes.some((re) => re.test(target)));
+  const matched: string[] = [];
+  for (const target of targets) {
+    // The symbol-stripped form first, then the LITERAL one. `::` is a symbol
+    // selector by convention and a legal character in a filename by rule, so
+    // stripping unconditionally meant a repository tracking `src/a::b.ts` had a
+    // watch on exactly that path which could never fire — it was asked about
+    // `src/a`. Stripped-first keeps the reported path the one a maintainer
+    // wrote the watch against; the literal is the fallback that rescues a real
+    // filename, and a target with no `::` produces the same string twice.
+    for (const candidate of [normalizeTarget(target), canonicalPath(target.trim())]) {
+      if (candidate.length === 0) continue;
+      if (!regexes.some((re) => re.test(candidate))) continue;
+      matched.push(candidate);
+      break;
+    }
+  }
   return [...new Set(matched)];
 }
 
@@ -827,6 +840,9 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   const { declared: declaredInputs, issues: inputIssues } = resolveInputs(
     decl.inputs.entries,
     storeView(store),
+    new Set(
+      (options.baseStore?.records ?? []).map((indexed) => indexed.slug),
+    ),
   );
   issues.push(...inputIssues);
 
@@ -1324,6 +1340,17 @@ function storeView(store: MemoryStore): StoreView {
 function resolveInputs(
   entries: readonly MemoryInput[],
   view: StoreView,
+  /**
+   * Slugs the BASE store carries, which a disposition may legitimately name
+   * even though the working store no longer does.
+   *
+   * Reading the working store alone made a legal record RENAME unclosable:
+   * rename `old` to `new` while changing a file `old` watched, and naming `new`
+   * does not answer the base watcher while naming `old` is rejected for no
+   * longer being indexed. Declaring what you removed is exactly the
+   * acknowledgement the input contract asks for, so it must be sayable.
+   */
+  baseSlugs: ReadonlySet<string> = new Set(),
 ): { declared: Set<string>; issues: string[] } {
   const declared = new Set<string>();
   const issues: string[] = [];
@@ -1336,6 +1363,7 @@ function resolveInputs(
     }
     declared.add(input.slug);
     if (view.bySlug.has(input.slug)) continue;
+    if (baseSlugs.has(input.slug)) continue;
     if (view.superseded.has(input.slug)) {
       issues.push(`${INPUTS_HEADING}: '${input.slug}' is superseded — it cannot be an input`);
     } else if (view.unreadable.has(input.slug)) {

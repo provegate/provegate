@@ -1,7 +1,8 @@
 import { execFileSync, execSync } from 'node:child_process';
-import { lstatSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { CONFIG_FILENAME } from '../config/index.js';
+import { CONFIG_FILENAME, DEFAULT_CONFIG } from '../config/index.js';
+import { MANIFEST_FILENAME } from '../gates/manifest.js';
 import type { MemoryConfig, WorkflowConfig } from '../config/index.js';
 import type { GatesManifest } from '../gates/manifest.js';
 import {
@@ -21,7 +22,12 @@ import {
 import { resolveClassGates, mergeGateCommands } from '../gates/classes.js';
 import { validateTasksReviewRow } from '../gates/review.js';
 import type { StateRecord } from '../state/build.js';
-import { loadAcceptanceChecked, operatorGateOk, validAcceptance } from './acceptance.js';
+import {
+  acceptancesRelativePath,
+  loadAcceptanceChecked,
+  operatorGateOk,
+  validAcceptance,
+} from './acceptance.js';
 import { declaredArtifacts, declaredArtifactsStrict, durableArtifactsOk } from './durable.js';
 import { appendMetric } from './metrics.js';
 import type { GateResultRow } from './cards.js';
@@ -171,13 +177,23 @@ function capturedDiffFiles(root: string, base: string): { captured: string[]; to
  */
 function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
   const raw = blobAt(root, config.branches.base, CONFIG_FILENAME);
+  // No base config at all is first adoption: there is no earlier policy to
+  // enforce, so the working one stands.
   if (raw === null) return config.memory;
   try {
     const parsed = JSON.parse(raw) as { memory?: Partial<MemoryConfig> };
     if (parsed.memory === undefined) return config.memory;
-    return { ...config.memory, ...parsed.memory };
+    // Missing base fields fall back to the DEFAULTS, never to the branch. A real
+    // config is sparse — `{memory:{enabled:true,entrypoints:[…]}}` names no
+    // `index` — so overlaying it on the branch's memory config handed the branch
+    // its own relocated index back and the "base" store loaded empty again. The
+    // whole point of asking the base is to read a value the branch cannot set.
+    return { ...DEFAULT_CONFIG.memory, ...parsed.memory };
   } catch {
-    return config.memory;
+    // An unreadable base policy is not a weaker one. Falling back to the working
+    // config let a branch pair `enabled: false` with a corrupted base file and
+    // build no memory gates at all.
+    return { ...DEFAULT_CONFIG.memory, enabled: true };
   }
 }
 
@@ -297,6 +313,28 @@ function memoryWeakeningGate(options: {
       why:
         `Memory Outputs weakened against \`${base}\` with no owner approval row in the ` +
         `Changelog naming ${unapproved.map((w) => `'${w.path}'`).join(', ')}: ${detail}`,
+    };
+  }
+  // The acceptance must be COMMITTED, for the same reason the PRD must be:
+  // `ensureCheckoutClean` resets tracked coordination paths on the way to the
+  // merge, and an untracked one is simply not in the source commit. Round 20
+  // closed this for the Changelog approval and left the acceptance — the other
+  // half of the same waiver — reading the working tree.
+  const acceptanceRel = acceptancesRelativePath(config);
+  const committedAcceptance = blobAt(root, 'HEAD', acceptanceRel);
+  let workingAcceptance: string | null;
+  try {
+    workingAcceptance = readFileSync(resolve(root, acceptanceRel), 'utf8');
+  } catch {
+    workingAcceptance = null;
+  }
+  if (workingAcceptance !== committedAcceptance) {
+    return {
+      ok: false,
+      why:
+        `Memory Outputs weakened against \`${base}\`, and \`${acceptanceRel}\` is not committed ` +
+        `as it stands — the merge lands the COMMITTED copy, so commit the acceptance that ` +
+        `authorizes this removal and re-run: ${detail}`,
     };
   }
   const loaded = loadAcceptanceChecked(config, root, record.prd);
@@ -492,6 +530,42 @@ export function buildGateChain(options: {
   }
 
   const phase7Cmds = manifest.phases['7'] ?? [];
+  // A validator the BASE had may not vanish on the way through. Marking the
+  // existing commands non-skippable did nothing about DELETING them: empty
+  // `phases.7`, empty `memory.verifyCommand`, and the close runs no store
+  // validator at all — a record with a dangling `links` reference passes the
+  // internal loader and only `verify:brain` would have caught it.
+  if (config.memory.enabled) {
+    const baseManifestRaw = blobAt(root, config.branches.base, MANIFEST_FILENAME);
+    let basePhase7: string[];
+    try {
+      const parsed =
+        baseManifestRaw === null
+          ? null
+          : (JSON.parse(baseManifestRaw) as { phases?: Record<string, string[]> });
+      basePhase7 = parsed?.phases?.['7'] ?? [];
+    } catch {
+      basePhase7 = [];
+    }
+    const baseHadValidator =
+      basePhase7.length > 0 || baseMemoryConfig(root, config).verifyCommand.trim().length > 0;
+    const hasValidator =
+      phase7Cmds.length > 0 || config.memory.verifyCommand.trim().length > 0;
+    if (baseHadValidator && !hasValidator) {
+      chain.push({
+        phase: '7 Learning',
+        nonSkippable: true,
+        label: 'memory: the store validator may not be removed by the merge that needs it',
+        fn: () => ({
+          ok: false,
+          why:
+            `\`${config.branches.base}\` runs a Phase 7 store validator and this branch runs ` +
+            `none — removing it is a policy change, not a close. Restore \`phases.7\` or ` +
+            `\`memory.verifyCommand\`, or land the removal as its own owner-accepted work item`,
+        }),
+      });
+    }
+  }
   if (phase7Cmds.length > 0) {
     chain.push({
       phase: '7 Learning',

@@ -708,3 +708,34 @@ describe('phase 6 round 21 — one spelling for one path', () => {
     expect(watchMatches(['packages/x/**'], ['./docs/a.md'])).toEqual([]);
   });
 });
+
+describe('phase 6 round 22 — one step over', () => {
+  it('[R22-7] a rationale marker inside inline code is a snippet, not a section', () => {
+    // `contractView` preserves code spans on purpose — the contract grammar
+    // reads slugs and paths out of backticks — so a body made of
+    // `` `**Why:** fake` `` rendered as a snippet and validated as a rationale.
+    const body = 'Body.\n\n`**Why:** fake reason`\n`**How to apply:** fake method`\n';
+    const doc = [
+      '---',
+      'name: r',
+      'description: d',
+      'type: convention',
+      'scope: workflow',
+      'status: active',
+      '---',
+      body,
+    ].join('\n');
+    expect(validateRecord(doc, 'learnings/r.md', 'r').record).toBeNull();
+  });
+
+  it('[R22-8] a real filename containing `::` is matched literally', () => {
+    // `::` is a symbol selector by convention and a legal filename character by
+    // rule, so stripping unconditionally left a watch on `src/a::b.ts` unable to
+    // fire — it was asked about `src/a`.
+    expect(watchMatches(['src/a::b.ts'], ['src/a::b.ts'])).toEqual(['src/a::b.ts']);
+    // And the symbol form still resolves to the path a maintainer wrote.
+    expect(watchMatches(['packages/x/**'], ['packages/x/a.ts::doThing'])).toEqual([
+      'packages/x/a.ts',
+    ]);
+  });
+});

@@ -5,6 +5,8 @@
  * table writes) that must not drift.
  */
 
+import { scanDocument } from '../memory/scan.js';
+
 export function stripMarkdown(value: string): string {
   return value
     .replace(/\*\*/g, '')
@@ -46,14 +48,40 @@ export function sectionAfter(content: string, heading: string): string {
   return sectionMatching(content, escapeRegExp(heading));
 }
 
+/**
+ * EVERY section under a heading matching `headingPattern`, read from the
+ * executable document.
+ *
+ * The old reader took the first raw `^## ` match, and a heading inside a fenced
+ * example is code to every renderer. A fenced `## Operator Handoff` holding
+ * `none`, placed above the real section, was therefore selected — and the merge
+ * gate's precondition IS that row count, so an owner-gated PRD passed with no
+ * acceptance at all. The same primitive under-read a real Conflict Surface.
+ *
+ * All matches are returned, not the first, because these callers are gates: two
+ * sections with the same heading is an ambiguity, and the fail-closed reading of
+ * an ambiguity is to honour every one of them.
+ */
+export function sectionsMatching(content: string, headingPattern: string): string[] {
+  const lines = scanDocument(content).lines;
+  const heading = new RegExp(`^##\\s+${headingPattern}\\s*$`, 'i');
+  const bodies: string[] = [];
+  for (const [index, line] of lines.entries()) {
+    if (line.kind !== 'text' || !heading.test(line.text)) continue;
+    const body: string[] = [];
+    for (let i = index + 1; i < lines.length; i += 1) {
+      const next = lines[i]!;
+      if (next.kind === 'text' && /^##\s+/.test(next.text)) break;
+      body.push(next.kind === 'text' ? next.text : '');
+    }
+    bodies.push(`\n${body.join('\n')}`);
+  }
+  return bodies;
+}
+
 /** Like `sectionAfter`, but the heading is a regex source (e.g. `.*Verification Commands.*`). */
 export function sectionMatching(content: string, headingPattern: string): string {
-  const pattern = new RegExp(`^##\\s+${headingPattern}\\s*$`, 'im');
-  const match = pattern.exec(content);
-  if (!match) return '';
-  const rest = content.slice(match.index + match[0].length);
-  const next = rest.search(/^##\s+/m);
-  return next === -1 ? rest : rest.slice(0, next);
+  return sectionsMatching(content, headingPattern)[0] ?? '';
 }
 
 export function countTaskChecks(content: string): { checkedCount: number; uncheckedCount: number } {
@@ -79,7 +107,16 @@ export function countTaskChecks(content: string): { checkedCount: number; unchec
  * is not a row — an empty section legitimately means zero operator rows.
  */
 export function countOperatorHandoff(content: string): number {
-  const section = sectionAfter(content, 'Operator Handoff');
+  // Summed across EVERY section with this heading. One row anywhere is enough
+  // to require an acceptance, so counting only the first section was the
+  // permissive reading of a document that says the same thing twice.
+  return sectionsMatching(content, escapeRegExp('Operator Handoff')).reduce(
+    (total, section) => total + operatorRowsIn(section),
+    0,
+  );
+}
+
+function operatorRowsIn(section: string): number {
   if (!section) return 0;
   const lines = section.split('\n');
   const tableRows = lines
@@ -161,9 +198,12 @@ export function writeTableValue(content: string, label: string, value: string): 
  * `{ }` template tokens, bare `none` lines, and non-path tokens.
  */
 export function declaredGlobs(content: string): string[] {
-  const section = sectionAfter(content, 'Conflict Surface');
+  // Unioned across every section with this heading, for the same reason the
+  // operator rows are summed: a claim written twice is still a claim.
   const globs: string[] = [];
-  for (const line of section.split('\n')) {
+  for (const line of sectionsMatching(content, escapeRegExp('Conflict Surface'))
+    .join('\n')
+    .split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;
     if (/\bnone\b/i.test(line) && !line.includes('`')) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {

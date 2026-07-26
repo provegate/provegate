@@ -57,9 +57,16 @@ function artifactPaths(section: string): string[] {
       // dropped every `RELEASING.md`, so a PRD could promise one and close
       // without touching it — and with memory enabled the same list is what a
       // Memory Output must appear in, so the drop reaches the close gate too.
-      // The `/`-less tokens this was written to skip are prose words, and those
-      // do not end in a file extension.
-      if (!value.includes('/') && !/\.[A-Za-z0-9]+$/.test(value)) continue;
+      // A ROOT-LEVEL artifact is still an artifact, and the extension test alone
+      // was the wrong discriminator: `LICENSE`, `Makefile` and `CODEOWNERS` are
+      // root files with no extension, and a PRD promising one closed without
+      // touching it. Accepting every `/`-less token instead swept in prose —
+      // `- none — \`nothing\` durable here` declared an artifact called
+      // "nothing". A leading capital is what separates the two: repository root
+      // files are spelled that way and prose in these bullets is not.
+      if (!value.includes('/') && !/\.[A-Za-z0-9]+$/.test(value) && !/^[A-Z]/.test(value)) {
+        continue;
+      }
       if (/[{}]/.test(value)) continue;
       if (/\bnone\b/i.test(value)) continue;
       paths.push(value);

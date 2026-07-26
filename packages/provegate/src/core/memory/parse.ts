@@ -476,7 +476,13 @@ export function validateRecord(
   // validator exists to reject, wearing the validator's own approval. The same
   // scan the contract grammar uses answers this, so the two cannot disagree
   // about what is on the page.
-  const visibleBody = contractView(body);
+  // Code SPANS are stripped as well as blanked blocks. `contractView` preserves
+  // span contents deliberately — the contract grammar reads slugs and paths out
+  // of backticks — but a record whose body is only `` `**Why:** fake` `` renders
+  // as a code snippet, not a rationale section, and it validated. What the
+  // marker search needs is the prose, so the spans come out here rather than
+  // in the shared scanner, where other readers depend on them.
+  const visibleBody = contractView(body).replace(/`[^`]*`/g, ' ');
 
   // Rationale sections are what make a record actionable rather than a note.
   // Two exemptions: `reference`, because a pointer to an external resource has

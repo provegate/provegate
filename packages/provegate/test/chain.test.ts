@@ -1622,3 +1622,151 @@ describe('phase 6 round 21 — the rename source and the root-level artifact', (
     ).toEqual([]);
   });
 });
+
+describe('phase 6 round 22 regressions — one step over each round-21 fix', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+  const SECOND_OUTPUT = '_brain/adr/ADR-0001-x.md';
+  const TWO_OUTPUTS = [
+    '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+    `- adr: \`${SECOND_OUTPUT}\` — the decision.`,
+  ];
+  const TWO_DURABLE = [
+    '- `_brain/learnings/new-thing.md` — the durable fact',
+    `- \`${SECOND_OUTPUT}\` — the decision`,
+  ];
+  const GOOD_ENTRY = {
+    prd: 'PRD-002',
+    owner: 'owner',
+    items: [`memory output removal: \`${SECOND_OUTPUT}\``],
+    reason: 'the decision moved to PRD-022',
+    date: '2026-07-25',
+    method: 'interactive',
+  };
+
+  it('[R22-1] an uncommitted acceptance cannot authorize the weakening either', () => {
+    // Round 20 required the PRD to be committed and left the acceptance — the
+    // other half of the same waiver — reading the working tree, which
+    // `ensureCheckoutClean` resets on the way to the merge.
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        `| 2026-07-25 | owner | removed \`${SECOND_OUTPUT}\` — the decision moved to PRD-022 |`,
+      ],
+    });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() }, CAPTURED_RECORD);
+    const chain = chainFor({ root, prdContent: approved, changedFiles: CHANGED });
+    // The acceptance appears only AFTER the branch was committed.
+    mkdirSync(join(root, '_state'), { recursive: true });
+    writeFileSync(
+      join(root, '_state/acceptances.json'),
+      JSON.stringify({ schemaVersion: 1, acceptances: [GOOD_ENTRY] }),
+    );
+    const result = chain.find((g) => (g.label ?? '').includes('no weakening'))!.fn!();
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('is not committed as it stands');
+  });
+
+  it('[R22-2] a SPARSE base config does not hand the branch its own index back', () => {
+    // A real base config names `enabled` and `entrypoints` and no `index`, and
+    // the overlay was onto the BRANCH's memory config — so relocating the index
+    // made the "base" config carry the new path and the base store loaded empty.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': content,
+        'workflow.config.json': JSON.stringify({
+          memory: { enabled: true, entrypoints: ['AGENT_BOOTSTRAP.md'] },
+        }),
+        ...STORE('packages/x/**'),
+      },
+      CAPTURED_RECORD,
+    );
+    const relocated = { ...memOn, memory: { ...memOn.memory, index: '_brain/new/INDEX.md' } };
+    mkdirSync(join(root, '_brain/new/learnings'), { recursive: true });
+    writeFileSync(
+      join(root, '_brain/new/INDEX.md'),
+      '# INDEX\n\n- [new thing](learnings/new-thing.md) — hook\n',
+    );
+    writeFileSync(join(root, '_brain/new/learnings/new-thing.md'), RECORD_MD('new-thing'));
+    const result = gate(
+      chainFor({
+        root,
+        prdContent: content,
+        changedFiles: [...CHANGED, 'packages/x/src/a.ts'],
+        config: relocated,
+      }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("'watcher-record' watches packages/x/src/a.ts");
+  });
+
+  it('[R22-3] deleting the store validator is refused, not silently honoured', () => {
+    // Marking the existing phase-7 commands non-skippable did nothing about
+    // REMOVING them: empty `phases.7` and empty `verifyCommand` ran no validator.
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': prd(),
+        'gates.manifest.json': JSON.stringify({ phases: { '7': ['pnpm verify:brain'] } }),
+        ...STORE(),
+      },
+      CAPTURED_RECORD,
+    );
+    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED });
+    const guard = chain.find((g) => (g.label ?? '').includes('validator may not be removed'));
+    expect(guard, 'no guard for a removed validator').toBeDefined();
+    expect(shouldSkipGate(guard!, 'merge')).toBe(false);
+    expect(guard!.fn!().ok).toBe(false);
+  });
+
+  it('[R22-9] an acceptance date must be ISO, and the owner must be configured', () => {
+    const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
+    const approved = prd({
+      changelog: [
+        `| 2026-07-25 | owner | removed \`${SECOND_OUTPUT}\` — the decision moved to PRD-022 |`,
+      ],
+    });
+    const store = (entry: Record<string, unknown>): Record<string, string> => ({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({ schemaVersion: 1, acceptances: [entry] }),
+      ...STORE(),
+    });
+    const prose = gitRepo(store({ ...GOOD_ENTRY, date: 'July 25, 2026' }));
+    expect(
+      gate(chainFor({ root: prose, prdContent: approved, changedFiles: CHANGED }), 'no weakening').ok,
+    ).toBe(false);
+    const stranger = gitRepo(store({ ...GOOD_ENTRY, owner: 'someone-else' }));
+    const result = gate(
+      chainFor({ root: stranger, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('is not a configured owner');
+  });
+
+  it('[R22-12] a record RENAME can still be closed by naming what was removed', () => {
+    // The base/working union made the base slug's watch fire, and the working
+    // store no longer carried that slug — so naming it was rejected and not
+    // naming it failed the watch. The obligation was unsatisfiable.
+    const content = prd({ inputs: ['- applied: `watcher-record` — renamed to `watcher-v2`.'] });
+    const root = gitRepo(
+      { '_prds/wip/p.md': content, ...STORE('packages/x/**') },
+      { ...CAPTURED_RECORD },
+    );
+    rmSync(join(root, '_brain/learnings/watcher-record.md'));
+    writeFileSync(
+      join(root, '_brain/learnings/watcher-v2.md'),
+      RECORD_MD('watcher-v2', 'packages/x/**'),
+    );
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      '# INDEX\n\n- [new thing](learnings/new-thing.md) — hook\n- [watcher](learnings/watcher-v2.md) — hook\n',
+    );
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+      'declared outputs',
+    );
+    expect(result.why ?? '').not.toContain('is not an active indexed record');
+    expect(result.why ?? '').not.toContain("'watcher-record' watches");
+  });
+});
