@@ -1438,3 +1438,69 @@ describe('phase 6 round 15 regressions', () => {
     );
   });
 });
+
+describe('phase 6 round 16 regressions', () => {
+  it('[R16-P1-1] a type-7 tag WITH attributes opens a raw HTML block', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<x-note class="warning">',
+      '- none — hidden.',
+      '</x-note>',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R16-P1-1] a heading closes a paragraph, so a type-7 tag may open after it', () => {
+    const doc = ['## Memory Outputs', '', '### Note', '<x-note>', '- none — hidden.', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R16-P1-2] rationale visibility survives quoted `>`, NBSP, and empty code', () => {
+    for (const rationale of ['<span class="note" title=">"></span>', '&#160;', '` `']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
+        expect.stringContaining('requires a rationale'),
+      );
+    }
+  });
+
+  it('[R16-P1-2] and real content inside a code span still counts', () => {
+    const doc = ['## Memory Outputs', '', '- none — the flag is `--dry-run`.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R16-P2-3] a CRLF blank line terminates an HTML block', () => {
+    const doc = [
+      '<div>',
+      'note',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — no durable output is expected.',
+      '',
+    ].join('\r\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.present).toBe(true);
+    expect(decl.outputs.none).toBe(true);
+  });
+
+  it('[R16-P2-4] `<style-guide>` is a custom element, not a `<style>` block', () => {
+    const doc = [
+      '<style-guide>',
+      '',
+      '## Memory Outputs',
+      '',
+      '- none — no durable output is expected.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).outputs.present).toBe(true);
+  });
+});
