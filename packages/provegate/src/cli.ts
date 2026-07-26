@@ -30,7 +30,7 @@ import {
   loadManifest,
   parsePrdClass,
 } from './core/gates/index.js';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { dirname as pathDirname } from 'node:path';
 import {
   RUN_ACTIVE_ENV,
@@ -57,6 +57,7 @@ import {
 } from './core/run/index.js';
 import { handoffCard as buildHandoffCard } from './core/run/index.js';
 import { colorTier, paint, verdictSlot, statusLine } from './core/ui/theme.js';
+import { memoryDoctor } from './core/memory/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -111,6 +112,7 @@ function usage(): string {
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
     '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
+    '  doctor   diagnose an install, read-only (gate doctor --memory [--json])',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
     '  land     merge step only (alias for run --from-phase=merge)',
     '  push     (refused — push is always yours)',
@@ -488,6 +490,73 @@ function findRecord(
   const record = state.records.find((r) => r.number === number);
   if (!record) return null;
   return { record, id: formatId(config.idPattern, number) };
+}
+
+/**
+ * `gate doctor` — read-only install diagnosis.
+ *
+ * Bare `gate doctor` prints usage and exits 1 rather than guessing a mode. That
+ * is the house style `gate renew` and `gate release` already set, and it is what
+ * keeps the surface defined when a second doctor mode lands: today's bare
+ * invocation must not become tomorrow's silent default.
+ */
+function runDoctor(args: string[]): number {
+  const unknown = unknownOption(args, ['--memory', '--json']);
+  if (unknown !== null) {
+    console.error(`[doctor] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
+  if (!args.includes('--memory')) {
+    console.error('usage: gate doctor --memory [--json]');
+    return 1;
+  }
+  const json = args.includes('--json');
+  const { root, config } = loadConfig();
+  const manifest = loadManifest(config, root);
+
+  const pkgPath = resolve(root, 'package.json');
+  const packageScripts = existsSync(pkgPath)
+    ? ((JSON.parse(readFileSync(pkgPath, 'utf8')) as { scripts?: Record<string, string> })
+        .scripts ?? {})
+    : undefined;
+
+  // CI files are READ, never required: their absence warns rather than fails,
+  // because a repository may run its gates from anywhere.
+  const ciTexts: string[] = [];
+  const workflows = resolve(root, '.github/workflows');
+  if (existsSync(workflows)) {
+    for (const name of readdirSync(workflows)) {
+      if (!/\.ya?ml$/.test(name)) continue;
+      try {
+        ciTexts.push(readFileSync(resolve(workflows, name), 'utf8'));
+      } catch {
+        /* unreadable CI file — absence warns, it does not fail */
+      }
+    }
+  }
+
+  const report = memoryDoctor({ config, manifest, root, packageScripts, ciTexts });
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+    return report.code;
+  }
+
+  const tier = colorTier();
+  const glyph = { pass: '✓', warn: '⚠', fail: '✗' } as const;
+  const slot = { pass: 'green', warn: 'amber', fail: 'red' } as const;
+  console.log(`[doctor --memory] ${config.memory.enabled ? 'contract ON' : 'contract OFF'}`);
+  for (const check of report.checks) {
+    console.log(`  ${paint(slot[check.severity], glyph[check.severity], tier)} ${check.id}: ${check.detail}`);
+    if (check.remedy !== undefined) console.log(`      → ${check.remedy}`);
+  }
+  const fails = report.checks.filter((c) => c.severity === 'fail').length;
+  const warns = report.checks.filter((c) => c.severity === 'warn').length;
+  console.log(
+    report.ok
+      ? `[doctor --memory] reachable${warns > 0 ? ` — ${warns} warning(s)` : ''}`
+      : `[doctor --memory] ${fails} blocking problem(s)${warns > 0 ? `, ${warns} warning(s)` : ''}`,
+  );
+  return report.code;
 }
 
 function runCheck(args: string[]): number {
@@ -1059,6 +1128,7 @@ export function main(argv: string[]): number {
       return runQueue(rest.includes('--json'));
     }
     if (command === 'check') return runCheck(rest);
+    if (command === 'doctor') return runDoctor(rest);
     if (command === 'run') return runRun(rest);
     if (command === 'land') return runRun(rest, { mergeOnly: true });
   } catch (error) {

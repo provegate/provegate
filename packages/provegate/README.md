@@ -49,6 +49,11 @@ New here? [QUICKSTART.md](QUICKSTART.md) walks install → first gated close
   warnings between READY items.
 - `gate check PRD-XXX` / `gate check --wiring` — readiness lint (structural + manifest
   hard caps) and the wire-or-delete audit.
+- `gate doctor --memory [--json]` — read-only diagnosis of a memory install: config
+  containment, store and index, record validation, entrypoint pointer, validator presence
+  and wiring, Phase 7 reachability. Mandatory failures exit 1; CI reachability and unfilled
+  placeholders warn, because a workflow layout is user-defined and absence there proves
+  nothing. It never edits config, manifests, entrypoints, scripts, or state.
 - `gate run [--dry-run] [--from-phase=…] PRD-XXX` — the deterministic close: manifest gate
   chain (floor + diff-conditional class defaults), §11 commands through the safety
   allowlist, review-artifact schema gate, durable-artifacts gate, operator-acceptance

@@ -1,4 +1,13 @@
 export {
+  memoryDoctor,
+  type DoctorCheck,
+  type DoctorCheckId,
+  type DoctorOptions,
+  type DoctorReport,
+  type DoctorSeverity,
+} from './doctor.js';
+
+export {
   ADR_STATUSES,
   LEARNING_TYPES,
   SCOPES,
