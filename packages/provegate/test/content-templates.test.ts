@@ -1189,7 +1189,7 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
     for (const rationale of ['<br>', '<span></span>', '<span hidden>x</span>']) {
       const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
       expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
-        expect.stringContaining('raw HTML'),
+        expect.stringContaining('raw inline HTML'),
       );
     }
   });
@@ -1305,7 +1305,7 @@ describe('phase 6 round 13 (reframed) regressions', () => {
   it('[R13b-P1-5] an inline tag with a quoted `>` is found, not mis-scanned', () => {
     const doc = ['## Memory Outputs', '', '- none — <span title=">"></span>', ''].join('\n');
     expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('raw HTML'),
+      expect.stringContaining('raw inline HTML'),
     );
   });
 
@@ -1430,10 +1430,11 @@ describe('phase 6 round 15 regressions', () => {
       '  The behavior is fully derivable from tests.',
       '',
     ].join('\n');
-    // Not "a raw HTML block" — the section is still a plain bullet list. The
-    // rationale-level rule is what refuses it, and it names the reason.
+    // Not "a raw HTML block" — the section is still a plain bullet list, and a
+    // `<br>` on a wrapped continuation line cannot open one. Round 18 moved the
+    // refusal up to the section, so the construct named is "raw inline HTML".
     const issues = parseMemoryDeclarations(doc).issues;
-    expect(issues).toContainEqual(expect.stringContaining('raw HTML'));
+    expect(issues).toContainEqual(expect.stringContaining('raw inline HTML'));
     expect(issues.join('; ')).not.toContain('a raw HTML block');
   });
 
@@ -1487,7 +1488,7 @@ describe('phase 6 round 16 regressions', () => {
       '\n',
     );
     expect(parseMemoryDeclarations(tagged).issues).toContainEqual(
-      expect.stringContaining('raw HTML'),
+      expect.stringContaining('raw inline HTML'),
     );
   });
 
@@ -1577,5 +1578,147 @@ describe('phase 6 round 17 regressions (the confirming round)', () => {
   it('[R17-3] `<3>` is visible text, not a tag', () => {
     const doc = ['## Memory Outputs', '', '- none — the team said <3>.', ''].join('\n');
     expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+});
+
+describe('phase 6 round 18 regressions', () => {
+  const NBSP = '\u00a0';
+  const LINE_SEPARATOR = '\u2028';
+  const ZERO_WIDTH_SPACE = '\u200b';
+  const VERTICAL_TAB = '\u000b';
+
+  it('[R18-1] a code-span lookahead cannot reach across a fence or an HTML block', () => {
+    // A lone backtick in prose found its "closer" on the FENCE line, so the
+    // scanner masked the fence opener as span content and never opened the
+    // fence — leaving an entire forged contract to be read out of rendered code.
+    for (const interrupt of ['~~~ `', '<div> `']) {
+      const doc = ['Prose `open', interrupt, '## Memory Outputs', '- none — forged.', ''].join('\n');
+      const decl = parseMemoryDeclarations(doc);
+      expect(decl.outputs.none, interrupt).toBe(false);
+      expect(decl.outputs.entries, interrupt).toEqual([]);
+    }
+    // A backtick fence reaches the same stop, one line further down: its own
+    // info string may hold no backtick, so the closer the lookahead would have
+    // found sits below the fence rather than on it.
+    const backtickFence = [
+      'Prose `open',
+      '```',
+      'code `',
+      '## Memory Outputs',
+      '- none — forged.',
+      '',
+    ].join('\n');
+    const fenced = parseMemoryDeclarations(backtickFence);
+    expect(fenced.outputs.none).toBe(false);
+    expect(fenced.outputs.entries).toEqual([]);
+    // But the stop must use the scanner's own fence predicate: ` ```` ` ` is NOT
+    // a fence, because a backtick fence's info string may not contain a
+    // backtick, so the span closes there and the heading below it is real.
+    const notAFence = ['Prose `open', '```` `', '## Memory Outputs', '', '- none — shown.', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(notAFence).outputs.none).toBe(true);
+  });
+
+  it('[R18-2] only spaces and tabs may follow a closing fence', () => {
+    // `.trim()` removes every Unicode blank, so a trailing NBSP closed the fence
+    // here and left it open in the renderer.
+    const doc = ['```', '```' + NBSP, '## Memory Outputs', '- none — forged.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('an unclosed code fence'),
+    );
+    // A closing fence followed by ordinary trailing spaces still closes.
+    const closed = ['```', '```  ', '## Memory Outputs', '', '- none — reasoned.', ''].join('\n');
+    expect(parseMemoryDeclarations(closed).issues).toEqual([]);
+  });
+
+  it('[R18-3] the scanner and the heading matcher share one line model', () => {
+    // The scanner split on LF while every `/m` regex also broke on a bare CR, so
+    // a CR document had a fence the scanner never saw and a heading the matcher
+    // did.
+    const bareCr = '```\r## Memory Outputs\r- none — forged.\r';
+    expect(parseMemoryDeclarations(bareCr).issues).toContainEqual(
+      expect.stringContaining('an unclosed code fence'),
+    );
+    // CRLF is the same line model and must still parse.
+    const crlf = ['## Memory Outputs', '', '- none — reasoned.', ''].join('\r\n');
+    expect(parseMemoryDeclarations(crlf).issues).toEqual([]);
+    expect(parseMemoryDeclarations(crlf).outputs.none).toBe(true);
+  });
+
+  it('[R18-4] a U+2028 separator is refused, because only JavaScript ends a line there', () => {
+    const doc = 'intro' + LINE_SEPARATOR + '## Memory Outputs\n- none — forged.\n';
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toContainEqual(expect.stringContaining('U+2028 or U+2029'));
+    expect(decl.outputs.present).toBe(false);
+  });
+
+  it('[R18-5] raw inline HTML anywhere in a section is refused, not only in a rationale', () => {
+    // A renderer's HTML parser closes the paragraph at the `<div>` and swallows
+    // the list after it, so the declaration is in the source and not on the page.
+    const doc = ['## Memory Outputs', '', 'note <div hidden>', '- none — forged.', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.issues).toContainEqual(expect.stringContaining('raw inline HTML'));
+    expect(decl.outputs.none).toBe(false);
+  });
+
+  it('[R18-6] a zero-width character is not a rationale', () => {
+    for (const rationale of ['&#8203;', '&#8288;', '&shy;', ZERO_WIDTH_SPACE, '&#xFEFF;']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, JSON.stringify(rationale)).toContainEqual(
+        expect.stringContaining('requires a rationale'),
+      );
+    }
+  });
+
+  it('[R18-7] an unrecognized character reference is refused by name, not read either way', () => {
+    // Counting an unknown name visible let `&Tab;` stand in for a rationale;
+    // counting it invisible refused `&AElig;`, which renders. There is no third
+    // answer without the entity table, so the reader declines to pick one.
+    const doc = ['## Memory Outputs', '', '- none — &AElig;', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(expect.stringContaining('&AElig;'));
+    // A known-invisible name keeps its round 17 behavior.
+    const tab = ['## Memory Outputs', '', '- none — &Tab;', ''].join('\n');
+    expect(parseMemoryDeclarations(tab).issues).toContainEqual(
+      expect.stringContaining('requires a rationale'),
+    );
+    // A known-visible one is still a rationale, and one inside a code span is
+    // literal text rather than a reference at all.
+    const visible = ['## Memory Outputs', '', '- none — nothing &mdash; truly nothing.', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(visible).issues).toEqual([]);
+    const spanned = ['## Memory Outputs', '', '- none — the literal `&AElig;` entity.', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(spanned).issues).toEqual([]);
+  });
+
+  it('[R18-8] a tag needs tag whitespace, so a vertical tab inside one is visible text', () => {
+    // Refusing this named a construct the page does not contain — the same
+    // defect as reading a declaration that is not there, pointed the other way.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<x' + VERTICAL_TAB + 'class=y>',
+      '- none — shown.',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+    expect(parseMemoryDeclarations(doc).outputs.none).toBe(true);
+  });
+
+  it('[R18-9] a setext contract heading is named, not reported missing', () => {
+    const doc = ['Memory Outputs', '--------------', '', '- none — shown.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('setext heading'),
+    );
+  });
+
+  it('[R18-10] a tab opens an indented code block, like four spaces', () => {
+    const doc = ['## Memory Outputs', '', '\t- none — code.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('an indented code block'),
+    );
   });
 });

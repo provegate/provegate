@@ -120,6 +120,30 @@ function pathProblem(value: string): string | null {
  */
 const COMMENT_MASK = '␀';
 
+/**
+ * CommonMark's three line endings, reduced to one.
+ *
+ * The scanner split on `\n` while every heading and container regex ran under
+ * `/m`, which also breaks on a bare `\r`. A document using bare CR therefore had
+ * a fence the scanner never saw and a heading the matcher did — so a whole
+ * contract could be read out of fenced code. Normalizing once is what keeps the
+ * two halves on the same line model; nothing downstream may re-split raw text.
+ */
+function normalizeLineEndings(content: string): string {
+  return content.replace(/\r\n|\r/g, '\n');
+}
+
+/**
+ * U+2028 and U+2029 are line terminators to JavaScript and ORDINARY CHARACTERS
+ * to CommonMark. `/m` therefore anchors a heading after one where a renderer
+ * shows a single continuing paragraph, so a U+2028 before `## Memory Outputs` forged
+ * a section that is not on the page. Rather than teach every regex a second line
+ * model, a document containing one is refused by name. Measured across 239
+ * Markdown files in this repository: none contains either.
+ */
+const UNICODE_SEPARATOR = /[\u2028\u2029]/;
+const UNICODE_SEPARATOR_G = /[\u2028\u2029]/g;
+
 /** Does a backtick run of `length` close on this line's remainder, or on a
  * later line of the SAME paragraph? A blank line ends the paragraph, and a span
  * cannot span one. */
@@ -141,6 +165,19 @@ function closesBeforeParagraphEnd(
     // A column-zero list marker interrupts a paragraph too, so a span cannot
     // reach across it — masking one as span interior hid a rendered list item.
     if (/^-[ \t]+\S/.test(line)) return false;
+    // So does a fence, and so does an HTML block of types 1-6. Both were
+    // missing, and the omission ran the wrong way: a lone backtick in prose
+    // above them found its "closer" on the fence line, which made the scanner
+    // treat the fence OPENER as span content and never open the fence. The
+    // whole contract could then be forged inside rendered code —
+    // `` Prose `open `` / `` ~~~ ` `` / `## Memory Outputs` / `- none — …`.
+    // The fence test is the scanner's OWN predicate, backtick-info exclusion and
+    // all: a looser one here would stop the lookahead at ` ```` ` ` — which is
+    // not a fence, because a backtick fence's info string may not contain a
+    // backtick — and refuse a span the renderer closes.
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence !== null && !(fence[1]![0] === '`' && fence[2]!.includes('`'))) return false;
+    if (htmlBlockEnd(line, true) !== null) return false;
     if (closer.test(line)) return true;
   }
   return false;
@@ -170,8 +207,12 @@ const BLANK_LINE = /^[ \t]*\r?$/;
  * `<x-note class="warning">` opened a raw block for a renderer and nothing for
  * this reader — which then read the bullet the block was hiding.
  */
+// The separators are `[ \t]`, never `\s`: CommonMark allows only spaces and
+// tabs inside a tag on one line, so a tag holding a vertical tab is literal TEXT to a
+// renderer and was refused here as a raw HTML block — a refusal naming a
+// construct the page does not contain.
 const TYPE_7 =
-  /^ {0,3}(?:<[a-zA-Z][a-zA-Z0-9-]*(?:\s+[a-zA-Z_:][a-zA-Z0-9_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>|<\/[a-zA-Z][a-zA-Z0-9-]*\s*>)[ \t]*\r?$/;
+  /^ {0,3}(?:<[a-zA-Z][a-zA-Z0-9-]*(?:[ \t]+[a-zA-Z_:][a-zA-Z0-9_.:-]*(?:[ \t]*=[ \t]*(?:"[^"]*"|'[^']*'|[^ \t"'=<>`]+))?)*[ \t]*\/?>|<\/[a-zA-Z][a-zA-Z0-9-]*[ \t]*>)[ \t]*\r?$/;
 
 function htmlBlockEnd(line: string, paragraphActive: boolean): RegExp | null {
   // Types 1-5 carry their own terminators and may interrupt a paragraph.
@@ -225,7 +266,7 @@ function executableView(content: string): { view: string; unreliable: string | n
   let span = 0;
   const out: string[] = [];
 
-  const lines = content.split('\n');
+  const lines = normalizeLineEndings(content).split('\n');
   for (const [lineIndex, raw] of lines.entries()) {
     if (fence !== null) {
       const closer = /^( {0,3})(`{3,}|~{3,})[ \t]*(.*)$/.exec(raw);
@@ -233,7 +274,11 @@ function executableView(content: string): { view: string; unreliable: string | n
         closer !== null &&
         closer[2]![0] === fence.char &&
         closer[2]!.length >= fence.length &&
-        closer[3]!.trim().length === 0
+        // A closing fence may be followed only by SPACES OR TABS. `.trim()` also
+        // removes a non-breaking space and every other Unicode blank, so a
+        // trailing NBSP closed a fence here and left it open in the renderer —
+        // recording a declaration written inside the code block.
+        /^\r?$/.test(closer[3]!)
       ) {
         fence = null;
       }
@@ -373,10 +418,20 @@ function executableView(content: string): { view: string; unreliable: string | n
   // no longer opens a span at all, so it cannot leave one dangling — and
   // refusing on it would have rejected four real artifacts in this repository
   // that render perfectly well.
-  const dangling =
-    fence !== null ? 'an unclosed code fence' : inComment ? 'an unclosed HTML comment' : null;
+  const dangling = UNICODE_SEPARATOR.test(content)
+    ? 'a U+2028 or U+2029 separator, which JavaScript treats as a line ending and CommonMark does not'
+    : fence !== null
+      ? 'an unclosed code fence'
+      : inComment
+        ? 'an unclosed HTML comment'
+        : null;
 
-  return { view: out.join('\n'), unreliable: dangling };
+  // The separator is MASKED in the view as well as refused above. The refusal
+  // only protects the PRD reader; the INDEX, the Changelog and Durable Artifacts
+  // read this same view through their own `/m` regexes, and a forged heading
+  // there would be just as invisible on the page. Masking makes them safe by
+  // construction rather than by the order the callers happen to run in.
+  return { view: out.join('\n').replace(UNICODE_SEPARATOR_G, COMMENT_MASK), unreliable: dangling };
 }
 
 /**
@@ -401,9 +456,12 @@ export function contractView(content: string): string {
 /** Why the document cannot be read reliably, or null when it can. */
 export function contractViewProblem(content: string): string | null {
   const { unreliable } = executableView(content);
-  return unreliable === null
-    ? null
-    : `the document ends with ${unreliable}, so its contract sections cannot be read reliably`;
+  if (unreliable === null) return null;
+  // "ends with" is true of the two dangling states and false of the separator,
+  // which may sit anywhere — a refusal that misdescribes what it saw sends the
+  // author to the wrong end of the file.
+  const verb = UNICODE_SEPARATOR.test(content) ? 'contains' : 'ends with';
+  return `the document ${verb} ${unreliable}, so its contract sections cannot be read reliably`;
 }
 
 /**
@@ -475,7 +533,13 @@ function unsupportedContainer(body: string): string | null {
     // Four spaces after a blank line opens an indented code block — but NOT
     // inside a list item, where that indentation is the item's own second
     // paragraph. Refusing it rejected an ordinary wrapped rationale.
-    if (previousBlank && !inBullet && /^ {4,}\S/.test(line)) return 'an indented code block';
+    // A leading TAB advances to the next four-column stop, so it opens one too.
+    // Only literal spaces were recognized, and a tab-indented bullet fell
+    // through to the useless "declares neither an entry nor a reasoned `none`"
+    // instead of naming the code block the author can see.
+    if (previousBlank && !inBullet && /^(?: {4,}|\t)[ \t]*\S/.test(line)) {
+      return 'an indented code block';
+    }
     // Containers this reader does not model. The narrowed grammar's whole point
     // is that a section holds bullets, their continuations, prose and blanks —
     // anything that nests content is refused rather than approximated.
@@ -502,6 +566,16 @@ function unsupportedContainer(body: string): string | null {
       !/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(line) &&
       !/^ {0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*\r?$/.test(line);
   }
+  // Raw INLINE HTML, anywhere in the section — not only in a rationale. The
+  // line-anchored block checks above miss `note <div hidden>` written mid-
+  // paragraph, and a renderer's HTML parser closes the `<p>` at that `<div>` and
+  // swallows the list that follows: the declaration below it is on the page's
+  // source and not on the page. Whether a tag displays what follows it is the
+  // DOM question the narrowed grammar exists not to answer, so the section is
+  // refused instead. Scanned over the whole body rather than line by line, so a
+  // code span that wraps is skipped as one span. Measured across this
+  // repository's real contract sections: none contains inline HTML.
+  if (rationaleHasRawHtml(body.replace(/<!--[\s\S]*?-->/g, ''))) return 'raw inline HTML';
   return null;
 }
 
@@ -554,6 +628,31 @@ function bulletBlocks(section: string): string[] {
  * and `<script>x</script>` display nothing), and inferring that is the guessing
  * the narrowed grammar exists to avoid.
  */
+/**
+ * CommonMark's inline raw HTML, all six shapes, anchored at the scan position.
+ *
+ * The previous test was "a `<` followed by a letter, slash, `!` or `?`, with a
+ * `>` somewhere after it", which refused text a renderer displays: a tag's
+ * whitespace may be spaces, tabs and newlines and nothing else, so
+ * a tag holding a vertical tab is literal text on the page and was reported as HTML. A
+ * refusal that names a construct the reader invented is the same defect as
+ * reading a declaration that is not there, pointed the other way.
+ */
+const INLINE_HTML = new RegExp(
+  '^(?:' +
+    // open tag
+    '<[a-zA-Z][a-zA-Z0-9-]*(?:[ \\t\\n]+[a-zA-Z_:][a-zA-Z0-9_.:-]*' +
+    '(?:[ \\t\\n]*=[ \\t\\n]*(?:"[^"]*"|\'[^\']*\'|[^ \\t\\n"\'=<>`]+))?)*[ \\t\\n]*/?>' +
+    // closing tag
+    '|</[a-zA-Z][a-zA-Z0-9-]*[ \\t\\n]*>' +
+    // comment, processing instruction, declaration, CDATA
+    '|<!-->|<!--->|<!--[\\s\\S]*?-->' +
+    '|<\\?[\\s\\S]*?\\?>' +
+    '|<![a-zA-Z][\\s\\S]*?>' +
+    '|<!\\[CDATA\\[[\\s\\S]*?\\]\\]>' +
+    ')',
+);
+
 function rationaleHasRawHtml(rationale: string | null): boolean {
   if (rationale === null) return false;
   const text = rationale.split(COMMENT_MASK).join('');
@@ -571,7 +670,7 @@ function rationaleHasRawHtml(rationale: string | null): boolean {
         i += 1;
         continue;
       }
-      if (/^<[a-zA-Z/!?]/.test(text.slice(i)) && tagEnd(text, i) !== -1) return true;
+      if (INLINE_HTML.test(text.slice(i))) return true;
     }
     i += 1;
   }
@@ -637,7 +736,53 @@ function visibleLength(rationale: string | null): number {
     visible += char;
     i += 1;
   }
-  return visible.trim().length;
+  // Zero-width and formatting characters occupy no space on the page, so a
+  // rationale made of them is not a rationale. `\s` matches none of them:
+  // `- none — &#8203;` decoded to U+200B, survived the trim, and satisfied the
+  // very check that exists to reject an unreasoned `none`. Literal ones pasted
+  // straight into the source did the same.
+  return visible.replace(INVISIBLE, '').trim().length;
+}
+
+/** Characters a renderer displays as nothing: the C0/C1 controls, the format
+ * characters (`\p{Cf}` — soft hyphen, zero-width space, joiners, bidi marks,
+ * BOM), and the two Unicode separators. */
+const INVISIBLE = /[\p{Cc}\p{Cf}\u00ad\u180e\u200b-\u200f\u2028\u2029\u2060-\u2064\ufeff]/gu;
+
+/**
+ * A named character reference the visible-length reader does not know, or null.
+ *
+ * Assuming an unknown name displays SOMETHING let `&Tab;` stand in for a
+ * rationale; assuming it displays NOTHING refuses `&AElig;`, which renders `Æ`.
+ * There is no third answer without shipping the entity table this package may
+ * not take a dependency on — so an unrecognized name is refused BY NAME, and the
+ * author writes the character. The known-invisible names stay invisible, because
+ * naming them is the point: they are the ones a forgery would reach for.
+ */
+function unknownNamedEntity(rationale: string | null): string | null {
+  if (rationale === null) return null;
+  const text = rationale.split(COMMENT_MASK).join('');
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '`') {
+      let run = 0;
+      while (text[i + run] === '`') run += 1;
+      const closer = text.indexOf('`'.repeat(run), i + run);
+      i = closer === -1 ? i + run : closer + run;
+      continue;
+    }
+    if (text[i] === '&') {
+      const named = /^&([a-zA-Z][a-zA-Z0-9]*);/.exec(text.slice(i));
+      if (named !== null) {
+        const name = named[1]!;
+        if (!VISIBLE_NAMED_ENTITIES.has(name) && !INVISIBLE_NAMED_ENTITIES.has(name)) return name;
+        i += named[0].length;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  return null;
 }
 
 /** Index just past the tag starting at `from`, scanning to an UNQUOTED `>`, or
@@ -671,16 +816,58 @@ function decodeEntity(body: string): string {
     // Out of range is not a character reference at all — a renderer displays
     // `&#99999999;` literally, and `fromCodePoint` would throw on it.
     if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return `&${body};`;
+    // A surrogate is not a character either \u2014 a renderer substitutes U+FFFD, and
+    // `fromCodePoint` accepts the code point but produces a lone surrogate.
+    if (code >= 0xd800 && code <= 0xdfff) return '\ufffd';
     const char = String.fromCodePoint(code);
-    return /\s|\u00a0/.test(char) ? ' ' : char;
+    // Whitespace AND the zero-width formatting characters: `&#8203;` decoded to
+    // something `\s` does not match, so it counted as a visible rationale.
+    return /\s|\u00a0/.test(char) || new RegExp(INVISIBLE.source, 'u').test(char) ? ' ' : char;
   }
-  // A NAMED entity is only counted as visible when it is known to be. HTML has
-  // hundreds, several of which are whitespace — `&Tab;`, `&NewLine;`,
-  // `&ZeroWidthSpace;` — and assuming an unknown name displays SOMETHING let a
-  // rationale made of one satisfy the check that exists to reject an unreasoned
-  // `none`. Unknown means invisible here: the conservative direction.
+  // A NAMED entity is visible only when it is known to be. HTML has hundreds,
+  // several of which are whitespace — `&Tab;`, `&NewLine;`, `&ZeroWidthSpace;` —
+  // and assuming an unknown name displays SOMETHING let a rationale made of one
+  // satisfy the check that exists to reject an unreasoned `none`. A name in
+  // NEITHER set never reaches here: `unknownNamedEntity` refuses it by name
+  // first, because counting `&AElig;` invisible would refuse a rationale that
+  // renders `Æ`, and this reader does not get to guess in either direction.
   return VISIBLE_NAMED_ENTITIES.has(body) ? 'x' : ' ';
 }
+
+/** Named references that render as nothing or as blank space. These are the
+ * names a forged rationale reaches for, so they are enumerated rather than left
+ * to the unknown-name refusal. */
+const INVISIBLE_NAMED_ENTITIES = new Set([
+  'Tab',
+  'NewLine',
+  'ZeroWidthSpace',
+  'NoBreak',
+  'NonBreakingSpace',
+  'nbsp',
+  'shy',
+  'ensp',
+  'emsp',
+  'emsp13',
+  'emsp14',
+  'numsp',
+  'puncsp',
+  'thinsp',
+  'hairsp',
+  'MediumSpace',
+  'ThickSpace',
+  'ThinSpace',
+  'VeryThinSpace',
+  'zwnj',
+  'zwj',
+  'lrm',
+  'rlm',
+  'ApplyFunction',
+  'af',
+  'InvisibleComma',
+  'ic',
+  'InvisibleTimes',
+  'it',
+]);
 
 /** Named entities common in this repository's prose that display a character.
  * Everything outside this set counts as invisible — see `decodeEntity`. */
@@ -762,7 +949,21 @@ function parseSection<T>(
   const { count, body } = contractSection(content, heading);
   const present = count > 0;
   const section: MemorySection<T> = { present, entries: [], none: false };
-  if (!present) return { section, issues };
+  if (!present) {
+    // A setext heading renders as the H2 the contract requires, and this reader
+    // matches only the ATX form. Reporting the section MISSING when the author
+    // can see it on the page is a refusal that names the wrong thing — so the
+    // shape is named instead. Measured: no artifact in this repository writes
+    // one, and the fix costs nothing it already contains.
+    const setext = new RegExp(`^ {0,3}${heading}[ \\t]*\\n {0,3}(?:=+|-+)[ \\t]*$`, 'm');
+    if (setext.test(rawContent)) {
+      issues.push(
+        `${heading}: written as a setext heading — write it as \`## ${heading}\`, which is ` +
+          `the one form this contract reads`,
+      );
+    }
+    return { section, issues };
+  }
   if (count > 1) {
     issues.push(`${heading}: declared ${count} times — exactly one section is parseable`);
     return { section, issues };
@@ -775,6 +976,11 @@ function parseSection<T>(
   // The container check reads the RAW section, because the scanner has already
   // blanked what it recognized — and "the section is empty" is a true but
   // useless message when the cause is an HTML block the author can see.
+  // When the raw document and the executable view disagree about how many
+  // headings there are — a `## Memory Outputs` written inside a fence or a
+  // comment — the container check has no single body to read and is skipped.
+  // That is the one path on which the per-rationale raw-HTML rule below is still
+  // load-bearing; everywhere else this check reaches the construct first.
   const raw = contractSection(rawContent, heading);
   const container = raw.count === 1 ? unsupportedContainer(raw.body) : null;
   if (container !== null) {
@@ -809,6 +1015,15 @@ function parseSection<T>(
         );
         continue;
       }
+      const unknownNone = unknownNamedEntity(parsed.rationale);
+      if (unknownNone !== null) {
+        issues.push(
+          `${heading}: \`none\` has a rationale containing the character reference ` +
+            `\`&${unknownNone};\` — write the character itself, this reader does not carry ` +
+            `the HTML entity table`,
+        );
+        continue;
+      }
       if (visibleLength(parsed.rationale) === 0) {
         issues.push(`${heading}: \`none\` requires a rationale after ' — '`);
       }
@@ -836,6 +1051,15 @@ function parseSection<T>(
       issues.push(
         `${heading}: '${parsed.value}' has a rationale containing raw HTML — whether a tag ` +
           `displays its contents is not something this reader decides`,
+      );
+      continue;
+    }
+    const unknown = unknownNamedEntity(parsed.rationale);
+    if (unknown !== null) {
+      issues.push(
+        `${heading}: '${parsed.value}' has a rationale containing the character reference ` +
+          `\`&${unknown};\` — write the character itself, this reader does not carry the HTML ` +
+          `entity table`,
       );
       continue;
     }
@@ -870,7 +1094,13 @@ function slugProblem(value: string): string | null {
 
 /** Parse both sections of a PRD. Absent headings are reported by `present`, not
  * as issues — whether they are required is the caller's configured question. */
-export function parseMemoryDeclarations(rawContent: string): MemoryDeclarations {
+export function parseMemoryDeclarations(input: string): MemoryDeclarations {
+  // ONE line model for the scanner and for every `/m` regex downstream. The raw
+  // content is normalized HERE and the normalized string is what the container
+  // check reads, because a `\r` the scanner ignored was still a line boundary to
+  // the heading matcher — two line models over one document is the same class of
+  // defect as two parsers over one input.
+  const rawContent = normalizeLineEndings(input);
   // Every contract read happens on the executable view of the document, so a
   // quoted example or a commented-out block can never stand in for the real
   // section — and an unreadable document is refused rather than guessed at.
