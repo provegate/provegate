@@ -163,7 +163,11 @@ export interface Queue {
 
 /** READY candidates whose declared Conflict Surfaces overlap — do not schedule
  * together. Best-effort: skips records whose PRD file cannot be read. */
-export function readyOverlaps(root: string, readyRecords: StateRecord[]): QueueOverlapWarning[] {
+export function readyOverlaps(
+  root: string,
+  readyRecords: StateRecord[],
+  config: { sharedAppendOnly: readonly string[] } = { sharedAppendOnly: [] },
+): QueueOverlapWarning[] {
   const surfaces = readyRecords
     .map((record) => {
       try {
@@ -184,7 +188,14 @@ export function readyOverlaps(root: string, readyRecords: StateRecord[]): QueueO
       // refused at `gate open` — so the queue said "schedule these together" and
       // the very next command said otherwise.
       const exact = surfaces[i]!.paths.filter((path) => surfaces[j]!.paths.includes(path));
-      const structural = structuralOverlap(surfaces[i]!.paths, surfaces[j]!.paths);
+      // With the CONFIGURED shared set. Calling `structuralOverlap` without it
+      // warned about pairs the lock engine deliberately allows — a queue that
+      // contradicts the command it is advising about.
+      const structural = structuralOverlap(
+        surfaces[i]!.paths,
+        surfaces[j]!.paths,
+        new Set(config.sharedAppendOnly),
+      );
       const shared = [...new Set([...exact, ...structural])];
       if (shared.length > 0) {
         warnings.push({ a: surfaces[i]!.prd, b: surfaces[j]!.prd, shared });
@@ -241,7 +252,7 @@ export function buildQueue(
   return {
     generatedAt,
     ready,
-    readyOverlaps: readyOverlaps(root, readyRecords),
+    readyOverlaps: readyOverlaps(root, readyRecords, config),
     inFlight,
     blocked,
     inReview,

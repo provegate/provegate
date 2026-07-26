@@ -1890,6 +1890,26 @@ describe('phase 6 round 23 — the enforcement machinery, one step over', () => 
     );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('real calendar date');
+
+    // The OTHER half of this test's name, which it did not exercise: an
+    // unescaped prefix is a regex, so `P.D` matched `PXD-001` and a store entry
+    // naming a work item that does not exist read as a decision about one that
+    // does.
+    const dotted = { ...memOn, idPattern: { ...memOn.idPattern, prefix: 'P.D' } };
+    const forged = gitRepo({
+      '_prds/wip/p.md': baseline,
+      '_state/acceptances.json': JSON.stringify({
+        schemaVersion: 1,
+        acceptances: [{ ...GOOD_ENTRY, prd: 'PXD-002' }],
+      }),
+      ...STORE(),
+    });
+    const escaped = gate(
+      chainFor({ root: forged, prdContent: approved, changedFiles: CHANGED, config: dotted }),
+      'no weakening',
+    );
+    expect(escaped.ok).toBe(false);
+    expect(escaped.why).toContain('is not a work-item id');
   });
 
   it('[R23-14] a SUPERSEDED base record does not rescue a disposition', () => {

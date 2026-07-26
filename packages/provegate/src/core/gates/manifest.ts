@@ -159,6 +159,13 @@ export function validateManifest(config: WorkflowConfig, value: unknown): Manife
             return;
           }
           const when = rule['when'];
+          if (isPlainObject(when)) {
+            for (const key of Object.keys(when)) {
+              if (key !== 'diffMatches') {
+                issues.push({ path: `classDefaults.${cls}[${i}].when.${key}`, message: 'unknown key' });
+              }
+            }
+          }
           if (when !== undefined) {
             if (!isPlainObject(when) || !isNonEmptyCommandArray(when['diffMatches'])) {
               issues.push({

@@ -96,8 +96,10 @@ export function countTaskChecks(content: string): { checkedCount: number; unchec
   // is an illustration, and counting it recorded an unchecked task that no one
   // had to do — the queue then reported the work item resumable forever.
   const executable = executableTextOf(content);
-  const checkedCount = (executable.match(/^\s*-\s*\[[xX]\]/gm) ?? []).length;
-  const uncheckedCount = (executable.match(/^\s*-\s*\[\s\]/gm) ?? []).length;
+  // `*` and `+` are task-list markers too, and a plan written with them
+  // reported zero tasks — no progress, and no work item ever resumable.
+  const checkedCount = (executable.match(/^\s*[-*+]\s*\[[xX]\]/gm) ?? []).length;
+  const uncheckedCount = (executable.match(/^\s*[-*+]\s*\[\s\]/gm) ?? []).length;
   return { checkedCount, uncheckedCount };
 }
 
@@ -136,13 +138,21 @@ export function countOperatorHandoff(content: string): number {
 
 function operatorRowsIn(section: string): number {
   if (!section) return 0;
-  const lines = section.split('\n');
+  const lines = section.split('\n').map((line) => line.trim());
   const tableRows = lines
-    .filter((line) => line.trim().startsWith('|'))
-    .filter((line) => !/^\|\s*-+/.test(line))
+    .filter((line) => line.startsWith('|'))
+    // A SEPARATOR in any of its spellings. `^\|\s*-+` missed the aligned forms
+    // `| :--- |` and `| ---: |`, so a table with a header and no data rows
+    // counted one row and demanded an acceptance nobody owed. Indentation
+    // defeated this filter and the header filter together, which is why the
+    // lines are trimmed above.
+    .filter((line) => !/^\|[\s:|-]*$/.test(line))
     .filter((line) => !/^\|\s*Task\s*\|/i.test(line))
     .filter((line) => line.split('|').some((cell) => cell.trim().length > 0)).length;
-  const checkboxRows = lines.filter((line) => /^\s*-\s*\[[ xX]\]/.test(line)).length;
+  // `*` and `+` open a task list exactly as `-` does. Recognizing only `-` let
+  // `* [ ] owner approves` read as zero operator rows, and the merge gate passed
+  // without the acceptance that row exists to require.
+  const checkboxRows = lines.filter((line) => /^[-*+]\s*\[[ xX]\]/.test(line)).length;
   return tableRows + checkboxRows;
 }
 
@@ -223,10 +233,14 @@ export function declaredGlobs(content: string): string[] {
     .join('\n')
     .split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;
-    if (/\bnone\b/i.test(line) && !line.includes('`')) continue;
+    if (/^\s*-\s+none\b/i.test(line)) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
-      if (!value.includes('/')) continue;
+      // A ROOT-LEVEL claim is a claim. Requiring a `/` discarded
+      // `workflow.config.json` and `gates.manifest.json` — the entries this
+      // repository's own PRDs use — so two agents could claim the same control
+      // file and no conflict was detected.
+      if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
       if (/\bnone\b/i.test(value)) continue;
       globs.push(value);

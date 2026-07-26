@@ -171,20 +171,29 @@ describe('writeTableValue', () => {
 });
 
 describe('declaredGlobs', () => {
-  it('extracts backticked path globs, dropping none/template tokens/non-paths', () => {
+  it('extracts backticked globs, dropping none and template tokens', () => {
     const content = [
       '## Conflict Surface',
       '',
       '- `packages/provegate/src/**`',
       '- `path/to/{placeholder}/x`',
-      '- `not-a-path`',
+      '- `workflow.config.json`',
       '- none',
       '- `none`',
       '- `packages/provegate/src/**`',
       '',
       '## Next',
     ].join('\n');
-    expect(declaredGlobs(content)).toEqual(['packages/provegate/src/**']);
+    // A ROOT-LEVEL entry is a claim. This used to require a `/`, which silently
+    // discarded `workflow.config.json` and `gates.manifest.json` — the entries
+    // this repository's own PRDs write — so two agents could claim the same
+    // control file with no conflict reported. Template tokens and `none` are
+    // still excluded; a backticked token in a real bullet is taken at its word,
+    // and over-claiming only ever detects MORE conflicts.
+    expect(declaredGlobs(content)).toEqual([
+      'packages/provegate/src/**',
+      'workflow.config.json',
+    ]);
   });
 
   it('returns empty when the section is missing', () => {

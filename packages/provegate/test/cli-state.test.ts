@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -174,6 +174,25 @@ describe('phase 6 round 23 — a misspelled option must never mutate', () => {
       (e: { code?: number; stderr?: string }) => ({ code: e.code ?? -1, stderr: e.stderr ?? '' }),
     );
 
+  /** Every file under `root`, with its bytes — so the test can assert that a
+   * refusal changed nothing, which is the property its name claims. */
+  const snapshot = (dir: string): Record<string, string> => {
+    const out: Record<string, string> = {};
+    const walk = (current: string): void => {
+      for (const entry of readdirSync(current, { withFileTypes: true })) {
+        const full = join(current, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === '.git') continue;
+          walk(full);
+        } else {
+          out[full] = readFileSync(full, 'utf8');
+        }
+      }
+    };
+    walk(dir);
+    return out;
+  };
+
   it('refuses an unknown option on every mutating command', async () => {
     // `gate run PRD-018 --dry-rnu` ran the live archive-and-merge, because
     // unknown flags were ignored. A misspelled SAFETY flag must never be the
@@ -185,10 +204,18 @@ describe('phase 6 round 23 — a misspelled option must never mutate', () => {
       ['new', 'thing', '--clas=infra'],
       ['renew', 'PRD-001', '--hrs=2'],
       ['release', 'PRD-001', '--forc'],
+      // `status` WRITES the state file, and the first pass at this rule missed
+      // it because its name sounds read-only.
+      ['status', '--dry-rnu'],
     ]) {
+      // The property this test is NAMED for: nothing on disk changed. Exit code
+      // and stderr alone were satisfied by an implementation that mutates and
+      // then prints the right refusal.
+      const before = snapshot(root);
       const result = await attempt(args);
       expect(result.code, args.join(' ')).toBe(1);
       expect(result.stderr, args.join(' ')).toContain('unknown option');
+      expect(snapshot(root), args.join(' ')).toEqual(before);
     }
   });
 
@@ -201,9 +228,11 @@ describe('phase 6 round 23 — a misspelled option must never mutate', () => {
       ['run', 'PRD-001', '--dry-run=false'],
       ['init', '--practices=yes'],
     ]) {
+      const before = snapshot(root);
       const result = await attempt(args);
       expect(result.code, args.join(' ')).toBe(1);
       expect(result.stderr, args.join(' ')).toContain('unknown option');
+      expect(snapshot(root), args.join(' ')).toEqual(before);
     }
   });
 });

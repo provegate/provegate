@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from 'node:child_process';
-import { lstatSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CONFIG_FILENAME, DEFAULT_CONFIG } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
@@ -175,7 +175,9 @@ function capturedDiffFiles(root: string, base: string): { captured: string[]; to
  * when its config will not parse, because an unreadable base policy must not
  * read as a weaker one.
  */
-function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
+function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig & {
+  malformed?: boolean;
+} {
   const raw = blobAt(root, config.branches.base, CONFIG_FILENAME);
   // No base config at all is first adoption: there is no earlier policy to
   // enforce, so the working one stands.
@@ -188,7 +190,7 @@ function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
     // gate went unbuilt — the unreadable-config path fails closed and this one
     // walked around it.
     if (parsed.memory === null || typeof parsed.memory !== 'object' || Array.isArray(parsed.memory)) {
-      return { ...DEFAULT_CONFIG.memory, enabled: true };
+      return { ...DEFAULT_CONFIG.memory, enabled: true, malformed: true };
     }
     // Missing base fields fall back to the DEFAULTS, never to the branch. A real
     // config is sparse — `{memory:{enabled:true,entrypoints:[…]}}` names no
@@ -200,7 +202,7 @@ function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig {
     // An unreadable base policy is not a weaker one. Falling back to the working
     // config let a branch pair `enabled: false` with a corrupted base file and
     // build no memory gates at all.
-    return { ...DEFAULT_CONFIG.memory, enabled: true };
+    return { ...DEFAULT_CONFIG.memory, enabled: true, malformed: true };
   }
 }
 
@@ -240,6 +242,56 @@ function baselinePrd(root: string, base: string, prdPath: string): string | null
  * send the first non-worktree close hunting for a bug instead of committing a
  * file.
  */
+/**
+ * What a validator command IS, rather than how it is spelled.
+ *
+ * `pnpm verify:brain` and `pnpm run verify:brain` invoke the same package script,
+ * and exact-string comparison called the second one a removal of the first —
+ * refusing a close that changed nothing. Manager flags are dropped for the same
+ * reason `packageScriptOf` drops them.
+ */
+function validatorIdentity(command: string): string {
+  const parts = command.trim().split(/\s+/);
+  if (parts.length === 0) return command.trim();
+  const manager = parts[0] ?? '';
+  if (!['pnpm', 'npm', 'yarn', 'bun'].includes(manager)) return command.trim();
+  const rest = parts.slice(1).filter((part) => !part.startsWith('-'));
+  if (rest[0] === 'run') rest.shift();
+  return rest.length === 0 ? command.trim() : `${manager}:${rest.join(' ')}`;
+}
+
+/**
+ * Does the working copy of `path` differ from HEAD, as GIT sees it?
+ *
+ * Raw byte equality called a clean checkout dirty: with `core.autocrlf` or any
+ * other clean filter the working file legitimately differs from the blob, and
+ * git reports no change. Refusing an acceptance that IS committed, because its
+ * line endings were translated on checkout, is a gate rejecting correct work.
+ * An untracked path differs from HEAD by definition, which is the answer wanted.
+ */
+function differsFromHead(root: string, path: string): boolean {
+  try {
+    execFileSync('git', ['diff', '--quiet', 'HEAD', '--', path], {
+      cwd: root,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+  } catch {
+    return true;
+  }
+  // `--quiet` exits 0 for "no difference", but an UNTRACKED file is not a
+  // difference to that command — it has to be asked about separately.
+  try {
+    const tracked = execFileSync('git', ['ls-files', '--error-unmatch', '--', path], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return tracked.trim().length === 0;
+  } catch {
+    return true;
+  }
+}
+
 function memoryWeakeningGate(options: {
   config: WorkflowConfig;
   root: string;
@@ -328,14 +380,14 @@ function memoryWeakeningGate(options: {
   // closed this for the Changelog approval and left the acceptance — the other
   // half of the same waiver — reading the working tree.
   const acceptanceRel = acceptancesRelativePath(config);
-  const committedAcceptance = blobAt(root, 'HEAD', acceptanceRel);
-  let workingAcceptance: string | null;
-  try {
-    workingAcceptance = readFileSync(resolve(root, acceptanceRel), 'utf8');
-  } catch {
-    workingAcceptance = null;
-  }
-  if (workingAcceptance !== committedAcceptance) {
+  // An acceptance file that exists NOWHERE is simply absent, and the checks
+  // below say so in the words an author can act on. This one answers a
+  // different question — "is the evidence the one that will land" — and asking
+  // it of a file nobody has written yet produced a confusing refusal about
+  // committing something that does not exist.
+  const acceptanceExists =
+    existsSync(resolve(root, acceptanceRel)) || blobAt(root, 'HEAD', acceptanceRel) !== null;
+  if (acceptanceExists && differsFromHead(root, acceptanceRel)) {
     return {
       ok: false,
       why:
@@ -454,7 +506,8 @@ export function buildGateChain(options: {
   // memory gate built at all — the contract disabled by the very merge it was
   // meant to govern. Turning it OFF is a policy change, and a policy change is
   // judged under the policy in force.
-  const memoryInForce = config.memory.enabled || baseMemoryConfig(root, config).enabled;
+  const basePolicy = baseMemoryConfig(root, config);
+  const memoryInForce = config.memory.enabled || basePolicy.enabled;
   if (memoryInForce && !config.memory.enabled) {
     chain.push({
       phase: '7 Learning',
@@ -462,10 +515,14 @@ export function buildGateChain(options: {
       label: `memory: disabling the contract needs an owner acceptance`,
       fn: () => ({
         ok: false,
-        why:
-          `\`memory.enabled\` is true on \`${config.branches.base}\` and false here — this merge ` +
-          `would disable the memory contract for the repository. That is a policy change, not a ` +
-          `close: revert it, or land it as its own owner-accepted work item`,
+        why: basePolicy.malformed === true
+          ? `\`${config.branches.base}\` has a malformed \`memory\` block in ` +
+            `${CONFIG_FILENAME}, so the policy in force there cannot be read — and an ` +
+            `unreadable policy is not permission to run without one. Repair the base ` +
+            `configuration, then close`
+          : `\`memory.enabled\` is true on \`${config.branches.base}\` and false here — this ` +
+            `merge would disable the memory contract for the repository. That is a policy ` +
+            `change, not a close: revert it, or land it as its own owner-accepted work item`,
       }),
     });
   }
@@ -556,17 +613,18 @@ export function buildGateChain(options: {
     }
     const baseVerify = baseMemoryConfig(root, config).verifyCommand.trim();
     const baseValidators = new Set(
-      [...basePhase7, ...(baseVerify.length > 0 ? [baseVerify] : [])].map((c) => c.trim()),
+      [...basePhase7, ...(baseVerify.length > 0 ? [baseVerify] : [])].map(validatorIdentity),
     );
     const branchValidators = new Set(
       [...phase7Cmds, config.memory.verifyCommand]
         .map((c) => c.trim())
-        .filter((c) => c.length > 0),
+        .filter((c) => c.length > 0)
+        .map(validatorIdentity),
     );
     // IDENTITY, not headcount. Comparing "is either side non-empty" let a branch
     // swap `pnpm verify:brain` for `pnpm lint` and keep the gate quiet: the
     // store validator was gone and something else stood where it had been.
-    const dropped = [...baseValidators].filter((cmd) => !branchValidators.has(cmd));
+    const dropped = [...baseValidators].filter((id) => !branchValidators.has(id));
     if (dropped.length > 0) {
       chain.push({
         phase: '7 Learning',

@@ -61,7 +61,7 @@ export function trackedFiles(cwd: string): string[] {
 }
 
 function materialize(config: WorkflowConfig, globs: string[], files: string[]): Set<string> {
-  const shared = new Set(config.sharedAppendOnly);
+  const shared = new Set(config.sharedAppendOnly.map(canonicalGlob));
   const regexes = globs.map(globToRegExp);
   const out = new Set<string>();
   for (const file of files) {
@@ -133,7 +133,14 @@ export function findConflicts(
       // every future path under `src/new/`. The conflict is in the claims, and
       // whether some sibling pattern happens to match a tracked file today says
       // nothing about it.
-      const structural = structuralOverlap(a.globs, b.globs, new Set(config.sharedAppendOnly));
+      // The shared set is canonicalized too — comparing canonical globs against raw
+      // spellings made an append-only file exempt under one spelling and exclusive
+      // under another.
+      const structural = structuralOverlap(
+        a.globs,
+        b.globs,
+        new Set(config.sharedAppendOnly.map(canonicalGlob)),
+      );
       if (shared.length > 0 || structural.length > 0) {
         conflicts.push({
           a: a.lock.prd,

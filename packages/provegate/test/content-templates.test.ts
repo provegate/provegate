@@ -3,10 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { DEFAULT_CONFIG, validateResolvedConfig } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
+import { validateRecord } from '../src/core/memory/parse.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
-import { countOperatorHandoff, countTaskChecks } from '../src/core/state/markdown.js';
+import {
+  countOperatorHandoff,
+  countTaskChecks,
+  declaredGlobs,
+} from '../src/core/state/markdown.js';
 import { validateReviewArtifact, validateTasksReviewRow } from '../src/core/gates/review.js';
 import { parseVerificationCommands } from '../src/core/gates/safety.js';
 import {
@@ -1953,9 +1958,11 @@ describe('phase 6 round 22 — the shared section reader', () => {
   });
 
   it('[R22-6] an extensionless root artifact is still an artifact', () => {
-    // Lowercase entries are the point: the first fix used a leading capital as
-    // the discriminator, so this fixture's own data would have hidden it.
-    for (const name of ['LICENSE', 'Makefile', 'CODEOWNERS', 'justfile', 'dockerfile', 'license']) {
+    // Names NOT in any allowlist the implementation ever held. Two rounds of
+    // fixtures restated the discriminator under test — an extension, then a
+    // leading capital, then a named set — and so could not catch the next file
+    // the rule forgot.
+    for (const name of ['BUILD', 'WORKSPACE', 'Pipfile', 'Taskfile', 'justfile', 'LICENSE']) {
       const doc = `## Durable Artifacts\n\n- \`${name}\` — the file\n`;
       expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
     }
@@ -1983,7 +1990,7 @@ describe('phase 6 round 23 — the adjacent case, again', () => {
   });
 
   it('[R23-10] an extensionless root artifact is kept whatever its case', () => {
-    for (const name of ['justfile', 'dockerfile', 'license', 'LICENSE', 'Makefile']) {
+    for (const name of ['justfile', 'dockerfile', 'license', 'BUILD', 'Taskfile', 'Makefile']) {
       const doc = `## Durable Artifacts\n\n- \`${name}\` — the file\n`;
       expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
     }
@@ -2005,5 +2012,114 @@ describe('phase 6 round 23 — the adjacent case, again', () => {
       '',
     ].join('\n');
     expect(countTaskChecks(doc)).toEqual({ checkedCount: 1, uncheckedCount: 0 });
+  });
+});
+
+describe('phase 6 round 24 — the overshoots, and what they were hiding', () => {
+  it('[R24-1] `*` and `+` operator rows arm the owner gate', () => {
+    // Only `-` was recognized, so `* [ ] owner approves` read as zero rows and
+    // the merge gate passed with no acceptance.
+    for (const marker of ['-', '*', '+']) {
+      const doc = ['## Operator Handoff', '', `${marker} [ ] 9.1 owner approves`, ''].join('\n');
+      expect(countOperatorHandoff(doc), marker).toBe(1);
+    }
+    // And the same markers count as tasks.
+    for (const marker of ['-', '*', '+']) {
+      const doc = [`${marker} [x] done`, `${marker} [ ] not done`].join('\n');
+      expect(countTaskChecks(doc), marker).toEqual({ checkedCount: 1, uncheckedCount: 1 });
+    }
+  });
+
+  it('[R24-14] an aligned or indented table separator is not an operator row', () => {
+    // A header plus separator and no data rows demanded an acceptance nobody
+    // owed, because `^\\|\\s*-+` misses `| :--- |` and indentation defeated both
+    // the separator and header filters.
+    for (const separator of ['| --- | --- |', '| :--- | ---: |', '  | :-: | :-: |']) {
+      const doc = ['## Operator Handoff', '', '| Task | Owner |', separator, ''].join('\n');
+      expect(countOperatorHandoff(doc), separator).toBe(0);
+    }
+    // A real data row still counts, indented or not.
+    const withRow = [
+      '## Operator Handoff',
+      '',
+      '  | Task | Owner |',
+      '  | :--- | :---- |',
+      '  | 1.1 | owner |',
+      '',
+    ].join('\n');
+    expect(countOperatorHandoff(withRow)).toBe(1);
+  });
+
+  it('[R24-2] a root-level Conflict Surface entry is a claim', () => {
+    const doc = [
+      '## Conflict Surface',
+      '',
+      '- `workflow.config.json`',
+      '- `gates.manifest.json`',
+      '',
+    ].join('\n');
+    expect(declaredGlobs(doc)).toEqual(['workflow.config.json', 'gates.manifest.json']);
+  });
+
+  it('[R24-7] a `none` bullet declares nothing, whatever it quotes', () => {
+    // `- none — revisit in a `follow-up`` declared an artifact named
+    // "follow-up" and refused every close until a file by that name changed.
+    expect(
+      declaredArtifactsStrict('## Durable Artifacts\n\n- none — revisit in a `follow-up`\n').paths,
+    ).toEqual([]);
+    // And a real bullet's backticked token is taken at its word, allowlist or
+    // no allowlist.
+    for (const name of ['BUILD', 'WORKSPACE', 'Taskfile', '_brain/learnings/x.md']) {
+      const doc = `## Durable Artifacts\n\n- \`${name}\` — the artifact\n`;
+      expect(declaredArtifactsStrict(doc).paths, name).toEqual([name]);
+    }
+  });
+
+  it('[R24-13] a code span does not reach across a blank line', () => {
+    // Two literal backticks in different paragraphs were paired and everything
+    // between them deleted — including the real `**Why:**` section, so a valid
+    // record was refused for a marker it contains.
+    const body = [
+      'The token ` is discussed here.',
+      '',
+      '**Why:** this constraint matters.',
+      '',
+      'Another literal ` appears later.',
+      '',
+      '**How to apply:** follow the constraint.',
+      '',
+    ].join('\n');
+    const doc = [
+      '---',
+      'name: r',
+      'description: d',
+      'type: convention',
+      'scope: workflow',
+      'status: active',
+      '---',
+      body,
+    ].join('\n');
+    expect(validateRecord(doc, 'learnings/r.md', 'r').issues).toEqual([]);
+  });
+
+  it('[R24-6] a namespace-qualified symbol still resolves to its file', () => {
+    expect(watchMatches(['src/parser.ts'], ['src/parser.ts::Parser::parse'])).toEqual([
+      'src/parser.ts',
+    ]);
+    // The earlier rules, both still honoured.
+    expect(watchMatches(['packages/x/**'], ['packages/x/a.ts::doThing'])).toEqual([
+      'packages/x/a.ts',
+    ]);
+    expect(watchMatches(['src/a::b.ts'], ['src/a::b.ts'])).toEqual(['src/a::b.ts']);
+  });
+
+  it('[R24-5] a legitimate filename starting with a tilde is not home-relative', () => {
+    // `~/` is a shell convention Node's path APIs never expand; `~state.json`
+    // is an ordinary filename, and refusing it rejected a legal configuration.
+    const withStateFile = (stateFile: string): unknown[] =>
+      validateResolvedConfig({ ...DEFAULT_CONFIG, dirs: { ...DEFAULT_CONFIG.dirs, stateFile } });
+    expect(withStateFile('~state.json')).toEqual([]);
+    expect(withStateFile('~/state.json')).not.toEqual([]);
+    expect(withStateFile('../outside/state.json')).not.toEqual([]);
   });
 });

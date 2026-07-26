@@ -370,7 +370,15 @@ function paintReadiness(cell: string, tier: ReturnType<typeof colorTier>): strin
     .replace('REJECT', paint('red', 'REJECT', tier));
 }
 
-function runStatus(): number {
+function runStatus(args: string[]): number {
+  // `status` WRITES `_state/prds.json`, so it is a mutating command and belongs
+  // under the same rule as the rest. The first pass at this change listed the
+  // obviously-mutating verbs and missed the one whose name sounds read-only.
+  const unknown = unknownOption(args, ['--json']);
+  if (unknown !== null) {
+    console.error(`[status] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    return 1;
+  }
   const { root, config } = loadConfig();
   const state = buildState(config, root);
   const path = writeState(config, root, state);
@@ -1025,7 +1033,7 @@ export function main(argv: string[]): number {
     if (command === 'open') return runOpen(rest);
     if (command === 'renew') return runRenew(rest);
     if (command === 'release') return runRelease(rest);
-    if (command === 'status') return runStatus();
+    if (command === 'status') return runStatus(rest);
     if (command === 'queue') return runQueue(rest.includes('--json'));
     if (command === 'check') return runCheck(rest);
     if (command === 'run') return runRun(rest);

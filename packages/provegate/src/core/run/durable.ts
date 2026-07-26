@@ -46,34 +46,16 @@ export function declaredArtifactsStrict(content: string): StrictArtifacts {
   return { paths: artifactPaths(body), ambiguous: false };
 }
 
-/** Extensionless files that live at a repository root by convention. Named
- * exactly, because the alternative is guessing which bare words are paths. */
-const ROOT_FILENAMES = new Set([
-  'license',
-  'licence',
-  'notice',
-  'copying',
-  'authors',
-  'contributors',
-  'codeowners',
-  'makefile',
-  'justfile',
-  'dockerfile',
-  'procfile',
-  'rakefile',
-  'gemfile',
-  'brewfile',
-  'vagrantfile',
-  'jenkinsfile',
-  'readme',
-  'changelog',
-]);
 
 function artifactPaths(section: string): string[] {
   const paths: string[] = [];
   for (const line of section.split('\n')) {
     if (!/^\s*-\s+\S/.test(line)) continue;
-    if (/\bnone\b/i.test(line) && !line.includes('`')) continue;
+    // A bullet that OPENS with `none` declares nothing, whatever it quotes
+    // later. The old rule only skipped it when the line held no backticks, so
+    // `- none — revisit in a \`follow-up\`` declared an artifact named
+    // "follow-up" and refused every close until a file by that name changed.
+    if (/^\s*-\s+none\b/i.test(line)) continue;
     for (const match of line.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
       // A ROOT-LEVEL artifact is still an artifact. Requiring a `/` silently
@@ -87,24 +69,13 @@ function artifactPaths(section: string): string[] {
       // `- none — \`nothing\` durable here` declared an artifact called
       // "nothing". A leading capital is what separates the two: repository root
       // files are spelled that way and prose in these bullets is not.
-      // A `/`-less token is a root file when it LOOKS like a filename rather than
-      // like prose. Capitalization was the wrong discriminator in both
-      // directions: `justfile`, `dockerfile` and a lowercase `license` are real
-      // root files and were dropped, while nothing stops prose from starting
-      // with a capital. What separates them is that a path has no spaces and is
-      // not an English word this section uses — so the test is shape, and the
-      // `none` filters below remove the one word that reaches here.
-      if (!value.includes('/') && !/^[A-Za-z0-9._-]+$/.test(value)) continue;
-      // A bare lowercase word with no separator and no extension is prose, not a
-      // path — except for the small set of extensionless root files, which are
-      // named exactly and by convention.
-      if (
-        !value.includes('/') &&
-        !/[.\-_]/.test(value) &&
-        !ROOT_FILENAMES.has(value.toLowerCase())
-      ) {
-        continue;
-      }
+      // Inside a REAL declaration bullet, a backticked token is the artifact the
+      // author named. Guessing which bare words are paths cost two rounds: an
+      // extension test dropped `LICENSE`, a leading capital dropped `justfile`,
+      // and a named allowlist dropped `BUILD` and `WORKSPACE` while admitting
+      // prose. The `none` bullet is filtered above, which is the only place
+      // prose appears in this section, so shape is all that is left to check.
+      if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
       if (/\bnone\b/i.test(value)) continue;
       paths.push(value);

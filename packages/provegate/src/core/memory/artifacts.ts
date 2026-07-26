@@ -723,6 +723,33 @@ export function canonicalPath(path: string): string {
  * not a staleness verdict — the caller requires an input disposition naming the
  * record, never an edit to the record.
  */
+/**
+ * Every path a target could name, most specific first.
+ *
+ * `::` is a symbol selector by convention and a legal filename character by
+ * rule, and symbols nest: `src/parser.ts::Parser::parse`. Splitting at the first
+ * `::` truncated real filenames; splitting at the last one truncated nested
+ * symbols to `src/parser.ts::Parser`. Neither single rule is right, so every
+ * prefix at a `::` boundary is offered, plus the whole literal — the first that
+ * a watch matches wins, and a target with no `::` yields exactly one candidate.
+ */
+function targetCandidates(target: string): string[] {
+  const trimmed = target.trim();
+  // SHORTEST first, whole literal last. When a glob matches more than one
+  // candidate — `packages/x/**` matches `packages/x/a.ts` and
+  // `packages/x/a.ts::doThing` alike — the reported path must be the file, not
+  // the selector, which is the path a maintainer wrote the watch against. The
+  // literal is the fallback that rescues a real filename containing `::`.
+  const candidates: string[] = [];
+  let idx = trimmed.indexOf('::');
+  while (idx > 0) {
+    candidates.push(canonicalPath(trimmed.slice(0, idx)));
+    idx = trimmed.indexOf('::', idx + 2);
+  }
+  candidates.push(canonicalPath(trimmed));
+  return [...new Set(candidates.filter((c) => c.length > 0))];
+}
+
 export function watchMatches(watch: readonly string[], targets: readonly string[]): string[] {
   // Both sides are canonicalized, never one: normalizing the target alone still
   // left a backslash-spelled GLOB compiling to a literal that matches nothing.
@@ -736,7 +763,7 @@ export function watchMatches(watch: readonly string[], targets: readonly string[
     // `src/a`. Stripped-first keeps the reported path the one a maintainer
     // wrote the watch against; the literal is the fallback that rescues a real
     // filename, and a target with no `::` produces the same string twice.
-    for (const candidate of [normalizeTarget(target), canonicalPath(target.trim())]) {
+    for (const candidate of targetCandidates(target)) {
       if (candidate.length === 0) continue;
       if (!regexes.some((re) => re.test(candidate))) continue;
       matched.push(candidate);

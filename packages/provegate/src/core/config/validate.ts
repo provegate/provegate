@@ -269,7 +269,12 @@ export function validateResolvedConfig(config: {
  */
 function unsafeRelPath(value: string): string | null {
   if (value.length === 0) return 'must not be empty';
-  if (value.startsWith('~')) return 'must not start with ~ (home-relative)';
+  // `~/` is home-relative; `~state.json` is an ordinary filename these Node
+  // APIs never expand. Refusing every leading tilde rejected a legal
+  // configuration for a shell convention that does not apply here.
+  if (value === '~' || value.startsWith('~/') || value.startsWith('~\\')) {
+    return 'must not start with ~/ (home-relative)';
+  }
   // `C:foo` is drive-RELATIVE: it resolves against that drive's working
   // directory, not against this repository, so the slash is not what makes a
   // drive path dangerous.

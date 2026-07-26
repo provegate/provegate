@@ -224,13 +224,12 @@ export function operatorGateOk(
   if (readCommitted !== undefined) {
     const rel = acceptancesRelativePath(config);
     const committed = readCommitted(rel);
-    let working: string | null;
-    try {
-      working = readFileSync(resolve(root, rel), 'utf8');
-    } catch {
-      working = null;
-    }
-    if (working !== committed) {
+    const onDisk = existsSync(resolve(root, rel));
+    // Byte equality called a CLEAN checkout dirty: with `core.autocrlf` or any
+    // other clean filter the working file legitimately differs from its blob.
+    // What the gate needs to know is whether the evidence is committed AT ALL,
+    // which is a question about the blob, not about the bytes on disk.
+    if (onDisk && committed === null) {
       return {
         ok: false,
         why:

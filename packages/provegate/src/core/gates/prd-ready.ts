@@ -210,6 +210,14 @@ export function lintPrd(
     if (!fires) continue;
     // The EXECUTABLE document: a required evidence line written only inside a
     // fence or an HTML comment renders as an example, and satisfied the cap.
+    // Fenced blocks and comments are masked; INLINE code is not, deliberately.
+    // Round 24 proposed masking spans too, because prose quoting the required
+    // form can satisfy the cap it is describing. That fix refuses correct work:
+    // a real cap's evidence line IS written with its command in backticks
+    // (`Deny test: \`pnpm test test/deny.ts\``), and masking spans rejects every
+    // one of them. There is no syntactic difference between evidence and a
+    // sentence about evidence at this level, so the reader takes the document at
+    // its word and only the unambiguous cases — fence, comment — are excluded.
     if (!new RegExp(cap.requireLine, 'm').test(contractView(content))) {
       issues.push(`hard cap ${cap.id}: ${cap.message}`);
     }

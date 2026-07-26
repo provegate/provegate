@@ -305,6 +305,17 @@ export interface ValidateOptions {
  * grammar's own span reader already uses.
  */
 function stripCodeSpans(text: string): string {
+  // Per PARAGRAPH: a code span cannot cross a blank line. Scanning the whole
+  // body paired two literal backticks written in different paragraphs and
+  // deleted everything between them — including a real `**Why:**` section, which
+  // is a valid record refused for a marker it does contain.
+  return text
+    .split(/\n[ \t]*\n/)
+    .map(stripSpansInParagraph)
+    .join('\n\n');
+}
+
+function stripSpansInParagraph(text: string): string {
   let out = '';
   let i = 0;
   while (i < text.length) {
@@ -315,7 +326,7 @@ function stripCodeSpans(text: string): string {
     }
     let run = 0;
     while (text[i + run] === '`') run += 1;
-    const closer = text.indexOf('`'.repeat(run), i + run);
+    const closer = exactRunAt(text, i + run, run);
     if (closer === -1) {
       // Unmatched: the delimiters are literal text.
       out += text.slice(i, i + run);
@@ -326,6 +337,20 @@ function stripCodeSpans(text: string): string {
     i = closer + run;
   }
   return out;
+}
+
+/** The index of the next run of EXACTLY `run` backticks at or after `from`, or
+ * -1. `indexOf` found a shorter run inside a longer one and closed a span the
+ * renderer leaves open. */
+function exactRunAt(text: string, from: number, run: number): number {
+  for (let i = from; i < text.length; i += 1) {
+    if (text[i] !== '`') continue;
+    let length = 0;
+    while (text[i + length] === '`') length += 1;
+    if (length === run) return i;
+    i += length - 1;
+  }
+  return -1;
 }
 
 export function validateRecord(

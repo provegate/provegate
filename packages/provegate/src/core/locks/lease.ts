@@ -211,8 +211,13 @@ export function validateLock(
     if (!KNOWN_LOCK_FIELDS.has(key)) issues.push(`unexpected field "${key}"`);
   }
   const lockId = data['lockId'];
-  if (typeof lockId === 'string' && !/^[a-z0-9][a-z0-9.-]*$/.test(lockId)) {
-    issues.push('lockId must be a lowercase slug');
+  // The PUBLISHED pattern, character for character. Inventing a stricter
+  // lowercase-slug rule at runtime made a lock the schema permits — and that a
+  // first-party tool may already have written — read as malformed, which then
+  // blocks activation and release. A validator that disagrees with its own
+  // schema is not validating anything.
+  if (typeof lockId === 'string' && !/^[a-zA-Z0-9_.:-]+$/.test(lockId)) {
+    issues.push('lockId must match ^[a-zA-Z0-9_.:-]+$');
   }
   if (Array.isArray(touched) && new Set(touched).size !== touched.length) {
     issues.push('touchedFiles must not repeat a path');

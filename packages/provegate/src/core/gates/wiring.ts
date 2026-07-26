@@ -186,18 +186,19 @@ export function auditWiring(
       wiringText.push(...yamlRunText(readFileSync(resolve(workflowsDir, name), 'utf8')));
     }
   }
-  // An INVOCATION of the exact script, not a substring of it. `includes` counted
-  // `echo verify:brain` and `pnpm verify:brain-old` as wiring, so the audit's
-  // whole claim — every registered check reaches an executing surface — rested
-  // on the script's NAME appearing somewhere in a CI file.
-  const wiredIn = (script: string): boolean => {
-    const escaped = script.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const invocation = new RegExp(
-      `(?:^|[;&|]|\\b(?:pnpm|npm|yarn|bun)(?:\\s+run)?\\s+)${escaped}(?![\\w:.-])`,
-      'm',
-    );
-    return wiringText.some((text) => invocation.test(text));
-  };
+  // The script a COMMAND resolves to, decided by the same parser the rest of
+  // this audit uses. Text matching failed both ways: `echo pnpm verify:brain`
+  // counted as wiring because the regex began matching mid-line, and a genuine
+  // `pnpm --silent run verify:brain` was called unwired because the flag sat
+  // where the parser did not look. One command, one answer, one parser.
+  const wiredScripts = new Set<string>();
+  for (const text of wiringText) {
+    for (const command of text.split(/[\n;]|&&|\|\|/)) {
+      const script = packageScriptOf(command);
+      if (script !== null) wiredScripts.add(script);
+    }
+  }
+  const wiredIn = (script: string): boolean => wiredScripts.has(script);
 
   for (const script of scriptNames) {
     if (!pattern.test(script)) continue;
