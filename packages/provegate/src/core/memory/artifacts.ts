@@ -133,7 +133,11 @@ function closesBeforeParagraphEnd(
   if (closer.test(restOfLine)) return true;
   for (let i = from + 1; i < lines.length; i += 1) {
     const line = lines[i]!;
+    // A paragraph ends at a blank line OR at a heading, which can interrupt one
+    // without a blank. Carrying a span across a heading masked the heading and
+    // pulled the next section's bullets into this one.
     if (line.trim().length === 0) return false;
+    if (/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(line)) return false;
     if (closer.test(line)) return true;
   }
   return false;
@@ -334,52 +338,20 @@ export function contractViewProblem(content: string): string | null {
  * `##` on one line with the text on the next is not a heading.
  */
 export function contractSection(content: string, heading: string): { count: number; body: string } {
-  const pattern = new RegExp(`^##[ \\t]+${heading}[ \\t]*$`, 'gim');
+  // Up to three leading spaces and an optional closing run of hashes are both
+  // ordinary ATX — `   ## Memory Outputs ##` renders as the required heading,
+  // and reporting it missing refused a document a maintainer can see is correct.
+  const pattern = new RegExp(`^ {0,3}##[ \\t]+${heading}[ \\t]*#*[ \\t]*$`, 'gim');
   const matches = [...content.matchAll(pattern)];
   if (matches.length !== 1) return { count: matches.length, body: '' };
   const match = matches[0]!;
   const rest = content.slice(match.index! + match[0].length);
-  // `^##[ \t]` missed a BARE `##` line, so an empty H2 inserted after the real
-  // heading did not end the section and its bullets were still read as this
-  // section's. End of line is a valid separator — and so is a SETEXT heading,
-  // `Other` over `-----`, which renders as an H2 while looking like prose.
-  const atx = rest.search(/^##(?:[ \t]|\r?$)/m);
-  // A setext underline follows a PARAGRAPH. A run of dashes under a list item,
-  // a table row, or another heading is a thematic break or a table separator —
-  // and treating those as a heading would truncate a real section at its last
-  // bullet, which is a fail-closed regression but a regression all the same.
-  // Measured across all 23 PRDs here: zero sections end early either way.
-  // The exclusion tests the BLOCK GRAMMAR, not the first character. `#Other` is
-  // a paragraph — an ATX heading needs whitespace after the hashes — so
-  // `#Other` over dashes IS a setext H2, and rejecting every line starting `#`
-  // let an owner row below it stay inside the preceding section. Same for `-`,
-  // `*`, `+` and `|`: they open a block only in the shapes below.
-  // Up to three leading spaces are legal on a heading. There is no `|`
-  // exclusion: a GFM table needs a DELIMITER row, which carries pipes, so it can
-  // never be the dashes-only line this pattern requires — excluding pipe-bearing
-  // lines only suppressed real setext headings, and an owner row beneath one
-  // stayed inside the section above it.
-  const NOT_A_PARAGRAPH = [
-    '[-*+][ \\t]', // bullet list item
-    '\\d+[.)][ \\t]', // ordered list item
-    '#{1,6}(?:[ \\t]|$)', // ATX heading
-    '>', // block quote
-    '\\[[^\\]]*\\]:', // link reference definition
-    '[ \\t]{4,}', // indented code block
-  ].join('|');
-  // A line that is only a masked HTML comment is not a paragraph, so it cannot
-  // be a setext heading's text. Masking with a non-whitespace placeholder made
-  // `<!-- note -->` over `---` look like one, which TRUNCATED the section and
-  // hid a declaration that contradicted a reasoned `none`.
-  const setext = rest.search(
-    new RegExp(
-      `^ {0,3}(?!(?:${NOT_A_PARAGRAPH}))(?![${COMMENT_MASK}\\s]*\\r?$)[^\\n\\s][^\\n]*\\r?\\n[ \\t]{0,3}-+[ \\t]*\\r?$`,
-      'm',
-    ),
-  );
-  const stops = [atx, setext].filter((i) => i !== -1);
-  const next = stops.length === 0 ? -1 : Math.min(...stops);
-  return { count: 1, body: next === -1 ? rest : rest.slice(0, next) };
+  // A section ends at the next heading of rank 1 or 2 — `# Other` closes an H2
+  // section just as `## Other` does. Setext headings cannot occur inside a
+  // contract section any more: the ambiguous underline is refused outright, so
+  // there is nothing left here to guess about.
+  const atx = rest.search(/^ {0,3}#{1,2}(?:[ \t]|\r?$)/m);
+  return { count: 1, body: atx === -1 ? rest : rest.slice(0, atx) };
 }
 
 /**
@@ -398,15 +370,29 @@ function unsupportedContainer(body: string): string | null {
   for (const line of body.split('\n')) {
     if (/^[ \t]*(?:```|~~~)/.test(line)) return 'a code fence';
     // An HTML block STARTS a block, so only a line after a blank one can open
-    // it. A `<https://…>` autolink wrapping onto a rationale's second line is
-    // paragraph continuation, and refusing it would block an author writing an
-    // ordinary link. An HTML COMMENT is excluded too: it is masked in the view,
-    // a block comment owns its closing line, and the shipped template uses one
-    // to show the alternative form.
-    if (previousBlank && /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(line)) return 'a raw HTML block';
+    // it — a `<https://…>` autolink on a rationale's wrapped second line is
+    // paragraph continuation. An autolink is excluded by shape as well, and an
+    // HTML COMMENT is excluded because the shipped template uses one to show
+    // the alternative form and a block comment owns its closing line.
+    if (
+      previousBlank &&
+      /^ {0,3}<(?!!--)[?!/a-zA-Z]/.test(line) &&
+      !/^ {0,3}<[a-zA-Z][a-zA-Z0-9+.-]*:[^ >]*>[ \t]*$/.test(line)
+    ) {
+      return 'a raw HTML block';
+    }
     // Four spaces after a blank line opens an indented code block; the same
     // indentation directly under a bullet is that bullet's continuation.
     if (previousBlank && /^ {4,}\S/.test(line)) return 'an indented code block';
+    // A line of only dashes or equals after a NON-blank line is a setext
+    // underline: it turns the line above into a heading and everything below
+    // into a different section. After a blank line the same run is a thematic
+    // break, which is what every real PRD writes before its next heading.
+    // Refusing the ambiguous case is what retires setext handling here
+    // altogether — the reader no longer has to decide which one it is.
+    if (!previousBlank && /^ {0,3}(?:-+|=+)[ \t]*$/.test(line)) {
+      return 'a setext underline (a line of dashes or equals directly under text)';
+    }
     previousBlank = line.trim().length === 0;
   }
   return null;
@@ -421,7 +407,12 @@ function unsupportedContainer(body: string): string | null {
 function bulletBlocks(section: string): string[] {
   const blocks: string[] = [];
   for (const line of section.split('\n')) {
-    // COLUMN ZERO only. Accepting a bullet at any indentation meant one inside
+    // COLUMN ZERO only — and deliberately narrower than CommonMark, which starts
+    // a top-level list at up to three spaces. Accepting those would re-admit the
+    // nested-list case: `-` then `  - none` is a NESTED item to a renderer and a
+    // declaration to a line-based reader, and telling them apart needs the list
+    // context this reader does not keep. Column zero is a rule an author can
+    // see, and every declaration in this repository already sits there. Accepting a bullet at any indentation meant one inside
     // indented code, inside a raw HTML block, or NESTED under another list item
     // was read as a declaration — so both contract sections could be satisfied
     // entirely by text a renderer never shows as a top-level list. Telling a
@@ -457,8 +448,19 @@ function visibleLength(rationale: string | null): number {
       // `&#32;` and `<br>` render as whitespace or nothing, so a rationale made
       // of them satisfied a length check while showing the reader no reason at
       // all — the ceremonial `none` this rule exists to reject, spelled in HTML.
-      .replace(/&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, ' ')
-      .replace(/<[^>]*>/g, ' ')
+      // Code spans render their contents literally, so `\`&#32;\`` IS visible
+      // text and must survive the entity pass. Everything outside them is
+      // decoded, and an inline tag is removed with its quoted attributes —
+      // `<span title=">">` ends at the LAST quote, not the first `>`.
+      .split(/(`[^`]*`)/)
+      .map((part, index) =>
+        index % 2 === 1
+          ? part
+          : part
+              .replace(/<[a-zA-Z/!?][^>"']*(?:"[^"]*"|'[^']*')*[^>]*>/g, ' ')
+              .replace(/&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, ' '),
+      )
+      .join('')
       .trim().length
   );
 }

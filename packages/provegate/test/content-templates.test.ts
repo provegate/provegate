@@ -664,7 +664,7 @@ describe('phase 6 round 6 regressions', () => {
     expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/x.md']);
   });
 
-  it('[R6-P1-3] a setext H2 terminates a contract section', () => {
+  it('[R6-P1-3] an ambiguous underline is refused, not interpreted', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -676,9 +676,9 @@ describe('phase 6 round 6 regressions', () => {
       '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/real.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a setext underline'),
+    );
   });
 
   it('[R6-P1-4] a fenced INDEX example is not a pointer', () => {
@@ -722,7 +722,7 @@ describe('phase 6 round 6 regressions', () => {
 });
 
 describe('phase 6 round 7 self-attack (before the independent round returned)', () => {
-  it('a horizontal rule under a bullet does not truncate the section', () => {
+  it('a rule directly under a bullet is ambiguous, so it is refused', () => {
     // The setext stop must not fire on a thematic break. A section whose last
     // bullet is followed by `---` is an ordinary PRD shape, and cutting it there
     // would drop a real declaration — fail-closed, but still wrong.
@@ -736,10 +736,9 @@ describe('phase 6 round 7 self-attack (before the independent round returned)', 
       '## Conflict Surface',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/first.md',
-      '_brain/learnings/last.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 
   it('a table separator does not read as a heading underline', () => {
@@ -754,7 +753,7 @@ describe('phase 6 round 7 self-attack (before the independent round returned)', 
     expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(true);
   });
 
-  it('but a real setext heading still terminates the section', () => {
+  it('and so is a setext heading written inside a section', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -766,9 +765,9 @@ describe('phase 6 round 7 self-attack (before the independent round returned)', 
       '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/real.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 });
 
@@ -819,7 +818,7 @@ describe('phase 6 round 7 regressions', () => {
     expect(changelogApproves(doc, cfg.owners, '_brain/adr/ADR-0001-x.md')).toBe(false);
   });
 
-  it('[R7-P1-4] `#Other` over dashes IS a setext heading and terminates the section', () => {
+  it('[R7-P1-4] `#Other` over dashes is refused rather than interpreted', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -831,12 +830,12 @@ describe('phase 6 round 7 regressions', () => {
       '- learning: `_brain/learnings/smuggled.md` — under a rendered H2.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/real.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 
-  it('[R7-P1-4] but a real ATX heading line over dashes is not a setext heading', () => {
+  it('[R7-P1-4] and a heading line over dashes is refused too', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -848,10 +847,9 @@ describe('phase 6 round 7 regressions', () => {
       '- learning: `_brain/learnings/second.md` — still this section.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/first.md',
-      '_brain/learnings/second.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 });
 
@@ -946,7 +944,7 @@ describe('phase 6 round 8 self-attack (before the independent round returned)', 
 });
 
 describe('phase 6 round 9 regressions', () => {
-  it('[R9-P1-1] a pipe-bearing paragraph over dashes IS a setext heading', () => {
+  it('[R9-P1-1] a pipe-bearing line over dashes is refused', () => {
     // A GFM table needs a DELIMITER row, and a delimiter row carries pipes — so
     // it can never be the dashes-only line the setext pattern requires. The `|`
     // exclusion was pure loss: it kept bullets below a real heading inside the
@@ -962,9 +960,9 @@ describe('phase 6 round 9 regressions', () => {
       '- learning: `_brain/learnings/smuggled.md` — below another H2.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries.map((o) => o.path)).toEqual([
-      '_brain/learnings/real.md',
-    ]);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 
   it('[R9-P1-1] and a real table is still a table', () => {
@@ -996,7 +994,7 @@ describe('phase 6 round 9 regressions', () => {
 });
 
 describe('phase 6 round 10 regressions', () => {
-  it('[R10-P1-1] a masked comment over a rule does not truncate the section', () => {
+  it('[R10-P1-1] a comment over a rule is refused, never silently truncating', () => {
     // The `␀` placeholder is not whitespace, so `<!-- note -->` over `---`
     // looked like a setext heading: the section was cut short and a declaration
     // contradicting the reasoned `none` disappeared.
@@ -1011,10 +1009,9 @@ describe('phase 6 round 10 regressions', () => {
       '- learning: `_brain/learnings/hidden.md` — actual output.',
       '',
     ].join('\n');
-    const decl = parseMemoryDeclarations(doc);
-    expect(decl.outputs.none).toBe(true);
-    expect(decl.outputs.entries).toHaveLength(1);
-    expect(decl.issues).toContainEqual(expect.stringContaining('mutually exclusive'));
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 
   it('[R10-P1-2] a fence nested in a list item cannot smuggle a declaration', () => {
@@ -1049,7 +1046,7 @@ describe('phase 6 round 10 regressions', () => {
     );
   });
 
-  it('[R10-P2] the `|` setext case is discriminating, not a companion', () => {
+  it('[R10-P2] the `|` case refuses too', () => {
     // Round 10: the "a real table is still a table" assertion stays green if the
     // removed exclusion is restored, so this is the one that must fail.
     const doc = [
@@ -1063,7 +1060,9 @@ describe('phase 6 round 10 regressions', () => {
       '- learning: `_brain/learnings/smuggled.md` — below another H2.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).outputs.entries).toHaveLength(1);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 });
 
@@ -1089,7 +1088,7 @@ describe('phase 6 round 11 regressions — every one was fail-open', () => {
     expect(decl.outputs.entries).toEqual([]);
   });
 
-  it('[R11-P1-2] a ONE-hyphen setext underline still ends the section', () => {
+  it('[R11-P1-2] a ONE-hyphen underline is refused', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -1101,9 +1100,9 @@ describe('phase 6 round 11 regressions — every one was fail-open', () => {
       '- none — forged below another rendered H2.',
       '',
     ].join('\n');
-    const decl = parseMemoryDeclarations(doc);
-    expect(decl.outputs.none).toBe(false);
-    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
+    );
   });
 
   it('[R11-P1-3] a rationale hidden in a comment is no rationale', () => {
@@ -1144,7 +1143,7 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
     expect(decl.issues).toContainEqual(expect.stringContaining('a raw HTML block'));
   });
 
-  it('[R12-P1-2] a block comment owns its closing line, text after `-->` included', () => {
+  it('[R12-P1-2] a comment closing into text above a rule is refused', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -1158,8 +1157,8 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
     ].join('\n');
     // The contradiction must be VISIBLE to the gate, not sliced away by a
     // forged setext heading — so the mutual-exclusion rule fires.
-    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('mutually exclusive'),
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
     );
   });
 
@@ -1233,8 +1232,81 @@ describe('phase 6 round 13 regressions (leads the round named before it was cut 
       '- learning: `_brain/learnings/x.md` — contradiction.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('mutually exclusive'),
+    expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
+      /a setext underline|contains a code fence|a raw HTML block/,
     );
+  });
+});
+
+describe('phase 6 round 13 (reframed) regressions', () => {
+  it('[R13b-P1-1] a raw HTML block with a blank line inside it stays raw', () => {
+    // The block was ended at the blank line, so a declaration below it was read.
+    // The section refuses the block outright now, which is what the narrowed
+    // grammar buys: the reader does not have to model HTML block lifetimes.
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<script>',
+      '',
+      '- none — forged.',
+      '</script>',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R13b-P1-2] a code span cannot carry across a heading', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      'An opener `foo',
+      '## Other',
+      'bar` closes here.',
+      '',
+      '- none — under Other, not under Memory Outputs.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
+  });
+
+  it('[R13b-P1-3] an H1 ends an H2 section', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '- learning: `_brain/learnings/real.md` — declared.',
+      '',
+      '# Other',
+      '',
+      '- none — under a rank-1 heading.',
+      '',
+    ].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.none).toBe(false);
+    expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
+  });
+
+  it('[R13b-P1-5] an inline tag with a quoted `>` is still removed', () => {
+    const doc = ['## Memory Outputs', '', '- none — <span title=">"></span>', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('requires a rationale'),
+    );
+  });
+
+  it('[R13b-P2] an entity inside a code span is visible text', () => {
+    const doc = ['## Memory Outputs', '', '- none — the literal `&#32;` entity.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R13b-P2] an ordinary ATX heading form is recognized', () => {
+    const doc = ['   ## Memory Outputs ##', '', '- none — reasoned.', ''].join('\n');
+    const decl = parseMemoryDeclarations(doc);
+    expect(decl.outputs.present).toBe(true);
+    expect(decl.outputs.none).toBe(true);
   });
 });
