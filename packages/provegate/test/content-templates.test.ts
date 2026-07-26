@@ -1026,7 +1026,7 @@ describe('phase 6 round 10 regressions', () => {
     // The declaration inside it is not a column-zero bullet, so nothing is read
     // from it — the section declares neither form and says so.
     expect(parseMemoryDeclarations(doc).issues.join('; ')).toMatch(
-      /contains a code fence|declares neither/,
+      /contains a code fence|an ordered list|declares neither/,
     );
   });
 
@@ -1176,11 +1176,20 @@ describe('phase 6 round 12 regressions — fail-open, every one', () => {
     expect(store.records).toEqual([]);
   });
 
-  it('[R12-P1-4] a rationale of entities or tags renders as nothing', () => {
-    for (const rationale of ['&#32;', '<br>', '&nbsp; <span></span>']) {
+  it('[R12-P1-4] a rationale that renders as nothing is refused', () => {
+    for (const rationale of ['&#32;', '&nbsp;']) {
       const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
       expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
         expect.stringContaining('requires a rationale'),
+      );
+    }
+    // Raw inline HTML is refused BY NAME instead — whether `<span hidden>x</span>`
+    // or `<br>` displays anything is a DOM question, and round 17 established
+    // that guessing at it is the inference the narrowed grammar exists to avoid.
+    for (const rationale of ['<br>', '<span></span>', '<span hidden>x</span>']) {
+      const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
+        expect.stringContaining('raw HTML'),
       );
     }
   });
@@ -1293,10 +1302,10 @@ describe('phase 6 round 13 (reframed) regressions', () => {
     expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/real.md']);
   });
 
-  it('[R13b-P1-5] an inline tag with a quoted `>` is still removed', () => {
+  it('[R13b-P1-5] an inline tag with a quoted `>` is found, not mis-scanned', () => {
     const doc = ['## Memory Outputs', '', '- none — <span title=">"></span>', ''].join('\n');
     expect(parseMemoryDeclarations(doc).issues).toContainEqual(
-      expect.stringContaining('requires a rationale'),
+      expect.stringContaining('raw HTML'),
     );
   });
 
@@ -1412,7 +1421,7 @@ describe('phase 6 round 15 regressions', () => {
     );
   });
 
-  it('[R15-P2-3] a wrapped inline tag inside a rationale is not a block', () => {
+  it('[R15-P2-3] a wrapped inline tag is not a BLOCK, though the rationale refuses it', () => {
     const doc = [
       '## Memory Outputs',
       '',
@@ -1421,7 +1430,11 @@ describe('phase 6 round 15 regressions', () => {
       '  The behavior is fully derivable from tests.',
       '',
     ].join('\n');
-    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+    // Not "a raw HTML block" — the section is still a plain bullet list. The
+    // rationale-level rule is what refuses it, and it names the reason.
+    const issues = parseMemoryDeclarations(doc).issues;
+    expect(issues).toContainEqual(expect.stringContaining('raw HTML'));
+    expect(issues.join('; ')).not.toContain('a raw HTML block');
   });
 
   it('[R15-P2-4] an autolink and a decoded entity are visible rationale', () => {
@@ -1463,13 +1476,19 @@ describe('phase 6 round 16 regressions', () => {
     );
   });
 
-  it('[R16-P1-2] rationale visibility survives quoted `>`, NBSP, and empty code', () => {
-    for (const rationale of ['<span class="note" title=">"></span>', '&#160;', '` `']) {
+  it('[R16-P1-2] rationale visibility survives NBSP and empty code', () => {
+    for (const rationale of ['&#160;', '` `']) {
       const doc = ['## Memory Outputs', '', `- none — ${rationale}`, ''].join('\n');
       expect(parseMemoryDeclarations(doc).issues, rationale).toContainEqual(
         expect.stringContaining('requires a rationale'),
       );
     }
+    const tagged = ['## Memory Outputs', '', '- none — <span class="n" title=">"></span>', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(tagged).issues).toContainEqual(
+      expect.stringContaining('raw HTML'),
+    );
   });
 
   it('[R16-P1-2] and real content inside a code span still counts', () => {
@@ -1502,5 +1521,61 @@ describe('phase 6 round 16 regressions', () => {
       '',
     ].join('\n');
     expect(parseMemoryDeclarations(doc).outputs.present).toBe(true);
+  });
+});
+
+describe('phase 6 round 17 regressions (the confirming round)', () => {
+  it('[R17-1] a completed comment closes no paragraph, so the next tag opens a block', () => {
+    const doc = [
+      '## Memory Outputs',
+      '',
+      '<!-- note -->',
+      '<x-note>',
+      '- none — hidden.',
+      '</x-note>',
+      '',
+    ].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toContainEqual(
+      expect.stringContaining('a raw HTML block'),
+    );
+  });
+
+  it('[R17-1] a blockquote and an ordered list are refused, not approximated', () => {
+    const quoted = ['## Memory Outputs', '', '> - none — inside a quote.', ''].join('\n');
+    expect(parseMemoryDeclarations(quoted).issues).toContainEqual(
+      expect.stringContaining('a block quote'),
+    );
+    const ordered = ['## Memory Outputs', '', '1. none — inside an ordered list.', ''].join('\n');
+    expect(parseMemoryDeclarations(ordered).issues).toContainEqual(
+      expect.stringContaining('an ordered list'),
+    );
+  });
+
+  it('[R17-2] a named whitespace entity is not a rationale', () => {
+    for (const entity of ['&Tab;', '&NewLine;', '&ZeroWidthSpace;']) {
+      const doc = ['## Memory Outputs', '', `- none — ${entity}`, ''].join('\n');
+      expect(parseMemoryDeclarations(doc).issues, entity).toContainEqual(
+        expect.stringContaining('requires a rationale'),
+      );
+    }
+  });
+
+  it('[R17-2] and a known visible entity still is one', () => {
+    const doc = ['## Memory Outputs', '', '- none — nothing here &mdash; truly nothing.', ''].join(
+      '\n',
+    );
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R17-3] an out-of-range numeric reference renders literally', () => {
+    const doc = ['## Memory Outputs', '', '- none — &#99999999;', ''].join('\n');
+    // It is not a character reference, so a renderer shows the text — which is
+    // a rationale, however odd. The point is that it does not throw.
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
+  });
+
+  it('[R17-3] `<3>` is visible text, not a tag', () => {
+    const doc = ['## Memory Outputs', '', '- none — the team said <3>.', ''].join('\n');
+    expect(parseMemoryDeclarations(doc).issues).toEqual([]);
   });
 });

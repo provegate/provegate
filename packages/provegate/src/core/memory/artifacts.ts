@@ -356,8 +356,13 @@ function executableView(content: string): { view: string; unreliable: string | n
       i += 1;
     }
     out.push(line);
+    // Derived from the MASKED line, not the raw one: a completed `<!-- note -->`
+    // renders as nothing and closes no paragraph, but its raw text is non-blank
+    // and left the flag set — which stopped the NEXT line's type-7 tag from
+    // opening a block, so the bullet that block was hiding got read.
+    const visible = line.split(COMMENT_MASK).join('').trim();
     paragraphActive =
-      raw.trim().length > 0 &&
+      visible.length > 0 &&
       !/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(raw) &&
       !/^ {0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*\r?$/.test(raw);
   }
@@ -471,6 +476,12 @@ function unsupportedContainer(body: string): string | null {
     // inside a list item, where that indentation is the item's own second
     // paragraph. Refusing it rejected an ordinary wrapped rationale.
     if (previousBlank && !inBullet && /^ {4,}\S/.test(line)) return 'an indented code block';
+    // Containers this reader does not model. The narrowed grammar's whole point
+    // is that a section holds bullets, their continuations, prose and blanks —
+    // anything that nests content is refused rather than approximated.
+    // Measured across 29 real sections: neither appears.
+    if (/^ {0,3}>/.test(line)) return 'a block quote';
+    if (/^ {0,3}\d+[.)][ \t]/.test(line)) return 'an ordered list';
     // A line of only dashes or equals after a NON-blank line is a setext
     // underline: it turns the line above into a heading and everything below
     // into a different section. After a blank line the same run is a thematic
@@ -483,8 +494,11 @@ function unsupportedContainer(body: string): string | null {
     if (/^-[ \t]+\S/.test(line)) inBullet = true;
     else if (line.trim().length > 0 && !/^ +\S/.test(line)) inBullet = false;
     previousBlank = line.trim().length === 0;
+    // Same rule as the scanner's: a completed comment renders as nothing and
+    // closes no paragraph, so it must not keep the flag set for the next line.
+    const visible = line.replace(/<!--[\s\S]*?-->/g, '').trim();
     paragraphActive =
-      line.trim().length > 0 &&
+      visible.length > 0 &&
       !/^ {0,3}#{1,6}(?:[ \t]|\r?$)/.test(line) &&
       !/^ {0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*\r?$/.test(line);
   }
@@ -532,6 +546,38 @@ function bulletBlocks(section: string): string[] {
 /** Rationale length with masked comment characters removed. `- none — <!-- x -->`
  * renders with NO rationale, but the mask has nonzero length, so a hidden
  * comment satisfied the check that exists to reject an unreasoned `none`. */
+/**
+ * Does the rationale carry raw inline HTML outside a code span?
+ *
+ * An autolink is excluded — it is Markdown, and it displays its target. A TAG is
+ * refused: whether its contents render is a DOM question (`<span hidden>x</span>`
+ * and `<script>x</script>` display nothing), and inferring that is the guessing
+ * the narrowed grammar exists to avoid.
+ */
+function rationaleHasRawHtml(rationale: string | null): boolean {
+  if (rationale === null) return false;
+  const text = rationale.split(COMMENT_MASK).join('');
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '`') {
+      let run = 0;
+      while (text[i + run] === '`') run += 1;
+      const closer = text.indexOf('`'.repeat(run), i + run);
+      i = closer === -1 ? i + run : closer + run;
+      continue;
+    }
+    if (text[i] === '<') {
+      if (/^<([a-zA-Z][a-zA-Z0-9+.-]*:[^ <>]*|[^ <>@]+@[^ <>@]+)>/.test(text.slice(i))) {
+        i += 1;
+        continue;
+      }
+      if (/^<[a-zA-Z/!?]/.test(text.slice(i)) && tagEnd(text, i) !== -1) return true;
+    }
+    i += 1;
+  }
+  return false;
+}
+
 function visibleLength(rationale: string | null): number {
   if (rationale === null) return 0;
   // One stateful pass, because three regexes in sequence each lost the
@@ -566,7 +612,12 @@ function visibleLength(rationale: string | null): number {
         i += autolink[0].length;
         continue;
       }
-      const end = tagEnd(text, i);
+      // A TAG, not merely a `<…>` span: `<3>` is visible text. Whether the tag's
+      // contents are displayed is a DOM question — `<span hidden>x</span>` and
+      // `<script>x</script>` show nothing — and guessing at it is exactly the
+      // inference the narrowed grammar exists to avoid, so raw inline HTML is
+      // refused by the caller instead.
+      const end = /^<[a-zA-Z/!?]/.test(text.slice(i)) ? tagEnd(text, i) : -1;
       if (end !== -1) {
         i = end;
         continue;
@@ -611,17 +662,59 @@ function tagEnd(text: string, from: number): number {
 /** The character an entity displays. Whitespace entities render as space, so
  * they add nothing visible; every other entity contributes a character. */
 function decodeEntity(body: string): string {
-  const code = body.startsWith('#x') || body.startsWith('#X')
-    ? Number.parseInt(body.slice(2), 16)
-    : body.startsWith('#')
-      ? Number.parseInt(body.slice(1), 10)
-      : NaN;
-  if (Number.isFinite(code)) {
+  const numeric = body.startsWith('#');
+  if (numeric) {
+    const code =
+      body[1] === 'x' || body[1] === 'X'
+        ? Number.parseInt(body.slice(2), 16)
+        : Number.parseInt(body.slice(1), 10);
+    // Out of range is not a character reference at all — a renderer displays
+    // `&#99999999;` literally, and `fromCodePoint` would throw on it.
+    if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return `&${body};`;
     const char = String.fromCodePoint(code);
     return /\s|\u00a0/.test(char) ? ' ' : char;
   }
-  return /^(?:nbsp|ensp|emsp|thinsp)$/.test(body) ? ' ' : 'x';
+  // A NAMED entity is only counted as visible when it is known to be. HTML has
+  // hundreds, several of which are whitespace — `&Tab;`, `&NewLine;`,
+  // `&ZeroWidthSpace;` — and assuming an unknown name displays SOMETHING let a
+  // rationale made of one satisfy the check that exists to reject an unreasoned
+  // `none`. Unknown means invisible here: the conservative direction.
+  return VISIBLE_NAMED_ENTITIES.has(body) ? 'x' : ' ';
 }
+
+/** Named entities common in this repository's prose that display a character.
+ * Everything outside this set counts as invisible — see `decodeEntity`. */
+const VISIBLE_NAMED_ENTITIES = new Set([
+  'amp',
+  'lt',
+  'gt',
+  'quot',
+  'apos',
+  'hellip',
+  'mdash',
+  'ndash',
+  'lsquo',
+  'rsquo',
+  'ldquo',
+  'rdquo',
+  'copy',
+  'reg',
+  'deg',
+  'plusmn',
+  'times',
+  'divide',
+  'micro',
+  'para',
+  'sect',
+  'middot',
+  'bull',
+  'dagger',
+  'permil',
+  'euro',
+  'pound',
+  'yen',
+  'cent',
+]);
 
 function splitRationale(block: string): { head: string; rationale: string | null } {
   const idx = block.indexOf('—');
@@ -709,6 +802,13 @@ function parseSection<T>(
       }
       // A rationale is required in every form, including `none`. An unreasoned
       // `none` is the ceremonial answer the contract exists to prevent.
+      if (rationaleHasRawHtml(parsed.rationale)) {
+        issues.push(
+          `${heading}: \`none\` has a rationale containing raw HTML — whether a tag displays ` +
+            `its contents is not something this reader decides`,
+        );
+        continue;
+      }
       if (visibleLength(parsed.rationale) === 0) {
         issues.push(`${heading}: \`none\` requires a rationale after ' — '`);
       }
@@ -730,6 +830,13 @@ function parseSection<T>(
     const problem = valueProblem(parsed.value);
     if (problem !== null) {
       issues.push(`${heading}: '${parsed.value}' ${problem}`);
+      continue;
+    }
+    if (rationaleHasRawHtml(parsed.rationale)) {
+      issues.push(
+        `${heading}: '${parsed.value}' has a rationale containing raw HTML — whether a tag ` +
+          `displays its contents is not something this reader decides`,
+      );
       continue;
     }
     if (visibleLength(parsed.rationale) === 0) {
