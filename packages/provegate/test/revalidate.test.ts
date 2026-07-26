@@ -353,8 +353,13 @@ describe('the boundary is stated where the mechanism is described (FR-5)', () =>
       resolve(dirname(fileURLToPath(import.meta.url)), '../../../apps/docs/content/docs/method.mdx'),
       'utf8',
     );
-    const section = mdx.slice(mdx.indexOf('revalidat'));
-    expect(section.length).toBeGreaterThan(0);
+    // Anchor on the SECTION HEADING, not any mention: an earlier paragraph in
+    // this file already says `git merge` bypasses the gates, and a slice that
+    // started before it would satisfy the first exclusion without the new
+    // section existing at all.
+    const start = mdx.indexOf('### Control-artifact revalidation');
+    expect(start, 'FR-5 section heading missing from method.mdx').toBeGreaterThan(-1);
+    const section = mdx.slice(start);
     // A direct merge bypasses the runner entirely.
     expect(section).toMatch(/git merge/);
     // The read-only commands do not check, by design.

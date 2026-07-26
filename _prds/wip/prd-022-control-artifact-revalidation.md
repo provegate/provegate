@@ -419,6 +419,12 @@ Everything else PRD-018 owns — `chain.ts`, `merge.ts`, `open.test.ts`, `merge.
   PRD touches the same teardown path and the record watches `cli.ts`.
 - applied: `durable-artifact-must-commit` — the review artifact must be tracked, or the
   close gate fails on work that is otherwise correct.
+- applied: `assert-absent-needs-an-independent-cause` — written BY this PRD at Phase 7 and
+  applied back to it: the fixture's assert-absent steps were re-anchored on the refusal's
+  own text after a mutation check found one passing with the feature removed.
+- applied: `strictness-added-during-extraction-is-a-behavior-change` — also written by this
+  PRD, and applied to it: the fail-closed guard added inside the extracted primitive was
+  reverted rather than having the caller's test adjusted around it.
 - reviewed: `conflict-check-independent-of-override` — revalidation reads the declared
   surface, never a caller override, or a refreshed claim can widen itself.
 - reviewed: `operator-acceptance-no-self-accept` — this PRD is operator-gated and the
@@ -426,8 +432,17 @@ Everything else PRD-018 owns — `chain.ts`, `merge.ts`, `open.test.ts`, `merge.
 
 ## Memory Outputs
 
-- none — revalidation semantics are derivable from `open.ts` and its fixtures. Append an
-  exact learning path only if the drift cases expose a non-derivable ordering trap.
+- learning: `_brain/learnings/assert-absent-needs-an-independent-cause.md` — a negative
+  assertion is evidence only when the absence has a different cause than the defect under
+  test; the mutation check is what tells the two apart.
+- learning: `_brain/learnings/strictness-added-during-extraction-is-a-behavior-change.md` —
+  a fail-closed guard added while extracting shared logic relocates a decision the callers
+  already owned; the callers' existing tests are the spec.
+
+Appended during Phase 7 under the escape hatch this section opened at Phase 1 ("append an
+exact learning path only if the drift cases expose a non-derivable trap"). Both were found
+by measurement during implementation, not anticipated: the first by a mutation check that
+left a test green, the second by an existing test refusing a change that looked safer.
 
 ---
 
@@ -435,6 +450,9 @@ Everything else PRD-018 owns — `chain.ts`, `merge.ts`, `open.test.ts`, `merge.
 
 - Method docs: `apps/docs/content/docs/method.mdx`
 - Review: `_docs/reviews/review-022-control-artifact-revalidation.md`
+- `_brain/learnings/assert-absent-needs-an-independent-cause.md` — every Memory Output
+  repeats here; the two lists are proved against the same merge diff.
+- `_brain/learnings/strictness-added-during-extraction-is-a-behavior-change.md`
 
 ---
 

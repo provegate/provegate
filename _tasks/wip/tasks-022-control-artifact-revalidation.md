@@ -391,6 +391,18 @@ by the implementer without anything noticing.
   `inputs` (`verify:turbo-inputs`); this is the opposite gap, a cross-package read no
   default key covers.
 
+- **8.3 finding — the Phase 7 capture edits files no PRD declares and no lease covers.**
+  Every FR target in PRD §4 appears in the diff and every code/docs file in the diff appears
+  in the Conflict Surface. The remainder of the diff is workflow artifacts, and they split
+  in two: `_prds/`, `_tasks/`, `_state/` are coordination prefixes
+  (`branches.allowedDirectPrefixes`), while **`STATUS.md` and `_brain/**` are neither
+  coordination paths nor declared surface** — and the capture protocol requires editing
+  `_brain/INDEX.md` on every close. Two PRDs closing concurrently would collide there with
+  no lease to detect it, and an uncommitted `_brain` edit reads as non-coordination dirt to
+  the merge precondition. No impact here (single lease, everything committed), and the fix
+  — adding `_brain/` and `STATUS.md` to the coordination allowlist, or declaring them —
+  touches `core/config`, outside this Conflict Surface. Raised, not taken.
+
 - **Migration (6.1).** None. No data, cache, or artifact migration. What changes is that an
   existing worktree can now be refused where it previously ran.
 
@@ -476,5 +488,5 @@ by the implementer without anything noticing.
 
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
-| 6.2  | manual-qa | owner | Accept that any lease claimed before the last root control-artifact change can be refused on its next `gate run` or `gate land`, with merge-or-rebase as the remedy | pending | The agent can list the affected leases; deciding to land a change that stops in-flight work is an owner call |
+| 6.2  | manual-qa | owner | Accept that any lease claimed before the last root control-artifact change can be refused on its next `gate run` or `gate land`, with merge-or-rebase as the remedy | pending | **Enumerated at implementation time: one active lease, PRD-022's own** (claimed 2026-07-26, after the last control-artifact change `03a1500` on 2026-07-25), and its checkout is byte-identical to base for both artifacts — so nothing in flight is refused by this merge. Re-check `_state/locks` at land time; the list is only as current as the moment it was taken |
 | 9.4  | manual-qa | owner | Sign the close acceptance — Autonomous Close is operator-gated for this PRD | pending | The merge gate refuses until the acceptance row exists; the agent never signs its own |
