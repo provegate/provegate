@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import type { StateRecord } from '../state/build.js';
@@ -140,6 +140,23 @@ export function loadAcceptanceChecked(
 ): { entry: AcceptanceEntry | null; problem: string | null } {
   const path = acceptancesPath(config, root);
   if (!existsSync(path)) return { entry: null, problem: null };
+  // A SYMLINK is not the evidence. Committing `_state/acceptances.json` as a
+  // link to a file outside the repository put a valid-looking authorization in
+  // front of the gate while the merge carried only the link — the JSON that
+  // authorized the weakening lands nowhere. `lstat`, so the link itself is what
+  // is inspected rather than whatever it points at.
+  try {
+    if (lstatSync(path).isSymbolicLink()) {
+      return {
+        entry: null,
+        problem:
+          'the acceptance store is a symlink — the merge would carry the link, not the ' +
+          'authorization, so it cannot serve as evidence',
+      };
+    }
+  } catch {
+    return { entry: null, problem: 'the acceptance store cannot be read' };
+  }
   return acceptanceFrom(config, readFileSync(path, 'utf8'), id);
 }
 

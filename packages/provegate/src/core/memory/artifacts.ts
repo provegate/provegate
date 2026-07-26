@@ -865,6 +865,17 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   const decl = parseMemoryDeclarations(content);
 
   issues.push(...store.issues);
+  // The BASE store's issues too. Round 25 made the base loader report an
+  // unreadable index instead of returning a silent empty store — and then
+  // nobody read the report. A branch could repair an already-broken base index
+  // while omitting a watcher, change what that watcher covered, and close: the
+  // base watch set was empty because the base was unreadable, which is the one
+  // case that must never read as "no obligations".
+  issues.push(
+    ...(options.baseStore?.issues ?? []).map(
+      (issue) => `the base ref's memory store cannot be read, so its watches cannot fire — ${issue}`,
+    ),
+  );
   if (!decl.inputs.present) issues.push(`missing \`## ${INPUTS_HEADING}\` section`);
   if (!decl.outputs.present) issues.push(`missing \`## ${OUTPUTS_HEADING}\` section`);
   issues.push(...decl.issues);

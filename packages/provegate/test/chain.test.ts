@@ -1967,3 +1967,171 @@ describe('phase 6 round 23 — the enforcement machinery, one step over', () => 
     expect(result.why).toContain("'retired-record' is not an active indexed record");
   });
 });
+
+describe('phase 6 round 26 — the readiness assessment’s blocking defects', () => {
+  const CHANGED = ['_brain/learnings/new-thing.md'];
+
+  it('[R26-1] an unreadable BASE store is reported, not read as "no obligations"', () => {
+    // Round 25 made the base loader report an unreadable index instead of
+    // returning a silent empty store, and nobody consumed the report. A branch
+    // could repair an already-broken base index while omitting a watcher, change
+    // what that watcher covered, and close — rated `plausible`, because
+    // repairing a broken index is ordinary maintenance.
+    const content = prd({ inputs: ['- none — nothing applied.'] });
+    const root = gitRepo(
+      {
+        '_prds/wip/p.md': content,
+        ...STORE('packages/x/**'),
+        // The base's index is unreadable: an unclosed HTML comment erases it.
+        '_brain/INDEX.md': '<!-- unterminated\n- [sample](learnings/sample-record.md) — hook\n',
+      },
+      CAPTURED_RECORD,
+    );
+    // The branch repairs the index and omits the watcher.
+    writeFileSync(
+      join(root, '_brain/INDEX.md'),
+      ['# INDEX', '', '- [new thing](learnings/new-thing.md) — hook', ''].join('\n'),
+    );
+    rmSync(join(root, '_brain/learnings/watcher-record.md'), { force: true });
+    rmSync(join(root, '_brain/learnings/sample-record.md'), { force: true });
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: [...CHANGED, 'packages/x/src/a.ts'] }),
+      'declared outputs',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain("the base ref's memory store cannot be read");
+  });
+
+  it('[R26-2] removing an UNRELATED Phase 7 gate is waivable, and named honestly', () => {
+    // The gate called every base Phase 7 command a "store validator" and refused
+    // outright, so dropping `pnpm lint` from a custom Phase 7 while keeping the
+    // real validator was unclosable — and the refusal pointed at an owner
+    // acceptance path that had never been implemented.
+    const base = {
+      '_prds/wip/p.md': prd(),
+      'gates.manifest.json': JSON.stringify({ phases: { '7': ['pnpm verify:brain', 'pnpm lint'] } }),
+      ...STORE(),
+    };
+    const kept = {
+      ...defaultManifest(memOn),
+      phases: { ...defaultManifest(memOn).phases, '7': ['pnpm verify:brain'] },
+    };
+    const build = (root: string) =>
+      buildGateChain({
+        config: memOn,
+        manifest: kept,
+        root,
+        record: record(),
+        prdContent: prd(),
+        tasksContent: '| independent-review | x | passed |',
+        changedFiles: CHANGED,
+        prdClass: 'infra',
+      });
+
+    const refused = gitRepo(base, CAPTURED_RECORD);
+    const guard = build(refused).find((g) => (g.label ?? '').includes('validator may not be removed'));
+    const why = guard!.fn!().why ?? '';
+    expect(why).toContain("'lint'");
+    // It names a Phase 7 GATE, not a store validator it did not remove.
+    expect(why).toContain('Phase 7 gate');
+    expect(why).not.toContain('store validator');
+
+    // With an owner acceptance naming it, the removal is waived.
+    const accepted = gitRepo(
+      {
+        ...base,
+        '_state/acceptances.json': JSON.stringify({
+          schemaVersion: 1,
+          acceptances: [
+            {
+              prd: 'PRD-002',
+              owner: 'owner',
+              items: ['phase 7 gate removal: `lint`'],
+              reason: 'linting moved to phase 4',
+              date: '2026-07-26',
+              method: 'interactive',
+            },
+          ],
+        }),
+      },
+      CAPTURED_RECORD,
+    );
+    // With the waiver, nothing was dropped that needs a gate — so the gate is
+    // not in the chain at all, which is what `--dry-run` should print too.
+    const waived = build(accepted).find((g) =>
+      (g.label ?? '').includes('validator may not be removed'),
+    );
+    expect(waived).toBeUndefined();
+    // And the STORE validator itself still cannot be dropped without one.
+    const swapped = {
+      ...defaultManifest(memOn),
+      phases: { ...defaultManifest(memOn).phases, '7': ['pnpm lint'] },
+    };
+    const stillRefused = buildGateChain({
+      config: memOn,
+      manifest: swapped,
+      root: accepted,
+      record: record(),
+      prdContent: prd(),
+      tasksContent: '| independent-review | x | passed |',
+      changedFiles: CHANGED,
+      prdClass: 'infra',
+    }).find((g) => (g.label ?? '').includes('validator may not be removed'));
+    expect(stillRefused!.fn!().ok).toBe(false);
+    expect(stillRefused!.fn!().why).toContain('verify:brain');
+  });
+
+  it('[R26-4] a symlinked acceptance store is not evidence', () => {
+    // Committing `_state/acceptances.json` as a link to an external file put a
+    // valid-looking authorization in front of the gate while the merge carried
+    // only the link.
+    const baseline = prd({
+      outputs: [
+        '- learning: `_brain/learnings/new-thing.md` — the durable fact.',
+        '- adr: `_brain/adr/ADR-0001-x.md` — the decision.',
+      ],
+      durable: [
+        '- `_brain/learnings/new-thing.md` — the durable fact',
+        '- `_brain/adr/ADR-0001-x.md` — the decision',
+      ],
+    });
+    const approved = prd({
+      changelog: [
+        '| 2026-07-25 | owner | removed `_brain/adr/ADR-0001-x.md` — moved to PRD-022 |',
+      ],
+    });
+    const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() }, CAPTURED_RECORD);
+    const outside = join(root, 'outside-acceptances.json');
+    writeFileSync(
+      outside,
+      JSON.stringify({
+        schemaVersion: 1,
+        acceptances: [
+          {
+            prd: 'PRD-002',
+            owner: 'owner',
+            items: ['memory output removal: `_brain/adr/ADR-0001-x.md`'],
+            reason: 'the decision moved to PRD-022',
+            date: '2026-07-25',
+            method: 'interactive',
+          },
+        ],
+      }),
+    );
+    mkdirSync(join(root, '_state'), { recursive: true });
+    symlinkSync(outside, join(root, '_state/acceptances.json'));
+    // COMMITTED, which is the whole point: it passes every "is the evidence
+    // committed" check and still carries no authorization into the merge.
+    execFileSync('git', ['add', '-A'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-qm', 'acceptance', '--no-verify'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
+    expect(result.ok).toBe(false);
+    expect(result.why).toContain('symlink');
+  });
+});

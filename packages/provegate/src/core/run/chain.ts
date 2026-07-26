@@ -660,7 +660,16 @@ export function buildGateChain(options: {
     // IDENTITY, not headcount. Comparing "is either side non-empty" let a branch
     // swap `pnpm verify:brain` for `pnpm lint` and keep the gate quiet: the
     // store validator was gone and something else stood where it had been.
-    const dropped = [...baseValidators].filter((id) => !branchValidators.has(id));
+    const droppedAll = [...baseValidators].filter((id) => !branchValidators.has(id));
+    // An owner ACCEPTANCE waives a specific dropped command, which is what the
+    // refusal has been telling authors to do since round 23 without ever
+    // implementing it. Removing `pnpm lint` from a custom Phase 7 while keeping
+    // the store validator is a legitimate policy change, and the gate refused it
+    // outright with a message about a "store validator" it had not removed.
+    const waived = loadAcceptanceChecked(config, root, record.prd).entry;
+    const dropped = droppedAll.filter(
+      (id) => waived === null || !acceptanceCoversPath(waived.items, id.replace(/^script:/, '')),
+    );
     if (dropped.length > 0) {
       chain.push({
         phase: '7 Learning',
@@ -669,10 +678,11 @@ export function buildGateChain(options: {
         fn: () => ({
           ok: false,
           why:
-            `\`${config.branches.base}\` runs ${dropped.map((c) => `'${c}'`).join(', ')} after ` +
-            `capture and this branch does not — dropping a store validator is a policy change, ` +
-            `not a close. Restore it in \`phases.7\` or \`memory.verifyCommand\`, or land the ` +
-            `removal as its own owner-accepted work item`,
+            `\`${config.branches.base}\` runs ${dropped
+              .map((c) => `'${c.replace(/^script:/, '')}'`)
+              .join(', ')} after capture and this branch does not — dropping a Phase 7 gate ` +
+            `is a policy change, not a close. Restore it in \`phases.7\` or ` +
+            `\`memory.verifyCommand\`, or record an owner acceptance naming it`,
         }),
       });
     }
