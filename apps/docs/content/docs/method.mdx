@@ -78,3 +78,24 @@ mutex that guards lease claims and refuses while another work item holds an acti
 so gate policy never changes under a running agent's feet. That is a `gate land`
 precondition and not a git-level invariant — a direct `git merge` bypasses it, as it
 bypasses every gate here.
+
+### Control-artifact revalidation, and what it does not cover
+
+`gate run` and `gate land` revalidate the checkout before anything executes: when a lease
+carries worktree stamps, the config and the gates manifest the checkout holds must match
+what the base branch holds. They are compared as the union of what is present in either
+place, so a file **deleted locally while still committed on base** is drift rather than an
+omission — otherwise manifest load quietly falls back to the built-in defaults and the
+agent runs a different set of gates than the repository declares. On a mismatch the
+command stops before any phase command runs, before any metric row is written, and before
+any merge, and it names the remedy: merge or rebase base into the feature branch.
+
+The boundary is narrow on purpose, and it is worth stating rather than implying:
+
+- **A direct `git merge` bypasses it entirely.** The check lives in the runner, so it
+  binds the commands that go through the runner and nothing else.
+- **`gate check`, `gate status`, and `gate queue` do not check, by design.** They read
+  and report; refusing to answer a question about a stale checkout would remove the tool
+  you reach for while diagnosing one.
+- **`gate run --dry-run` plans without checking.** A plan executes nothing, so there is
+  nothing to protect — and a plan that refuses to print is a plan you cannot read.

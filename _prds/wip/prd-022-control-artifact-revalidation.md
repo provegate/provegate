@@ -399,16 +399,30 @@ Everything else PRD-018 owns — `chain.ts`, `merge.ts`, `open.test.ts`, `merge.
 
 ## Memory Inputs
 
-- applied: `locks-on-main-not-worktree` — revalidation reads control artifacts from the
-  main checkout, and a lease that lives in the worktree is orphaned by teardown; this PRD
-  must not reintroduce that.
+- applied: `locks-on-main-not-worktree` — revalidation reads control artifacts and leases
+  from the MAIN checkout while running inside a worktree; resolving the wrong root is the
+  defect this record names, and this PRD's seam is exactly where it would recur.
+- applied: `absence-must-be-asserted` — the fixture is negative evidence throughout ("no
+  marker file", "no merge commit"), and each needs an explicit assert-absent rather than a
+  grep that passes because it found nothing.
+- applied: `turbo-cache-masks-out-of-input-reads` — FR-5's assertion reads
+  `apps/docs/content/docs/method.mdx` from inside the package test task, which is the
+  out-of-input read this record describes; it must be a declared input or a cached green
+  replays over it.
+- applied: `fresh-worktree-env-gap` — the fixture runs the built CLI inside a linked
+  worktree, which inherits no root `.env*` and (measured this session) no `node_modules`
+  either.
 - applied: `cleanup-after-verified-merge` — a revalidation that tears down on a stale
   reading would destroy work a failed merge should have preserved.
 - applied: `fixture-must-reach-production-shape` — PRD-019's lease fix shipped broken
   because its tests called the function with cleaner arguments than the caller does. This
-  PRD touches the same teardown path and inherits that trap directly.
+  PRD touches the same teardown path and the record watches `cli.ts`.
+- applied: `durable-artifact-must-commit` — the review artifact must be tracked, or the
+  close gate fails on work that is otherwise correct.
 - reviewed: `conflict-check-independent-of-override` — revalidation reads the declared
   surface, never a caller override, or a refreshed claim can widen itself.
+- reviewed: `operator-acceptance-no-self-accept` — this PRD is operator-gated and the
+  agent never signs its own row.
 
 ## Memory Outputs
 

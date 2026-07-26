@@ -8,7 +8,13 @@ import {
   unlinkSync,
 } from 'node:fs';
 import { isAbsolute, join, resolve, sep } from 'node:path';
-import { normalizedWorktreeDir, type WorkflowConfig } from '../config/index.js';
+import {
+  CONFIG_FILENAME,
+  configSourceFor,
+  normalizedWorktreeDir,
+  type WorkflowConfig,
+} from '../config/index.js';
+import { MANIFEST_FILENAME, manifestSourceFor } from '../gates/manifest.js';
 import { mainRepoRoot } from '../state/io.js';
 import { containedPath } from './init.js';
 
@@ -270,6 +276,126 @@ export function snapshotsNotMatchingRef(
   return snapshots
     .filter((s) => blobShaOnRef(mainRoot, ref, s.rel) !== s.sha)
     .map((s) => s.rel);
+}
+
+/** What {@link revalidateControlArtifacts} needs to decide drift. Both call
+ * sites pass the same shape, so they cannot diverge in their INPUTS either —
+ * the derivation being duplicated was only half the problem. */
+export interface RevalidateInput {
+  /** The checkout whose control artifacts are read and parsed. */
+  root: string;
+  config: WorkflowConfig;
+  /** Worktree path relative to the main checkout. It names the checkout whose
+   * contents are compared AND appears in the refusal. */
+  relPath: string;
+  /** Branch in that checkout — the remedy tells the reader where to merge. */
+  branch: string;
+  /** An already-pinned revision. Resolved internally when absent; a caller
+   * that pinned one earlier passes it, so one operation never compares
+   * against two revisions. */
+  baseRef?: string;
+  /** Snapshots the caller owns, ordered FIRST. The claim path passes its PRD
+   * blob; `run`/`land` pass nothing — including the PRD there would refuse
+   * every worktree the moment it edits its own PRD, which is the normal state
+   * of a worktree mid-phase. */
+  extra?: ArtifactSnapshot[];
+}
+
+export interface RevalidateResult {
+  /** Deduplicated by FIRST occurrence, in derivation order. The refusal joins
+   * this list, so its order is part of the text. */
+  drifted: string[];
+  /** null when nothing drifted, so callers branch on the value rather than on
+   * an empty string. */
+  refusal: string | null;
+}
+
+/** The control artifacts a checkout must carry: present in the checkout OR on
+ * the base ref. The union is load-bearing in both directions — a file DELETED
+ * locally but still committed on base would otherwise drop out of the list
+ * (and `loadManifest` would silently fall back to `defaultManifest`), and a
+ * file newly ADDED on base is drift the checkout has never seen. */
+const CONTROL_ARTIFACTS = [CONFIG_FILENAME, MANIFEST_FILENAME] as const;
+
+/** A loader failure reduced to one line — the refusal names the cause without
+ * pasting a validation report into a card. */
+function firstLine(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  return error.message.split('\n')[0] ?? error.message;
+}
+
+/**
+ * Does `relPath` still carry the control artifacts `baseRef` carries?
+ *
+ * This is the DECISION the claim path used to inline: `snapshotsNotMatchingRef`
+ * and `snapshotsMissingFrom` are comparators, and deriving the set to compare
+ * is the half that had no owner — the half `gate run` needs, because the lease
+ * persists no snapshot to read back.
+ *
+ * Fails closed: a control file present but unreadable or unparseable refuses,
+ * because unknowable gate policy is not "no drift".
+ */
+export function revalidateControlArtifacts(input: RevalidateInput): RevalidateResult {
+  const { root, config, relPath, branch } = input;
+  const mainRoot = mainRepoRoot(root);
+  const displayBase = config.branches.base;
+  // ONE pinned revision for every comparison inside this call: a base that
+  // advances mid-check would otherwise have the presence probe and the blob
+  // comparison naming different commits. The name-shaped fallback mirrors
+  // `open.ts`: an unresolvable base makes every present artifact mismatch,
+  // which refuses rather than passes.
+  const baseRef =
+    input.baseRef ?? resolveRef(mainRoot, `refs/heads/${displayBase}`) ?? `refs/heads/${displayBase}`;
+  const unusable = (rel: string, reason: string): RevalidateResult => ({
+    // Never an empty drifted list next to a refusal: a caller that reports the
+    // list instead of the text would otherwise print "nothing is wrong".
+    drifted: [rel],
+    refusal: `the checkout at ${relPath} has an unusable workflow artifact (${rel}): ${reason} — restore it from '${displayBase}' before running`,
+  });
+
+  let checkoutDir: string;
+  try {
+    checkoutDir = containedPath(mainRoot, relPath);
+  } catch (error) {
+    return unusable(relPath, firstLine(error));
+  }
+
+  const snapshots: ArtifactSnapshot[] = [...(input.extra ?? [])];
+  for (const control of CONTROL_ARTIFACTS) {
+    const present = existsSync(resolve(root, control));
+    if (!present && !existsOnRef(mainRoot, baseRef, control)) continue;
+    // The bytes the LOADER parsed, never a later re-read: re-reading here
+    // reopens the window between parse and comparison the claim path closed.
+    // Nothing is loaded HERE. Parseability is the loaders' job and they run
+    // upstream of both call sites; a control file that is present, parsed by
+    // nobody, and differs from base is DRIFT, with the merge remedy — not an
+    // error. Loading in this function instead turned that case into a
+    // different refusal and broke open.test.ts's introduction case.
+    const parsed = control === CONFIG_FILENAME ? configSourceFor(root) : manifestSourceFor(root);
+    const sha = parsed !== null ? blobShaOfBuffer(root, control, parsed) : blobShaOfFile(root, control);
+    // Fail closed on the one case the comparators read as agreement: a file
+    // present but unhashable, with nothing committed on base to disagree with,
+    // makes both comparators see null === null and report no drift.
+    if (present && sha === null) return unusable(control, 'unreadable');
+    snapshots.push({ rel: control, sha, ...(parsed !== null ? { content: parsed } : {}) });
+  }
+
+  // Order is contractual: the claim refusal joins this list and its bytes are
+  // promised unchanged. Ref-mismatch first, then checkout-mismatch, dedup by
+  // FIRST occurrence. A Set, a sort, or last-wins dedup would each be
+  // defensible and each would move a name in the text.
+  const drifted = [
+    ...snapshotsNotMatchingRef(mainRoot, baseRef, snapshots),
+    ...snapshotsMissingFrom(checkoutDir, snapshots),
+  ].filter((rel, i, all) => all.indexOf(rel) === i);
+
+  return {
+    drifted,
+    refusal:
+      drifted.length === 0
+        ? null
+        : `the checkout at ${relPath} carries workflow artifacts differing from '${displayBase}' (${drifted.join(', ')}) — merge or rebase ${displayBase} into ${branch} first`,
+  };
 }
 
 /** The branch currently registered at `path` (realpath-compared), or null. */
