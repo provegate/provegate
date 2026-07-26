@@ -6,11 +6,12 @@
 > **Tool/Model:** OpenAI Codex CLI 0.145.0, reasoning effort high — a different model family from the implementer (Claude Opus 5)
 > **Base SHA:** b9163079c412673e6978fbe46dc6d7cac857e380
 > **Diff range:** b916307..HEAD
-> **Critical:** 64
+> **Critical:** 69
 > **High:** 0
 > **Medium:** 48
+> **Low:** 3
 > **Quorum:** 1/1 pass (single cross-model reviewer)
-> **Rounds:** 17
+> **Rounds:** 18
 
 ## How this review was run
 
@@ -253,20 +254,61 @@ PRD-017/018/019 satisfy the narrowed grammar; none of the 108 artifacts under `_
 repository retains its legacy behavior in `lintPrd`, the gate chain, and
 `declaredArtifacts`.
 
+### Round 18 — five more, and the first LOW findings that mattered
+
+Round 18 confirmed round 17's three fixes and found five CRITICAL. Four were one
+shape: the reader and a renderer disagreeing about where a block begins or ends.
+
+- The code-span lookahead stopped at blank lines, headings and list markers but **not at
+  a fence or an HTML block**. A lone backtick in prose therefore found its "closer" on
+  the fence line, the scanner masked the fence OPENER as span content, and a whole
+  contract could be forged inside rendered code. The stop now uses the scanner's own
+  fence predicate — including the rule that a backtick fence's info string may hold no
+  backtick, without which the fix would have refused a span the renderer closes.
+- A closing fence was accepted with any trailing Unicode blank, because `.trim()` removes
+  NBSP. CommonMark allows spaces and tabs.
+- The scanner split on LF while every `/m` regex also broke on a bare CR — **two line
+  models over one document**, which is the defect `two-parsers-wrong-together` describes.
+  Content is normalized once now, at the single entry point.
+- U+2028 and U+2029 are line terminators to JavaScript and ordinary characters to
+  CommonMark, so `/m` anchored headings a renderer never shows. Refused by name, and
+  masked in the view as well, because the INDEX and the Changelog read that view through
+  their own regexes — safe by construction rather than by call order.
+- Raw inline HTML was refused only inside a **rationale**. A renderer's HTML parser closes
+  the paragraph at a mid-sentence `<div hidden>` and swallows the list after it, so the
+  refusal moved up to the section.
+
+The fifth was the rationale counting zero-width characters as visible: `- none — &#8203;`
+satisfied the very check that exists to reject an unreasoned `none`.
+
+The three LOW findings are the ones worth recording, because they run the other way.
+Round 17's named-entity allowlist refused `&AElig;`, which renders `Æ`. A tag holding a
+vertical tab is literal text, not HTML. A leading tab opens an indented code block just as
+four spaces do, and a setext contract heading is a heading rather than a missing section.
+**A refusal that invents what it saw is the same defect as reading a declaration that is
+not there, pointed the other way** — and the narrowing strategy only holds if refusals are
+as honest as reads. The unknown-entity case has no third answer without the entity table
+this package may not depend on, so it is refused by name and the author writes the
+character.
+
+Measured before narrowing, across 239 Markdown files: no separator, no tab-indented
+section line, no setext contract heading, no named entity, and no inline HTML in a real
+contract section. Every PRD in the repository still parses with no issue. 767 tests.
+
 ### Open
 
 **No round has run against the current code.** The verdict stays `fail`, and that is the
-honest reading: this artifact records seventeen rounds in which every finding was closed,
-not a round that found nothing. The confirming round was asked to be that round and
-instead found three more, which is itself the most useful fact here — the trend across
-rounds 14-17 is 7, 4, 4, 3 findings, narrowing but not yet zero.
+honest reading: this artifact records eighteen rounds in which every finding was closed,
+not a round that found nothing. Round 17 was commissioned as the confirming round and
+found three; round 18 found five more, four of them fail-open.
 
-Closing the PRD therefore needs an explicit owner decision: commission another round, or
-accept the residual. An agent may not flip the ledger row, and this one has not.
+The trend across rounds 14-18 is 7, 4, 4, 3, 5 — it is not converging. That is the
+finding, and it is the same one `narrow-the-grammar-not-the-parser` already records from
+the other side: what round 18 hit was not the narrowed grammar failing but the parts of
+the reader the narrowing has not reached — the scanner's line model, its fence closers,
+its span lookahead. Those are still an approximation of CommonMark, and rounds keep
+finding defects there at a steady rate.
 
-Two residuals are recorded on the deferral board rather than fixed here, both because
-their fix spans files outside this PRD's Conflict Surface: the package and standalone
-`verify-brain.mjs` disagree about what an INDEX pointer is (the fail-OPEN half of that is
-closed — an unindexed record file is now a blocking store issue), and the two deliberate
-parser splits, `frTargets` and `declaredArtifacts`, each keep a legacy reader so a
-memory-DISABLED repository stays byte-identical.
+Closing the PRD needs an explicit owner decision: keep running rounds against the scanner,
+narrow further so the scanner has less to do, or accept the residual. An agent may not
+flip the ledger row, and this one has not.
