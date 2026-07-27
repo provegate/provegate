@@ -1,10 +1,21 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
+> **Iteration 6 (Codex, independent) scored the remediated PRD at 6.92 — up 0.07 from
+> 6.85.** The adjacent-case pass worked on substance and did not stop the churn: R closed
+> outright, four findings are partially closed, and three of iteration 6's five [P1]s are
+> defects **this** remediation introduced. Six independent rounds now sit between 6.65 and
+> 7.19 with no trend toward the 8.0 PASS threshold. **The non-convergence is the finding.**
+> See §9 and the convergence note below it.
+>
+> <details><summary>Iteration 5 (6.85 ITERATE) — the round where remediation lowered the score</summary>
+>
 > **Iteration 5 (Codex, independent) scored the remediated PRD at 6.85 — DOWN from 7.19.**
 > This is the first round in this PRD's history where remediation lowered the score, and
 > that is the finding as much as the five [P1]s are. Every H/I/J fix landed the named
 > symptom and missed an adjacent operational case, which is the failure shape this PRD
 > exists to remove — now committed three times in the PRD's own text. See §8.
+>
+> </details>
 >
 > <details><summary>Iteration 4 (7.19 ITERATE) — the round whose remediation caused the drop</summary>
 >
@@ -54,9 +65,9 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-023-gate-self-hosting.md`       |
-| Score                  | 6.85/10                                        |
-| Verdict                | ITERATE — five [P1] items (§8), four of them defects the iteration-4 remediation itself introduced. The 7.19 at iteration 4 is superseded |
-| Iteration              | 5                                              |
+| Score                  | 6.92/10                                        |
+| Verdict                | ITERATE — five [P1] items (§9), three of them defects the iteration-5 remediation itself introduced, two pre-existing and never caught before. Six rounds without convergence; see the convergence note. The 6.85 at iteration 5 is superseded |
+| Iteration              | 6                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
@@ -67,6 +78,31 @@
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
+
+**The PRD is not converging, and that is now the headline.** Six independent rounds:
+6.65 → 7.19 → 6.85 → 6.92, against a PASS threshold of 8.0. Each remediation closes real
+findings and introduces roughly as many new ones, so the score oscillates inside a
+half-point band instead of climbing. At the observed rate the threshold is many rounds
+away, and nothing in the last three rounds suggests the rate improves.
+
+The iteration-6 evidence says the cause is **size**, not care. That round's five [P1]s
+split three ways: three are defects the iteration-5 remediation introduced (an undefined
+interpreter grammar where an unsafe substring match used to be, a mutation check that
+throws before it asserts, a four-versus-five step count), and **two are pre-existing
+defects that five prior independent rounds never found** — FR-5's only verification
+command is a script FR-4 deletes, and three shipped documents still tell adopters to run
+checks this PRD removes. A document where two live defects can hide through five
+adversarial reviews is a document too large to review.
+
+Iteration 5 already said this in its [P2] M, scoped to one FR: FR-4 is oversized for a
+single Phase-3 task. Iteration 6 generalizes it. The FRs now span three unrelated
+engineering problems — a pack migration, a wiring predicate, and three Markdown parser
+defects — held together by a thesis rather than by a shared surface. **Splitting is the
+structural answer** and it is an owner decision, recorded here rather than taken: each
+piece would be independently scoreable, small enough that its adjacent-case surface is
+tractable, and free of the cross-FR seams where every round's findings have clustered.
+
+<details><summary>Superseded — the iteration-5 headline</summary>
 
 **The score went down, and that is the headline.** Iterations 3 → 4 rose because the
 remediation absorbed a scope error correctly. Iteration 4 → 5 fell because the remediation
@@ -86,6 +122,8 @@ is not an applied one, and this round is the evidence. Second, that same session
 a stale overlap count from five to eight in the Conflict Surface and simultaneously wrote
 "five overlaps" into §9. Fourth stale count in this wave, first one introduced by the fix
 for the third.
+
+</details>
 
 ---
 
@@ -550,6 +588,82 @@ says PRD-021 remains a prerequisite "for its other **five** overlaps" while the 
 Surface, corrected in the same edit, measures **eight**. Historical changelog references to
 the retired `isRootRelativeFilename` contract are correctly historical and need no change.
 
+### 9. Iteration-6 independent measurement — Codex, on the adjacent-case remediation
+
+Read-only, high reasoning effort, told to test whether the adjacent-case pass actually
+worked or merely moved the problem. Per-finding status: **R closed; N, O, P, Q, S
+partially closed.** Five new [P1]s — three introduced by the iteration-5 remediation, two
+pre-existing and never caught in five prior rounds.
+
+**[P1] T — FR-5's only §11 command is a script FR-4 deletes.** FR-5's single verification
+row runs `pnpm verify:gates-wired` (PRD `:1314`). That alias exists only at
+`package.json:36`, and FR-4 deletes both the script and the entry (PRD `:454-475`). After
+implementation the row reports a missing script, so the FR has no runnable verification —
+the scorer's runnable-row requirement (`phase-2-readiness-scorer.md:211-216`). **Pre-existing
+since the PRD was drafted; five independent rounds missed it.**
+
+**[P1] U — P traded an unsafe predicate for an undefined one.** FR-4(b′) now requires the
+basename to be an argument to an "executing interpreter (`node`, `bun`, `tsx`, …)",
+reusing "the existing non-executing-flag discipline". That discipline does not generalize:
+`NON_EXECUTING_FLAGS` is consumed by `packageScriptOf`, which accepts only `pnpm`, `npm`,
+`yarn`, `bun` (`wiring.ts:121-175`). There is no `node`/`tsx` parser to reuse. The
+open-ended ellipsis leaves the interpreter set to the implementer, and
+`node --check verify-foo.mjs`, `node -e "…verify-foo.mjs…"`, `env node …`, and
+interpreter-specific dry-run modes are all undecided. A rule nobody can falsify is not
+stricter than the substring match it replaced — it is unspecified. Name a closed grammar:
+the interpreter list, the flags that mean "does not execute", wrapper handling, and a
+positive/deny matrix.
+
+**[P1] V — O's mutation check throws before it asserts.** The check says: re-add one
+removed path to `PACK_MAP`, rebuild, confirm assertion (a) goes red. But FR-8 deletes the
+packed source files in the same change, and `planPractices` reads every mapped source
+eagerly (`init.ts:188-190`). Re-adding only the entry raises `ENOENT` before
+`initWorkspace` returns a report, so the check fails on pack readability rather than on the
+created/skipped contract it is meant to pin. **This is
+`assert-absent-needs-an-independent-cause` applied to the mutation check itself** — the
+remediation added a control and the control has the defect the control was for. Restore a
+readable source alongside the entry, or inject the removed action directly, and assert the
+failure came from the contract.
+
+**[P1] W — N left a four-versus-five step contradiction.** Splitting the exception
+conversion into its own step made the migration five steps, while FR-8's introduction still
+promises "four manual steps" (PRD `:658-662`) and FR-9 still requires the changeset to
+carry "FR-8's four steps" (`:780-791`). The changeset assertion is therefore ambiguous
+about which required step may be absent — and the one most likely to be dropped is the
+exception conversion, the only step that loses data. Also: the fixture converts "the real
+packed eight-entry array", which the same change deletes; it needs an explicit retained
+old-pack fixture.
+
+**[P1] X — the forward sweep misses live shipped references to the deleted checks.**
+`AGENT_BOOTSTRAP.md:128` names `verify:durable-artifacts`; the **shipped** template
+`practices/templates/AGENT_BOOTSTRAP.template.md:106` does the same; and the shipped
+example `practices/examples/manifests/monorepo/README.md:188-195` tells adopters that
+`scripts/verify/verify-gates-wired.mjs` exists, that it fails, and how to handle it via its
+exceptions file. None is an FR target or a Conflict Surface entry, so all three become
+false guidance the moment the deletions land — two of them **inside the published
+package**. This is `gate-wire-or-delete` applied to documentation, and it is the second
+pre-existing defect five rounds did not find.
+
+**[P2] Y — S missed one live stale count.** §1's comparison table still labels
+`wiring.ts` as 212 lines (PRD `:57`); the file is 259. §10's re-measured figures are
+correct, so the document now carries both numbers.
+
+**What Codex confirmed at iteration 6.** `Decision Record` genuinely sits outside the
+Open Questions selector, and the §9 restructure broke no other parser — Memory
+Inputs/Outputs, Durable Artifacts, and §11 all select by their own exact headings, so **R
+is closed**. Root exceptions are `[]` and the packed file holds eight `.mjs` names.
+`wiringExceptions` is `Record<string,string>`, rejects empty justifications, and fails on
+stale keys. Production init is `initWorkspace(config, root, { dryRun, extra })` writing
+with `wx`. A path removed from `PACK_MAP` appears in neither `created` nor `skipped` — the
+corrected assertion is right. The root bundle has eight members leaving five, the packed
+has six leaving three; **the seventh stale count is confirmed**. The repaired rollback
+covers root bundle membership, the CI steps, sweep removal, manifest reversal, and
+ledger/ADR agreement. Every FR has a §11 row and every parsed command is
+safety-allowlisted. The pure readiness lint is green. No runtime dependency, push path,
+protected surface, or client→server contract is introduced.
+
+---
+
 **What Codex confirmed at iteration 5.** `gate init` is genuinely additive-only and uses
 `wx`, so manual migration is the right shape even though the current wording of it is not.
 FR-8 names every pack-drift half it needs. The pack-ledger rollback correctly distinguishes
@@ -566,6 +680,29 @@ network call, push path, protected surface, or client→server payload is introd
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+**Iteration 6 — independent (Codex), on the adjacent-case remediation. Supersedes
+iteration 5.**
+
+| #         | Dimension                | Weight | Score      | Notes |
+| --------- | ------------------------ | ------ | ---------- | ----- |
+| 1         | Clarity                  | 15%    | 6.5/10     | Capped below 7: FR-5's only verification command is a script FR-4 deletes, and FR-4 leaves "executing interpreter" undefined. |
+| 2         | Completeness             | 20%    | 7.0/10     | Most iteration-5 gaps are addressed; current and shipped guidance still names removed scripts. |
+| 3         | Technical Depth          | 20%    | 7.0/10     | The surface-kind split is sound, but no implementable interpreter grammar exists and the mutation proof fails for the wrong reason. |
+| 4         | Multi-Tenancy & Security | 10%    | 8.5/10     | Unchanged: no protected surface, payload, runtime dependency, network call, tenant boundary, or push path. |
+| 5         | Scope & Testability      | 15%    | 6.2/10     | Every FR has a row and every parsed command is allowlisted, but one row is not runnable post-change and two proposed proofs remain defective. |
+| 6         | Migration & Rollback     | 20%    | 6.8/10     | Rollback is substantially repaired; forward migration contradicts itself on four versus five steps and misses shipped references. |
+| **Total** | **Weighted**             |        | **6.92/10** | **ITERATE** |
+
+Weighted sum:
+`0.15×6.5 + 0.20×7.0 + 0.20×7.0 + 0.10×8.5 + 0.15×6.2 + 0.20×6.8`
+= `0.975 + 1.400 + 1.400 + 0.850 + 0.930 + 1.360 = 6.915` → 6.92.
+
+Hard caps: none tripped. `lintPrd` green by direct invocation; the CLI wrapper again could
+not run read-only because it refreshes `_state/prds.json`.
+
+<details>
+<summary>Superseded — iteration-5 scorecard (Codex, 6.85 ITERATE)</summary>
 
 **Iteration 5 — independent (Codex), on the H/I/J remediation. Supersedes iteration 4.**
 
@@ -584,6 +721,8 @@ Weighted sum:
 = `1.050 + 1.360 + 1.440 + 0.850 + 0.945 + 1.200 = 6.845` → 6.85.
 
 Hard caps: none tripped. `lintPrd` green by direct invocation.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-4 scorecard (Codex, 7.19 ITERATE)</summary>
@@ -733,6 +872,7 @@ Verdict.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 6   | 2026-07-27 | 6.92  | ITERATE | **Independent — Codex, told to test whether the adjacent-case remediation worked or merely moved the problem. Answer: both.** Per-finding status R **CLOSED**, N/O/P/Q/S partially closed. Five new [P1]s in three groups. **Introduced by the iteration-5 remediation:** **(U)** FR-4(b′) traded an unsafe predicate for an **undefined** one — "executing interpreter (`node`, `bun`, `tsx`, …)" reusing a non-executing-flag discipline that only `packageScriptOf` implements, and that accepts package managers only (`wiring.ts:121-175`); the ellipsis makes the rule unfalsifiable and leaves `node --check`, `node -e`, and `env node` undecided. **(V)** the new mutation check throws before it asserts — `planPractices` reads every mapped source eagerly (`init.ts:188-190`), so re-adding a `PACK_MAP` entry whose file the same change deletes raises `ENOENT`; the control added to satisfy `assert-absent-needs-an-independent-cause` has the exact defect that record describes. **(W)** splitting the exception conversion into its own step made the migration five steps while FR-8's intro and FR-9's changeset contract both still say four. **Pre-existing and missed by five prior rounds:** **(T)** FR-5's only §11 command is `pnpm verify:gates-wired`, the script FR-4 deletes, so the FR has no runnable verification after implementation. **(X)** three live documents still tell readers to run the removed checks — `AGENT_BOOTSTRAP.md:128`, the **shipped** `practices/templates/AGENT_BOOTSTRAP.template.md:106`, and the **shipped** `examples/manifests/monorepo/README.md:188-195` — none an FR target or Conflict Surface entry; `gate-wire-or-delete` applied to documentation. P2: §1's table still says `wiring.ts` is 212 lines where §10's re-measurement says 259, so the document carries both. **Confirmed: R is fully closed** — `Decision Record` sits outside the `.*Open Questions.*` selector and the restructure broke no other parser; the seventh stale count is real; the repaired rollback is complete; every FR has an allowlisted §11 row; lint green. **Six rounds now span 6.65–7.19 with no trend toward 8.0 — see the convergence note above the model-tier table.** |
 | 5   | 2026-07-27 | 6.85  | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort, scoring the H/I/J remediation written by a Claude Opus 5 session. First score DROP in this PRD's history, and the drop is the finding.** Five [P1]s, four of them introduced by the remediation itself, each the *adjacent case* of a fix that was correct as far as it went. **(N)** FR-8's exception migration is unexecutable: the packed store is an array of eight `.mjs` filenames, `wiringExceptions` is `Record<script-name, justification>` validated non-empty, and `auditWiring` reports an exception naming no existing script as stale — so "re-record them" yields eight stale entries or an invalid manifest. **(O)** the upgrade fixture asserts byte-identity after `planPractices`, which returns `InitAction[]` and writes nothing; the `wx` invariant lives in `initWorkspace`, so the assertion cannot fail for its stated reason — `fixture-must-reach-production-shape` and `assert-absent-needs-an-independent-cause`, both **declared as applied Memory Inputs by the session that then violated them**. **(P)** FR-4(b′)'s basename match is unbounded across the sibling-`package.json`-script surface FR-4(b) newly adds, so `"docs": "echo verify-foo.mjs"` wires `verify:foo` — the residual is reasoned about for hooks and bundles and not for the surface where it actually bites. **(Q)** the rewritten rollback restores the pack half and the manifest but not the **root** bundle's `CHECKS` membership or the replaced CI steps, which CI references by name and which are therefore not "inert if unreferenced"; it also omits the ADR-0002 mirror that FR-1 makes a gate. **(R)** FR-7(c) is a self-exemption — §9 stays in the shape the new rule will fail — and its corpus row runs `pnpm verify:workflow`, a bundle that executes only its `CHECKS` and never calls `lintPrd`. Codex proved the bullet-only false green empirically by injecting an unresolved bold `Q5` and watching `lintPrd` return clean. P2: §1's table and prose still assert the retired `/` rule and "three divergences", the §11 FR-3 row still promises three, `durable.ts`/`wiring.ts` line counts are stale (46→115, 212→259), and §9 says PRD-021 has "five overlaps" where the Conflict Surface — corrected in the *same edit* — measures eight. Confirmed sound: Q4's decision, the additive-only diagnosis, FR-8's pack-drift completeness, the `track: "pack"` rollback distinction, finding I's underlying diagnosis, and FR-7's identification of all three parser defects. |
 | 4   | 2026-07-25 | 7.19  | ITERATE | **Independent — Codex, same session resumed and told to hunt for defects the remediation introduced.** Five of six prior findings CLOSED (config contract, predicate binding, class rationale + changeset, both stale sentences, ADR contract); the packed-duplicates finding only PARTIALLY, and that is finding H. Three new [P1]s, all re-verified: **(H)** `gate init` is **additive-only** by explicit design — `init.ts` says "nothing is ever overwritten or deleted" and writes with `wx` — so removing files from the pack migrates nobody who already installed them; FR-8's "adopters move with us" holds only for fresh installs, and an existing adopter keeps all three scripts, their package scripts, and the old bundle membership. **(I)** FR-4 ported the surface set and missed the *matching predicate*: the deleted script counts a check wired when its script name **or** its `.mjs` basename appears in a surface, while the survivor's `wiredIn` matches the name only — so a hook running `node scripts/verify/verify-foo.mjs` still would not register. Same shape as the earlier `startsWith('verify:')` miss, twice now. **(J)** the expansion grew the deletion but not the rollback, which still restores only the root half and claims "no state or artifact migration exists". P2s: the `lucide-react` correction was itself wrong — it *is* in PRD-014's Durable Artifacts section, on a bullet continuation line the bullet-start parser does not read; the overlap sentence says five files where the queue reports eight; FR-4 is oversized for one Phase-3 task though it should stay one FR. Codex confirmed FR-8 names every pack-drift half it needs, that any one-sided intermediate deletion is red, and that keeping CI at `run:` text is right. |
 | 3   | 2026-07-25 | 6.65  | ITERATE | **Independent — Codex (gpt-5.x) via the `/codex` skill, read-only, high reasoning effort. Supersedes the self-scored 8.30.** Four [P1]s, all re-verified against source before recording. The blocking one is scope, not detail: the three scripts this PRD deletes are **shipped in the practices pack**, installed into adopter repos by `gate init --practices` (`core/run/init.ts`), run by the packed `verify-workflow.mjs` bundle, and protected by `verify-pack-drift.mjs`, which fails with "pack ships 'X' but this repo has no 'Y' — the live layer lost its copy" when a mapped destination disappears. So the deletion reds `pnpm verify:pack-drift`, which §11's floor requires green — and the packed `gates-wired-exceptions.json` holds eight entries where the root copy this PRD inspected is `[]`, so FR-4(c)'s "the file is empty" is true of the wrong copy. Also: FR-4 makes three paths configurable without naming keys, defaults, validation, or the `defaults.ts`/`validate.ts` targets; FR-3 consumes a predicate PRD-021 never promises to export, so Phase 4 must duplicate it or edit out of scope; the class rationale claims "no new user-facing feature" while adding two public CLI flags and new config, with no changeset. Two revision leftovers: §9 Q2 still says eleven tokens after FR-3 was corrected to fourteen, and §7 Dependencies still claims PRD-021 edits `gates-wired-exceptions.json`, contradicting FR-4(c). Codex confirmed the FR-4(b) surface table, the `run:`-only CI narrowing, and the 14-token measurement. |
