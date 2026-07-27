@@ -146,4 +146,30 @@ sub-scores. Suggested starting thresholds (recalibrate after your first ~10 cand
 ≥ 3.40 stays a candidate; ≥ 4.00 is top tier. Below threshold → broaden the candidate
 and re-score; cut only after two failed expansions, with recorded rationale.
 
-{{VALUE_AXES_TABLE}}
+The axes and their weights come from `workflow.config.json` under `valueScoring`. The
+shipped defaults are below; **if you change `valueScoring.axes` or `valueScoring.weights`,
+edit this table to match** — nothing substitutes it for you, and a table that disagrees
+with the config is the kind of stale claim the gate exists to catch.
+
+| Dim | Meaning | Weight |
+|-----|---------|--------|
+| MF — Method Fidelity | strengthens the gated method / stays true to the source snapshot | 0.25 |
+| UI — User Impact | value to adopters of the CLI/method | 0.25 |
+| TL — Technical Leverage | unlocks or de-risks later roadmap work | 0.20 |
+| AR — Adoption & Reach | improves OSS adoption surface (docs, DX, examples) | 0.15 |
+| RM — Risk & Maintenance | low regression risk / low standing maintenance (5 = safest) | 0.15 |
+
+Notation in the work-item header: `Value: 3.55 (MF/UI/TL/AR/RM: 4/5/2/3/3)`. The declared
+total must equal the weighted sum, and that is **enforced mechanically**:
+`gate check PRD-NNN` recomputes it from the weights above and refuses a header whose
+arithmetic does not hold, while `gate check --value-score` sweeps the whole corpus — which
+is what catches a score edited after its item passed readiness.
+
+The shipped default omits `enforceFrom`, which means **presence-triggered**: an item with
+no header passes, and only an item that declares one has its arithmetic checked. Set
+`valueScoring.enforceFrom` to the first id you want the header required from — your older
+items keep passing without one.
+
+Changing the axes is a corpus migration rather than a config edit: run
+`gate check --value-score` first to see which items would break, then land the axis change
+and the header rewrites in one commit.

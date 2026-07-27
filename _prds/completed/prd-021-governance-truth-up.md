@@ -511,7 +511,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    belongs to PRD-018, which creates the file; this PRD proves only the edit case. Phase 4
    preflight re-checks `_state/locks` before committing, because the measurement goes stale.
    - **Targets:** `packages/provegate/test/config-value-scoring.test.ts`,
-     `packages/provegate/src/core/run/open.ts` (read-only reference — no behavior change)
+     `packages/provegate/src/core/run/open.ts` (FR-5 reads it; **FR-13(c) also edits it** —
+     the claim prints the rejected tokens, so the earlier "read-only, no behavior change"
+     note is superseded)
 6. **FR-6**: Prove the decision at the unit and the sweep at the **command**. The
    arithmetic and cutoff matrix is a unit test over `value-score.ts` and `lintPrd`: custom
    valid weights → a total computed from them; a wrong total → the failure names declared
@@ -1103,6 +1105,9 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/config/defaults.ts`
 - `packages/provegate/src/core/config/validate.ts`
 - `packages/provegate/src/core/config/load.ts`
+- `packages/provegate/src/core/run/open.ts`
+- `packages/provegate/src/core/state/index.ts`
+- `packages/provegate/test/cli-state.test.ts`
 - `packages/provegate/test/config-value-scoring.test.ts`
 - `packages/provegate/test/doc-claims-script.test.ts`
 - `packages/provegate/test/content-canon.test.ts`
@@ -1206,12 +1211,30 @@ resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019
   accidentally satisfy the generated header pattern. Today it cannot (the template emits
   no `Value:` line, which is why presence-triggering is the default), and that fact must be
   pinned rather than assumed, because FR-10 edits templates in the same change.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — also written BY this PRD at
+  Phase 7, and it watches `_prds/**`, which the merge diff changes. Applied to this very
+  document: nine of the fourteen review findings were one rule corrected in the place that
+  owned it and left standing elsewhere, and the remediation for each listed the other
+  restatements before editing.
+- applied: `docs-outlive-the-gate-they-promise` — written BY this PRD at Phase 7 and applied
+  back to it: it watches `_brain/PROTOCOL.md`, which FR-9 corrects, and its rule is exactly
+  what `verify:doc-claims` implements. The contract catching its own output.
 
 ## Memory Outputs
 
-- none — the checker's rules live in its own allowlist and tests. Append an exact learning
-  path only if reconciling the docs surfaces a governance trap that is not derivable from
-  the checker.
+- learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — a document that
+  describes a check as future work keeps describing it that way after the check ships, and
+  the stale direction is the inverse of the intuitive one: three of four "wave 2" claims
+  here were already true, and the two defects were shipped-things-called-unshipped.
+- learning: `_brain/learnings/a-rule-corrected-survives-where-it-is-restated.md` — across
+  five consecutive readiness rounds on this item, every finding was created by the fix for
+  the round before it: a rule corrected in its owning FR while the old version survived in
+  another section. The remedy is a reviewer instruction, not a gate — brief a sweep across
+  named sections rather than a defect hunt.
+
+Appended at Phase 7 under the escape hatch this section opened at Phase 1. It is not
+derivable from the checker or from the code: the evidence is the shape of five rounds, and
+the actionable half is how the sixth round was briefed.
 
 ---
 
@@ -1222,10 +1245,15 @@ against the merge diff). Never leave empty — write `none` explicitly. Narrow s
 only **this PRD's** durable knowledge.
 
 - Review artifact: `_docs/reviews/review-021-governance-truth-up.md`
-- Learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — the promise-vs-shipped
-  gap is the recurring shape here (three of four wave-2 claims were already true); record
-  it if the close confirms the pattern, otherwise downgrade this entry to `none` before
-  Phase 4.
+- Learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — **the close
+  confirmed the pattern and sharpened its direction.** `verify:doc-claims` found two stale
+  claims on its first run, and both were the INVERSE of the expected defect: a wired,
+  CI-running script described as future work. The record carries that measurement, because
+  a checker written for the intuitive direction would have found nothing.
+- Learning: `_brain/learnings/a-rule-corrected-survives-where-it-is-restated.md` — the
+  readiness history's own shape: five rounds, five findings, every one created by the fix
+  for the round before it. Every Memory Output repeats here; the two lists are proved
+  against the same merge diff.
 
 ---
 

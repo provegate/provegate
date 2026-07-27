@@ -29,4 +29,10 @@ export {
   type ReviewMeta,
 } from './review.js';
 export { lintPrd, type PrdReadyReport } from './prd-ready.js';
+export {
+  scoreValueHeader,
+  valueScoreIssue,
+  type ValueScoreProblem,
+  type ValueScoreResult,
+} from './value-score.js';
 export { auditWiring, yamlRunText, type WiringReport } from './wiring.js';

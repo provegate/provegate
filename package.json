@@ -30,6 +30,7 @@
     "check-egress": "node scripts/check-static-egress.mjs",
     "verify:brain": "node scripts/verify/verify-brain.mjs",
     "verify:review-artifact": "node scripts/verify/verify-review-artifact.mjs",
+    "verify:doc-claims": "node scripts/verify/verify-doc-claims.mjs",
     "verify:durable-artifacts": "node scripts/verify/verify-durable-artifacts.mjs",
     "verify:deferred": "node scripts/verify/verify-deferred.mjs",
     "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
@@ -37,6 +38,7 @@
     "verify:pack-drift": "node scripts/verify/verify-pack-drift.mjs",
     "verify:turbo-inputs": "node scripts/verify/verify-turbo-inputs.mjs",
     "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
+    "verify:value-score": "node packages/provegate/dist/cli.js check --value-score",
     "verify:workflow": "node scripts/verify/verify-workflow.mjs",
     "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green — ready to push; run git push yourself (push is always human)')\""
   },

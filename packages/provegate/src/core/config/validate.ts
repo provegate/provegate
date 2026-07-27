@@ -9,11 +9,13 @@ import type { ConfigIssue, WorkflowConfig } from './types.js';
 
 type Spec =
   | { kind: 'string' }
+  | { kind: 'cutoff' }
   | { kind: 'number' }
   | { kind: 'countOrZero' }
   | { kind: 'boolean' }
   | { kind: 'stringArray' }
   | { kind: 'stringRecord' }
+  | { kind: 'numberRecord' }
   | { kind: 'maybeEmptyString' }
   | { kind: 'object'; children: Record<string, Spec> };
 
@@ -21,11 +23,17 @@ const str: Spec = { kind: 'string' };
 const num: Spec = { kind: 'number' };
 const strArr: Spec = { kind: 'stringArray' };
 const strRec: Spec = { kind: 'stringRecord' };
+const numRec: Spec = { kind: 'numberRecord' };
 const obj = (children: Record<string, Spec>): Spec => ({ kind: 'object', children });
 const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
 const bool: Spec = { kind: 'boolean' };
 /** A cadence: a count where 0 is a legal value meaning "off", unlike `num`. */
 const countOrZero: Spec = { kind: 'countOrZero' };
+/** A cutoff id: a non-negative integer where 0 means "enforce everywhere" — the
+ * OPPOSITE of `countOrZero`'s 0. Reusing that spec produced a validation error
+ * telling an adopter `0 disables it`, which is exactly backwards and would have
+ * shipped as advice. */
+const cutoff: Spec = { kind: 'cutoff' };
 
 const artifactKind = obj({ dir: str, prefix: str });
 
@@ -69,6 +77,7 @@ const CONFIG_SPEC = obj({
   classes: strArr,
   verifyScriptPattern: str,
   templates: obj({ prd: strOrEmpty }),
+  valueScoring: obj({ axes: strArr, weights: numRec, enforceFrom: cutoff }),
   memory: obj({
     enabled: bool,
     root: str,
@@ -107,6 +116,14 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
         issues.push({ path, message: 'must be a non-negative integer (0 disables it)' });
       }
       return;
+    case 'cutoff':
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+        issues.push({
+          path,
+          message: 'must be a non-negative work-item id (0 enforces from the very first item)',
+        });
+      }
+      return;
     case 'number':
       if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
         issues.push({ path, message: 'must be a positive integer' });
@@ -115,6 +132,18 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
     case 'stringArray':
       if (!Array.isArray(value) || value.some((v) => typeof v !== 'string' || v.length === 0)) {
         issues.push({ path, message: 'must be an array of non-empty strings' });
+      }
+      return;
+    case 'numberRecord':
+      // Shape only. The weight SEMANTICS — two decimals, sum to 1, key set
+      // equal to the axes — need the resolved config, so they live in
+      // `validateResolvedConfig`. Rejecting a non-number here keeps that
+      // function from having to re-check types it was handed.
+      if (
+        !isPlainObject(value) ||
+        Object.values(value).some((v) => typeof v !== 'number' || !Number.isFinite(v))
+      ) {
+        issues.push({ path, message: 'must be an object mapping strings to finite numbers' });
       }
       return;
     case 'stringRecord':
@@ -190,6 +219,7 @@ export function validateResolvedConfig(config: {
     entrypoints: string[];
     verifyCommand: string;
   };
+  valueScoring?: { axes: string[]; weights: Record<string, number>; enforceFrom?: number };
 }): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
 
@@ -255,6 +285,117 @@ export function validateResolvedConfig(config: {
     if (value === undefined) continue;
     const reason = unsafeRelPath(value);
     if (reason !== null) issues.push({ path, message: reason });
+  }
+
+  if (config.valueScoring !== undefined) {
+    issues.push(...validateValueScoring(config.valueScoring));
+  }
+
+  return issues;
+}
+
+/** An axis identifier: a letter, then up to 15 more letters/digits/underscores.
+ * The charset is load-bearing rather than cosmetic — the value-header pattern is
+ * BUILT from these identifiers, so admitting `/` (the dimension separator),
+ * whitespace, or a regex metacharacter would let a configured axis change the
+ * meaning of the pattern it appears in. Validate before any pattern is built. */
+const AXIS_ID = /^[A-Za-z][A-Za-z0-9_]{0,15}$/;
+
+/** A weight's decimal form, tested LEXICALLY. `Number.isInteger(0.29 * 100)` is
+ * false — 0.29 * 100 is 28.999999999999996 — so an arithmetic two-decimal test
+ * rejects a legal weight. JS emits the shortest round-tripping form, so
+ * `String(0.29) === '0.29'` and the string is the honest thing to measure. */
+const WEIGHT_FORM = /^0(\.\d{1,2})?$|^1(\.0{1,2})?$/;
+
+function validateValueScoring(vs: {
+  axes: string[];
+  weights: Record<string, number>;
+  enforceFrom?: number;
+}): ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+  const { axes, weights } = vs;
+
+  if (axes.length < 2 || axes.length > 10) {
+    issues.push({
+      path: 'valueScoring.axes',
+      message: 'must declare between 2 and 10 axes (a one-axis score is the dimension itself)',
+    });
+  }
+  const seen = new Map<string, string>();
+  axes.forEach((axis, i) => {
+    if (!AXIS_ID.test(axis)) {
+      issues.push({
+        path: `valueScoring.axes[${i}]`,
+        message: `"${axis}" must match ${AXIS_ID.source} — the header pattern is built from it`,
+      });
+      return;
+    }
+    // Case-INSENSITIVE uniqueness. The generated pattern is case-insensitive,
+    // because the source snapshot's regex is, so `MF` and `mf` would be
+    // indistinguishable in a header while validating as two distinct axes. The
+    // ambiguity is resolved here rather than by diverging from the snapshot.
+    const key = axis.toLowerCase();
+    const first = seen.get(key);
+    if (first !== undefined) {
+      issues.push({
+        path: `valueScoring.axes[${i}]`,
+        message: `"${axis}" duplicates "${first}" — axis identifiers are unique ignoring case`,
+      });
+      return;
+    }
+    seen.set(key, axis);
+  });
+
+  // The weight key set must EXACTLY equal the axis set, in both directions.
+  // Neither may be defaulted: silently supplying a weight for an axis the
+  // adopter never declared is how a score stops meaning what they think it does.
+  const axisSet = new Set(axes);
+  for (const axis of axes) {
+    if (!Object.hasOwn(weights, axis)) {
+      issues.push({
+        path: `valueScoring.weights.${axis}`,
+        message: 'missing — every declared axis needs a weight',
+      });
+    }
+  }
+  for (const key of Object.keys(weights)) {
+    if (!axisSet.has(key)) {
+      issues.push({
+        path: `valueScoring.weights.${key}`,
+        message: 'names an axis that valueScoring.axes does not declare',
+      });
+    }
+  }
+
+  let hundredths = 0;
+  let scalable = true;
+  for (const [key, weight] of Object.entries(weights)) {
+    if (weight <= 0) {
+      issues.push({ path: `valueScoring.weights.${key}`, message: 'must be greater than 0' });
+      scalable = false;
+      continue;
+    }
+    if (!WEIGHT_FORM.test(String(weight))) {
+      issues.push({
+        path: `valueScoring.weights.${key}`,
+        message: `${String(weight)} must be written with at most two decimal places`,
+      });
+      scalable = false;
+      continue;
+    }
+    hundredths += Math.round(weight * 100);
+  }
+  // Compared in integer hundredths, never float equality. The shipped five
+  // weights happen to sum to exactly 1 as doubles — an earlier version of this
+  // comment claimed otherwise and was simply wrong — but plenty of legal sets
+  // do not: 0.06 + 0.57 + 0.37 is 0.9999999999999999, and a `=== 1` test would
+  // reject it. Only reported when every weight was scalable, so a bad decimal
+  // form does not also produce a confusing sum error.
+  if (scalable && Object.keys(weights).length > 0 && hundredths !== 100) {
+    issues.push({
+      path: 'valueScoring.weights',
+      message: `must sum to exactly 1 (got ${(hundredths / 100).toFixed(2)})`,
+    });
   }
 
   return issues;

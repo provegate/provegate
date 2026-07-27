@@ -107,4 +107,14 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
     verifyCommand: '',
     retroAfterCompleted: 0,
   },
+  // The five axes this repository's triage rubric uses, and their weights.
+  // `enforceFrom` is deliberately ABSENT rather than 1: the shipped PRD
+  // template emits no `Value:` line and no shipped prompt asks for one, so a
+  // default cutoff would fail an adopter's very first `gate check` for omitting
+  // something nothing had asked them to write. This repository opts in through
+  // its own `workflow.config.json`.
+  valueScoring: {
+    axes: ['MF', 'UI', 'TL', 'AR', 'RM'],
+    weights: { MF: 0.25, UI: 0.25, TL: 0.2, AR: 0.15, RM: 0.15 },
+  },
 };

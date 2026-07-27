@@ -9,6 +9,9 @@ export {
   findMarkdownTable,
   writeTableValue,
   declaredGlobs,
+  isRootRelativeFilename,
+  parseConflictSurface,
+  type RejectedClaim,
   type MarkdownTableBounds,
 } from './markdown.js';
 export {

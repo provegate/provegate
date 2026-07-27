@@ -17,7 +17,7 @@
     "brain/PROTOCOL.md": {
       "dest": "_brain/PROTOCOL.md",
       "pack": "928149b82b901e0c",
-      "repo": "2a67249db232cd39"
+      "repo": "ae70fbd804b97e86"
     },
     "brain/README.md": {
       "dest": "_brain/README.md",
@@ -47,8 +47,8 @@
     },
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
-      "pack": "ad045baf1653ee97",
-      "repo": "b7787d48e3353c7a"
+      "pack": "6083eb45e7cfa526",
+      "repo": "f9664d50c0ed05a2"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",
@@ -140,7 +140,7 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "7e5cfd4e9eafcee9",
-      "repo": "22b566161653ef08",
+      "repo": "150374e23c3bd010",
       "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit"
     },
     "verify/gates-wired-exceptions.json": {

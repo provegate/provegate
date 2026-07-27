@@ -226,14 +226,49 @@ export function writeTableValue(content: string, label: string, value: string): 
 }
 
 /**
- * Parse a `## Conflict Surface` section into the globs a work item claims
- * exclusive write-ownership of. Keeps `*` (globs are intentional), drops
- * `{ }` template tokens, bare `none` lines, and non-path tokens.
+ * A repo-root filename claimed without a `/` — the shape that makes
+ * `workflow.config.json`, `STATUS.md` and `.gitignore` real claims.
+ *
+ * Exported because it is a CONTRACT, not an implementation detail: the Durable
+ * Artifacts parser needs the same predicate, and the alternative is two
+ * definitions of "is this a filename" that drift. Both shapes forbid
+ * whitespace, a leading `/`, a `..` segment and a trailing `.` — which is what
+ * keeps prose abbreviations (`e.g.`, `i.e.`, `etc.`) out of a lease.
+ *
+ * The predicate IS the specification. "Looks like a filename" is not one.
  */
-export function declaredGlobs(content: string): string[] {
-  // Unioned across every section with this heading, for the same reason the
-  // operator rows are summed: a claim written twice is still a claim.
+export function isRootRelativeFilename(token: string): boolean {
+  return (
+    /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$/.test(token) ||
+    /^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$/.test(token)
+  );
+}
+
+/** Why a Conflict Surface token was not accepted as a claim. */
+export interface RejectedClaim {
+  token: string;
+  reason: string;
+}
+
+/**
+ * Parse a `## Conflict Surface` section into claimed globs **and the tokens
+ * that were refused**, with a reason each.
+ *
+ * The rejections are the point. A token silently dropped is a path the author
+ * believes is protected and the lock engine has never heard of, and both
+ * consumers — the enforcing claim and the advisory queue — used to discard
+ * without a word. Measured before this change: `../outside.ts`, `/etc/passwd`,
+ * `e.g.` and `etc.` were all accepted as claims, so the loose predicate erred
+ * in both directions at once.
+ */
+export function parseConflictSurface(content: string): {
+  globs: string[];
+  rejected: RejectedClaim[];
+} {
   const globs: string[] = [];
+  const rejected: RejectedClaim[] = [];
+  const seen = new Set<string>();
+
   for (const line of sectionsMatching(content, escapeRegExp('Conflict Surface'))
     .join('\n')
     .split('\n')) {
@@ -245,15 +280,45 @@ export function declaredGlobs(content: string): string[] {
     const declared = line.split('—')[0]!;
     for (const match of declared.matchAll(/`([^`]+)`/g)) {
       const value = match[1]!.trim();
-      // A ROOT-LEVEL claim is a claim. Requiring a `/` discarded
-      // `workflow.config.json` and `gates.manifest.json` — the entries this
-      // repository's own PRDs use — so two agents could claim the same control
-      // file and no conflict was detected.
-      if (!/^[^\s`]+$/.test(value)) continue;
-      if (/[{}]/.test(value)) continue;
-      if (/^none$/i.test(value)) continue;
+      if (seen.has(value)) continue;
+      seen.add(value);
+      const reason = rejectionReason(value);
+      if (reason !== null) {
+        // A template token is not a claim and not a mistake — the shipped
+        // template carries them and reporting them would train an author to
+        // ignore this list.
+        if (reason !== 'template token') rejected.push({ token: value, reason });
+        continue;
+      }
       globs.push(value);
     }
   }
-  return [...new Set(globs)];
+  return { globs, rejected };
 }
+
+/** Why `token` is not a claimable path, or null when it is one. */
+function rejectionReason(token: string): string | null {
+  if (/[{}]/.test(token)) return 'template token';
+  if (/^none$/i.test(token)) return 'template token';
+  if (/\s/.test(token)) return 'contains whitespace';
+  if (token.startsWith('/')) return 'absolute — Conflict Surface paths are repo-relative';
+  if (token.split('/').includes('..')) return 'contains a `..` segment';
+  if (token.endsWith('.')) return 'ends with a dot — prose, not a path';
+  if (token.includes('/')) return null;
+  return isRootRelativeFilename(token)
+    ? null
+    : 'not a repo-root filename (needs an extension, or a leading dot)';
+}
+
+/**
+ * Parse a `## Conflict Surface` section into the globs a work item claims
+ * exclusive write-ownership of. Keeps `*` (globs are intentional), drops
+ * `{ }` template tokens, bare `none` lines, and non-path tokens.
+ *
+ * Signature unchanged so no caller breaks; `parseConflictSurface` is where the
+ * rejections live for the two consumers that should report them.
+ */
+export function declaredGlobs(content: string): string[] {
+  return parseConflictSurface(content).globs;
+}
+

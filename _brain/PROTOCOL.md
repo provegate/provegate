@@ -223,8 +223,9 @@ skipped:
 6. **Dedupe.** Before creating, check for an existing record that already covers it —
    update that file instead of forking a near-duplicate.
 
-Optional enforcement (wave 2, ships with `verify:*`): a `verify:brain` script (§9) can
-require that a change touching a declared workflow-tooling path glob either adds/updates a
+Enforcement, shipped: `verify:brain` (§9) is a wired `package.json` script and a member of
+the `verify:workflow` bundle. It requires that a change touching a declared
+workflow-tooling path glob either adds/updates a
 `_brain` record or carries an explicit `Learning: none` line in its Durable Artifacts
 section — nudging capture without forcing noise.
 

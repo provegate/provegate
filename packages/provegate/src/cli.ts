@@ -29,6 +29,8 @@ import {
   lintPrd,
   loadManifest,
   parsePrdClass,
+  scoreValueHeader,
+  valueScoreIssue,
 } from './core/gates/index.js';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname as pathDirname } from 'node:path';
@@ -460,6 +462,13 @@ function runQueue(json: boolean): number {
     for (const w of queue.readyOverlaps)
       lines.push(`    ${w.a} <-> ${w.b}: ${w.shared.join(', ')}`);
   }
+  if (queue.surfaceRejections.length > 0) {
+    // A token the author wrote and the lock engine never received. Silence here
+    // is the worst outcome: they believe a path is protected and it is not.
+    lines.push(`  ${paint('stale', '!', tier)} Conflict Surface tokens NOT claimed:`);
+    for (const s of queue.surfaceRejections)
+      for (const r of s.rejected) lines.push(`    ${s.prd}: \`${r.token}\` — ${r.reason}`);
+  }
   push(
     'IN-FLIGHT',
     queue.inFlight,
@@ -621,8 +630,63 @@ function runMemory(args: string[]): number {
   return 0;
 }
 
+/**
+ * `gate check --value-score` — the corpus sweep.
+ *
+ * `gate check PRD-NNN` only covers the item in front of it, which cannot catch
+ * a score edited AFTER its PRD passed Phase 2. This applies the same decision
+ * to every record in state and reports each failure with both numbers.
+ *
+ * Pre-cutoff skips are printed rather than silent: a sweep that says nothing
+ * about the items it did not check reads as a sweep that checked them.
+ */
+function runValueScoreSweep(config: WorkflowConfig, root: string): number {
+  const state = buildState(config, root);
+  const failures: string[] = [];
+  const skipped: string[] = [];
+  // Counted separately on purpose. An item with no header and no cutoff is not
+  // "scored and passing" — nothing was recomputed for it — and a summary that
+  // folds the two together claims more than the sweep did, which is the exact
+  // shape of defect this work item exists to remove.
+  let scored = 0;
+  let headerless = 0;
+
+  for (const record of state.records) {
+    const rel = record.artifacts.prd;
+    if (!rel) continue;
+    let content: string;
+    try {
+      content = readFileSync(resolve(root, rel), 'utf8');
+    } catch (error) {
+      // A record naming a file we cannot read is a finding, not a skip: the
+      // state snapshot and the tree disagree.
+      failures.push(`${record.prd}: cannot read ${rel} (${error instanceof Error ? error.message : String(error)})`);
+      continue;
+    }
+    const cutoff = config.valueScoring.enforceFrom;
+    if (cutoff !== undefined && record.number < cutoff && scoreValueHeader(config, content).problem?.kind === 'absent') {
+      skipped.push(`${record.prd}: no header, and id ${record.number} is before the cutoff of ${cutoff}`);
+      continue;
+    }
+    if (scoreValueHeader(config, content).problem?.kind === 'absent') headerless++;
+    else scored++;
+    const issue = valueScoreIssue(config, content, record.number);
+    if (issue !== null) failures.push(`${record.prd}: ${issue}`);
+  }
+
+  for (const line of skipped) console.log(`[check --value-score] skipped ${line}`);
+  const tally = `${scored} scored, ${headerless} without a header, ${skipped.length} skipped by the cutoff`;
+  if (failures.length > 0) {
+    console.error(`[check --value-score] ${failures.length} failure(s) — ${tally}:`);
+    for (const line of failures) console.error(`  - ${line}`);
+    return 1;
+  }
+  console.log(`[check --value-score] ok — ${tally}`);
+  return 0;
+}
+
 function runCheck(args: string[]): number {
-  const unknown = unknownOption(args, ['--wiring']);
+  const unknown = unknownOption(args, ['--wiring', '--value-score']);
   if (unknown !== null) {
     console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
@@ -641,6 +705,8 @@ function runCheck(args: string[]): number {
     return 0;
   }
 
+  if (args.includes('--value-score')) return runValueScoreSweep(config, root);
+
   const idArg = args.find((a) => !a.startsWith('-'));
   if (!idArg) {
     console.error('usage: gate check PRD-XXX | gate check --wiring');
@@ -652,7 +718,7 @@ function runCheck(args: string[]): number {
     return 1;
   }
   const content = readFileSync(resolve(root, found.record.artifacts.prd), 'utf8');
-  const report = lintPrd(config, manifest, content, root);
+  const report = lintPrd(config, manifest, content, root, found.record.number);
   if (!report.ok) {
     console.error(`[check] ${found.id} is not ready:`);
     for (const issue of report.issues) console.error(`  - ${issue}`);
@@ -696,6 +762,10 @@ interface WorktreeStamps {
   file: string;
   /** Absolute path, used to unlink. */
   leasePath: string;
+  /** The paths this lease claims exclusive write-ownership of. A claim over a
+   * control artifact is what AUTHORIZES the checkout to differ from base on it
+   * — see the revalidation seam in `runRun`. */
+  ownedPaths: string[];
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
@@ -766,6 +836,9 @@ function worktreeStamps(
     stamps: {
       worktree: wt,
       branch: br,
+      ownedPaths: Array.isArray(live.data['ownedPaths'])
+        ? (live.data['ownedPaths'] as unknown[]).filter((p): p is string => typeof p === 'string')
+        : [],
       // Key order is whatever the parse produced; an identical rewrite by the
       // same writer reproduces it, and ANY field change breaks equality.
       identity: JSON.stringify(live.data),
@@ -929,12 +1002,29 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       relPath: stamps.worktree,
       branch: stamps.branch,
     });
-    if (revalidation.refusal !== null) {
+    // A difference in a file this lease OWNS is not drift — it is the work.
+    //
+    // PRD-022's check compares the checkout's control artifacts against base
+    // and refuses any difference, which is right for a checkout that has fallen
+    // behind. It cannot, on its own, tell that apart from a work item whose
+    // declared job is to edit `workflow.config.json` — and PRD-021 is the first
+    // such item, refused by the gate at its own close.
+    //
+    // The lease is the authorization. A `## Conflict Surface` claim means
+    // exclusive write-ownership, so a control artifact inside `ownedPaths` is
+    // one this branch is entitled to change. Everything else still refuses,
+    // including a control artifact the item never claimed.
+    const owned = new Set(stamps.ownedPaths);
+    const unauthorized = revalidation.drifted.filter((rel) => !owned.has(rel));
+    if (revalidation.refusal !== null && unauthorized.length > 0) {
       console.error(
         stopCard({
           id,
           phase: 'merge',
-          why: `${revalidation.refusal} — nothing ran, nothing merged`,
+          why:
+          `the checkout at ${stamps.worktree} carries workflow artifacts differing from ` +
+          `'${config.branches.base}' (${unauthorized.join(', ')}) — merge or rebase ` +
+          `${config.branches.base} into ${stamps.branch} first — nothing ran, nothing merged`,
           results: [],
         }),
       );

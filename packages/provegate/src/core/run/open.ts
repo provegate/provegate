@@ -245,6 +245,28 @@ function claimPrdLocked(
     };
   }
   const globs = candidate.ownedPaths ?? [];
+  // Tokens the author wrote that are NOT claimable paths. Reported on every
+  // outcome, success included: a claim that quietly protects four of five
+  // declared paths is more dangerous than one that fails, because the author
+  // reads "claimed" and stops looking. Warnings, not a refusal — the surface
+  // that parsed is real and the work should proceed.
+  const surfaceNotes = (candidate.rejected ?? []).map(
+    (r) => `Conflict Surface token not claimed: \`${r.token}\` — ${r.reason}`,
+  );
+  if (globs.length === 0) {
+    // Every declared token was refused. Say WHY, rather than "you declared
+    // nothing" — the author declared several things and none of them parsed,
+    // which is a different problem with a different fix.
+    return {
+      ...base,
+      ok: false,
+      issues: [
+        ...surfaceNotes,
+        `${normalized} declares a Conflict Surface but no token in it is a claimable path`,
+        ...surfaceNotes,
+      ],
+    };
+  }
 
   // Preconditions BEFORE any mutation: slug + containment + destination
   // resolution happen while every victim still sits untouched on disk — an
@@ -295,6 +317,7 @@ function claimPrdLocked(
         ...base,
         ok: false,
         issues: [
+          ...surfaceNotes,
           `cannot verify gate policy for a worktree claim: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`,
         ],
       };
@@ -346,6 +369,7 @@ function claimPrdLocked(
       ...base,
       ok: false,
       issues: [
+        ...surfaceNotes,
         ...malformed.map((m) => `malformed lease (fail closed): ${m}`),
         'ownership is unknowable while malformed leases exist — repair or delete them explicitly, then re-run',
       ],
@@ -404,6 +428,7 @@ function claimPrdLocked(
       blockers: blockers.map(asBlocker),
       ok: false,
       issues: [
+        ...surfaceNotes,
         ...conflicts.map(
           (c) =>
             `surface overlap with STALE lease ${c.a === normalized ? c.b : c.a}: ${c.shared.slice(0, 5).join(', ')}${c.shared.length > 5 ? ', …' : ''}`,
@@ -496,6 +521,7 @@ function claimPrdLocked(
             globs,
             ok: false,
             issues: [
+              ...surfaceNotes,
               `steal aborted, victims restored: lease of ${l.prd} ${mismatch}`,
               ...stranded,
             ],
@@ -542,6 +568,7 @@ function claimPrdLocked(
         globs,
         ok: false,
         issues: [
+          ...surfaceNotes,
           `existing lease ${stampSource?.file ?? '(unknown)'} stamps only ${typeof priorWt === 'string' ? 'worktree' : 'branch'} — worktree metadata is incomplete; repair or delete it before re-claiming`,
           ...stranded,
         ],
@@ -668,7 +695,8 @@ function claimPrdLocked(
         ...base,
         globs,
         ok: false,
-        issues: [`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
+        issues: [
+          ...surfaceNotes,`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
       };
     }
 
@@ -793,7 +821,8 @@ function claimPrdLocked(
           ...base,
           globs,
           ok: false,
-          issues: [`claim rolled back: ${reuse.refusal}`, ...notes],
+          issues: [
+            ...surfaceNotes,`claim rolled back: ${reuse.refusal}`, ...notes],
         };
       }
       if (reusable) {
@@ -823,6 +852,7 @@ function claimPrdLocked(
             globs,
             ok: false,
             issues: [
+              ...surfaceNotes,
               notes.length === 0
                 ? `claim rolled back: ${msg}`
                 : `claim rollback INCOMPLETE: ${msg}`,
@@ -863,7 +893,7 @@ function claimPrdLocked(
         }
         const stranded = rollback();
         dropQuarantineDir();
-        return { ...base, globs, ok: false, issues: [...issues, ...stranded] };
+        return { ...base, globs, ok: false, issues: [...surfaceNotes, ...issues, ...stranded] };
       }
     }
 
@@ -900,7 +930,7 @@ function claimPrdLocked(
       staleBlockers: [],
       stolen,
       ...(provisioned ? { worktree: provisioned } : {}),
-      issues: warnings,
+      issues: [...surfaceNotes, ...warnings],
     };
   } catch (err) {
     // Exception path: stranded-rollback messages must not vanish with the

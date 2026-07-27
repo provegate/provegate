@@ -6,6 +6,7 @@ import { declaredArtifactsStrict } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
 import { parseVerificationCommands } from './safety.js';
+import { valueScoreIssue } from './value-score.js';
 
 /**
  * PRD-readiness lint (`gate check`) — the machine gate that retires the
@@ -110,6 +111,11 @@ export function lintPrd(
   manifest: GatesManifest,
   content: string,
   root?: string,
+  // FIFTH, and optional, because a required parameter cannot follow the
+  // optional `root` — and because optional is what keeps this a one-caller
+  // change. Every existing call site omits it and receives `undefined`; only
+  // `runCheck`, which already resolved the record, has an id to pass.
+  prdNumber?: number | null,
 ): PrdReadyReport {
   const issues: string[] = [];
   const frs = frBlocks(content);
@@ -165,6 +171,12 @@ export function lintPrd(
   }
 
   const allTargets = frs.flatMap((fr) => frTargets(fr.body));
+
+  // The value recompute. Absent and `null` take the same path — see
+  // `valueScoreIssue`, which owns the cutoff decision because it owns the
+  // config that configures it.
+  const valueIssue = valueScoreIssue(config, content, prdNumber);
+  if (valueIssue !== null) issues.push(valueIssue);
 
   if (config.memory.enabled) {
     if (root === undefined) {

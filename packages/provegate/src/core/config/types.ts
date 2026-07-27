@@ -112,6 +112,47 @@ export interface WorkflowConfig {
   sharedAppendOnly: string[];
   /** Durable-memory store; disabled by default. */
   memory: MemoryConfig;
+  /** Value-triage scoring: the axes, their weights, and the optional cutoff. */
+  valueScoring: ValueScoringConfig;
+}
+
+/**
+ * Value-triage scoring (PRD-021).
+ *
+ * The axes are CONFIGURABLE because the shipped agent-bootstrap template tells
+ * adopters to define their own — a gate that only knew this repository's five
+ * would be unable to score the method it ships with.
+ *
+ * Two rules about this block live outside validation and are easy to lose:
+ *
+ * 1. `axes` is ORDERED. The order is the order a value header lists its
+ *    dimensions in, so it is contractual rather than cosmetic, and the header
+ *    pattern is generated from it.
+ * 2. When a config supplies `axes`, `resolveConfig` replaces this whole object
+ *    rather than merging into it. `deepMerge` recurses into plain objects, so
+ *    without that exception a three-axis override would inherit the five
+ *    default weight keys and fail its own validation. Supplying `weights`
+ *    ALONE is different and legal: it retunes the default axes, and the
+ *    sum-to-1 rule is what keeps a partial honest.
+ */
+export interface ValueScoringConfig {
+  /**
+   * Ordered axis identifiers, 2-10 of them, each matching
+   * `/^[A-Za-z][A-Za-z0-9_]{0,15}$/` and unique case-insensitively. The
+   * charset is load-bearing: the header pattern is built from these, so an
+   * identifier admitting `/`, whitespace, or a regex metacharacter could
+   * change the pattern's meaning.
+   */
+  axes: string[];
+  /** Weight per axis identifier. At most two decimals each; sums to exactly 1. */
+  weights: Record<string, number>;
+  /**
+   * First work-item id the header is REQUIRED for. Absent — the shipped
+   * default — selects presence-triggered mode: a PRD with no header passes,
+   * one with a wrong header fails. Absent is not `0`; `0` is a legal, explicit
+   * "enforce everywhere".
+   */
+  enforceFrom?: number;
 }
 
 export interface TemplatesConfig {
