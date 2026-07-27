@@ -238,6 +238,17 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    validated identifiers only. `axes.length` must be ≥ 2 and ≤ 10; a one-axis score is the
    dimension itself, and the upper bound keeps a generated pattern bounded.
 
+   **Identifiers must be unique, compared case-INSENSITIVELY**, and neither the charset nor
+   the count bound implies it. `["A","A"]` has length 2, collapses to one `Record` key, and
+   makes the recompute apply one weight twice while the header still parses. `["A","a"]` is
+   worse: it validates, and then the generated pattern cannot tell the two apart, because
+   the pattern is case-insensitive. It is case-insensitive on purpose — the source
+   snapshot's regex carries `/i` (`verify-prd-ready.mjs:292`) and porting it faithfully is
+   a method obligation — so the ambiguity is resolved on the identifier side rather than by
+   diverging from the snapshot. Reject fixtures: `["MF","MF"]` and `["MF","mf"]`, each
+   failing as a duplicate identifier, which is a different message from a charset
+   violation and must not be collapsed into one.
+
    `weights` is keyed by axis identifier. Semantic validation
    (`validateResolvedConfig`) requires that the weight key set **exactly equals** the axis
    set — a missing axis and an extra axis are both errors, and neither may be defaulted,
@@ -267,14 +278,46 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    the same as `1` (every id is ≥ both), but it is a deliberate opt-in rather than a
    default.
 
-   **`deepMerge` is the reason `axes` and `weights` need one more rule.** A recursive
-   object merge would let an adopter who declares three axes inherit the two default
-   weights they did not ask for, producing a weight set that validates against a
-   *merged* axis list nobody wrote. So: when a config supplies `valueScoring.axes`, it
-   must supply the whole `weights` object too, and the pair replaces the defaults
-   wholesale rather than merging into them. State that as a validation rule
-   (`axes` present without a complete `weights`, or `weights` present without `axes`
-   when the two would disagree, is an error), not as a note about merge behavior.
+   **`deepMerge` makes the replacement a LOADER rule, not a validation rule — and an
+   earlier draft of this FR got that backwards.** Measured at `core/config/load.ts:243`:
+   `resolveConfig` runs `deepMerge(DEFAULT_CONFIG, parsed)` and only then
+   `validateResolvedConfig(merged)`. `deepMerge` (lines 195-205) recurses into plain
+   objects, so `axes` — an array — replaces wholesale, while `weights` — a plain object —
+   **merges**. A three-axis override therefore arrives at validation carrying the five
+   default weight keys and fails the set-equality rule above. Stating the replacement as
+   validation makes **every legal custom-axis config an error**.
+
+   So it is specified where it happens: in `resolveConfig`, **before** the merge, when the
+   parsed config supplies `valueScoring.axes`, the whole `valueScoring` object replaces the
+   default rather than merging into it. Everything else merges as it always has — this is
+   one keyed exception with one reason, not a change to `deepMerge`, which stays exactly as
+   it is because every other config key wants recursive merge.
+
+   Two rules follow, and they are different rules:
+   - **Loader (`load.ts`):** `parsed.valueScoring?.axes` present → `valueScoring` is taken
+     from the parsed config verbatim, with no default fill-in of any of its keys.
+   - **Validation (`validate.ts`):** with `axes` present, the weight key set must exactly
+     equal the axis set. `axes` present without `weights`, or `weights` naming an axis
+     `axes` omits, is an error — now *reachable*, because the loader no longer silently
+     supplies the missing keys.
+
+   The proof this needs is a **resolution** test, not a validation test: a three-axis
+   config file resolved through `loadConfig` must produce exactly three weight keys. A
+   validation-only fixture builds the resolved object by hand and would pass while the real
+   loader still failed — which is the defect this paragraph exists to fix.
+
+   **Changing `axes` is a corpus migration, and "adopter migration: none" is true only of
+   the shipped default.** Presence-triggering protects a *header-less* PRD; it does not
+   protect a *scored* one. FR-2 fails a header whose axis list disagrees with the config,
+   so editing `axes` in a repo that already has scored PRDs reds every one of them at once.
+   The downgrade direction is the same shape: removing an axis invalidates every header
+   that still names it. This PRD does not add header schema versioning — that is a real
+   feature with its own decisions — it names the migration and ships the preflight it
+   already builds. `gate check --value-score` (FR-3) sweeps the corpus and lists exactly
+   which PRDs a proposed axis change would fail. The rule, stated in the config
+   documentation FR-9 touches: run the sweep, then land the `axes` change and the header
+   rewrites **in one commit**. A config change that reds the corpus until a follow-up lands
+   is the half-migration this PRD exists to stop shipping.
 
    Fixtures must include the adopter cases directly: `valueScoring` absent entirely;
    `valueScoring.weights` set but no `enforceFrom`; a **three-axis** config with matching
@@ -285,7 +328,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - **Targets:** `packages/provegate/src/core/config/types.ts`,
      `packages/provegate/src/core/config/defaults.ts::DEFAULT_CONFIG`,
      `packages/provegate/src/core/config/validate.ts::validateConfig`,
-     `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`
+     `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`,
+     `packages/provegate/src/core/config/load.ts::resolveConfig`
 2. **FR-2**: Add the recompute as a **package gate**, `core/gates/value-score.ts`, and
    call it from `lintPrd` so `gate check PRD-NNN` enforces it. Given the PRD body and its
    numeric id, it parses the value header, recomputes the total in **integer hundredths**
@@ -340,6 +384,17 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    since that is where the template puts the header and no example ever appears there. A
    PRD body quoting the header in prose, in a fence, or in a §6 row is documentation, not
    a second declaration.
+
+   **Inside that block, at most one.** "First match wins" was the right answer to the
+   fenced-example problem and the wrong answer once the search is scoped: a *second* `Value`
+   line within the metadata block is a genuine duplicate declaration — two totals, and the
+   gate silently scoring the earlier one — not an example, because no example is ever
+   written there. So: zero matches in the block is "no header" (presence-triggering
+   decides what that means), one is the declaration, two or more is **malformed**. Negative
+   fixture: a metadata block carrying two `Value` lines with different totals, failing as a
+   duplicate declaration rather than scoring either. This is a divergence from the
+   snapshot's single `.exec` and is recorded as one: the snapshot searches the whole
+   document, where "first match wins" is the only safe rule.
 
    **The declared total's own decimal form is specified, not inferred.** Parse it
    lexically into integer hundredths: it must carry one or two decimal places
@@ -505,9 +560,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
     - `practices/templates/AGENT_BOOTSTRAP.template.md:116` contains
       `{{VALUE_AXES_TABLE}}`, and the token is **not declared** in
-      `prompts/PLACEHOLDERS.md`. Add the registry row, mapping it to
-      `valueScoring.axes` + `valueScoring.weights` in the config column, as the other
-      config-backed tokens do.
+      `prompts/PLACEHOLDERS.md`. **Remove the token; do not register it.** An earlier draft
+      of this FR said to add the registry row *and* replace the token with an inline table —
+      register-and-remove, which guarantees the failure it is fixing:
+      `content-placeholders.test.ts:59` fails on **orphan declarations** ("declared but
+      never used"), so registering a token no template still contains turns that existing
+      green test red. Register-or-remove is the rule, and remove is the right side of it
+      here, because nothing substitutes the token (next bullet).
     - `packages/provegate/test/content-placeholders.test.ts` walks `prompts/` and
       `templates/` only, so no test covers `practices/templates/` and the undeclared
       token has been shipping invisibly. Add `practices/templates/` to that walk. Expect
@@ -517,10 +576,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
       `AGENT_BOOTSTRAP.md`. **This PRD does not add substitution to the installer**
       (that is a real feature with its own decisions, and `init.ts` belongs to PRD-023's
       expanded surface). It does the honest minimum: the template renders the default
-      five-axis table inline **and** states, in the sentence above it, that the axes and
-      weights come from `workflow.config.json` `valueScoring` and that an adopter who
-      changes them must edit this table to match. A wrong-but-visible default beats an
-      unfilled placeholder; a note naming the config key beats both silently.
+      table inline **and** states, in the sentence above it, that the axes and weights come
+      from `workflow.config.json` `valueScoring` and that an adopter who changes them must
+      edit this table to match. A wrong-but-visible default beats an unfilled placeholder;
+      a note naming the config key beats both silently.
+
+      **The inline table is pinned to `DEFAULT_CONFIG`, not hand-maintained.** A hardcoded
+      table inside a document about configurable axes is exactly the duplication this PRD
+      exists to remove, so a test asserts the table's rows equal
+      `DEFAULT_CONFIG.valueScoring.axes` in order with their weights. Change the default
+      axes and the test names the template that no longer matches. Without that pin, the
+      table is a second authority with nothing keeping it honest — which is finding E's
+      subject, one paragraph below.
     - **Targets:** `packages/provegate/practices/brain/PROTOCOL.md`,
       `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`,
       `packages/provegate/practices/templates/STATUS.template.md`,
@@ -747,11 +814,23 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Exact arithmetic is a validation problem, not a rounding problem.** Rather than
   choosing a tolerance, FR-1 constrains weights to two decimals, so the recompute is
   integer arithmetic in hundredths and every legal total has an exact two-decimal form.
-- **One copy of the weight table.** `DEFAULT_CONFIG` supplies the defaults, the root
-  `workflow.config.json` overrides them, and the gate reads whatever `lintPrd` was handed.
-  Nothing else holds a weight. The earlier design accepted two copies — the script's
-  fallback table and `DEFAULT_CONFIG` — and mitigated with a behavioral parity test; this
-  design has nothing to pin, which is strictly stronger than a pinned duplicate.
+- **One authority for the weights, and two projections of it — say that, not "one copy".**
+  `DEFAULT_CONFIG` supplies the defaults, the root `workflow.config.json` overrides them,
+  and the gate reads whatever `lintPrd` was handed. That is the authority, and nothing else
+  *decides* a weight. But two documents still **display** the table: the root
+  `AGENT_BOOTSTRAP.md` triage section that FR-9 keeps, and the practices template's inline
+  table that FR-10 adds. An earlier revision of this section claimed nothing but the config
+  holds a weight, in the same PRD whose FR-10 was adding a second table — the exact shape of
+  the stale-claim defect this PRD exists to fix, committed by the PRD itself.
+
+  So: one authority, two projections, and they differ in how they are kept honest. The
+  practices template's table is **mechanically pinned** to `DEFAULT_CONFIG` by the test
+  FR-10 adds. The root `AGENT_BOOTSTRAP.md` table is **currently manual** — FR-7's
+  doc-claims grammar covers the durable-artifact and deferral claims, not this table.
+  Pinning it too is a one-line extension of the same test and is the obvious follow-up; it
+  is named here rather than claimed as done. The earlier design's two *authorities* (the
+  script's fallback table and `DEFAULT_CONFIG`, mitigated by a parity test) are genuinely
+  gone, and that is the real improvement — one decision point instead of two.
 - **Introducing a root `workflow.config.json` is not free.** `gate open --worktree`
   snapshots the config file as a control artifact when it exists
   (`run/open.ts` binds `configSourceFor` bytes into the lease). The file must therefore be
@@ -951,9 +1030,28 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/practices/templates/STATUS.template.md`
 - `docs/research/provegate-bootstrap/**`
 
-**This PRD overlaps four others, and every overlap is claimed rather than excused.** The
-list below is what `gate queue` reports on 2026-07-25 — not what this PRD believes, which
-is the distinction that cost it a round:
+**This PRD overlaps other work items, and every overlap is claimed rather than excused.**
+
+**Read the queue, not this list.** The enumeration below has now gone stale three times in
+this file — most recently when a reader compared it against `gate queue` and found the
+PRD-023 overlap reported as eight files where the prose said five. The Conflict Surface
+itself is complete, so locking has never been affected; only the sentence drifts, and it
+drifts because the surface it describes is edited by other PRDs, not by this one. The
+current measurement, `gate queue` on **2026-07-27** with PRD-018, 019, 020 and 022 landed:
+
+- **PRD-021 ↔ PRD-023, eight paths** — `packages/provegate/src/cli.ts`,
+  `packages/provegate/src/core/gates/prd-ready.ts`,
+  `packages/provegate/src/core/config/types.ts`,
+  `packages/provegate/src/core/config/defaults.ts`,
+  `packages/provegate/src/core/config/validate.ts`, `scripts/verify/verify-workflow.mjs`,
+  `scripts/verify/pack-drift-ledger.json`, `.github/workflows/ci.yml`. This PRD's FR-1 now
+  also targets `core/config/load.ts`; if PRD-023 claims it too the count becomes nine, and
+  the queue will say so.
+- **No other active overlap.** PRD-018, PRD-019, PRD-020 and PRD-022 have all landed, so
+  their rows below are historical. They are kept because they record why several files are
+  shared at all.
+
+Historical, from `gate queue` on 2026-07-25 while those items were in flight:
 
 - `packages/provegate/src/cli.ts` — also PRD-019's (`gate doctor`), PRD-022's (the
   revalidation seam in `runRun()`), and PRD-023's (its sweep branches). Four PRDs, four
@@ -1004,6 +1102,22 @@ resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019
 - applied: `fixture-must-reach-production-shape` — this PRD edits `cli.ts`, and the record
   watches it: a regression here must call the gate the way the router does, not with
   cleaner arguments.
+
+- applied: `assert-absent-needs-an-independent-cause` — this PRD's reject fixtures are
+  negative by construction (a header that must NOT match, a config that must NOT resolve,
+  an orphan declaration that must NOT exist). Each one needs a mutation check proving the
+  absence has a cause independent of the scenario, or it is green either way.
+- applied: `strictness-added-during-extraction-is-a-behavior-change` — FR-2 moves the
+  value-score decision out of the standalone script and into `lintPrd`. The relocation must
+  not tighten what the snapshot does on the way: where it deliberately diverges (exact
+  comparison instead of a tolerance band, `[1-5]` instead of any digit) the PRD records it
+  as a divergence, and everything else must behave as the source does.
+- applied: `evidence-pattern-satisfied-by-the-template` — written by PRD-020 about this
+  exact class of gate. FR-2 generates a required-line pattern and the repo ships a PRD
+  template; the obligation is one assertion that the shipped template does not
+  accidentally satisfy the generated header pattern. Today it cannot (the template emits
+  no `Value:` line, which is why presence-triggering is the default), and that fact must be
+  pinned rather than assumed, because FR-10 edits templates in the same change.
 
 ## Memory Outputs
 
@@ -1157,6 +1271,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 10's four [P1]s and three [P2]s answered, each re-verified against source before being written. **A** was the load-bearing one and it moved an FR's target: `deepMerge` recurses into plain objects, so `weights` merges while `axes` replaces, and a three-axis config reaches validation carrying five default weight keys — the replacement is a LOADER rule, `load.ts::resolveConfig` joins FR-1's targets, and the proof is a resolution test rather than a validation fixture. **B** requires case-insensitive uniqueness of axis identifiers, resolving the `A`/`a` ambiguity on the identifier side rather than by dropping the snapshot's `/i`. **C** withdraws "adopter migration: none" for the scored corpus: changing `axes` reds every scored PRD, so the rule is sweep with `gate check --value-score`, then land the axis change and the header rewrites in one commit. **D** replaces register-and-remove with register-**or**-remove — registering `{{VALUE_AXES_TABLE}}` after removing it would red `content-placeholders.test.ts`'s orphan check — and pins the inline table to `DEFAULT_CONFIG`. **E** corrects "one copy of the weight table" to one authority and two projections, one pinned and one manual, which is the same stale-claim defect this PRD exists to fix, committed by the PRD itself. **F** requires at most one `Value` line inside the metadata block. **G** replaces the overlap enumeration with a dated measurement and an instruction to read the queue. Also disposes the three memory records written by PRD-020 and PRD-022 whose watches now overlap this PRD's targets |
 | 2026-07-25 | Claude Opus 5, on owner direction | **Readiness iteration 9 remediation — the independent Codex round's four [P1]s. Owner decision: make the axes configurable.** The blocking finding was a false premise two self-scored rounds asserted four times: `practices/templates/AGENT_BOOTSTRAP.template.md` was said to have no triage section. It has one at line 108, and line 111 tells adopters to **"define your own axes"** — so an `MF/UI/TL/AR/RM`-only gate cannot score the method it ships with. The owner chose configurable axes over rewriting the shipped template to canonical axes, which would have needed a snapshot addendum and removed an adopter capability. **FR-1** gains `axes: string[]` (ordered, default MF/UI/TL/AR/RM), `weights` keyed by those axes with exact set-equality validation in both directions, an axis-identifier charset that is load-bearing rather than cosmetic (FR-2 interpolates identifiers into the header pattern, so the charset is what keeps a configured axis from altering the pattern's meaning), a 2–10 axis-count bound, and a `deepMerge` rule so `axes` and `weights` replace the defaults wholesale instead of an adopter inheriting weights for axes they never declared. **FR-2** builds the header pattern *from* config rather than a literal, and **dimensions become `[1-5]`** — the previous "each dim a single digit" admitted 0 and 6–9, so `9/9/9/9/9` recomputed consistently and passed. A header whose axis list disagrees with the config now fails as malformed rather than reading as a missing header. **FR-6** is corrected: it said "`null` id with no header → fails", contradicting FR-2's remediation and the existing `content-templates.test.ts`, which lints the header-less shipped template and asserts zero issues. **FR-10** repairs the placeholder that declares the axes — `{{VALUE_AXES_TABLE}}` is unregistered in `PLACEHOLDERS.md`, `content-placeholders.test.ts` walks only `prompts/` and `templates/` so `practices/templates/` was never covered, and nothing substitutes the token, so `gate init --practices` writes it literally into an adopter's bootstrap; the fix registers the token, widens the walk, and renders a default table naming the config key, while leaving installer substitution explicitly out of scope. **FR-13** now exports `isRootRelativeFilename` by name, because PRD-023 FR-3 consumes it and "one predicate for two sections" is only true if one is exposed. **FR-12** replaces W9's two independent greps — satisfiable by two different files — with one semantic assertion over a single changeset entry. **Rollback** now removes FR-2's `lintPrd` call; the earlier text called `value-score.ts` "uncalled", which it would not be |
 | 2026-07-25 | Claude Opus 5, via owner | **Readiness iteration 7 remediation (W13–W21). The blocking fix came from the source snapshot rather than from a judgement call.** `verify-prd-ready.mjs:280-306` already implements this gate and its comment states the design — *"Presence-triggered: only PRDs carrying a `**V-Skor:**` line are checked, so pre-triage PRDs are never retro-failed."* `validateVScore` takes no PRD number and has no cutoff guard; the snapshot's `ENFORCE_FROM_PRD = 248` is a separate repo-local constant for other checks, and its PRD template carries no value header. The earlier `enforceFrom: 1` default fused those two mechanisms and produced W13: the shipped `templates/prd-template.md` emits no `Value:` line, so an adopter's first `gate check` would fail on a header nothing asked for. **FR-1 now ships `enforceFrom` absent (presence-triggered) and FR-4's `17` becomes this repo's opt-in**; adding the line to the shipped template is refused as fabricated method content and moved to Non-Goals with the reason. **FR-2 gains the header grammar** (W14) — the specified bare form `Value: T (…)` matched zero files against the real `> **Value**: T (…)`, so the snapshot regex is ported with the colon-outside-bold adjustment, plus a stated rule for the declared total's own decimal form and a recorded divergence from the snapshot's 0.005 tolerance. **FR-9 pins the AGENT_BOOTSTRAP weight table to `DEFAULT_CONFIG` in `content-canon.test.ts`** (W15) rather than shipping the prose duplicate the relocation claimed to remove. Overlap list rebuilt from `gate queue` and now carries PRD-023 (five files) and the active PRD-017 lease (five surfaces), the latter added to Dependencies with the note that FR-1 extends a config surface PRD-017 is mid-flight on (W16, W17). FR-13(b) states the two `readyOverlaps` weaknesses it does **not** fix and why the enforcing path is where it matters (W18). Cross-reference drift fixed: FR-11 → FR-12, FR-6 → FR-7, §9 Q3's deleted parity test, W1–W7 → W1–W21 (W19). Stale corpus counts and the "`_state/locks` is empty" claim removed rather than re-measured, since both went stale within a day (W20). The self-expiring "until the root gates manifest exists" DO NOT replaced with the unconditional reduction (W21). Value re-scored 3.65 → 4.10 per iteration 7. **Written by the same session that scored iteration 7 — the next round must be independent of it** |
 | 2026-07-25 | Claude Opus 5, via owner | Sequencing and overlap-list corrections only — no FR, Target, dependency, or verification command changed, and no Conflict Surface path was added or removed. Two fixes, both measured with `gate queue`: the wave-order sentence now says the chain is a valid serialization rather than a required one (PRD-020 overlaps PRD-019 alone, so it may run concurrently with this PRD; PRD-021 ∥ PRD-022 stays forbidden on `cli.ts`), and the "three overlaps" claim now names the fourth it omitted — `PRD-021 <-> PRD-023` on five files. Readiness iteration 7 (ITERATE 7.30) is recorded separately in `_readiness/wip/readiness-021-governance-truth-up.md`; W13–W21 there are unaddressed by this edit |
