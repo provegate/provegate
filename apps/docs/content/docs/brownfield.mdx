@@ -1,0 +1,103 @@
+---
+title: Brownfield adoption
+description: Four rungs into an existing repository, and what stays unprotected at each one.
+---
+
+Greenfield adoption is one command. An existing repository is different: it already has
+CI, conventions, and work in flight, and any step that asks it to stop and convert is a
+step nobody takes.
+
+So adopt in rungs. Each one is independently useful, each one leaves the repo working, and
+each one names what it does **not** yet protect — because stopping is allowed, and stopping
+without knowing what you left open is not.
+
+## Rung 1 — run `verify:workflow` next to the CI you already have
+
+```sh
+npx gate init --practices
+```
+
+The practices pack writes `scripts/verify/` and prints its wiring steps. Add the script it
+names and run it in CI alongside everything already there:
+
+```jsonc
+// package.json
+{ "scripts": { "verify:workflow": "node scripts/verify/verify-workflow.mjs" } }
+```
+
+Nothing about how you work changes. The checks read artifacts — review records, durable
+artifact declarations, deferral rows — and fail when a claim is not backed. You can stop
+here indefinitely and still have gained something real.
+
+**Stop here and this stays unprotected:** everything about *code*. No gate runs your
+tests, nothing sequences phases, and nothing stops a merge. The pack audits the paperwork
+around the work, not the work.
+
+## Rung 2 — `gate init` into the existing tree
+
+```sh
+npx gate init
+```
+
+It creates the artifact directories, the state and locks directories, and two starter
+configs. **It never overwrites**: every existing file is reported as skipped, so running it
+in a repository that already has a `docs/` or a `package.json` you care about is safe. The
+output lists exactly what was created and what was left alone.
+
+Now `gate status`, `gate queue`, and `gate open` work. You can claim a work item, get a
+lease over its declared file surface, and see conflicts with anyone else's claim before
+either of you writes code.
+
+**Stop here and this stays unprotected:** the gates themselves.
+
+`gate init` writes an **empty** `gates.manifest.json`. An empty manifest is not a
+configuration error — it is a manifest that declares no phase commands, so `gate run` walks
+the phases, runs nothing, and reports green. That green is **honest and worthless**: it
+says "every gate I was given passed", and you gave it none. This is the single most
+important thing to know about a fresh install, and the reason rung 3 is not optional if you
+intend to trust a run.
+
+(An absent manifest is a different case — that inherits the built-in floor. The file
+`gate init` writes is present and empty, which is why it does not.)
+
+## Rung 3 — fill the floors from the cookbook
+
+Copy the entry that matches your repo shape and change the script names to yours:
+
+- [`examples/manifests/single-package/`](https://github.com/rayvaz/provegate/tree/main/packages/provegate/examples/manifests/single-package) — one package at the root, npm scripts
+- [`examples/manifests/monorepo/`](https://github.com/rayvaz/provegate/tree/main/packages/provegate/examples/manifests/monorepo) — a workspace, plus one domain gate
+
+Both ship as `gates.manifest.json` next to a README that annotates every key with the
+failure that key catches. Check the result before you rely on it:
+
+```sh
+npx gate run PRD-001 --dry-run
+```
+
+The dry run prints the exact chain your manifest produces, and executes nothing.
+
+**Stop here and this stays unprotected:** anything specific to your domain. The floor is
+type-check, lint, build, test — the four checks that are the same in every repository. It
+cannot know that your routes need guard tests or that your migrations need a rollback.
+
+## Rung 4 — turn on class defaults and hard caps
+
+Class defaults add commands to Phase 4 for a given work-item class, optionally scoped to a
+path (`when.diffMatches`), so a check that only matters for route changes costs nothing on
+the items that never touch routes. Hard caps refuse a *specification* whose targets touch a
+sensitive path without a required line in the PRD body — a documentation gate that fires at
+readiness, before implementation, not after.
+
+The monorepo cookbook entry ships one of each, and walks the cap firing end to end.
+
+**Stop here and nothing stays unprotected by the workflow** — which is not the same as
+nothing being unprotected. The gates run what you declared. The method's claim is that a
+green run means every declared check passed on this diff, and it is exactly that claim, no
+larger.
+
+## What no rung protects
+
+A direct `git merge` bypasses the runner entirely, and so does anything else that does not
+go through `gate run` or `gate land`. The gates bind the path through the tool; they are
+not a branch protection rule. If you need the guarantee enforced against every path into
+the branch, that belongs in your forge's settings, next to this — not instead of it.

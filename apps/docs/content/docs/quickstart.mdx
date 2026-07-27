@@ -11,13 +11,26 @@ size, the honest answer is printed in METHOD.md — don't use the workflow.
 
 ```sh
 npm install -D provegate
-npx gate init
+npx gate init --practices
 ```
 
 `gate init` creates the artifact tree (`_prds/`, `_readiness/`, `_tasks/`, `_docs/`
 with `wip/completed/deferred` states), the state and locks directories, and two
 starter configs (`workflow.config.json`, `gates.manifest.json`). It never overwrites
-anything — re-run it any time. Check the result:
+anything — re-run it any time.
+
+**`--practices` is the recommended install.** It adds the agent bootstrap and artifact
+templates plus `scripts/verify/` — the checks that hold the artifacts to what they claim.
+Without them you get the lifecycle and no one auditing it. Plain `gate init` remains
+available for a repository that wants only the tree.
+
+One thing the pack does **not** do: wire itself. It creates files and then prints the
+manual steps — the `package.json` scripts to add, the CI job to run them in, and the
+agent-entry shims to paste. That list is `NEXT_STEPS.md`, printed at the end of the
+install and kept in the package. Editing your `package.json` and your CI config is not
+something a scaffold should do without you.
+
+Check the result:
 
 ```sh
 npx gate status

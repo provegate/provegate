@@ -1,0 +1,11 @@
+{
+  "phases": {
+    "4": ["npm run check-types", "npm run lint", "npm run build", "npm run test"]
+  },
+  "classDefaults": {
+    "hotfix": [{ "run": ["npm run test:smoke"] }]
+  },
+  "hardCaps": [],
+  "postMerge": ["npm run check-types", "npm run build"],
+  "wiringExceptions": {}
+}

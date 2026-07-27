@@ -101,12 +101,23 @@ reads as "nothing relevant" about a store that was never consulted. Superseded a
 unreadable records never appear: acting on a record the validator would reject is worse than
 finding nothing.
 
-### `gate init [--dry-run]`
+### `gate init [--dry-run] [--practices]`
 
 Scaffolds the workflow tree (artifact dirs × lifecycle states, state and locks dirs) plus
 starter `workflow.config.json` and `gates.manifest.json`. Additive-only and idempotent:
 nothing is ever overwritten; re-run any time. Roots at the nearest `.git` walking up from
 the current directory, else the current directory itself.
+
+`--practices` additionally installs the **practices pack**: the agent bootstrap templates,
+the artifact templates, and `scripts/verify/` — the checks that hold artifacts to what they
+claim. The never-overwrite guarantee covers it too: every file that already exists is
+reported as skipped, which is what makes `--practices` safe to add to a repository that has
+already been scaffolded.
+
+The pack **creates files only**. Adding its `package.json` scripts, wiring CI, and pasting
+the agent-entry shims are deliberate manual steps — `gate init` prints them
+(`NEXT_STEPS.md`) and performs none of them, because editing an adopter's `package.json`
+and CI config is not something a scaffold should do behind their back.
 
 ### `gate new <slug> [--class=X] [--template=path]`
 

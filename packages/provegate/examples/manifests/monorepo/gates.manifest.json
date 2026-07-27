@@ -1,0 +1,60 @@
+{
+  "phases": {
+    "4": [
+      "pnpm check-types",
+      "pnpm lint",
+      "pnpm build",
+      "pnpm test"
+    ]
+  },
+  "classDefaults": {
+    "feature": [
+      {
+        "when": {
+          "diffMatches": [
+            "src/routes/**"
+          ]
+        },
+        "run": [
+          "pnpm verify:route-guards"
+        ]
+      }
+    ],
+    "hotfix": [
+      {
+        "when": {
+          "diffMatches": [
+            "src/routes/**"
+          ]
+        },
+        "run": [
+          "pnpm verify:route-guards"
+        ]
+      }
+    ],
+    "infra": [
+      {
+        "run": [
+          "pnpm verify:workflow"
+        ]
+      }
+    ]
+  },
+  "hardCaps": [
+    {
+      "id": "route-deny-test",
+      "when": {
+        "targetsMatch": [
+          "src/routes/**"
+        ]
+      },
+      "requireLine": "Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
+      "message": "targets touch routes - name a runnable deny-path test line"
+    }
+  ],
+  "postMerge": [
+    "pnpm check-types",
+    "pnpm build"
+  ],
+  "wiringExceptions": {}
+}

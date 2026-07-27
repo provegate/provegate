@@ -35,9 +35,17 @@ Pair it with a manifest hard cap so the _PRD_ names the deny test before scoring
     {
       "id": "route-deny-test",
       "when": { "targetsMatch": ["src/routes/**"] },
-      "requireLine": "Deny test: `[^`]+`",
+      "requireLine": "Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
       "message": "targets touch routes - name a runnable deny-path test line",
     },
   ],
 }
 ```
+
+The runner prefix in `requireLine` is load-bearing, and it was added by measurement:
+the shipped PRD template carries a placeholder line, `` Deny test: `path/to/x.test.ts` ``,
+under its hard-caps reminder. A pattern of `` Deny test: `[^`]+` `` matches that
+placeholder, so the cap passes on every PRD `gate new` produces and fires only after an
+author happens to delete the line. Requiring a runner prefix makes the pattern mean what
+the message says — *name a runnable deny-path test line* — and the placeholder no longer
+satisfies it.
