@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T11:00:20.589Z",
+  "generatedAt": "2026-07-27T11:18:09.240Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.95,
+        "score": 7.8,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -985,7 +985,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.93,
+        "score": 7.03,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -1011,21 +1011,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-028-open-questions-grammar.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-028-open-questions-grammar.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.18,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
