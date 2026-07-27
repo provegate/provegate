@@ -144,6 +144,16 @@
       "reason": "owner directed the close in chat. 6.2 was discharged by MEASUREMENT rather than judgement about hypothetical leases: `_state/locks` held exactly one lease at close time, PRD-022's own, claimed after the last control-artifact change (03a1500), and its checkout is byte-identical to base for both control files - so this merge refuses nothing in flight. The remedy the refusal prints is proven to work in the fixture, not just documented. One independent adversarial round (Codex, a different model family) returned DO NOT CLOSE with four blockers; all four remediated, the two that turned on runtime behaviour re-measured here before being accepted, 0 outstanding. Three further findings confirmed real and recorded rather than absorbed: two inherited lease-discovery holes and one adversarial race, the last deferred in STATUS.md with an owner and a due date because its fix would be a second definition of drift inside cli.ts, which the PRD forbids. 917 tests, full floor green, verify:workflow PASS",
       "date": "2026-07-27",
       "method": "agent-directed by owner in chat; not an interactive owner confirmation"
+    },
+    {
+      "prd": "PRD-020",
+      "items": [
+        "11.3 read brownfield.mdx end to end and confirm the ladder matches how you would onboard an existing repo, and that the cookbook examples are ones you would hand to an adopter"
+      ],
+      "owner": "owner",
+      "reason": "owner directed the close in chat after round 3. The judgement 11.3 asks for was NOT made by the owner reading the page; it is accepted on the recorded evidence instead, and the evidence is unusually direct for a content PRD: three independent adversarial rounds by a different model family raised eleven findings, six of which were claims exceeding their mechanism - a cookbook that was not runnable as copied, a hard cap satisfied by the shipped PRD template's own placeholder, an impossible install sequence, an empty-manifest claim that was false twice over, a wiring explanation that described a filesystem scan the audit does not do, and an overwrite warning placed after the action it prevents. All eleven remediated, zero outstanding. The adopter path was walked twice end to end in scratch repos built by gate init, not asserted: the copied domain gate ran, failed on an unguarded route, passed once guarded, and the hard cap refused a fresh gate new PRD and cleared on a real deny-test line. 946 tests, full floor green, no file under packages/provegate/src touched",
+      "date": "2026-07-27",
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     }
   ]
 }
