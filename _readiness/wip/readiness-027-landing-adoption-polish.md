@@ -1,5 +1,58 @@
 # Readiness Assessment: PRD-027 — Landing Adoption Polish
 
+> ## ⚠ ARTIFACT DIVERGENCE — read before using this file
+>
+> **Iterations 2 and 3 were scored against a version of PRD-027 that no longer exists on
+> disk.** On 2026-07-27 a concurrent session committed PRD-027 mid-round as part of
+> `b63f5d6` (its message notes "PRD-027 appeared mid-round"), capturing the **484-line
+> initial draft**. Subsequent PRD-021 archive/land/merge commits (`11b2fd1`, `9b397af`,
+> `c020536`) then checked out the tree, and the uncommitted W1–W15 remediations were
+> overwritten. Searched and confirmed unrecoverable: no stash, and all three dangling
+> PRD-027 blobs (`4a16dfd`, `d4b1900`, `8ef533d`) carry one Changelog row — the pre-
+> remediation draft.
+>
+> Consequence: **this file's watch-item statuses describe a PRD that must be rebuilt.**
+> W1–W15 are recorded as closed/verdicted below because they *were* closed when scored; the
+> PRD on disk contains none of them. The findings themselves remain valid and are the
+> rebuild specification — iteration 3 in particular was executed against the remediated
+> text and its citations (`PRD:671`, `PRD:743`, …) refer to that lost version's line
+> numbers, not to the current file.
+>
+> **Before rebuilding: commit the PRD-027 artifacts.** They were lost precisely because they
+> were uncommitted while another agent was landing work on `main`.
+
+> **Iteration 3 (Codex, independent) — 7.33/10, UP 0.30, still ITERATE.** Scored against the
+> W1–W15 remediation. Three [P1]s, and two remediations came back **OPEN**:
+>
+> **W8 OPEN** — the fold promise survived in the operator row (`PRD:671`) after being
+> withdrawn in FR-6, the metric and the DO NOT. The PRD contradicted itself in the one place
+> the author didn't re-read. **W11 OPEN** — the prescribed scrollspy algorithm models
+> `IntersectionObserver` as a *snapshot* of all intersecting targets. It is not: entries are
+> queued only for targets crossing a configured threshold, so "greatest ratio in this
+> callback" can replace a still-visible 0.8 section with a newly-reported 0.1 one. The
+> prescribed two-entry batch test cannot catch it. Needs a per-target ratio map, explicit
+> thresholds, and sequential-callback tests.
+>
+> New [P1]s: **(A)** FR-6 can pass without hiding anything — one test checks a CSS rule, the
+> other counts one card, and nothing binds the selector to the rendered wrapper. Same
+> declaration-vs-effect gap as iteration 2's K, in a different FR. **(C)** FR-7's census is
+> vacuous as specified: the scan scope includes `content.ts` itself, where every export names
+> itself at its declaration, and `PROOF` is a **prefix of `PROOF_EVIDENCE`**, so a substring
+> scan greens the very orphan it exists to catch. This is the `grep-token-anchors-real-impl`
+> record — active, indexed, and **absent from the PRD's Memory Inputs**.
+>
+> Also: **(E)** a third loose measured claim — the Changelog said `alt.html` is "byte-identical
+> to `/`"; only the *metadata* is identical (233,709 B vs 101,898 B). **(D)** the emitted-metadata
+> rows fail on a missing build file but pass on a **stale** one, and `--from-phase=5` skips the
+> build (`chain.ts:88`). **(F)** the `_brain/INDEX.md` justification overreached: overlap
+> subtraction reads configuration only, never `.gitattributes` (`conflicts.ts:63`), so a union
+> driver alone would not change queue behaviour — and PRD-024/025/026/028 all declare learnings
+> without declaring the INDEX write, so the real collision stays invisible to the gate.
+>
+> Closed and settled: **W12**, **W13**, **W15**.
+>
+> <details><summary>Iteration 2 (7.03 ITERATE, Codex)</summary>
+>
 > **Iteration 2 (Codex, independent) — 7.03/10, UP 0.10, still ITERATE.** The round that
 > proved the self-score's mechanism work but broke its *tests*. Both resolver claims the
 > author remediated into the PRD (W1, W5) were **verified correct** — Codex executed
@@ -17,6 +70,8 @@
 > Six [P2]s, including a **second false baseline**: the overview says the install command is
 > authored twice; it is authored three times (`content.ts:18,35,350`) — and the PRD's own FR-3
 > already names three consumers. Same defect class as iteration 1's [P1] C, one round later.
+>
+> </details>
 >
 > <details><summary>Iteration 1 (6.93 ITERATE, self-scored)</summary>
 >
@@ -51,13 +106,14 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-027-landing-adoption-polish.md` |
-| Score                  | 7.03/10                                        |
-| Verdict                | ITERATE — two [P1] items: FR-6's fold target is geometrically unreachable by FR-6, and the FR-1/FR-8 tests assert declarations where the acceptance criteria promise resolved behavior |
-| Iteration              | 2                                              |
+| Score                  | 7.33/10                                        |
+| Verdict                | ITERATE — three [P1] items: FR-6 can pass without hiding the card, FR-5's scrollspy algorithm mismodels IntersectionObserver as a snapshot, and FR-7's census is vacuous because its scan scope includes the declaration file and PROOF is a prefix of PROOF_EVIDENCE |
+| Iteration              | 3                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
-| Scored by              | **Codex (codex-cli 0.145.0) via the `/codex` skill — independent, different model family, did not write the PRD** |
+| Scored by              | **Codex (codex-cli 0.145.0) via the `/codex` skill — independent, different model family, did not write the PRD.** Iterations 2 and 3 both. |
 | Self-scored            | **no** (iteration 1 was; see the collapsed banner) |
+| Artifact state         | **DIVERGED** — scored against a PRD version since overwritten by a concurrent session; see the banner |
 | Date                   | 2026-07-27                                     |
 | PRD Lint               | passed — `node packages/provegate/dist/cli.js check PRD-027` → `ok`, re-run in a writable workspace. Codex's own run exited 1 only because its read-only sandbox denied `_state/prds.json.<pid>.tmp`; that is an environment artifact, not a content failure |
 | State Record           | updated — `gate status` re-run after saving    |
@@ -77,6 +133,70 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 3 (Codex, independent). This section is the rebuild specification.
+
+Line citations are to the **lost** remediated PRD. Treat each item as a requirement the rebuilt
+PRD must satisfy, not as a location to edit.
+
+**Watch-item verdicts.** W12, W13, W15 **CLOSED**. W9, W10, W14 **PARTIALLY CLOSED**. W8, W11
+**OPEN**.
+
+**[P1] A — FR-6 can pass without hiding the card.** One test asserts a CSS rule exists in the
+≤900px block; the other counts one `HandoffCard` in the document. Neither binds the selector to
+the rendered wrapper, so an implementation that adds the rule and never applies the class is
+green with the card still visible on mobile. Rebuild: render `Hero`, assert the card sits inside
+the exact wrapper class, **then** source-test that same class inside the media block. Same
+declaration-vs-effect shape as iteration 2's [P1] K.
+
+**[P1] B — FR-5's algorithm mismodels `IntersectionObserver`.** The prescribed rule ("among
+entries intersecting in this callback, greatest `intersectionRatio`") assumes the callback
+carries a snapshot of every currently-intersecting target. It does not: entries are queued only
+for targets that crossed a configured threshold, so a callback reporting a newly-visible 0.1
+section replaces a still-visible 0.8 one. The prescribed two-entry batch test proves sorting,
+not retention. Rebuild: maintain a **per-target ratio map** across callbacks, declare explicit
+`thresholds`, pick the max over the map, and test the sequence A-high → later B-low → A-exit as
+**separate** callbacks.
+
+**[P1] C — FR-7's census is vacuous as specified.** Two independent causes, both executed:
+the scan scope is "any source under `apps/web/app`", which **includes `content.ts` itself**,
+where every export names itself at its own declaration; and `PROOF` is a **prefix of
+`PROOF_EVIDENCE`** (`content.ts:284` vs `:291`), so a substring scan greens the exact orphan the
+FR exists to delete. Rebuild: exclude the declaration file, enumerate the supported export
+forms, and match **identifier tokens** — word-anchored — not substrings, after comment
+stripping. This is the `grep-token-anchors-real-impl` record, which is active, indexed, and was
+**missing from the PRD's Memory Inputs**; the rebuilt PRD must declare it.
+
+**[P2] D — the emitted-metadata rows can certify stale output.** Missing-file refusal covers
+absence, not an old `.next` tree. A full `gate run` builds before Phase 5
+(`gates.manifest.json:3`, `chain.ts:487`) and root turbo `test` depends on `build`
+(`turbo.json:15`), but the §11 command invokes package vitest directly
+(`apps/web/package.json:13`), and Phase 4 is skippable via `--from-phase=5` (`chain.ts:88`).
+Rebuild: make a fresh web build an executable prerequisite of these rows, or forbid Phase-5
+resume for them.
+
+**[P2] E — a third loose measured claim.** The Changelog said `alt.html` is "byte-identical to
+`/`". Only the **metadata** is identical; the files are 233,709 B and 101,898 B. Rebuild: say
+"metadata byte-identical". Third measurement-phrasing defect in three rounds — the pattern is
+now the finding, not the instance.
+
+**[P2] F — the `_brain/INDEX.md` justification overreached.** Claiming the path is right, but
+the stated reasoning was wrong in one clause: overlap subtraction consults **configuration
+only**, never `.gitattributes` (`conflicts.ts:63`), so adding a union merge driver alone would
+not change queue behaviour. Also material: PRD-024, PRD-025, PRD-026 **and PRD-028** all declare
+new memory records while omitting the INDEX write from their surfaces, so the real collision is
+invisible to the gate regardless of what PRD-027 declares. Rebuild: keep the declaration, fix
+the clause, and state that the cross-PRD fix is substrate work owned elsewhere.
+
+**[P3] G — the section count is inconsistent.** The PRD says 20 sections in one place and 23 in
+another; `page.tsx` composes 23 named blocks. Rebuild: "23 composition blocks", or drop the
+number.
+
+**What held up in iteration 3.** The resolver behaviour and route-path reasoning (again). The
+executed baselines: 38 exports with only `PROOF` externally unreferenced, nine handoff lines,
+three install literals, `[egress] clean`, and the emitted-metadata before-state quoted
+accurately for both routes. Memory Output / Durable Artifacts / Implementation Scope agree. The
+Value arithmetic. `lintPrd` returns `ok: true` by direct invocation. No hard cap tripped.
 
 ### Findings — iteration 2 (Codex, independent)
 
@@ -300,9 +420,29 @@ which is evidence for fixing the parser rather than the authors.
 
 ---
 
-## Scorecard — iteration 2 (Codex, independent)
+## Scorecard — iteration 3 (Codex, independent)
 
 Class `feature` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+| #         | Dimension                | Weight | Score      | Weighted |
+| --------- | ------------------------ | ------ | ---------- | -------- |
+| 1         | Clarity                  | 15%    | 6.5/10     | 0.975 |
+| 2         | Completeness             | 20%    | 7.0/10     | 1.400 |
+| 3         | Technical Depth          | 25%    | 7.0/10     | 1.750 |
+| 4         | Multi-Tenancy & Security | 20%    | 9.0/10     | 1.800 |
+| 5         | Scope & Testability      | 10%    | 5.5/10     | 0.550 |
+| 6         | Migration & Rollback     | 10%    | 8.5/10     | 0.850 |
+| **Total** | **Weighted**             |        | **7.33/10** | **ITERATE** |
+
+`0.15×6.5 + 0.20×7.0 + 0.25×7.0 + 0.20×9.0 + 0.10×5.5 + 0.10×8.5 = 7.325` → 7.33.
+
+Migration & Rollback rose 2.0 (W13 closed cleanly). Scope & Testability stayed at 5.5 — three
+rounds in a row it is the lowest dimension, and every round its cause is the same: assertions
+that sit one level below the thing they claim.
+
+<details><summary>Scorecard — iteration 2 (7.03)</summary>
+
+Class `feature` weights.
 
 | #         | Dimension                | Weight | Score      | Notes |
 | --------- | ------------------------ | ------ | ---------- | ----- |
@@ -317,6 +457,8 @@ Class `feature` weights, per `packages/provegate/prompts/phase-2-readiness-score
 Weighted sum:
 `0.15×6.5 + 0.20×6.5 + 0.25×7.0 + 0.20×9.0 + 0.10×5.5 + 0.10×6.5`
 = `0.975 + 1.300 + 1.750 + 1.800 + 0.550 + 0.650 = 7.025` → 7.03.
+
+</details>
 
 <details><summary>Scorecard — iteration 1 (self-scored, 6.93)</summary>
 
@@ -340,6 +482,24 @@ Weighted sum:
 
 ## Missing Pieces (watch items — binding on Phase 3 and Phase 6)
 
+### Iteration 3 — open, binding before re-scoring
+
+Carried from iteration 2 and still open or partial: **W8** (fold promise survived in the operator
+row), **W9** (stale-build gap, finding D), **W10** (no reusable `SITE_TITLE` / `PRODUCT_NAME`
+constants — the wordmark is split JSX at `ui.tsx:147` and the title is a nested `metadata`
+property at `layout.tsx:9`), **W11** (the IO algorithm), **W14** (the overreaching clause).
+
+New:
+
+- **W16 — anchored external-reference census.** [P1] C. Exclude the declaration file, match
+  word-anchored identifier tokens, enumerate the export forms, and declare
+  `grep-token-anchors-real-impl` as a Memory Input.
+- **W17 — correct every measured claim and count.** [P2] E and [P3] G: "metadata byte-identical",
+  and one consistent section count. Three rounds, three phrasing defects; the rebuilt PRD should
+  state a measured number only with the command that produced it.
+
+<details><summary>Iteration 2 watch items</summary>
+
 ### Iteration 2 — open, binding before re-scoring
 
 - **W8 — make FR-6's fold target reachable, or drop it.** [P1] J. The card is the hero's second
@@ -361,6 +521,8 @@ Weighted sum:
   Conflict Surface, and Durable Artifacts, or Phase 7 stalls on an out-of-scope file.
 - **W15 — correct the install baseline to three.** [P2] Q. `content.ts:18,35,350`. The overview
   contradicts the PRD's own FR-3.
+
+</details>
 
 <details><summary>Iteration 1 watch items — all closed</summary>
 
@@ -398,6 +560,7 @@ Weighted sum:
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 3   | 2026-07-27 | 7.33  | ITERATE | **Second independent round (Codex), against the W1–W15 remediation. UP 0.30. W12/W13/W15 CLOSED, W9/W10/W14 PARTIAL, W8/W11 OPEN.** Three [P1]s. **(A)** FR-6 can pass without hiding the card — a CSS-rule test plus a one-card DOM count, with nothing binding the selector to the rendered wrapper; the same declaration-vs-effect gap as iteration 2's K, one FR over. **(B)** FR-5's algorithm mismodels `IntersectionObserver` as a snapshot of all intersecting targets; entries are queued per threshold crossing, so a newly-reported 0.1 section can displace a still-visible 0.8 one, and the prescribed batch test proves only sorting. Needs a per-target ratio map, declared thresholds, sequential-callback tests. **(C)** FR-7's census is vacuous twice over: the scan scope includes `content.ts` itself where every export names itself, and `PROOF` is a **prefix of `PROOF_EVIDENCE`**, so a substring scan greens the exact orphan it exists to delete — the `grep-token-anchors-real-impl` record, active and indexed and missing from the PRD's Memory Inputs. Also **(D)** the emitted-metadata rows fail on a missing build file but pass on a stale one, and `--from-phase=5` skips the build (`chain.ts:88`); **(E)** a **third** loose measured claim — `alt.html` called "byte-identical to `/`" when only the metadata is (233,709 B vs 101,898 B); **(F)** the INDEX.md justification overreached, since overlap subtraction reads config only and never `.gitattributes` (`conflicts.ts:63`), and PRD-024/025/026/028 all omit the same INDEX write so the real collision is invisible regardless; **(G)** section count stated as both 20 and 23. Held again: the resolver behaviour, all executed baselines (38 exports/`PROOF` only orphan, 9 handoff lines, 3 install literals, `[egress] clean`, the quoted before-state for both routes), Value arithmetic, `lintPrd ok: true`, no hard cap tripped. **The remediation this round scored was subsequently lost** — see the divergence banner |
 | 2   | 2026-07-27 | 7.03  | ITERATE | **First independent round (Codex, codex-cli 0.145.0). UP 0.10, and the direction is informative: the score rose because the remediated *mechanisms* were verified correct, and fell on testability because the *tests* backing them were not.** Both self-remediated resolver claims held under execution, not reading: Codex invoked `accumulateMetadata` directly and got `/` → `https://provegate.dev/opengraph-image` in both Open Graph and Twitter, `/alt` → own title, **no image**, `card: summary`, `noindex, nofollow` (W1 `resolve-metadata.js:137-157` + `:619-653`; W5 `:182-190` + `:764-800`). Two [P1]s: **(J)** FR-6 cannot reach the fold target it serves — the CTAs are in the hero's first grid item and the `HandoffCard` is the second (`index.tsx:59-117`), so hiding the later card cannot lift earlier content; the real levers are the terminal's 188px `minHeight` or a mobile reorder, neither specified. **(K)** FR-1/FR-8 assert declarations and source tokens while their acceptance criteria promise resolved/unfurled behavior, so a framework change could break either direction with every test green — and `/alt` has no operator row; the fix is available since the build emits parseable HTML for both routes. Six [P2]s: **(L)** the OG card has no content spec — no exact strings, no `alt`, no shared `size` — while Non-Goals forbid inventing copy; **(M)** FR-7's textual-reference check is weaker than the Goal's "a render that uses it", and `noUnusedLocals` is off; **(N)** FR-5 has no intersection tie-break and `Nav` maps `NAV_LINKS` **twice** (`nav.tsx:104,159`), so an open drawer yields two `aria-current` links against "exactly one"; **(O)** the new Rollback section claims full FR independence while FR-8 exists *because* of FR-1; **(P)** the memory capture needs an `_brain/INDEX.md` write (`PROTOCOL.md:219-224`) that appears in neither Scope nor Conflict Surface, so Phase 7 stalls on an out-of-scope file; **(Q)** a **second false baseline** — the overview says the install command is authored twice, measured three (`content.ts:18,35,350`), contradicting the PRD's own FR-3. Also held: the measurable baselines (zero orphaned anchors, 0-of-3 TrustStrip links, `#refusal` absent, no image metadata on either built route), the 38-export census with `PROOF` the only orphan, `[egress] clean`, W3's test-file split, the turbo `inputs` claim, and the Value arithmetic. Codex's own `gate check` exited 1 only because its read-only sandbox denied the state tempfile; re-run writable → `ok` |
 | 1   | 2026-07-27 | 6.93  | ITERATE | **First round, self-scored — the author's own model.** Three [P1]s. **(A)** FR-1 mandates explicit `openGraph.images`, and `resolve-metadata.js:148-157` applies file-based OG metadata *only when that key is absent* — following the PRD suppresses the card it exists to add; `:636` shows `twitter.images` auto-fills from `openGraph`, so both declarations are wrong. **(B)** consequently FR-1's assertion targets a field a unit test can never see, because injection happens during resolution, not in the exported `metadata` object. **(C)** the Success Metrics table claims one orphaned anchor exists today; rendering all 23 sections measures **zero** — the defect is a missing `id` to link to, not a broken link. Also **(D)** FR-6's DOM assertion is aimed at `a11y.test.ts`, which has no jsdom pragma; **(E)** `aria-current="true"` where `location` is the ARIA token for an in-page position; **(F)** the root OG card FR-1 adds will make `/alt` unfurl as the product page, which FR-8's noindex does not govern; **(G)** no rollback treatment at all, and third-party unfurl caches are the one thing a revert does not reach; **(H)** FR-3's "exactly once" fails on a future doc comment; **(I)** the live `notes-column-runs-commands` parser hazard refused two Notes spans at authoring time — disclosed, not a defect, but the second toll paid this wave. **Confirmed by execution:** `PROOF` is the only unreferenced export of 38; all 23 sections *and* `<Page />` render in jsdom, so FR-4's closure assertion is real; `TermBar` already takes trailing children; current anchors have zero orphans; the turbo `inputs` DO NOT matches a shipped blanket gate; no `apps/**` claim overlap; both rejected review items refuted with holding citations; every hard cap checked individually and none tripped |
 
@@ -421,6 +584,26 @@ Weighted sum:
 ---
 
 ## Verdict
+
+**ITERATE — 7.33/10, iteration 3, scored independently by Codex.**
+
+Three rounds, three scores, one shape: 6.93 → 7.03 → 7.33, with **Scope & Testability the
+lowest dimension every single time**, and the same cause every single time — an assertion that
+sits one level below the claim it backs. Iteration 1 caught it in FR-1's metadata; iteration 2
+caught it in FR-1/FR-8's resolved-vs-declared gap; iteration 3 caught it in FR-6's CSS rule, in
+FR-5's snapshot assumption, and in FR-7's substring scan. The mechanisms in this PRD are now
+verified. Its *verification* is what keeps failing, and it fails the same way each time.
+
+The other durable pattern is measurement phrasing: three rounds, three loose numeric claims
+(one orphaned anchor, install authored twice, `alt.html` byte-identical). Every one was a number
+written without the command that produced it. The rebuilt PRD should not state a measured value
+unless the command is next to it.
+
+**Required before re-scoring:** W16 and the three [P1]s (A, B, C), plus the still-open W8, W9,
+W10, W11, W14 and the W17 cleanup. That is a single focused pass — none of it is a discovery
+about the world, all of it is specification work.
+
+<details><summary>Verdict — iteration 2 (7.03, Codex)</summary>
 
 **ITERATE — 7.03/10, iteration 2, scored independently by Codex.**
 
@@ -449,6 +632,8 @@ than open questions.
 **Confidence in the PASS band:** the two [P1]s are both specification errors, not discoveries
 about the world — the mechanism underneath is now verified. A single remediation pass that
 closes W8–W15 should clear 8.0.
+
+</details>
 
 <details><summary>Verdict — iteration 1 (self-scored)</summary>
 
