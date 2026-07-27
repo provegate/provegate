@@ -193,11 +193,14 @@ export const termButton: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-/** True when the visitor asked for reduced motion. Safe before hydration. */
+/**
+ * True when motion should be suppressed. If the preference cannot be read at
+ * all — server render, or a host without `matchMedia` — the answer is TRUE:
+ * an environment we cannot ask gets the finished state, never an animation it
+ * never asked for. Real browsers always answer, so this only decides the
+ * pre-hydration and test cases.
+ */
 export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

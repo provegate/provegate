@@ -21,7 +21,14 @@ export const HERO = {
  * state. Every echoed line is real tool output: `gate init` prints the
  * `next:` line verbatim, and no invented file count is shown.
  */
-export const HERO_TERMINAL = {
+export const HERO_TERMINAL: {
+  title: string;
+  steps: string[];
+  echoes: (string | null)[];
+  gates: { name: string; command: string; code?: number }[];
+  earned: string;
+  human: string;
+} = {
   title: 'zsh — ~/app',
   steps: ['npm install -D provegate', 'npx gate init', 'npx gate run PRD-001'],
   echoes: ['added 1 package', '[init] next: see QUICKSTART.md', null],
@@ -32,7 +39,7 @@ export const HERO_TERMINAL = {
   ],
   earned: '✓ phases 4–7 passed. merged into LOCAL main.',
   human: '→ handoff card ready — you run `git push`.',
-} as const;
+};
 
 /** Nav + footer anchors. Every href is a real route or a real section id. */
 export const NAV_LINKS = [
@@ -407,7 +414,7 @@ export const PLAN_TAIL = [
 export const PLAN_FOOTER = 'nothing runs · nothing merges · this is a plan';
 
 /**
- * CI snippets. `gate run` has no `--ci` flag, so CI runs the same gate commands
+ * CI snippets. The CLI has no CI-mode flag, so CI runs the same gate commands
  * the manifest declares — which is the point: they are ordinary commands.
  */
 export const CI_SNIPPETS = [

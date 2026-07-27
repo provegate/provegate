@@ -456,9 +456,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    rollback note in §Migration names the same ordinal; a rollback that restores a
    four-arity call is a different function. Deriving the id from the
    `# PRD-NNN:` heading inside the body would make the cutoff depend on a title string the
-   lint does not otherwise trust. Existing callers that have no id pass `null`, which
-   **skips the cutoff comparison and enforces the arithmetic unconditionally** — absence
-   of an id must not become absence of a check.
+   lint does not otherwise trust. Existing callers that have no id **omit the argument
+   entirely and therefore supply `undefined`** — they cannot pass `null`, because the
+   parameter does not exist until this PRD adds it. Both spellings take the same path:
+   **skip the cutoff comparison, enforce the arithmetic unconditionally** — absence of an
+   id must not become absence of a check. Write the guard against absence
+   (`prdNumber == null`, or an explicit `undefined || null` test), never `=== null`: the
+   strict form enforces presence on all 44 existing call sites the moment this repo sets
+   `enforceFrom`, and the first casualty is `content-templates.test.ts:99`, which lints the
+   shipped header-less template and asserts zero issues.
 
    **State the exact residual: a `null` id skips the *presence* requirement even where a
    cutoff is configured**, because presence is defined by id and there is no id. The
@@ -510,7 +516,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    arithmetic and cutoff matrix is a unit test over `value-score.ts` and `lintPrd`: custom
    valid weights → a total computed from them; a wrong total → the failure names declared
    and recomputed; a malformed header → fails at any id; a pre-cutoff PRD with no header
-   → passes; an at-cutoff PRD with no header → fails; **`null` id with no header →
+   → passes; an at-cutoff PRD with no header → fails; **an absent id — both `undefined` (the
+   spelling every existing caller uses) and an explicit `null` — with no header →
    passes**, because presence is defined by id and there is no id (FR-2 states this
    residual and `packages/provegate/test/content-templates.test.ts` depends on it — it
    lints the header-less shipped template through `lintPrd` and asserts zero issues). A
@@ -1232,7 +1239,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR    | Command / Check                                                        | Scope | Notes                                                       |
 | ----- | ------------------------------------------------------------------------ | ----- | ------------------------------------------------------------- |
 | FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject, and enforceFrom absent by default |
-| FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; a null id still enforces the arithmetic |
+| FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; an absent id, in either spelling, still enforces the arithmetic |
 | FR-3  | `pnpm --filter provegate test test/value-score.test.ts`                   | pkg   | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
 | FR-4  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | resolved config deep-equals defaults except the cutoff         |
 | FR-5  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | pre-existing worktree refused before merge, accepted after     |
@@ -1356,6 +1363,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 14 (ITERATE 7.99) answered. The axes/weights propagation defect is closed; one stale copy survived on the item introduced the round before. Three sites said existing callers "pass `null`" — they cannot, because the parameter does not exist until this PRD adds it; they **omit** it and supply `undefined`. FR-2's prose, FR-6's matrix, and the §11 FR-2 row now name both spellings, and the guard is specified as an absence test rather than `=== null`, because the strict form would enforce presence on all 44 existing call sites the moment this repo sets `enforceFrom` — first casualty `content-templates.test.ts:99`, which lints the shipped header-less template and asserts zero issues. Writing that §11 Notes cell also reproduced `notes-column-runs-commands` live: a backticked word in the Notes column was parsed as a verification command and `gate check` refused it as unsafe. Backticks removed; the record's interim workaround is the fix until PRD-023's FR-7(a) scopes the parser to the Command column |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 13 (ITERATE 7.98) answered. One blocker, and it was the same propagation defect a third time: making weights-only overrides legal in FR-1 left FR-12's changeset note and a DO NOT rule still saying `axes` and `weights` are supplied together — so routine implementation would either violate FR-1 or publish false adopter guidance. Both now state the rule in both directions. Two non-blocking items also taken: the caller census was off by one (41 in `prd-ready.test.ts`, not 42), and the existing callers **omit** the fifth argument rather than passing `null`, so FR-6's matrix must cover `undefined` and `null` both — an implementation checking only `=== null` would red the shipped-template test the moment this repo sets `enforceFrom` |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 12 (ITERATE 7.95, "converging") answered. Two contract inconsistencies, both introduced at the previous remediation seam. **The fifth `lintPrd` parameter was not compilable as written** — a required parameter cannot follow the optional `root?: string` — so it is `prdNumber?: number \| null`, optional, with absent and `null` meaning the same thing. That is what keeps it a one-caller change: measured, there are 44 call sites, 42 in `prd-ready.test.ts`, and a required parameter would edit all of them and pull two untouched test files into the Conflict Surface to buy nothing. The rollback note now names the fifth ordinal too. **Weights without axes was unspecified and defaulted to the wrong answer**: the loader rule covered `axes` present, so a weights-only override merged recursively and passed with default-filled keys, contradicting the wholesale-replacement prose. Decided in the adopter's favour — a weights-only config retunes the default axes, which is legitimate, and the sum rule already catches an incoherent partial. Three loader/validation rules are now stated separately with fixtures pinning the partial case in both directions |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 10's four [P1]s and three [P2]s answered, each re-verified against source before being written. **A** was the load-bearing one and it moved an FR's target: `deepMerge` recurses into plain objects, so `weights` merges while `axes` replaces, and a three-axis config reaches validation carrying five default weight keys — the replacement is a LOADER rule, `load.ts::resolveConfig` joins FR-1's targets, and the proof is a resolution test rather than a validation fixture. **B** requires case-insensitive uniqueness of axis identifiers, resolving the `A`/`a` ambiguity on the identifier side rather than by dropping the snapshot's `/i`. **C** withdraws "adopter migration: none" for the scored corpus: changing `axes` reds every scored PRD, so the rule is sweep with `gate check --value-score`, then land the axis change and the header rewrites in one commit. **D** replaces register-and-remove with register-**or**-remove — registering `{{VALUE_AXES_TABLE}}` after removing it would red `content-placeholders.test.ts`'s orphan check — and pins the inline table to `DEFAULT_CONFIG`. **E** corrects "one copy of the weight table" to one authority and two projections, one pinned and one manual, which is the same stale-claim defect this PRD exists to fix, committed by the PRD itself. **F** requires at most one `Value` line inside the metadata block. **G** replaces the overlap enumeration with a dated measurement and an instruction to read the queue. Also disposes the three memory records written by PRD-020 and PRD-022 whose watches now overlap this PRD's targets |

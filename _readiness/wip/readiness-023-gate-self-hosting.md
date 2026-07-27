@@ -1,10 +1,20 @@
 # Readiness Assessment: PRD-023 — Gate Self-Hosting
 
+> **Iteration 5 (Codex, independent) scored the remediated PRD at 6.85 — DOWN from 7.19.**
+> This is the first round in this PRD's history where remediation lowered the score, and
+> that is the finding as much as the five [P1]s are. Every H/I/J fix landed the named
+> symptom and missed an adjacent operational case, which is the failure shape this PRD
+> exists to remove — now committed three times in the PRD's own text. See §8.
+>
+> <details><summary>Iteration 4 (7.19 ITERATE) — the round whose remediation caused the drop</summary>
+>
 > **Iteration 4 (Codex, independent) scored the remediated PRD at 7.19 — up from 6.65.**
 > Five of six prior findings closed; the sixth (the packed duplicates) is only partially
 > closed, because `gate init` is additive-only and therefore cannot migrate an adopter who
 > already installed the scripts. Three new [P1]s, all on the expansion's edges rather than
 > its substance. See §7.
+>
+> </details>
 >
 > <details><summary>Iteration 3 remediation note (superseded)</summary>
 >
@@ -44,23 +54,38 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-023-gate-self-hosting.md`       |
-| Score                  | 7.19/10                                        |
-| Verdict                | ITERATE — three new [P1] items (§7); the scope expansion itself was right and five of six prior findings closed. The 6.65 at iteration 3 is superseded |
-| Iteration              | 4                                              |
+| Score                  | 6.85/10                                        |
+| Verdict                | ITERATE — five [P1] items (§8), four of them defects the iteration-4 remediation itself introduced. The 7.19 at iteration 4 is superseded |
+| Iteration              | 5                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD or any prior round** |
 | Self-scored            | **no**                                         |
-| Date                   | 2026-07-25                                     |
-| PRD Lint               | passed — `lintPrd` green (Codex ran the exported function; its sandbox is read-only) |
+| Date                   | 2026-07-27                                     |
+| PRD Lint               | passed — `lintPrd` green, verified by direct invocation of the exported function (the CLI wrapper rewrites `_state/prds.json`, which the read-only sandbox correctly refused; the refusal is not a lint failure) |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
 
-At iteration 4 three [P1] items are open and the score is rising. The scope expansion was
-the right call and landed coherently; what remains sits on its edges — existing adopters,
-a matching predicate, and rollback symmetry.
+**The score went down, and that is the headline.** Iterations 3 → 4 rose because the
+remediation absorbed a scope error correctly. Iteration 4 → 5 fell because the remediation
+answered each finding at the level it was reported and not one level deeper: the migration
+step is named but not executable, the fixture is specified against the pure planner rather
+than the executor that holds the invariant, the matching rule is widened without bounding
+the surface it now reads, and the reverse operation covers the pack half while leaving the
+root execution surfaces it also changes. Each is the *adjacent case* of a fix that was
+itself correct — the exact defect class this PRD was written to make mechanically
+impossible, now present three times in the document that proposes the mechanism.
+
+Two process facts belong in the record. First, the iteration-4 remediation was written by a
+Claude Opus 5 session which then declared two Memory Inputs — `fixture-must-reach-
+production-shape` and `assert-absent-needs-an-independent-cause` — with dispositions
+describing precisely the trap it went on to fall into in FR-8's fixture. A declared input
+is not an applied one, and this round is the evidence. Second, that same session corrected
+a stale overlap count from five to eight in the Conflict Surface and simultaneously wrote
+"five overlaps" into §9. Fourth stale count in this wave, first one introduced by the fix
+for the third.
 
 ---
 
@@ -444,9 +469,124 @@ accounted for. Keeping CI at `run:` text is right.
 
 ---
 
+### 8. Iteration-5 independent measurement — Codex, on the H/I/J remediation
+
+Read-only, high reasoning effort, different model family, did not write the PRD or any
+remediation. Told to hunt for defects the remediation **introduced**. Every finding below
+was re-verified against source by the recording session before being written down.
+
+**[P1] N — H's exception migration is named but not executable.** FR-8 step 4 tells an
+adopter to "re-record" their `gates-wired-exceptions.json` entries as
+`wiringExceptions` in `gates.manifest.json`. The two stores do not have the same shape.
+The packed file is a bare array of **`.mjs` filenames** — eight of them, from
+`verify-brain.mjs` to `verify-workflow.mjs`
+(`packages/provegate/practices/verify/gates-wired-exceptions.json`). `wiringExceptions` is
+`Record<string, string>` keyed by **package-script name** with a non-empty justification
+(`gates/manifest.ts:38`, validated at `:247-256`), and `auditWiring` looks up
+`verify:brain`, not `verify-brain.mjs`, then reports any exception naming no existing
+script as stale (`wiring.ts:238-255`). A literal re-recording therefore produces either
+eight stale exceptions or an invalid manifest. The migration must say: drop the entries
+for the three removed scripts, map each survivor's filename to its package-script name,
+and supply the justification the old array never carried.
+
+**[P1] O — H's upgrade fixture is specified against the pure planner and can pass
+vacuously.** FR-8 asserts that after seeding an old-pack repo and running
+`planPractices`, the four seeded files are still byte-identical. `planPractices` returns
+`InitAction[]` and writes nothing (`init.ts:183-201`); the additive-only guarantee lives in
+`initWorkspace`, which is where the `wx` write is (`init.ts:248-324`), and production runs
+both in sequence (`cli.ts:173-174`). The seeded files survive whether or not the `wx`
+protection exists, so the assertion cannot fail for the reason it is being made. This is
+`fixture-must-reach-production-shape` exactly, and the PRD **declares that record as an
+applied Memory Input**. The same paragraph's other half — "the plan names none of the four
+removed paths" — is an assert-absent with no independent cause, which is the other
+declared input, `assert-absent-needs-an-independent-cause`. Fix: call
+`initWorkspace(..., { extra: planPractices(...) })`, assert the four paths are reported
+skipped and byte-identical, and add the positive control the disposition already promised —
+at least one retained pack file still planned and processed. Success Metric 2 also
+overstates what the fixture proves: it proves non-re-shipping and non-mutation, not that a
+migrating adopter loses zero checks.
+
+**[P1] P — I's basename rule is unbounded across a surface it newly reads.** FR-4(b′)
+counts a check wired when its `.mjs` basename appears in **any surface text**, and
+FR-4(b) adds every non-verify `package.json` script body to that surface set. So
+`"docs": "echo verify-foo.mjs"` wires `verify:foo`. `wiring.ts:224-228` records that raw
+text matching was abandoned for exactly this reason on script *names*; the PRD reasons
+about the echo residual for hooks and bundles and never for the sibling-script surface it
+also ports. Require boundary-aware or executable-token matching, and add the deny fixture:
+a non-verify script whose body merely echoes the basename must **not** wire it.
+
+**[P1] Q — J's "complete reverse operation" omits the root execution surfaces and the
+ADR.** Forward execution removes the three checks from the **root** bundle — whose
+`CHECKS` currently holds all three (`scripts/verify/verify-workflow.mjs:15-24`) — and
+replaces their individual CI steps (`.github/workflows/ci.yml:64-77`) with FR-5's CLI
+sweep. The rewritten rollback restores the root files and scripts, the **packed** bundle,
+the ledger, and the manifest, but never restores root bundle membership or the old CI
+steps, and never removes the new sweep. Those are not "additive and inert if unreferenced";
+CI references them by name. Separately, flipping restored ledger entries to
+`method-pending` must be mirrored in ADR-0002, because FR-1 makes ledger-vs-ADR agreement
+a gate; the rollback mentions only the ledger.
+
+**[P1] R — FR-7(c) is a self-exemption, and its corpus command does not run the lint it
+changes.** FR-7(c) requires a paragraph-form Open Questions section to fail, while §9 of
+this PRD deliberately stays in exactly that shape and argues it should until the rule
+lands. That guarantees this PRD is a known-failure the day its own FR ships. The stated
+reason — converting resolved paragraphs to bullets would red today's lint — does not
+require keeping invalid future grammar: hold §9 at `(none)` and move the resolved-decision
+history under a different heading. Codex proved the false green empirically rather than by
+inspection: injecting a bold, unresolved `**Q5 open …**` paragraph into the PRD in memory
+left `lintPrd` returning `{ ok: true, issues: [] }`. The FR-7 corpus row is also not
+wired — it runs `pnpm verify:workflow`, and that bundle executes only its `CHECKS` scripts
+and never calls `lintPrd` (`scripts/verify/verify-workflow.mjs:15-24, 62-64`). A
+listed-but-not-run command is never "passed"; name a command that actually sweeps the
+corpus.
+
+**[P2] S — Q4 cleanup left live stale claims, and the fix for one stale count introduced
+another.** §1's comparison table and the paragraph under it still say the package "drops a
+claimed path containing no `/`" and that the parsers diverge "in three ways" — both false
+against `durable.ts:50-93` and against the PRD's own FR-3, which Q4 rewrote. The §11 FR-3
+row still promises "three divergences reconciled". Three line counts in §10 are stale:
+`durable.ts` is 115 lines, not 46, and `wiring.ts` is 259, not 212. And §9's Q4 resolution
+says PRD-021 remains a prerequisite "for its other **five** overlaps" while the Conflict
+Surface, corrected in the same edit, measures **eight**. Historical changelog references to
+the retired `isRootRelativeFilename` contract are correctly historical and need no change.
+
+**What Codex confirmed at iteration 5.** `gate init` is genuinely additive-only and uses
+`wx`, so manual migration is the right shape even though the current wording of it is not.
+FR-8 names every pack-drift half it needs. The pack-ledger rollback correctly distinguishes
+the three ordinary pairs from the `track: "pack"` exceptions entry. Finding I's underlying
+diagnosis is right: `wiredIn` sees only `packageScriptOf`-resolved names, and both the path
+and bare-basename forms are invisible to it. **Q4's substantive decision is sound** —
+`artifactPaths` has no `/` requirement today, and importing `isRootRelativeFilename` would
+reintroduce a stricter predicate the durable reader deliberately abandoned. FR-7 correctly
+identifies all three live parser defects. The PRD lint is green, and no runtime dependency,
+network call, push path, protected surface, or client→server payload is introduced.
+
+---
+
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+
+**Iteration 5 — independent (Codex), on the H/I/J remediation. Supersedes iteration 4.**
+
+| #         | Dimension                | Weight | Score      | Notes |
+| --------- | ------------------------ | ------ | ---------- | ----- |
+| 1         | Clarity                  | 15%    | 7.0/10     | Targets and decisions stay explicit, but the migration mapping, the rollback surface list, and the Open Questions treatment now contradict themselves. |
+| 2         | Completeness             | 20%    | 6.8/10     | H, I and J each gained real coverage and each still misses one adjacent operational case. |
+| 3         | Technical Depth          | 20%    | 7.2/10     | The source analysis is strong; it is undermined by an unbounded substring match and by confusing the planner with the executor. |
+| 4         | Multi-Tenancy & Security | 10%    | 8.5/10     | Unchanged: no protected surface, payload, runtime dependency, network call, or push path. |
+| 5         | Scope & Testability      | 15%    | 6.3/10     | The upgrade fixture can pass without exercising the invariant, and FR-7's corpus command does not execute the lint it changes. |
+| 6         | Migration & Rollback     | 20%    | 6.0/10     | The manual migration is honestly acknowledged; its exception conversion is not executable and the reverse operation is still partial. |
+| **Total** | **Weighted**             |        | **6.85/10** | **ITERATE** |
+
+Weighted sum:
+`0.15×7.0 + 0.20×6.8 + 0.20×7.2 + 0.10×8.5 + 0.15×6.3 + 0.20×6.0`
+= `1.050 + 1.360 + 1.440 + 0.850 + 0.945 + 1.200 = 6.845` → 6.85.
+
+Hard caps: none tripped. `lintPrd` green by direct invocation.
+
+<details>
+<summary>Superseded — iteration-4 scorecard (Codex, 7.19 ITERATE)</summary>
 
 **Iteration 4 — independent (Codex), on the remediated PRD. Supersedes iteration 3.**
 
@@ -461,6 +601,8 @@ Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.
 | **Total** | **Weighted**             |        | **7.19/10** | **ITERATE** |
 
 Hard caps: none tripped. `lintPrd` green.
+
+</details>
 
 <details>
 <summary>Superseded — iteration-3 scorecard (Codex, pre-remediation, 6.65 ITERATE)</summary>

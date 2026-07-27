@@ -101,8 +101,8 @@ export function InstallTabs(): React.JSX.Element {
 }
 
 /**
- * CI integration. There is no `--ci` flag — the gates are ordinary commands, so
- * CI runs the same ones the manifest declares. That is the whole integration.
+ * CI integration. The CLI has no CI-mode flag — the gates are ordinary commands,
+ * so CI runs the same ones the manifest declares. That is the whole integration.
  */
 export function CIIntegration(): React.JSX.Element {
   const [tab, setTab] = React.useState<string>(C.CI_SNIPPETS[0].id);
