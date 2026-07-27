@@ -149,7 +149,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    snapshot's exception text unchanged. The adopter's config carries the **key**, never the
    prose.
 
-   This uses PRD-029 FR-6's enumerated-token mechanism, which exists precisely so this PRD
+   This uses PRD-029 FR-4's enumerated-token mechanism, which exists precisely so this PRD
    adds **no code target**: scalar `prompts.values` substitution cannot select a text block,
    and putting the block text into an adopter's config would move method content out of the
    package and fail provenance from the other side. Both were found at PRD-029's readiness
@@ -187,11 +187,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/test/content-prompts.test.ts`
 
 6. **FR-6**: `{{AUTONOMY_MODE}}` is registered in `PLACEHOLDERS.md` using the enumerated
-   column PRD-029 FR-6 adds: its meaning, its two legal values, and no `workflow.config`
+   column PRD-029 FR-4 adds: its meaning, its two legal values, and no `workflow.config`
    field mapping, because the value is supplied through `prompts.values` as a key. The
    registry's own rule — a token not in the table must not appear in any shipped prompt — is
-   enforced by `test/content-placeholders.test.ts`, and PRD-029 additionally fails at build
-   time when a declared enumerated value has no fragment file; this FR must leave both green.
+   enforced by `test/content-placeholders.test.ts`, and PRD-029 FR-4 additionally fails a **package test and
+   the render** — never "at build time", since the package's `build` is one `tsup` invocation —
+   when a declared enumerated value has no fragment file; this FR must leave both green.
    Because PRD-029 derives the required-value set from the **rendered corpus**, adding this
    token makes it required for every adopter from the moment this PRD lands — that is
    intended, and PRD-032 must derive its own value set rather than hardcoding a count.
@@ -261,7 +262,7 @@ method prose into an adopter's file where the provenance rule cannot see it. The
 cost: the human sets a key in `workflow.config.json`, the agent never assesses itself, the
 prose stays in the package under the addendum's authority, and this PRD's target list
 contains no TypeScript file. **That is what keeps 030 and 031 parallelizable**, and it is
-PRD-029 FR-6 that pays for it.
+PRD-029 FR-4 that pays for it.
 
 **Two copies, one wording, held by a test.** FR-5 edits the same rule in two files. This
 repository's records say plainly what happens next if nothing holds them together, and the
@@ -485,5 +486,6 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                 |
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Swept against PRD-029's cut.** The enumerated-token mechanism moved from PRD-029 FR-6 to FR-4 when that document was renumbered, so three references here pointed at the adapters FR. And the "fails at build time" claim survived readiness iteration 5's sweep because it is split across a line break, which `grep` misses; PRD-029 FR-4 now states the opposite explicitly and this FR matches it. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** PRD-029's iteration 2 falsified the `prompts.values` design: scalar substitution cannot select a text block, and putting the block text in an adopter's config moves method prose out of the package. Owner decision: an **enumerated token** whose fragments ship at `prompts/_fragments/`, with the config carrying only the key. FR-2 now targets the two fragments; the target list still contains no TypeScript file, so this item stays parallel to PRD-030. FR-6 records the consequence for PRD-032: adding a token to the rendered corpus changes every adopter's required set, so PRD-032 must derive its values rather than hardcode a count. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1, W6). The parent's stated precondition — read the snapshot — was insufficient: the snapshot states the exception unconditionally, so FR-1 makes the owner-approved addendum a precondition FR rather than an assumption. `{{AUTONOMY_MODE}}` moved from a config key to a `prompts.values` entry, which removes every code target and makes this item parallel to PRD-030. FR-3 is new: the shipped copy already drops the snapshot's parenthetical. |

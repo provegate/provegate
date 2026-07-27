@@ -73,7 +73,7 @@ check runs from `scripts/verify/`.
 | Generated adapter files here pointing at a phase protocol          | 0       | all    | one Claude command per phase, one Cursor rule, one snippet  |
 | Hand-written bytes in the store or the adapters                    | n/a     | 0      | committed render equals a fresh render, checked cache-free  |
 | Required placeholder values this repository leaves unfilled        | all     | 0      | the render refuses otherwise, so a green check is the proof |
-| Required values this document hardcodes rather than derives        | n/a     | 0      | the set comes from what `gate init --prompts` scaffolds     |
+| Required values this document hardcodes rather than derives        | n/a     | 0      | the set comes from the block `gate init --prompts` prints   |
 
 ---
 
@@ -121,7 +121,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 1. **FR-1**: `workflow.config.json` gains the `prompts` block for this repository: `dir`
    (`.provegate`), `adapters` (all three), and `values` filled for **every key the installed
-   package requires** — the set PRD-029 FR-5 derives from the rendered corpus, obtained by
+   package requires** — the set PRD-029 FR-4 derives from the rendered corpus, obtained by
    running `gate init --prompts` and reading the `prompts` block it **prints**, **never by
    copying a count from this document.** PRD-029 FR-4 prints that block whether or not it
    writes a config, which matters here because this repository already has a
@@ -225,7 +225,7 @@ independence has to be *built* rather than asserted: PRD-031 adds `{{AUTONOMY_MO
 rendered corpus, and PRD-029 derives the required-value set from that corpus, so the number
 of values this repository must supply differs before and after PRD-031 lands. A hardcoded
 list here would make this item wrong depending on merge order. FR-1 therefore derives the set
-from what `gate init --prompts` scaffolds against the installed package. With that, PRD-031
+from the `prompts` block `gate init --prompts` prints against the installed package. With that, PRD-031
 landing later simply changes the rendered bytes, which FR-3's check requires to be
 re-committed — the mechanism working, not a conflict.
 
@@ -425,7 +425,7 @@ rationalize.
 - DO NOT leave a required key `null` or absent in `workflow.config.json`. The refusal is the
   proof that every value was answered.
 - DO NOT hardcode the required-value set or its size. Derive it from what
-  `gate init --prompts` scaffolds against the installed package; PRD-031 changes that set,
+  `gate init --prompts` prints against the installed package; PRD-031 changes that set,
   and a copied count makes this item's correctness depend on merge order.
 - DO NOT start before PRD-029 and PRD-030 are both Ship Verified. Without the check this is
   a committed tree nobody reconciles, which is the drift surface the chain exists to avoid.
@@ -438,6 +438,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                              |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-07-27 | owner  | **Swept: three live "scaffolds" restatements and an FR-5/FR-4 pair in one sentence.** Readiness iteration 6 found the previous edit had corrected one clause and left the other two lines away — the sixth instance of `a-rule-corrected-survives-where-it-is-restated` in this chain, created by the fix for the fifth. |
 | 2026-07-27 | owner  | **PRD-029 cut to a one-way install.** FR-1's derivation now reads the `prompts` block PRD-029 **prints** rather than one it scaffolds — this repository already has a config, so nothing is scaffolded, which readiness iteration 5 found breaks the prescribed method. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** FR-1 no longer hardcodes thirteen values: PRD-031 adds a token to the rendered corpus and PRD-029 derives the required set from that corpus, so a copied count would make this item wrong depending on merge order. The set is now obtained from what `gate init --prompts` scaffolds against the installed package, which removes the ordering dependency rather than documenting it. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1). Last in the chain: it needs both the store and the check. FR-6 is new — the parent never checked that an ignore rule or a narrowed turbo input could hide a committed generated tree from the gate that reads it. |

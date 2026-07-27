@@ -54,9 +54,10 @@ left the delivery mechanism behind.**
 > `gate init --prompts` renders the protocols into a consuming repository and **behaves
 > exactly like every other `init` plan: additive-only, `wx`, an existing path is reported as
 > skipped and never touched.** There is no upgrade path, no receipt, no reconciliation, no
-> exception store and no `sync`. Re-installing after a package upgrade is: **delete the store
-> directory, run the command again.** That is stated in the command's own output, in the
-> store's generated README and in `NEXT_STEPS.md`, not buried here.
+> exception store and no `sync`. Re-installing after a package upgrade is: **delete every path
+> the command printed, then run it again** — the store tree *and* the two adapter destinations
+> that live outside it. The command prints that set on every run, and the instruction is stated
+> there, in the store's generated README and in `NEXT_STEPS.md`, not buried here.
 >
 > This boundary is the remediation. Four independent readiness rounds scored the previous
 > ten-FR version 5.73, 5.90, 5.63 and 4.53, and **every mechanism defect in the final round
@@ -126,9 +127,14 @@ so that I am not waiting for an upgrade path that does not exist.
 
 - [ ] Re-running `gate init --prompts` reports every existing path as skipped and changes
       nothing.
+- [ ] Every run prints the complete generated path set, including the two adapter destinations
+      outside the store directory.
 - [ ] The command's output, the store's generated README and `NEXT_STEPS.md` all state that
-      reinstalling means deleting the store directory, and that reconciliation is a later
-      release.
+      reinstalling means deleting **every path in that set** — not just the store directory —
+      and that reconciliation is a later release.
+- [ ] Following the stated procedure after a package upgrade leaves **no file carrying the
+      previous version's banner**, which is what makes the instruction correct rather than
+      merely present.
 - [ ] Nothing in the shipped documentation implies a `sync`, a receipt or an exception.
 
 ---
@@ -151,16 +157,32 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    repository gets, **not an implicit activation**: nothing reads them while `enabled` is
    false."* This FR copies that precedent rather than rediscovering why it exists.
 
-   Validation splits across the loader's real two passes: shape and unknown-key checks —
-   including an unknown key inside `values` — in `validateConfig` on the raw object at
-   `load.ts:267`; `prompts.dir` containment in the resolved pass at 273, beside
-   `memoryPathsContained`, whose longest-existing-prefix resolution it reuses so a
-   not-yet-created `.provegate` is not refused.
+   Validation is placed against what each surface can actually do, which the predecessor got
+   wrong in two ways:
+
+   - **Shape only, in the raw pass.** `values` needs a **new `Spec` kind**,
+     `stringOrNullRecord`: an object mapping strings to `string | null`. The existing
+     `stringRecord` is not usable — `validate.ts:149-155` rejects any value that is not a
+     string **or is empty**, which is precisely the two values FR-4 declares legal.
+   - **Unknown keys are NOT a raw-pass check.** The legal key set is the rendered corpus's
+     token set, which lives in package Markdown that the config loader neither reads nor
+     should. An unknown key is therefore a **fourth render diagnostic** — `unused`, naming the
+     key and the tokens the corpus actually requires — alongside malformed, undeclared and
+     unresolved. The alternative, a TypeScript constant of legal keys, is rejected explicitly:
+     it would make PRD-031 unable to add `{{AUTONOMY_MODE}}` without a code edit its own
+     Non-Goals forbid, which is what keeps that item parallel to PRD-030.
+   - **Containment is a sibling of `memoryPathsContained` in `load.ts`, not a change to
+     `validateResolvedConfig`.** That function takes a structural config object and **no
+     repository root** (`validate.ts:194`), so it cannot resolve a path; `memoryPathsContained`
+     takes the root and is composed at `load.ts:273`. The new check goes beside it and reuses
+     its longest-existing-prefix resolution so a not-yet-created `.provegate` is not refused.
    - **Targets:** `packages/provegate/src/core/config/types.ts::WorkflowConfig`,
      `packages/provegate/src/core/config/types.ts::PromptsConfig`,
      `packages/provegate/src/core/config/defaults.ts`,
+     `packages/provegate/src/core/config/validate.ts::Spec`,
      `packages/provegate/src/core/config/validate.ts::validateConfig`,
-     `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`
+     `packages/provegate/src/core/config/load.ts::promptsPathContained`,
+     `packages/provegate/src/core/config/load.ts`
 
 2. **FR-2**: The source domain is **every regular file at any depth** under the package's
    `prompts/` and `templates/`. Dispositions are an **ordered** list; first match wins, exact
@@ -183,7 +205,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    (which reads outside the shipped tree) or skipped (which drops content silently); the
    diagnostic names the file so an adopter can replace it with a regular file. The store also
    receives a **generated** `<dir>/README.md` stating that the tree is generated, which package
-   version produced it, and that reinstalling means deleting the directory.
+   version produced it, that two adapter destinations live outside this directory, and that
+   reinstalling means deleting every path the command prints.
 
    *Corpus measurement, not specification* — the rules are the specification; today they select
    12 rendered protocols, 7 rendered templates, 1 verbatim and 2 not emitted, and a test pins
@@ -216,8 +239,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - Occurrences are collected **before** any replacement and each is replaced once with its
      value treated as **opaque**, so a value containing `{{X}}` is emitted as-is and
      replacement order cannot matter.
-   - Three failures, three messages — malformed, undeclared, unresolved — each naming file and
-     line. The refusal is proved against the **shipped corpus with an empty `values` map**.
+   - Four failures, four messages — **malformed**, **undeclared**, **unresolved**, and
+     **unused** (a `values` key no rendered token consumes; see FR-1 for why this is a render
+     check rather than a config-load one) — each naming the file and line, or the key. The
+     refusal is proved against the **shipped corpus with an empty `values` map**.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::renderPrompts`,
      `packages/provegate/src/core/run/prompts.ts::scanTokens`,
      `packages/provegate/src/core/run/prompts.ts::substituteOnce`,
@@ -269,15 +294,29 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    which is what keeps `gate init`'s additive-only promise intact for every caller rather than
    carving out an exception that would then have to be scoped.
 
-   The command refuses **before writing any store file** when a required value is unresolved,
-   listing each token with its meaning. It composes with `--practices` and works without it.
+   The command **writes nothing at all** when a required value is unresolved — no store file,
+   no adapter, and no starter config — and lists each token with its meaning. "Nothing" is the
+   word used everywhere in this document; the predecessor said "no store file" in two places
+   and "nothing" in a third, which left a refused run's residue undefined and, because writes
+   are `wx` and nothing deletes, permanent. It composes with `--practices` and works without it.
+
+   **Every run prints the complete set of generated paths** — written and skipped alike,
+   including the two adapter destinations outside `<dir>` — because that set is what the
+   reinstall procedure operates on. The prompt plan's actions append to the existing plan and
+   inherit `initWorkspace`'s ordering, which validates every planned path before writing any of
+   them and writes activation files last (`init.ts:265-275`); this FR does not change that
+   invariant and the config write stays last.
    `templates.prd` is set to the rendered PRD template only in a starter config it writes
    itself; an existing config is never edited and the value to set is printed. **`gate init
    --practices` alone installs no store** — `PACK_MAP` is a static table and cannot emit a
    config-dependent render — and `NEXT_STEPS.md` names the command that does.
 
-   **Re-installation is deletion plus re-run**, stated in the command's own summary. No command
-   in this PRD deletes anything.
+   **Re-installation is: delete every path the command printed, then re-run.** Not "delete the
+   store directory" — `.claude/commands/prd-*.md` and `.cursor/rules/prd-workflow.mdc` live
+   outside it, and deleting only `<dir>` leaves them at the previous package version with stale
+   banners and stale store paths while the adopter believes they have reinstalled. The command's
+   summary states the full instruction and the paths it applies to. No command in this PRD
+   deletes anything.
    - **Targets:** `packages/provegate/src/core/run/init.ts::planPrompts`,
      `packages/provegate/src/core/run/init.ts::starterConfig`,
      `packages/provegate/src/core/run/init.ts::runInit`,
@@ -289,11 +328,22 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      one fixed directive sentence, one fenced block whose info string is empty and whose sole
      line is the store-relative protocol path. Nothing else.
    - `cursor` → `.cursor/rules/prd-workflow.mdc`: frontmatter first with exactly `description`,
-     `globs` (derived from `config.dirs.artifacts`) and `alwaysApply` in that order; then the
-     banner; then one `##` heading; then one table of exactly two columns (`Phase`, `Protocol`)
-     with one row per phase **in phase order**, each cell a phase name or a store path.
+     `globs` and `alwaysApply` in that order; then the banner; then one `##` heading; then one
+     table of exactly two columns (`Phase`, `Protocol`) with one row per phase **in phase
+     order**, each cell a phase name or a store path.
+     **`globs` derivation, exactly:** for each entry of `config.dirs.artifacts` in declared key
+     order (`prd`, `readiness`, `tasks`, `summary`), emit `<entry.dir>/**/*.md`; join with
+     `, ` into a **single unquoted scalar on one line**. That is the form the source snapshot's
+     own `rules/prd-workflow.mdc` uses, and a test pins the rendered line rather than the
+     algorithm. `dirs.artifacts` is a map of `{dir, prefix}` records, not globs — the prefix is
+     not used.
    - `codex` → `<dir>/AGENTS.md.provegate.snippet`: one `##` heading and the same table.
      **A snippet, never a write to `AGENTS.md`.**
+
+   **Two of the three destinations are OUTSIDE `<dir>`**, and that is the reinstall unit's
+   definition: the generated set is the store tree **plus** `.claude/commands/prd-*.md` and
+   `.cursor/rules/prd-workflow.mdc`. FR-5 requires the command to print that complete set on
+   every run for exactly this reason.
 
    A test validates that grammar. `planPractices` states that agent-entrypoint files are
    deliberately absent from the pack so an existing entrypoint is never touched; that invariant
@@ -311,9 +361,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 7. **FR-7**: `gate init --practices` gains the adopter instructions: `NEXT_STEPS.md` names
    `gate init --prompts`, says the required values are printed by that command, says where the
-   store lands, and **states the one-way boundary in the adopter's own words** — this version
-   installs once, reinstalling means deleting the store directory, and reconciliation is a
-   later release. `PACK_MAP` gains only static files; no rendered output enters the pack, and
+   store **and the two out-of-store adapter destinations** land, and **states the one-way
+   boundary in the adopter's own words** — this version installs once, reinstalling means
+   deleting every path the command prints, and reconciliation is a later release. `PACK_MAP` gains only static files; no rendered output enters the pack, and
    `verify:pack-drift` is green on both sides.
    - **Targets:** `packages/provegate/practices/NEXT_STEPS.md`,
      `packages/provegate/src/core/run/init.ts::PACK_MAP`,
@@ -361,8 +411,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Given** every required value supplied, **When** the command runs, **Then** the store and
   the adapters are written and every rendered file resolves every token.
 - **Given** a store that already exists, **When** the command is re-run, **Then** every
-  existing path is reported as **skipped**, nothing is written over, and the summary states
-  that reinstalling means deleting the directory first.
+  existing path is reported as **skipped**, nothing is written over, and the summary prints the
+  complete generated set and states that reinstalling means deleting all of it first.
+- **Given** a v1 install and an upgraded package, **When** the adopter follows the printed
+  reinstall instruction exactly and re-runs, **Then** **no generated file carries the v1
+  banner** — including `.claude/commands/prd-*.md` and `.cursor/rules/prd-workflow.mdc`, which
+  are outside the store directory and which a delete-the-directory instruction would have left
+  stale.
+- **Given** a run refused for an unresolved value, **When** the filesystem is inspected,
+  **Then** it is byte-identical to before the run — no store file, no adapter, no starter
+  config.
 - **Given** a package file matching no disposition rule — a `.txt` beside a protocol, or a
   nested `templates/legacy/x-template.md` — **When** the plan is built, **Then** it fails
   naming that file and the dispositions available.
@@ -630,7 +688,8 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-2 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | ordered dispositions with rule 4 before rule 5; unmatched file and symlink each fail by name; nested paths preserved              |
 | FR-3 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | escape class matched first and recursive; lowercase and spaced braces pass through; malformed and undeclared are distinct         |
 | FR-4 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | nine required; the four practices-only tokens excluded; the per-token empty policy; a fragment carrying a candidate fails         |
-| FR-5 | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | unresolved writes zero store files; a re-run reports every existing path skipped; an existing config stays byte-identical         |
+| FR-5 | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | a refused run leaves the filesystem byte-identical; a re-run reports every existing path skipped; an existing config untouched    |
+| FR-5 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | the printed generated set equals the plan's destinations, and following the reinstall instruction across a version bump leaves no path carrying the old banner |
 | FR-6 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | each adapter conforms to its named destination and skeleton; a fixture that already has AGENTS.md leaves it byte-identical        |
 | FR-7 | `pnpm verify:pack-drift`                                         | repo  | the new pairs reconcile on both sides with no orphan packed file and no lost live copy                                          |
 | FR-7 | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | the shipped-file allowlist matches the packed tarball after the additions                                                       |
@@ -703,5 +762,6 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Iteration 6 remediation (6.03, first round out of the 4–5.9 band).** The reinstall instruction was wrong in all five places it appeared: two of FR-6's three adapter destinations are **outside** `<dir>`, so "delete the store directory" left them at the previous version while the adopter believed they had reinstalled — the one procedure the whole scope decision rests on. The generated set is now printed on every run, the instruction names that set, and a §11 row fails today by asserting no old banner survives the documented procedure. One design decision taken: the unknown-`values`-key check **moves out of the raw pass** into the render as a fourth diagnostic, because the legal key set is package Markdown the loader must not read and a TypeScript constant would break PRD-031's no-code promise; the raw pass gets a new `stringOrNullRecord` shape, since `stringRecord` rejects both `null` and `""` — the two values FR-4 declares legal. Containment moves to a `load.ts` sibling of `memoryPathsContained`, which takes the root that `validateResolvedConfig` does not, and `load.ts` returns to Targets. The `globs` derivation is now exact. A refused run writes **nothing**, stated identically in all three places. |
 | 2026-07-27 | owner  | **Scope cut to a one-way install, answering iteration 5's band action (4–5.9 → return to Phase 1).** Ten FRs become seven. **The entire store lifecycle is removed** — no receipt, no reconciliation, no `sync`, no exceptions, no upgrade path — because four independent rounds put every mechanism defect in that layer while measuring the layers beneath it exact. **The preflight goes with it**, returning this plan to the additive-only, skip-if-present contract every other `init` plan has; the predecessor's carve-out is what made its prescribed apply path unrunnable. **Activation becomes `prompts.enabled: false`**, copying the shape `memory` uses at `defaults.ts:95-101`, because `mergeConfig` deep-merges defaults and a presence test can never be false. **Discovery no longer depends on a write**: the config block is printed whether or not one is written, which is the only activation path an existing repository has. FR-6 names each adapter's destination, which no previous version did. FR-4 names package tests rather than a build boundary that does not exist. The one-way limit is stated in the command's output, the store's README and `NEXT_STEPS.md`. |
 | 2026-07-27 | owner  | Superseded shape: four remediation rounds against readiness iterations 1–4 (split, ledger, enumerated tokens, no-overwrite). Preserved in git history at `607954a`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

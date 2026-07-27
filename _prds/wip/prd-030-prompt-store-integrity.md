@@ -161,6 +161,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    rather than a preamble to it.
    - **Targets:** `_docs/design/prompt-store-state-model.md`
 
+> **FR-2 through FR-7 below are a SKETCH, not a specification, and are not binding.** They
+> were written against the design PRD-029 carried before its scope cut — one in which PRD-029
+> wrote a receipt and `sync` had an overwrite path. Neither is true now: **the receipt has no
+> owner anywhere in the chain and originates here**, and every transition these FRs assume is
+> one FR-1 must first define. They are retained so a reader can see the shape being aimed at,
+> and **FR-1's state model replaces them wholesale** — readiness iteration 6 counted nine live
+> restatements of the removed design in this document, and rewriting them before the model
+> exists is what produced them. Do not implement, score, or remediate them as written.
+
 2. **FR-2**: An `exceptions` entry **suppresses a `diverged` finding and authorizes nothing.** It names the exact path (not a
    glob), an `owner` present in `config.owners`, a `reason`, and a `reviewBy` date. Four
    shapes **fail**, each with its own message: an entry whose `reviewBy` has passed; one
@@ -562,6 +571,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                             |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **FR-2 through FR-7 marked as a non-binding sketch.** Readiness iteration 6 found nine live restatements of the removed design still in them, and that the receipt now has no owner in the chain. Rewriting them before FR-1's state model exists is exactly what produced the restatements; they are retained for shape and replaced wholesale by the model. |
 | 2026-07-27 | owner  | **PRD-029 cut to a one-way install, so this PRD owns the whole lifecycle and inherits no half-built version of it.** FR-1 becomes a **precondition**: one owner-approved document giving the complete state transitions for a generated store and the actor for each, covering the seven cases that were undefined or defined into a dead end in the design readiness iteration 5 rejected. That is the Phase 1 artifact iteration 5 demanded, located in the item that needs it. Nothing here is specified until it lands. |
 | 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: `sync` never overwrites, it only reports.** Iteration 4's counterexample was an adopter's own hand-written `.claude/commands/prd-3.md`, byte-identical to version 1, recorded by a no-op `init` and then overwritten by a version-2 `sync` — so receipt membership granted a capability while both documents promised it granted nothing. `sync` is now a **reporter**: it prints classifications and unified diffs, writes not one byte including the receipt, and exits non-zero when anything would change. The apply path is the human deleting a file and re-running `init`, whose additive-only contract makes deletion sufficient and makes the irreversible step theirs. Consequences: the receipt has **one writer** (`init`), so a reporter can no longer record hashes for content it declined to place; `retired` **persists** instead of being erased by the write that reports it; exceptions **suppress a finding and authorize nothing**; both control files are excluded from the tree-orphan rule by name; and FR-6 states the config-removal limit — with no `prompts` block there is no locator, which is accepted rather than worked around. §11 corrected from five per-path states to six. |
 | 2026-07-27 | owner  | **Iteration 3 remediation (W18, W19).** Owner decision: the receipt claims nothing. Exceptions move out of it into `prompts-exceptions.json`, owned end to end here — inside the receipt they would force a plan executor to preserve state it does not own, which is the shape iteration 3 rejected. FR-5 is restated as a plan executor writing the whole receipt, so the read-never-rewritten contradiction disappears. FR-3's domain becomes the current plan unioned with the on-disk receipt, and `retired` replaces the ownership lifecycle: a path the plan stopped producing is reported once and never deleted, because nothing was claimed. |
