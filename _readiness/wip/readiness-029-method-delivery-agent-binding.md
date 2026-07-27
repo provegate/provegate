@@ -1,5 +1,23 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 2 (Codex, independent) — 5.73/10, ITERATE. Up 1.25, the largest single-round
+> gain in this wave, and the findings changed class.** Iteration 1's were internal
+> contradictions; **none of iteration 2's is.** Every factual claim in the rewrite verified
+> against source — the 20/7/13 token split, the twelve rendered protocols, the seven
+> templates, the README wording, the loader order at 267/272/273, the `new.ts:170` fallback.
+> What the split bought was room for the document to be wrong about the *world* instead of
+> about itself, and eight [P1]s say it still is. **Two are my own overshoot**: FR-4 derives
+> the required value set from the registry rather than from what FR-2 actually renders, so
+> four tokens that live only in `practices/templates/AGENT_BOOTSTRAP.template.md` become
+> hard refusals an adopter cannot satisfy meaningfully; and FR-3's mandatory banner collides
+> with FR-6's `.mdc` frontmatter, which every `.cursor/rules/*.mdc` in this repository and in
+> the snapshot opens with on line 1. **Three are the successor interfaces failing to
+> compose**: PRD-030 requires a ledger PRD-029 never creates, and PRD-031's two-mode
+> rendering needs conditional expansion that `prompts.values` scalar substitution cannot do —
+> which also means 030 and 031 are not parallelizable as written.
+>
+> <details><summary>Iteration 1 (4.48 ITERATE)</summary>
+>
 > **Iteration 1 (Codex, independent) — 4.48/10, ITERATE.** The lowest opening score in the
 > wave, and the findings say why: **six of the eight [P1]s are the document disagreeing with
 > itself**, not with the codebase. The token count, the file inventory, the activation
@@ -9,15 +27,17 @@
 > `prompts/adapters/` already ships two prose-heavy adapters the PRD never mentions while
 > FR-5 promises "one protocol location", and FR-10 makes conditional a rule the frozen
 > snapshot states unconditionally, which is a method-content change rather than a token.
+>
+> </details>
 
 ## Quick Meta
 
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 4.48/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — eight [P1] items. Five are internal contradictions that exist only at this document's size, one is an unaccounted existing adapter directory, one is a false premise about `load.ts`, and one is a method-content provenance failure that no amount of rewriting inside this PRD can satisfy      |
-| Iteration              | 1                                                                                                                                                                                                                                                                                                        |
+| Score                  | 5.73/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — eight [P1] items, none of them an internal contradiction. Five are specification gaps the rewrite exposed rather than created (render-domain totality, token grammar, activation state machine, adapter grammar, banner-versus-frontmatter); two are hard refusals that reject legitimate input; one is the successor interfaces failing to compose |
+| Iteration              | 2                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD**                                                                                                                                                                                                  |
@@ -143,6 +163,29 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
+**Iteration 2** (the current score). Iteration 1's row is kept below it.
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                                            |
+| --------- | ------------------------ | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 6.5/10      | The manifest and activation are stated once each; the token grammar and the adapter grammar are named but undefined    |
+| 2         | Completeness             | 20%    | 5.5/10      | Render domain not total; four required values cannot affect the output; no ledger for the successor to adopt           |
+| 3         | Technical Depth          | 20%    | 6.0/10      | Purity and rule-over-list hold and were verified; substitution semantics and partial-run recovery are unspecified      |
+| 4         | Multi-Tenancy & Security | 10%    | 6.5/10      | No tenant surface; realpath containment specified; symlink traversal inside the package is not                         |
+| 5         | Scope & Testability      | 15%    | 6.0/10      | Eight FRs is the right size; two acceptance criteria describe inputs the rules make impossible                         |
+| 6         | Migration & Rollback     | 20%    | 4.5/10      | Transferred to PRD-030 without an interface: no ledger bootstrap, no partial-run recovery, mixed-version store possible |
+| **Total** | **Weighted**             |        | **5.73/10** | **ITERATE**                                                                                                          |
+
+Arithmetic re-derived here: `6.5×.15 + 5.5×.20 + 6.0×.20 + 6.5×.10 + 6.0×.15 + 4.5×.20 = 5.725`.
+
+Hard caps checked: **none tripped.** The method-content cap that iteration 1 tripped is gone
+from this document — FR-10 moved to PRD-031, which makes the owner-approved snapshot addendum
+its own precondition FR, and this PRD now targets no file under
+`packages/provegate/prompts/`. No runtime dependency added; no remote-push path added. Lint
+cap: not tripped — `lintPrd` returned `{ ok: true, issues: [] }` by direct invocation, the CLI
+wrapper again refused by sandbox `EPERM` on the state write.
+
+<details><summary>Iteration 1 scorecard (4.48)</summary>
+
 | #         | Dimension                | Weight | Score       | Notes                                                                                                       |
 | --------- | ------------------------ | ------ | ----------- | ------------------------------------------------------------------------------------------------------------- |
 | 1         | Clarity                  | 15%    | 5.5/10      | Problem statement and evidence are precise; the specification contradicts itself on what is rendered          |
@@ -153,23 +196,85 @@ Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md`
 | 6         | Migration & Rollback     | 20%    | 3.0/10      | Regeneration, exception survival and `templates.prd` rollback all unspecified                                 |
 | **Total** | **Weighted**             |        | **4.48/10** | **ITERATE**                                                                                                 |
 
-Arithmetic re-derived here: `5.5×.15 + 4.5×.20 + 5.0×.20 + 7.0×.10 + 3.0×.15 + 3.0×.20 = 4.475`.
-
-Hard caps checked: **one tripped.** Method content not traceable to the source snapshot —
+Hard cap tripped: method content not traceable to the source snapshot.
 `source-snapshot/prompts/phase-3-task-generator.md:80` states the autonomy exception
-**unconditionally**, so FR-10's `{{AUTONOMY_MODE}}` makes conditional a rule the snapshot
-does not condition. Reading the snapshot, which is all FR-10's stated precondition requires,
-does not authorize the change; critical rule 4 needs the wording to be traceable, and the
-PRD's Non-Goal claiming FR-10 "changes no rule" is false. No runtime dependency added; no
-remote-push path added. Lint cap: not tripped — `lintPrd` returned `{ ok: true, issues: [] }`.
+**unconditionally**, so the then-FR-10 made conditional a rule the snapshot does not
+condition. Measured while checking it and worth keeping: our shipped copy of that line
+**drops** the snapshot's parenthetical `(single-session test runs, agent-led sweeps)` — a
+pre-existing divergence found by a diff neither side was running for it. Both are PRD-031's
+now.
 
-Measured while checking the cap and worth keeping: our shipped copy of that line **drops**
-the snapshot's parenthetical `(single-session test runs, agent-led sweeps)`. A pre-existing
-divergence, found by a diff neither side was running for it.
+</details>
 
 ---
 
 ## Missing Pieces (to reach 10/10)
+
+Iteration 2's watch items. W1–W8 below them are iteration 1's, retained for the record;
+W1 is taken, the rest are closed or transferred as the closure audit states.
+
+1. **W9 — Make the render domain total, collision-free and symlink-safe.** The rule covers
+   `*.md` and `*-template.md` and leaves every other package file undisposed while claiming
+   totality. Nested templates flatten to a basename and can collide in the returned map;
+   case-only collisions land on a case-insensitive filesystem. Symlink traversal is
+   unspecified — following one reads outside the shipped tree, skipping one breaks totality.
+   And §6's "a `*.md` matching no rule fails" describes an input the wildcard makes
+   impossible; the pinning test is right, the criterion states the wrong reason.
+2. **W10 — Give the token scan a grammar.** `{{TO\nKEN}}` evades a `{{TOKEN}}` refusal. A
+   registered token shown literally in documentation or a fenced example is substituted with
+   no escape syntax. A configured value that itself contains `{{OTHER}}` is then read as
+   unresolved, and replacement order is undefined when one value contains another token.
+   Scan source tokens before substituting, substitute each occurrence once with an opaque
+   value, and separate malformed, undeclared and unresolved into three diagnostics.
+3. **W11 — Require values from the render inputs, not from the global registry.** Verified
+   here: `{{LINK_TO_VISION_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`,
+   `{{PROJECT_SPECIFIC_HARD_RULES}}` and `{{VISION_OR_DECISIONS_DOC}}` occur in **zero**
+   files FR-2 renders — only in `practices/templates/AGENT_BOOTSTRAP.template.md`. FR-4 makes
+   all thirteen mandatory, so four sentinels must be replaced with values that cannot change
+   one byte of the store. Also: a sentinel derived from the registry's mutable Meaning prose
+   stops matching when that prose is edited, and the stale text then reads as real content.
+   Use a stable sentinel encoding.
+4. **W12 — Specify the activation state machine and partial-run recovery.** "The store
+   exists iff the config declares `prompts`" is false in the state FR-5 itself creates —
+   config written, store refused — and false again after `prompts` is removed while the tree
+   remains. `wx` makes each write non-destructive; it does not make a multi-file render
+   atomic. A run that fails midway and a re-run under a newer package version produce a
+   mixed-version store, because the already-written files are skipped. Pin one package
+   version per plan, preflight every destination, and name the four states:
+   configured-unresolved, configured-complete, configured-incomplete, unconfigured-orphaned.
+5. **W13 — Replace the pointer predicate with an adapter grammar.** "No adapter line appears
+   verbatim in a protocol except a path" proves neither direction: exempt any line containing
+   a path and arbitrary prose rides along on it; exempt only bare paths and legitimate
+   pointer sentences and Cursor table rows are refused; and novel duplicated prose passes
+   because it appears nowhere verbatim. Specify what an adapter may contain — frontmatter
+   fields, table columns, path syntax, one bounded directive — and validate that.
+6. **W14 — Reconcile the banner with `.mdc` frontmatter.** Verified here: every
+   `.cursor/rules/*.mdc` in this repository and in the source snapshot opens with `---` on
+   line 1. FR-3 requires a banner on every emitted file and FR-6 requires frontmatter; a
+   banner above it moves the frontmatter off line 1 and the rule may not attach. Either the
+   banner has a frontmatter-safe location or the adapter is exempt and User Story 2's
+   criterion is false as written.
+7. **W15 — Give PRD-030 a ledger to adopt.** PRD-030 reconciles against a ledger recording
+   the version and hashes that produced the store; PRD-029 creates no ledger. Either PRD-029
+   writes it, or PRD-030 specifies a bootstrap for a ledgerless store. PRD-030's totality
+   argument also covers `prompts.dir` while the generated adapters live outside it, so their
+   missing/diverged/orphan semantics are undefined.
+8. **W16 — Resolve the successor coupling before claiming parallelism.** PRD-031 gives
+   `{{AUTONOMY_MODE}}` two legal values that must select whole text blocks, while forbidding
+   any renderer change and relying on PRD-029's literal scalar substitution — conditional
+   expansion is not substitution, and putting the block text in `prompts.values` puts method
+   content in an adopter's config, which is the provenance rule failing from the other side.
+   PRD-032 hardcodes thirteen values and PRD-031 adds a fourteenth, so landing order changes
+   PRD-032's config and generated bytes.
+9. **W17 — Bring `_brain/INDEX.md` under a valid contract.** It is a required Durable
+   Artifact write, it is outside the Conflict Surface by a judgement recorded in §7, and it
+   is not in `workflow.config.json` `sharedAppendOnly`. An implementer must therefore either
+   break the PRD's own DO NOT or stop for an out-of-scope write. Claim it, or make it
+   mechanically shared-append-only.
+
+---
+
+## Iteration 1 watch items (retained)
 
 1. **W1 — Take the split now rather than holding it.** Five of the six confirmed internal
    contradictions exist because one document states one rule in six places. Proposed
@@ -209,29 +314,51 @@ divergence, found by a diff neither side was running for it.
 | --- | ---------- | ----- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | 2026-07-27 | 4.48  | ITERATE | **First independent round; eight [P1]s, none rejected on re-verification.** Six are the document disagreeing with itself: the placeholder registry holds **20** tokens where the PRD says 21 in three places; `prompts/` holds 14 Markdown files where FR-2 says "all ten … including `PLACEHOLDERS.md`" and §11 says "all ten protocols"; activation is inert-without-config in FR-1, installed-by-`--practices` in FR-13, and unconditional in §6's Gherkin; `templates.prd` is rewired in FR-4 for new configs only and promised universally in §6. Two are not: **`packages/provegate/prompts/adapters/` already ships `codex-starter.md` and `cursor-bootstrap.md`**, prose-carrying and referenced by the package README as manual-paste instructions, so FR-5's "no adapter restates protocol prose" test fails against files the PRD never planned to touch; and **FR-10 trips the method-content hard cap** — `source-snapshot/prompts/phase-3-task-generator.md:80` states the autonomy exception unconditionally, so conditioning it is a method change that reading the snapshot does not authorize. Also: §7's `load.ts` premise is inverted (`validateConfig(parsed)` at 267 precedes `mergeConfig` at 272), and `AGENT_BOOTSTRAP.md` is an FR-11 Target absent from the Conflict Surface on a `sharedAppendOnly` exclusion that does not list it. Confirmed and left standing: the purity-and-recompute design, the pointer-only adapter rule, the realpath-both-sides containment, and the Memory Inputs set, which covers every watch overlap |
 
+| 2   | 2026-07-27 | 5.73  | ITERATE | **The split landed and the class of finding changed. Up 1.25.** Every rewritten factual claim verified against source — 20 registry rows with 7 mapped and 13 unmapped, 12 rendered protocols, 7 templates, the README's "tool-shaped entry points", the loader at 267/272/273, the `new.ts:170` fallback, literal `{{TOKEN}}` in the registry's own cells. **Not one of the eight [P1]s is an internal contradiction**, which is what the split was for. Two are the rewrite's own overshoot, and both are the same error: a rule derived from the wrong source. **FR-4 derives the required value set from the registry instead of from what FR-2 renders** — `{{LINK_TO_VISION_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`, `{{PROJECT_SPECIFIC_HARD_RULES}}` and `{{VISION_OR_DECISIONS_DOC}}` occur in zero rendered files and only in `practices/templates/AGENT_BOOTSTRAP.template.md`, so four sentinels must be answered with values that cannot change a byte of the store. **FR-3's mandatory banner collides with FR-6's `.mdc` frontmatter**, which every `.cursor/rules/*.mdc` here and in the snapshot opens with on line 1. Five more are specification depth the previous size hid: the render domain is not total for non-Markdown files, nested-template basename collisions or symlinks; the token scan has no grammar, so a line-broken token evades it and a documented literal is substituted; the activation invariant is false in the state FR-5 itself creates and `wx` does not make a multi-file render atomic; and the pointer predicate proves neither direction, refusing legitimate Cursor table rows or admitting prose that rides on a path line. **Three are the successors failing to compose**: PRD-030 reconciles against a ledger PRD-029 never creates, its totality argument omits the adapters that live outside `prompts.dir`, and PRD-031's two-mode rendering needs conditional expansion that scalar `prompts.values` substitution cannot provide — so 030 and 031 are not parallelizable as written, and PRD-032's thirteen hardcoded values become fourteen depending on landing order. Also confirmed: `_brain/INDEX.md` is a required durable write outside both the Conflict Surface and `sharedAppendOnly`, so §7's recorded judgement leaves an implementer with no lawful path. Memory contract clean — no watch overlap missing — with a [P2] that several dispositions are ceremonial, the sharpest being that `a-rule-corrected-survives-where-it-is-restated` is declared applied while activation is restated in five places |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 4.48/10, iteration 1, scored independently by Codex.**
+**ITERATE — 5.73/10, iteration 2, scored independently by Codex.**
 
-The problem this PRD identifies is real and was verified independently: the phase protocols
-ship and never install, and both observed agent symptoms follow from that one cause. The
-diagnosis is not what failed here.
+The split worked and the score says so, but the more useful signal is that **the class of
+finding changed.** Iteration 1's eight were the document disagreeing with itself; iteration
+2's eight are the document underspecifying the world. Not one is an internal contradiction,
+and every factual claim the rewrite makes was verified against source. That is what W1 was
+supposed to buy and it bought it.
 
-What failed is that a thirteen-FR document states each of its rules in six places, and the
-author's two late corrections — the store layout and the `templates.prd` rewiring —
-propagated to neither §6 nor §11 nor the Changelog. That is the failure mode
-`a-rule-corrected-survives-where-it-is-restated` describes, reproduced by a document that
-declares the record as `applied`. It is also the failure mode that superseded PRD-023, and
-the size is the same. **W1 is therefore load-bearing and comes first**: remediating six
-self-contradictions inside one document at this size reproduces the condition that created
-them.
+What remains splits three ways, and only the first is ordinary spec work.
 
-Two findings survive any split and must be answered rather than redistributed. The existing
-`prompts/adapters/` directory means adapter delivery is a reconciliation problem, not only a
-generation problem, and no successor PRD is coherent until that is decided. FR-10's
-provenance is a hard cap: the wording must come from an owner-approved snapshot addendum or
-the requirement is removed. Neither is a specification gap that better prose closes.
+**Five are depth the previous size hid.** A render rule that claims totality and covers only
+two glob shapes. A token scan with no grammar, so a line-broken token evades it and a
+documented literal is consumed. An activation invariant that is false in the very state its
+own FR creates. `wx` treated as if it made a multi-file render atomic. A pointer predicate
+that cannot be written to accept legitimate Cursor table rows and reject prose riding on a
+path line. Each is answerable inside this document.
+
+**Two are my own overshoot, and they share one root: a rule derived from the wrong source.**
+The required value set comes from the registry rather than from what the render actually
+consumes, so four tokens that exist only in `practices/templates/AGENT_BOOTSTRAP.template.md`
+become refusals an adopter cannot satisfy meaningfully. And a banner required on *every*
+emitted file collides with frontmatter that must be on line 1. Both were added as
+hardening in the iteration-1 remediation. `strictness-added-during-extraction-is-a-behavior-change`
+is declared `applied` in this PRD's Memory Inputs and did not catch either — which is the
+second consecutive round in which a record this document declares was not applied to the
+document's own new rules.
+
+**Three are the successor interfaces, and they are the ones that change the plan.** PRD-030
+reconciles against a ledger PRD-029 never creates. PRD-031's two-mode rendering needs
+conditional expansion, and the design that made it "text-only and parallel to PRD-030" rests
+on scalar substitution that cannot express it — putting the block text into `prompts.values`
+would put method content in an adopter's config, which fails provenance from the other side.
+PRD-032's thirteen hardcoded values become fourteen depending on landing order. **The claim
+that 030 and 031 are parallelizable does not hold**, and fixing it is a design decision
+about where conditional rendering lives, not a wording change.
+
+W15, W16 and W17 therefore bind the successors as much as this document, and the next
+revision should settle the ledger interface and the conditional-rendering question before
+re-scoring — otherwise iteration 3 will find the same three coupling defects wearing
+different clothes.
