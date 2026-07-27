@@ -1,14 +1,29 @@
 # Independent Review: PRD-029 — Method Delivery, One-Way Protocol Install
 
-| Field | Value |
-| --- | --- |
-| PRD | `_prds/wip/prd-029-method-delivery-agent-binding.md` |
-| Reviewed | `feat/prd-029-method-delivery` vs `main`, 8 commits |
-| Reviewer | Independent Claude session, own brief; **not the implementing session** |
-| Model tier | high |
-| Date | 2026-07-27 |
-| Verdict | **pass** |
-| Critical | 0 |
+> **PRD:** PRD-029
+> **Verdict:** pass
+> **Reviewer:** independent Claude session (`readiness-5`), own brief — NOT the implementing session
+> **Tool/Model:** Claude Opus 5; Codex (gpt-5.x) invoked read-only and hit its 570s timeout before a verdict, so the independence here is the session's, with three of Codex's four leads confirmed by its own reproduction and one rejected
+> **Base SHA:** e75fa39a0c5280de793f18c647514e0cb1672f6b
+> **Diff range:** e75fa39a0c52..9d8eb40
+> **Critical:** 0
+> **High:** 0
+> **Medium:** 0
+> **Rounds:** 2 — round 1 returned `fail` with Critical 1; every finding below was remediated and re-verified against the built CLI
+
+## Findings
+
+Ranked most-severe first. All were raised in round 1 and are **closed**; the counts above are
+the round-2 state that this verdict attests to.
+
+- **critical** · `src/core/config/validate.ts:88` — `prompts.adapters` membership was never validated, so a typo wrote 11 store protocols, zero adapters, and exited 0 while reporting success. Fixed: refused by name in `validateResolvedConfig`, listing the known set.
+- **major** · `src/core/config/validate.ts:296-315` — `prompts.dir` never joined the lexical path rules, so `~/store` was accepted and the printed reinstall set expanded to the adopter's home directory. Fixed: added to `configuredPaths`.
+- **major** · `src/cli.ts:166-179` — the containment diagnostic was swallowed and misreported as "prompts is not enabled". Fixed: the catch branches on `issues.length`.
+- **major** · `test/prompts.test.ts:149-166` — the collision guard's test could not fail on a case-insensitive volume. Fixed: `assertNoCollision` called directly, mutation-checked.
+- **minor** · `src/core/run/prompts.ts` — a config-backed key in `values` escaped `unused`. Fixed.
+- **minor** · `src/core/run/prompts.ts` — `{{A{B}}` matched neither candidate class. Fixed, then the fix overshot (below) and was narrowed.
+- **minor** · `src/core/run/init.ts:255` — `initWorkspace`'s comment asserted an invariant PRD-029 broke. Fixed.
+- **minor** · `src/core/run/prompts.ts` — the Codex snippet carries no banner. **Not changed**: FR-6 specifies exactly a heading and a table, and changing it would put the code outside the spec that was scored. Recorded in the task file's Deferrals.
 
 ## Round 1 — verdict `fail`, Critical 1
 
