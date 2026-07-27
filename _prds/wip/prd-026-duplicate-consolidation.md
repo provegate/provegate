@@ -75,11 +75,11 @@ which is a hard prerequisite.
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | Method rules with more than one implementation | 3, each implemented three times | 0 | the class ledger plus the pack manifest |
-| Parsers of the Durable Artifacts section | 2, divergent | 1 | the script is deleted |
+| Artifact-token **extraction** implementations for the Durable Artifacts section | 2, divergent | 1 | the script is deleted. Narrowed deliberately: the package retains two section *readers*, `declaredArtifacts` and `declaredArtifactsStrict`, whose split is a recorded deferral this PRD does not close |
 | Checks a **fresh** adopter loses by upgrading | n/a | 0 | `NEXT_STEPS.md` names the replacing flag for each |
 | Checks an **existing** adopter loses by upgrading | n/a | 0 once they run the migration; three stale copies keep running until they do | the changeset migration section. **Not** provable by any fixture — the migration is manual |
 | Removed pack paths an upgrade re-ships or deletes | n/a | 0 | the upgrade fixture, through the executor |
-| Live documents naming a deleted check | 6 | 0 | FR-6 |
+| Live documents naming a deleted check, under FR-6's stated boundary | 7 | 0 | FR-6 |
 | Repo surfaces that invoke `gate` | measured at Phase 4 | the root manifest plus at least one CI step | CI workflow text plus the manifest |
 
 ---
@@ -148,6 +148,21 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    **This flag covers review records only.** FR-2 adds a separate flag rather than
    overloading this one — two unrelated rules over two unrelated sections of two unrelated
    documents should not share a name that describes one of them.
+
+   **"Every record" is not a specification, and the deleted script had two predicates this
+   one needs.** Selection: a candidate is a file directly under the configured reviews
+   directory whose basename matches `^review-.*\.md$` — not recursive, and templates are
+   excluded by that pattern rather than by an allowlist. Binding: the package validator
+   checks PRD identity only when `expectedId` is supplied, and `validateReviewArtifactFile`
+   defaults it away (`review.ts:89-95, 124-134`), so a sweep that omits it would accept a
+   perfectly valid review **for the wrong PRD**. Derive the expected identifier from the
+   filename — `review-023-slug.md` yields `PRD-023` under the configured id pattern — and
+   pass it. A file whose name yields no identifier fails as unparseable rather than being
+   skipped.
+
+   Deny cases, each paired with a passing control on the same input shape: a valid record
+   filed under the wrong PRD's name; a record whose filename yields no identifier; a
+   template-shaped file that must not be selected.
    - **Targets:** `packages/provegate/src/cli.ts::runCheck`,
      `packages/provegate/src/core/gates/review.ts`,
      `packages/provegate/test/consolidation.test.ts` (new)
@@ -221,11 +236,29 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    left after FR-3, two are still method rules — the memory validator and the deferral
    check — both carried as `method-pending` in PRD-025's ledger.
 
+   **The CI change is a replacement, not an addition.** CI runs the three aliases FR-3
+   deletes (`ci.yml:64-77`, `package.json:32-36`). Those three steps are **removed** in the
+   same change; leaving them beside the new sweep would either fail on missing scripts or,
+   worse, run the same rules through two implementations — the state this PRD exists to end.
+   The rollback restores them, and an earlier version specified the restore without the
+   removal.
+
+   **The manifest entries are enumerated, because "the checks it wraps" is not a
+   specification.** Phase 4 gains `pnpm check-types`, `pnpm lint`, `pnpm build`,
+   `pnpm test`, `pnpm verify:workflow`, `pnpm check-egress` — today's set minus nothing —
+   and the two sweeps arrive as **CI steps invoking the built CLI directly**, not as
+   manifest entries. That distinction is load-bearing: `packageScriptOf` resolves only
+   package-manager invocations, so a manifest entry reading `node …/dist/cli.js check --…`
+   resolves to no `package.json` script and would fail the wiring audit's first direction.
+   If a sweep is to be manifest-driven it needs a `package.json` alias first; name that
+   alias or keep the sweeps in CI, but do not put a bare `node` command in the manifest.
+
    **FR-4's own verification must not name a deleted script.** An earlier version of this
    work verified this requirement with `pnpm verify:gates-wired`, the very script FR-3
    deletes; five independent review rounds did not notice. This FR verifies through
    `gate check --wiring`, which survives, plus a test that every manifest command resolves
-   to an existing `package.json` script.
+   to an existing `package.json` script — run against the repository **after** the change,
+   not against a fixture.
    - **Targets:** `gates.manifest.json`, `.github/workflows/ci.yml`, `package.json`,
      `packages/provegate/test/consolidation.test.ts`
 5. **FR-5 — Retire the packed duplicates, and state honestly who that moves.** Each of the
@@ -283,11 +316,27 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    | unknown key | ignored | reported stale — the audit fails an exception naming no existing script |
 
    The packed file ships **eight** filenames, so a literal copy produces eight stale
-   exceptions and a red gate. The rule: **drop** the entries for the three removed scripts;
-   **map** each survivor's filename to the `package.json` script whose body invokes it;
-   **justify or drop** — the new store requires a reason the old array never carried, and
-   an exception nobody can justify is one that should not exist. Stubbing a placeholder
-   would quietly defeat the shrink-only policy.
+   exceptions and a red gate. The rule has **four** steps, and the third was missing from an
+   earlier version:
+
+   1. **Drop** the entries for the three removed scripts. They no longer exist.
+   2. **Map** each survivor's filename to the `package.json` script whose body invokes it.
+   3. **Drop every survivor that is already wired.** `auditWiring` refuses an exception for
+      a wired script as stale (`wiring.ts:238-255`), and an exception is only meaningful for
+      a check that is wired nowhere. This step is not optional bookkeeping: the reviewer
+      executed the three-step version against this repository and `auditWiring` rejected
+      **all five** survivors, because all five are wired here.
+   4. **Justify or drop** what remains. The new store requires a reason the old array never
+      carried, and an exception nobody can justify is one that should not exist. Stubbing a
+      placeholder would quietly defeat the shrink-only policy.
+
+   **Prove it through the audit, not the loader.** `validateManifest` accepts any object of
+   non-empty strings (`manifest.ts:247-256`), so a manifest that loads cleanly can still be
+   a state the wiring audit refuses — which is exactly what the three-step rule produced.
+   The fixture asserts the converted result passes `auditWiring`, not merely `loadManifest`.
+   Note also that the loader's non-empty check is a **length** check and accepts whitespace
+   (`manifest.ts:251`); if "justify" is meant semantically, require trimmed non-empty text
+   and add a whitespace case, or say plainly that the contract is non-zero length.
 
    **The conversion is proved, not just documented.** This repository's own copy is empty,
    so nothing here would exercise the rule — a migration whose only validation is that it
@@ -344,6 +393,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    | `AGENT_BOOTSTRAP.md` | this repository's canonical agent entrypoint |
    | `_docs/parallel-orchestration/README.md` | repo documentation, names the meta-gate by its script alias twice |
    | `_prds/README.md` | repo documentation, describes the lint behavior by script name |
+   | `STATUS.md` | the board's **Recent activity** log names the checks in historical entries |
+
+   **`STATUS.md` is the seventh and it is a boundary question, not a rewrite.** Its
+   references sit in a historical activity log, which is a record of what happened and is
+   not rewritten — the same treatment PRD-021 already specifies for that section
+   (`prd-021:539-546`). So FR-6's check excludes `STATUS.md`'s historical section
+   explicitly, by the same rule, and that exclusion is **asserted** rather than assumed: a
+   test that the exclusion does not also swallow the live parts of the board. An earlier
+   version said six documents and would have had a check whose count, targets and boundary
+   disagreed.
 
    Each must be rewritten to name the surviving CLI surface. `NEXT_STEPS.md` additionally
    carries the fresh-install guidance and a pointer to the migration.
@@ -376,11 +435,78 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - **Targets:** `.changeset/` (new entry),
      `packages/provegate/test/changeset-entry.test.ts`
 
+8. **FR-8 — The class ledger, as a repo-class check, so the next duplicate fails at a gate
+   rather than at review.** Owner decision of 2026-07-27, moving this here from PRD-025.
+
+   **Why it lives here and not in the package.** Apply the decision record's own test to the
+   ledger: it governs which files exist under **this repository's** scripts directory and
+   where they belong — not PRDs, readiness records, tasks, review records, or memory
+   records. That is repo-class. Putting it in shipped code made a repository-local artifact
+   a hard requirement of `auditWiring`, which `gate check --wiring` runs for every adopter,
+   and where the `method` class is structurally unreachable: an adopter cannot move a check
+   into `packages/provegate`. It also created a cross-PRD seam — the ledger enforced stale
+   entries in one PRD while another deleted the scripts — which two independent reviewers
+   found from opposite sides. **This PRD owns both halves, so the transition is one commit
+   by construction.**
+
+   **What ships.** `scripts/verify/verify-script-classes.mjs`, registered as a
+   `package.json` gate and wired like any other, plus `scripts/verify/script-classes.json`:
+   one entry per `verify-*.mjs` under the scripts directory, each declaring a `class`.
+
+   | Class | Meaning | Failure condition |
+   | ----- | ------- | ----------------- |
+   | `repo` | governs this repository's stack | none; it belongs where it is |
+   | `method` | governs the method's artifacts, and its superseding CLI surface exists | **fails while the script still exists** — the state a new duplicate lands in |
+   | `method-pending` | a method rule whose CLI replacement does not exist yet | fails when `reviewBy` passes; requires `owner` and `reviewBy` |
+
+   An **unclassified** script fails. An entry naming a script that no longer exists fails as
+   stale, so the ledger shrinks with the work — `known-red-ledger-must-expire`.
+
+   **The schema is named, not left to Phase 4.** A JSON object keyed by filename, each value
+   `{ "class": "repo" | "method" | "method-pending", "owner"?: string, "reviewBy"?: "YYYY-MM-DD", "supersededBy"?: string }`.
+   `owner` and `reviewBy` are required for `method-pending` and refused otherwise;
+   `supersededBy` names the CLI surface for `method` and is required there. Any other key,
+   or a malformed date, fails.
+
+   **What the ledger contains at this PRD's close.** The three deleted scripts are **absent**
+   — the deletion and the ledger land together, so they are never written and never go
+   stale. `verify-deferred` and `verify-brain` are `method-pending`, owner-held, `reviewBy`
+   2026-10-01 (PRD-023's Decision Record). `verify-script-classes` itself is `repo`, which
+   is self-referential and correct. Everything else is `repo`.
+
+   **The comparison against the decision record, which is the mechanical half.**
+   `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md` lands on the base branch **ahead of this
+   PRD** as a precondition. It carries a table under a `## Classification` heading with
+   exactly two columns — `Script` and `Class` — one row per verify script. This check parses
+   that table and diffs it against the ledger; a disagreement, a script in one and not the
+   other, or an unparseable table each fail. A decision record whose classification no
+   artifact is compared against is a document, not a rule. **Both files change in the
+   deletion commit**: removing three ledger rows without removing the record's three
+   matching rows converts this PRD into a different red.
+
+   **If the record is absent when Phase 4 starts the precondition was violated — stop rather
+   than write it here.** Two work items each landing a different first version of one
+   decision is worse than a blocked start.
+
+   **Every negative fixture mutates one valid green baseline.** An earlier version of this
+   requirement asked only that unclassified, stale, expired and malformed-pending inputs
+   "fail" — and with the record absent, every one of them would have been red for that
+   reason alone. Build a passing ledger-plus-record pair first, mutate exactly one thing per
+   fixture, and assert the **specific** issue that mutation introduces.
+   - **Targets:** `scripts/verify/verify-script-classes.mjs` (new),
+     `scripts/verify/script-classes.json` (new),
+     `package.json`,
+     `packages/provegate/test/consolidation.test.ts`
+
 ---
 
 ## 5. Non-Goals (Out of Scope)
 
 - **Completing the wiring audit.** That is PRD-025 in full and a hard prerequisite here.
+  The **class ledger** is no longer a non-goal: owner decision of 2026-07-27 moved it here
+  from PRD-025 as a repo-class check (FR-8), because it governs this repository's scripts
+  directory and because the PRD that deletes the scripts must be the one that drops their
+  rows.
 - **The readiness lint parsers.** PRD-024.
 - **Making `gate init` remove anything, on upgrade or otherwise.** The additive-only
   invariant is load-bearing for every pack path; a pack that deletes adopter files is a
@@ -441,6 +567,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   check.
 - **Given** an adopter reading the changeset note, **Then** all five migration steps are
   present, including the exceptions conversion.
+- **Given** the converted exceptions set, **When** `auditWiring` runs against it, **Then**
+  it passes — not merely `loadManifest`. **Given** the three-step conversion that omits
+  already-wired survivors, **Then** the audit rejects them, which is the measured case.
+- **Given** the repository after this PRD, **When** the ledger check runs, **Then** the
+  three deleted scripts appear in neither the ledger nor the decision record's table; and
+  **given** either store still holding one of them, **Then** it fails.
+- **Given** a valid review record filed under the wrong PRD's name, **When** the review
+  sweep runs, **Then** it fails — the expected identifier is derived from the filename and
+  passed, not defaulted away.
+- **Given** CI after this PRD, **Then** the three replaced steps are absent and the sweep
+  is present; **given** a manifest entry invoking the CLI binary directly, **Then** the
+  wiring audit fails it, because it resolves to no package script.
 
 ---
 
@@ -463,9 +601,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Dependencies
 
-- **PRD-025 Ship Verified** — a hard prerequisite. It completes `auditWiring` and lands the
-  class ledger; deleting `verify-gates-wired.mjs` before that removes guarantees the
-  package does not yet have.
+- **PRD-025 Ship Verified** — a hard prerequisite. It completes `auditWiring`; deleting
+  `verify-gates-wired.mjs` before that removes guarantees the package does not yet have.
+  PRD-025 no longer lands the ledger — that moved here (FR-8).
+- **The decision record committed on the base branch** — a precondition, not a work item
+  (FR-8). Absent at Phase 4 start means stop.
 - **PRD-024** — no ordering constraint on FR-1, FR-3, FR-4, FR-5 or FR-6. FR-2 adds a lint
   to `lintPrd`, which PRD-024 also edits, so those two serialize on that file.
 - **PRD-021 Ship Verified** — shares `runCheck`, `verify-workflow.mjs`, the CI workflow, and
@@ -527,6 +667,10 @@ artifact, or lock shape changes.
 - [ ] Six live documents (FR-6)
 - [ ] `packages/provegate/test/consolidation.test.ts` (new), `test/init.test.ts`,
       `test/practices-pack.test.ts`
+- [ ] `scripts/verify/verify-script-classes.mjs` and `script-classes.json` (new) — the
+      ledger (FR-8), plus its `package.json` registration
+- [ ] `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md` — the three deleted rows removed
+      from its classification table, in the deletion commit
 - [ ] `.changeset/` entry (minor)
 
 ---
@@ -545,6 +689,7 @@ failure. -->
 
 - `_brain/learnings/false-green-on-missing-file.md` — binds every deletion here
 - `_brain/learnings/gate-wire-or-delete.md` — extended to documentation by FR-6
+- `_brain/learnings/known-red-ledger-must-expire.md` — binds FR-8's pending state
 - `_brain/learnings/fixture-must-reach-production-shape.md` — binds FR-5's upgrade fixture
 - `_brain/learnings/assert-absent-needs-an-independent-cause.md` — binds its positive
   controls and its mutation check
@@ -583,6 +728,9 @@ failure. -->
   work-item artifacts — must itself be asserted: an exclusion that accidentally matches
   everything makes the check pass vacuously, which is the same inert-gate failure this
   record describes arriving through the exclusion rather than the pattern.
+- applied: `known-red-ledger-must-expire` — FR-8's `method-pending` state carries an owner
+  and a `reviewBy` and fails when the date passes, so a stated intention cannot become a
+  permanent exemption. It arrives with the ledger from PRD-025.
 - reviewed: `two-parsers-wrong-together` — the two durable-artifact parsers agreeing on a
   corpus would not prove either correct, which is why FR-2 resolves each divergence
   deliberately instead of reconciling to whatever both happen to do.
@@ -634,15 +782,23 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `gates.manifest.json`
 - `.github/workflows/ci.yml`
 - `_docs/parallel-orchestration/README.md`
+- `AGENT_BOOTSTRAP.md`
+- `_prds/README.md`
+- `packages/provegate/test/changeset-entry.test.ts`
+- `packages/provegate/test/pack.test.ts`
+- `scripts/verify/script-classes.json`
+- `scripts/verify/verify-script-classes.mjs`
+- `_brain/adr/ADR-0002-method-rule-vs-repo-rule.md`
 - `_brain/learnings/docs-are-a-wiring-surface.md`
 - `.changeset/`
 
-**Two FR-6 targets are deliberately absent from this list.** `AGENT_BOOTSTRAP.md` is the
-canonical agent entrypoint and `_prds/README.md` sits under a directory whose bare
-`README.md` is in `sharedAppendOnly`. Both are edited by FR-6 and neither is claimed
-exclusively, per the rule above. Record the edits in the task plan rather than claiming the
-paths, and confirm the `sharedAppendOnly` matching semantics before Phase 4 rather than
-assuming them.
+**Both FR-6 targets are claimed, correcting an earlier assumption.** An earlier revision
+left `AGENT_BOOTSTRAP.md` and `_prds/README.md` unclaimed on the belief that
+`sharedAppendOnly` covered them. It does not: the default set is the **exact paths**
+`package.json`, `pnpm-lock.yaml`, `README.md`, `CLAUDE.md`, `AGENTS.md` (`defaults.ts:95`),
+and conflict subtraction uses exact canonical-string membership (`conflicts.ts:63-69,
+93-97`). Neither target is in that set, so both are claimed above — as is
+`test/changeset-entry.test.ts`, which FR-7 targets and an earlier revision omitted.
 
 **Contested, and the reason this PRD runs last.** `cli.ts`, `prd-ready.ts`, the CI workflow,
 `verify-workflow.mjs`, `pack-drift-ledger.json`, `init.ts`, `practices-pack.test.ts`,
@@ -680,9 +836,11 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-4 | `pnpm --filter provegate test test/consolidation.test.ts`   | pkg   | every manifest command resolves to an existing script, and no verification row names a deleted one |
 | FR-5 | `pnpm verify:pack-drift`                                    | repo  | pairs removed from both sides; no orphan packed file and no lost live copy |
 | FR-5 | `pnpm --filter provegate test test/init.test.ts`            | pkg   | the upgrade fixture through the executor: removed paths in neither list, seeded files byte-identical, and both positive controls hold |
-| FR-5 | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | the shipped allowlist shrank with the pack, the packed bundle lists three checks, and the retained eight-entry exceptions fixture converts to a manifest the loader accepts |
+| FR-5 | `pnpm --filter provegate test test/pack.test.ts`            | pkg   | the shipped-file allowlist shrank with the pack — this is the test that loads `pack-manifest.json` and compares it against the packed tarball |
+| FR-5 | `pnpm --filter provegate test test/practices-pack.test.ts`  | pkg   | the packed bundle lists three checks, and the retained eight-entry exceptions fixture converts to a state the wiring audit accepts — not merely one the manifest loader accepts |
 | FR-6 | `pnpm --filter provegate test test/consolidation.test.ts`   | pkg   | no live document outside the source snapshot and the work-item artifacts names a deleted check |
 | FR-7 | `pnpm --filter provegate test test/changeset-entry.test.ts` | pkg   | one entry declares a minor bump and carries all five migration steps including the exceptions conversion |
+| FR-8 | `pnpm verify:script-classes`                                | repo  | unclassified, stale, expired, and owner-less or date-less pending entries each fail, every fixture mutating one green baseline; the three deleted scripts appear in neither store |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -749,8 +907,24 @@ rationalize.
   them.
 - DO NOT edit the source snapshot or any historical work-item artifact to satisfy FR-6.
   Both are historical by construction.
-- DO NOT claim `AGENT_BOOTSTRAP.md` or `_prds/README.md` in the Conflict Surface. Record
-  the edits in the task plan instead, per the shared-append-only rule.
+- DO NOT assume `sharedAppendOnly` covers `AGENT_BOOTSTRAP.md` or `_prds/README.md`. The
+  default set is exact paths and matching is exact-string; both are claimed, and an earlier
+  version left them unclaimed on that false assumption.
+- DO NOT prove the exception conversion with `loadManifest`. A manifest that loads cleanly
+  can be a state the wiring audit refuses, which is precisely what the earlier three-step
+  rule produced. Prove it through the audit.
+- DO NOT put a bare `node …/dist/cli.js` command in `gates.manifest.json`.
+  `packageScriptOf` resolves only package-manager invocations, so it resolves to no script
+  and fails the audit's first direction. Give it a `package.json` alias or keep it in CI.
+- DO NOT add the CLI sweep to CI while leaving the three steps it replaces. That either
+  fails on missing scripts or runs the same rules twice — the state this PRD ends.
+- DO NOT write the decision record inside this PRD. It is a precondition (FR-8); if it is
+  absent, stop.
+- DO NOT build a ledger fixture that is red because the decision record is missing. Every
+  negative mutates one green baseline and asserts the specific issue it introduces.
+- DO NOT rewrite `STATUS.md`'s historical activity log to satisfy FR-6. It is a record of
+  what happened; exclude it explicitly and assert the exclusion does not swallow the live
+  board.
 
 ---
 
@@ -758,4 +932,5 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-27 | Claude Opus 5, on owner direction | **Iteration-1 remediation (Codex, seven [P1]s), plus the owner's ledger decision.** **New FR-8 takes the class ledger from PRD-025, as a repo-class check.** The decision record's own test says repo: the ledger governs which files exist under this repository's scripts directory, not the method's artifacts. That closes finding A by construction — one PRD now owns both the ledger and the deletions whose rows it must lose, so the transition is one commit instead of a cross-PRD contract nobody held. The schema, the three classes, the decision-record comparison, and the rule that every negative fixture mutates one green baseline are all specified rather than left to Phase 4. **(D) the exception conversion gains its missing third step and its real proof.** The reviewer executed the documented three-step rule and `auditWiring` rejected all five survivors as stale, because they are wired here — a manifest the loader accepts is not a state the audit accepts. The rule now drops already-wired survivors and the fixture asserts through the audit. **(C) FR-1 gains the two predicates the deleted script had**: candidate selection by filename pattern, and an expected identifier derived from the filename and passed, since `validateReviewArtifactFile` defaults it away and a sweep without it accepts a valid review for the wrong PRD. **(B) FR-4's CI change is a replacement, not an addition**, and the manifest entries are enumerated — with the reason a bare `node dist/cli.js` entry cannot go there: `packageScriptOf` resolves only package-manager invocations. **(E) seven documents, not six** — `STATUS.md` matches, and its historical activity log is excluded by the precedent PRD-021 already sets, with the exclusion itself asserted. **(F) both FR-6 targets are claimed**: `sharedAppendOnly` is a set of exact paths matched by exact string and covers neither, correcting a false assumption; `changeset-entry.test.ts` and `pack.test.ts` are claimed too. **(G) FR-5 points at `pack.test.ts`**, which is where the shipped-file allowlist is actually asserted. **(H) the parser metric is narrowed** to token extraction, since the package retains two section readers by a recorded deferral. **(I) the non-empty justification contract is stated** as the length check it currently is |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Split from PRD-023 (owner decision, 2026-07-27), carrying its FR-2, FR-3, FR-5, FR-8 and FR-9.** PRD-023 sat between 6.65 and 7.19 across four independent rounds; the recorded diagnosis was size. Five things change in the carry-over rather than being copied, all from PRD-023's iteration-6 findings. **FR-4's verification no longer names a deleted script** — the predecessor verified its CI requirement with `pnpm verify:gates-wired`, the script it removes, and five rounds missed it (finding T). **FR-5's mutation check is rewritten** — re-adding an installer-map entry whose file the same change deletes raises a missing-file error before the assertion, so the check failed on pack readability rather than the contract (finding V). **The migration is five steps everywhere** — the predecessor split the exceptions conversion into its own step while two other places still said four (finding W). **FR-6 is new and larger than the finding that prompted it** — the review named three live documents still instructing readers to run the deleted checks; re-measuring found **six**, three of them shipped inside the package, and one of those is `NEXT_STEPS.md`'s registration instructions, which are what created the duplication at every adopter in the first place (finding X, extended). **FR-2's parser reconciliation is re-measured** — two divergences are live and the third is retired, because the package side was fixed and the script side was not. Created with `gate new` |

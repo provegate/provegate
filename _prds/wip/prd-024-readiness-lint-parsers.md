@@ -24,7 +24,9 @@
 ## 1. Introduction / Overview
 
 Split from PRD-023 on owner direction, 2026-07-27, after six independent readiness rounds
-scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold. The
+scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold — four of
+those rounds independent, two self-scored, and the four independent ones are the band that
+matters. The
 diagnosis recorded there was size: three unrelated engineering problems held together by a
 thesis rather than a shared surface, in a document where two live defects hid through five
 adversarial reviews. This PRD is the first of the three pieces and the one with no
@@ -71,7 +73,7 @@ wiring audit, `init.ts`, CI, or the published CLI surface. That is the whole sco
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | Lints reading a wrong span of the document | 3 | 0 | the FR fixtures |
-| Backticked tokens outside the Command column that reach the gate | every one on an FR row | 0 | FR-1 fixture |
+| Backticked tokens outside the Command column that reach the gate | every one on an FR row **except** inert file paths, which `safety.ts:51-58` already excludes | 0 | FR-1 fixture |
 | Unresolved questions hidden by the word "deferred" | 1 measured (PRD-023 draft: 3 listed, 2 reported) | 0 | FR-2 fixture |
 | Unresolved questions hidden by paragraph form | unbounded — a paragraph §9 reports 0 whatever it holds | 0 | FR-3 fixture, seeded from the reviewer's injected-Q5 case |
 | Corpus commands that do not execute the rule they verify | 1 (`verify:workflow` for the readiness lint) | 0 | §11 rows name a command that calls `lintPrd` |
@@ -136,9 +138,30 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    **Splitting the row on `|` is safe by contract, and the contract already exists.** The
    PRD template forbids a pipe character inside a backticked command in this table, so the
    constraint that makes the fix sound is one every conforming artifact already carries.
-   State it in the code, not only here: a row that does not split into at least three
-   cells is malformed and must be reported, never silently skipped —
+   **The malformed-row report needs a channel, and today there is none.**
+   `parseVerificationCommands` returns `SafetyCheckedCommand[]` (`safety.ts:31-44`), and the
+   executor consumes that array directly (`chain.ts:491-495`), so "report it" has nowhere to
+   go. Widen the return to `{ commands, issues }`. `lintPrd` surfaces `issues` as readiness
+   failures, so a malformed row is caught at Phase 2. `buildGateChain` **refuses** when
+   `issues` is non-empty rather than running the commands it did parse: a table with one
+   unreadable row is a table whose gate coverage is unknown, and running the readable
+   remainder would report success over an unknown gap —
    `unparseable-command-must-fail-loudly`.
+
+   **There are two readers of this table, not one, and scoping only the executor's leaves
+   the hole open.** `lintPrd` independently decides whether a row carries a runnable command
+   by running `row.matchAll(...)` across the **entire row** (`prd-ready.ts:127-142`). After
+   scoping `parseVerificationCommands` alone, a Command cell holding no runnable command
+   still passes readiness whenever the Notes cell contains an allowlisted token such as
+   `pnpm test` — and the executor then receives nothing from that row
+   (`chain.ts:491-495`). A row that passes the gate and executes nothing is the exact false
+   green this PRD is about, arriving through the reader nobody scoped. **This is a fourth
+   instance of this PRD's own defect class, found inside it.**
+
+   Both readers take their cells from **one shared extraction function**, and neither
+   re-splits the row for itself. Deny fixture: a row whose Command cell is prose and whose
+   Notes cell holds an allowlisted command must fail readiness, paired with the control that
+   the same row with a real Command cell passes.
 
    **The interim guidance retires in the same change.**
    `_brain/learnings/notes-column-runs-commands.md` predicted this defect exactly and its
@@ -151,8 +174,14 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 2. **FR-2 — The Open Questions exemption needs a deferral target, not a substring.**
    `lintPrd` filters `/\(none\b|deferred/i` over each bullet, so any bullet that mentions
    the word is exempt. Require what the template already states — "every entry explicitly
-   deferred **with a link**" — so the exemption needs a deferral target: a Markdown link
-   or a `PRD-NNN` identifier.
+   deferred **with a link**" — but as a **closed form**, not a co-occurrence test.
+   "Contains the word and contains a link" is still substring-satisfiable: *"Why was this
+   deferred? See [background](…)"* passes it while remaining an open question. The exemption
+   is the bullet **opening** with `Deferred to <work-item-id>` or `Deferred: <link>`, where
+   the identifier matches the configured id pattern and the link is a Markdown link — the
+   same opens-with discipline `durable.ts` already uses for its `none` bullets, and for the
+   same reason. Deny fixture: an unresolved bullet containing both the word and an unrelated
+   link.
 
    **Do not fix this by deleting the `deferred` exemption.** The template promises a
    deferral-with-a-link escape and removing it outright would break PRDs that legitimately
@@ -163,10 +192,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 3. **FR-3 — The Open Questions section must be a bullet list, so prose cannot hide in it.**
    The filter keeps only lines matching `^\s*-\s+\S`, so a §9 written as bold paragraphs —
    PRD-023's was, and PRD-021's still is — reports zero unresolved items whatever it
-   contains. Per `narrow-the-grammar-not-the-parser`, restrict what the document may
-   contain rather than teaching the filter to read paragraphs: the section must be a
-   bullet list, and a section holding non-bullet prose other than a leading explanatory
-   line fails.
+   contains. Per `narrow-the-grammar-not-the-parser`, restrict what the document may contain rather
+   than teaching the filter to read paragraphs. **The accepted line forms are enumerated,
+   because "other than a leading explanatory line" is itself an exemption a question can
+   hide in** — nothing syntactically distinguishes an explanation from an unresolved
+   question, so exactly one paragraph-form question would survive. Inside the section, a
+   line must be one of: blank; an HTML comment; a bullet start matching `^\s*-\s+\S`; or an
+   **indented continuation** of the preceding bullet, matching `^\s+\S` — which this PRD's
+   own `(none)` bullet requires, since it wraps. Anything else fails, and there is **no**
+   leading-prose allowance. A continuation line is part of its bullet, not a separate
+   entry.
 
    **The destination for resolved history is named here, because the obvious one is a
    trap.** Authors moving resolved decisions out of §9 will reach for a heading like
@@ -187,17 +222,37 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    this PRD does not add one.
 
    The runnable form is a package test: iterate every PRD under the **configured wip
-   directory**, call `lintPrd` with the real config and manifest, and assert the expected
-   outcome per file. Read the directory from config rather than hardcoding `_prds/wip`, so
-   the test follows a repository that renames it.
+   directory** and call `lintPrd` with the caller's real argument shape —
+   `lintPrd(config, manifest, content, root)`, four arguments, as `cli.ts:654-655` passes
+   them. **The root is not optional here.** `lintPrd` takes it fourth
+   (`prd-ready.ts:108-113`) and, with memory enabled, omitting it fails with the unrelated
+   error *"memory is enabled but the readiness lint received no repository root"*
+   (`prd-ready.ts:169-173`); this repository enables memory. Measured: this PRD passes with
+   `root` and fails without it, for a reason that has nothing to do with the rules under
+   test. A three-argument call is `fixture-must-reach-production-shape` violated in the FR
+   that cites it.
+
+   Read the directory from config rather than hardcoding `_prds/wip`, so the test follows a
+   repository that renames it.
+
+   **The corpus test reads outside its package, so it must not be cached.** It reads PRDs at
+   the repository root while `turbo.json:15-17` declares no additional inputs for the test
+   task, so a change under the wip directory replays a stale green —
+   `turbo-cache-masks-out-of-input-reads`, exactly. Either declare the wip directory as an
+   input for the test task or give the sweep its own uncached command. Whichever is chosen,
+   `turbo.json` is a target and a claimed path.
 
    **Scope to wip deliberately.** Completed PRDs are historical artifacts and are never
    rewritten to manufacture compliance. **Report, never edit:** a wip PRD that newly fails
-   is a finding for its author. PRD-021's §9 is known to be in the failing shape today and
-   is under its own readiness iteration — its author owns it, and this PRD does not touch
-   it. If it is still failing when this work reaches Phase 4, stop and hand back rather
-   than editing another PRD to make this one's corpus green.
-   - **Targets:** `packages/provegate/test/lint-parsers.test.ts`
+   is a finding for its author.
+
+   **PRD-021 is a Phase-4 prerequisite, not a "known case".** The configured wip corpus
+   holds five PRDs and PRD-021's §9 is paragraph-form (`prd-021:1028-1046`), so FR-3 rejects
+   it. This PRD cannot reach a green corpus until PRD-021's §9 is remediated by its own
+   author. **Allowlisting an expected failure in the corpus test is forbidden** — a sweep
+   with a known-red exemption is the ledger-shaped bypass `known-red-ledger-must-expire`
+   warns about, arriving in a test instead of a ledger. Stop and hand back.
+   - **Targets:** `packages/provegate/test/lint-parsers.test.ts`, `turbo.json`
 
 ---
 
@@ -269,10 +324,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Rollback
 
-Revert the two parser functions and delete the test file. The `notes-column-runs-commands`
-edit reverts with them — its interim guidance is only obsolete while the parser is scoped.
+Revert the two parser functions, the shared cell extractor, and the `{commands, issues}`
+return shape; delete the test file and the `turbo.json` input. The
+`notes-column-runs-commands` edit reverts with them — its interim guidance is only obsolete
+while the parser is scoped.
+
+**FR-1 changes executed commands, not only verdicts, and the rollback must say so.**
+`buildGateChain` runs `parseVerificationCommands`' output directly (`chain.ts:491-495`), so
+scoping the parser removes any command an existing PRD was accidentally getting from its
+Notes cell. Forward, that is the fix. Backward, a revert restores those accidental
+commands. Neither direction is a silent no-op, and any PRD relying on Notes-cell execution
+is a finding to report before this lands, not after.
+
 No state, artifact, config, or published-surface migration exists: no flag, config key, or
-pack file changes, so an adopter sees only a lint that counts correctly.
+pack file changes.
 
 ---
 
@@ -326,9 +391,18 @@ failure, and a PRD proposing that rule must not be written in the shape it forbi
   and "this section does NOT pass" assertion here needs a cause independent of the
   scenario. Each deny fixture is paired with a positive control on the same input: the
   Command column still yields its command, and a conforming §9 still passes.
-- reviewed: `fixture-must-reach-production-shape` — the fixtures call `lintPrd` and
-  `parseVerificationCommands` with the config and manifest `gate check` passes them, not
-  with hand-built arguments.
+- applied: `fixture-must-reach-production-shape` — moved from `reviewed` to `applied` after
+  an independent round measured the gap: the fixtures must call
+  `lintPrd(config, manifest, content, root)` with all four arguments, because a
+  three-argument call fails on an unrelated memory error in this repository and would have
+  reported as coverage.
+- applied: `turbo-cache-masks-out-of-input-reads` — FR-4's corpus test reads PRDs at the
+  repository root while the test task declares no additional inputs, so a change under the
+  wip directory would replay a stale green. Either the directory becomes a declared input or
+  the sweep gets its own uncached command; `turbo.json` is a target either way.
+- applied: `known-red-ledger-must-expire` — FR-4 forbids allowlisting an expected corpus
+  failure. A sweep with a known-red exemption is this record's bypass arriving in a test
+  rather than a ledger, and PRD-021's §9 is the case that would tempt it.
 
 ---
 
@@ -356,6 +430,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/lint-parsers.test.ts`
 - `_brain/learnings/notes-column-runs-commands.md`
 - `_brain/learnings/lint-must-name-the-span-it-judges.md`
+- `turbo.json`
 
 **Contested, measured with `gate queue` on 2026-07-27:**
 `packages/provegate/src/core/gates/prd-ready.ts` is claimed by PRD-021 and by PRD-026.
@@ -439,6 +514,15 @@ rationalize.
   trap and its resolution stay discoverable together.
 - DO NOT write this PRD's own §9 as paragraphs. FR-3 makes that a failure and a PRD
   proposing the rule must not be written in the shape it forbids.
+- DO NOT scope only `parseVerificationCommands`. `lintPrd` has its own whole-row scan; both
+  readers take their cells from one shared extractor or the hole stays open in the reader
+  nobody touched.
+- DO NOT call `lintPrd` with three arguments anywhere in the fixtures. The fourth is the
+  repository root and omitting it fails for a reason unrelated to the rules under test.
+- DO NOT let the corpus test run inside a cached task without declaring what it reads. A
+  stale green over a corpus the task never re-read is the failure this PRD is about, in a
+  build tool instead of a parser.
+- DO NOT allowlist a known-failing PRD to make the corpus green. Report it and stop.
 
 ---
 
@@ -446,4 +530,5 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-27 | Claude Opus 5, via owner | **Iteration-1 remediation (Codex, six [P1]s).** **(A) FR-1 now scopes both readers.** `lintPrd` carries its own whole-row backtick scan independent of `parseVerificationCommands` (`prd-ready.ts:127-142`), so scoping one left a row whose Command cell is prose passing readiness on a Notes-cell token while the executor received nothing — a fourth instance of this PRD's own defect class, inside it. Both readers now take cells from one shared extractor, with a deny fixture. **(B) the malformed-row report gains a channel**: `parseVerificationCommands` returns `SafetyCheckedCommand[]` and the executor consumes it directly, so "report it" had nowhere to go. The return widens to `{commands, issues}`, `lintPrd` surfaces them, and `buildGateChain` refuses rather than running the readable remainder over an unknown gap. **(C) FR-2's exemption is a closed form**, opening with `Deferred to <id>` or `Deferred: <link>` — the same opens-with discipline `durable.ts` uses — because "contains the word and contains a link" is still satisfied by an open question that merely cites something. **(D) FR-3 enumerates the accepted line forms** and drops the leading-explanatory-line allowance, which was itself a slot a paragraph question could occupy; indented continuations are named, which this PRD's own wrapped `(none)` bullet requires. **(E) the corpus fixture takes all four arguments.** Measured by the reviewer: a three-argument `lintPrd` fails with an unrelated memory error in this repository, so the fixture could not have failed for its stated reason — `fixture-must-reach-production-shape` moves from reviewed to applied. **(F) the corpus test is un-cached or declares its inputs**, with `turbo.json` claimed: it reads the wip directory at the repository root while the test task declares no additional inputs, which is `turbo-cache-masks-out-of-input-reads` exactly, now a declared Memory Input. **(G) PRD-021 is a stated Phase-4 prerequisite**, not a known case, and allowlisting its expected failure is forbidden. P2s: the metric no longer claims *every* outside-column backtick reaches the gate, since inert file paths are already excluded; the rollback states that FR-1 changes executed commands in both directions; and the round count distinguishes the four independent rounds from the six total |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Split from PRD-023 (owner decision, 2026-07-27), carrying its FR-7 a/b/c plus the corpus-command defect iteration 6 found in it.** PRD-023 sat between 6.65 and 7.19 across four independent rounds without converging; the recorded diagnosis was size, and the evidence was two live defects hiding through five adversarial reviews. This is the piece with no dependency on the other two. Nothing is newly invented here: FR-1 is PRD-023 FR-7(a) with its malformed-row case named, FR-2 is FR-7(b), FR-3 is FR-7(c) with the heading trap moved into the failure message, and FR-4 replaces the `pnpm verify:workflow` corpus row that PRD-023 iteration 6 proved never calls `lintPrd`. Created with `gate new` |
