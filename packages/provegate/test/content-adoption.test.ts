@@ -90,15 +90,39 @@ describe('brownfield.mdx is a ladder with named failure modes (FR-4, FR-7)', () 
     expect(stops.length).toBe(rungs.length);
   });
 
-  it('states the empty-manifest warning explicitly, and why the green is worthless', () => {
-    // The single most load-bearing sentence for a fresh install: `gate init`
-    // writes an empty manifest, so `gate run` is green having run nothing.
+  it('describes the two fresh-install manifests as the CODE writes them', () => {
+    // An earlier draft said `gate init` writes an empty manifest and `gate run`
+    // is therefore green having run nothing. An independent review showed both
+    // halves wrong: the two install modes write DIFFERENT manifests, and the
+    // built-in gates plus the PRD's §11 commands run either way.
+    //
+    // So the claim is asserted against the source that produces it. `init.ts`
+    // is the only place the scaffolded manifest is written, and this reads the
+    // literal out of it — a change there fails this test instead of quietly
+    // making the page false.
+    const init = readFileSync(
+      join(pkgRoot, 'src/core/run/init.ts'),
+      'utf8',
+    );
+    const line = init.split('\n').find((l) => l.includes("memory ? { phases:"));
+    expect(line, 'init.ts no longer writes the manifest on one line').toBeDefined();
+    expect(line).toContain("{ phases: { '7': [PACK_BRAIN_GATE] } }");
+    expect(line).toContain("{ phases: { '4': [] }, postMerge: [] }");
+
     const text = page();
-    expect(text).toMatch(/writes an? \*\*empty\*\* `gates\.manifest\.json`/);
-    expect(text.toLowerCase()).toContain('worthless');
-    // …and that an ABSENT manifest is the other case, or the warning teaches
-    // the wrong rule.
-    expect(text.toLowerCase()).toMatch(/absent manifest[\s\S]{0,120}floor/);
+    // The practices manifest OMITS phases 4 → inherits the floor.
+    expect(text).toMatch(/--practices` writes[\s\S]{0,200}absent[\s\S]{0,120}inherits/);
+    // The plain manifest writes an EMPTY ARRAY → erases it.
+    expect(text).toMatch(/empty array[\s\S]{0,40}erases/);
+    // And it does not claim a run does nothing and passes.
+    expect(text.toLowerCase()).not.toContain('honestly green');
+    expect(text).toMatch(/not a blanket green/);
+  });
+
+  it('warns that copying a manifest over the practices one deletes a gate', () => {
+    // Routine data loss with no error: the `--practices` manifest carries the
+    // Phase 7 validator, and a cookbook copy replaces the file.
+    expect(page()).toMatch(/merge keys rather than replacing|merge keys/i);
   });
 
   it('is registered in the docs nav', () => {

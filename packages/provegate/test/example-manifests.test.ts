@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { ManifestError, defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
+import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { isSafeCommand } from '../src/core/gates/safety.js';
 
 /**
@@ -39,6 +40,27 @@ function loadExample(name: string, mutate?: (raw: Record<string, unknown>) => vo
 }
 
 const EXAMPLES = ['single-package', 'monorepo'] as const;
+
+/** The minimum PRD `lintPrd` will parse: one FR with a Targets line and a §11
+ * row, so the cap assertions fail on the cap and not on the scaffolding. */
+function prdBody({ targets, extra = '' }: { targets: string; extra?: string }): string {
+  return [
+    '# PRD-001: Cap fixture',
+    '',
+    '## 4. Functional Requirements',
+    '',
+    '1. **FR-1**: does a thing',
+    `   - **Targets:** \`${targets}\``,
+    extra,
+    '',
+    '## 11. Verification Commands',
+    '',
+    '| FR   | Command / Check | Scope | Notes |',
+    '| ---- | --------------- | ----- | ----- |',
+    '| FR-1 | `node -e "0"`   |       |       |',
+    '',
+  ].join('\n');
+}
 
 /** Every command the manifest can put in front of the runner. */
 function allCommands(manifest: ReturnType<typeof loadExample>): string[] {
@@ -95,20 +117,52 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
     }
   });
 
-  it('monorepo: the cap fires on a PRD with no deny-test line and clears with one', () => {
-    // The README walks this exact sequence. If the pattern were wrong in either
-    // direction — never matching, or matching prose — the walk-through would be
-    // instructions for a gate that does not behave that way.
+  it('monorepo: the cap fires and clears THROUGH lintPrd, not through RegExp.test', () => {
+    // `RegExp.test` proves the pattern; it does not prove the cap. Target
+    // extraction, the executable view, and the `m` flag are all production and
+    // all skipped by a direct regex call — an independent review pointed out
+    // that a wrong-but-non-empty `targetsMatch` would pass such a test.
+    const manifest = loadExample('monorepo');
+    const capIssues = (prd: string): string[] =>
+      lintPrd(DEFAULT_CONFIG, manifest, prd, undefined).issues.filter((i) =>
+        i.startsWith('hard cap route-deny-test'),
+      );
+
+    expect(capIssues(prdBody({ targets: 'src/routes/admin.route.ts' }))).toHaveLength(1);
+    // Not armed: the same PRD with targets elsewhere never sees the cap.
+    expect(capIssues(prdBody({ targets: 'src/lib/util.ts' }))).toHaveLength(0);
+    // Armed and satisfied.
+    expect(
+      capIssues(
+        prdBody({
+          targets: 'src/routes/admin.route.ts',
+          extra: '   Deny test: `npm run test -- src/routes/admin.guard.test.ts`',
+        }),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('monorepo: the cap accepts every runner it names and refuses prose and bare paths', () => {
     const cap = loadExample('monorepo').hardCaps[0]!;
-    const pattern = new RegExp(cap.requireLine);
-    const without = '# PRD-001\n\n- **Targets:** `src/routes/admin.route.ts`\n\nWe will test the deny path thoroughly.\n';
-    expect(pattern.test(without)).toBe(false);
+    // The `m` flag is production's (`prd-ready.ts` compiles it that way); a
+    // test that omits it is testing a different pattern.
+    const pattern = () => new RegExp(cap.requireLine, 'm');
     for (const line of [
       'Deny test: `pnpm vitest run src/routes/admin.guard.test.ts`',
-      'Deny test: `npm run test -- src/routes/admin.guard.test.ts`',
-      'Deny test: `node --test src/routes/admin.guard.test.ts`',
+      '- Deny test: `npm run test -- src/routes/admin.guard.test.ts`',
+      '   Deny test: `node --test src/routes/admin.guard.test.ts`',
+      'Deny test: `npx vitest run x.test.ts`',
     ]) {
-      expect(pattern.test(`${without}\n${line}\n`), line).toBe(true);
+      expect(pattern().test(line), line).toBe(true);
+    }
+    for (const line of [
+      'We will test the deny path thoroughly.',
+      'Deny test: `path/to/x.test.ts`',
+      // Mid-sentence promise. Without the `^\\s*-?\\s*` anchor this one
+      // satisfies the cap, which is what the README used to deny.
+      'We will add a Deny test: `pnpm vitest run x.test.ts` next sprint',
+    ]) {
+      expect(pattern().test(line), line).toBe(false);
     }
   });
 
@@ -126,7 +180,7 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
     expect(placeholder, 'template no longer carries the placeholder').toBeDefined();
 
     const cap = loadExample('monorepo').hardCaps[0]!;
-    expect(new RegExp(cap.requireLine).test(placeholder!)).toBe(false);
+    expect(new RegExp(cap.requireLine, 'm').test(placeholder!)).toBe(false);
     // …and the loose pattern this one replaced would have accepted it.
     expect(/Deny test: `[^`]+`/.test(placeholder!)).toBe(true);
   });
@@ -141,8 +195,18 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
       for (const cmd of new Set(allCommands(loadExample(name)))) {
         expect(readme, `${name}: README does not mention ${cmd}`).toContain(cmd);
       }
-      // …and the failure each key catches, not just the key name.
-      expect(readme.match(/\*\*Catches:?\*\*|\*\*Catches \(/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+      // …the failure each key catches, not just the key name…
+      for (const key of ['phases', 'classDefaults', 'hardCaps', 'postMerge', 'wiringExceptions']) {
+        // The heading is the key as the file writes it — `phases["4"]`, not
+        // `phases` — so match the heading LINE by prefix.
+        const start = readme.search(new RegExp(`^## \`${key}`, 'm'));
+        expect(start, `${name}: README has no section for ${key}`).toBeGreaterThan(-1);
+        const next = readme.indexOf('\n## ', start + 1);
+        const section = readme.slice(start, next === -1 ? undefined : next);
+        expect(section, `${name}: ${key} section names no failure`).toMatch(/\*\*Catches/);
+      }
+      // …and the warning that copying over an existing manifest deletes a gate.
+      expect(readme, `${name}: no overwrite warning`).toMatch(/Merge the keys|Merge keys|merge keys/);
     }
   });
 });

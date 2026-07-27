@@ -48,7 +48,7 @@
           "src/routes/**"
         ]
       },
-      "requireLine": "Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
+      "requireLine": "^\\s*-?\\s*Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
       "message": "targets touch routes - name a runnable deny-path test line"
     }
   ],

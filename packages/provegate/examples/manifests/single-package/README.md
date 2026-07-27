@@ -30,11 +30,23 @@ for an npm-based single package, they do.
 ## `classDefaults`
 
 ```json
+{}
+```
+
+**Catches:** nothing as shipped, and that is deliberate — **this file is meant to be
+runnable the moment you copy it**. A class default names a script, and a manifest shipping
+a rule for a script you have not written fails at Phase 4 with an error about a missing
+script, on the first hotfix, at the worst possible moment.
+
+Add one when you have the script. The shape:
+
+```json
 { "hotfix": [{ "run": ["npm run test:smoke"] }] }
 ```
 
-**Catches:** a hotfix that passes the floor and still breaks the running system — the case
-where "the unit tests are green" is not the question anyone is asking at 02:00.
+**Catches (once you add it):** a hotfix that passes the floor and still breaks the running
+system — the case where "the unit tests are green" is not the question anyone is asking at
+02:00. Write `test:smoke` first, then add the rule.
 
 **Class defaults are ADDITIVE ONLY.** `classDefaults` for the PRD's class are appended to
 Phase 4's command list (`core/gates/classes.ts` pushes each matching rule's `run` onto the
@@ -91,8 +103,19 @@ about the script, not about the manifest.
 
 | Command | Where it comes from |
 | ------- | ------------------- |
-| `npm run check-types`, `npm run lint`, `npm run build`, `npm run test` | yours — the four you already run in CI, renamed to match |
-| `npm run test:smoke` | **yours, and probably not written yet.** It is an example of the shape a class default takes, not a script the package ships. Write it, rename it, or delete the `classDefaults` block |
+| `npm run check-types`, `npm run lint`, `npm run build`, `npm run test` | **yours.** The four you already run in CI. If your script names differ, rename them here before the first `gate run` — these are the only commands the shipped file declares, and it declares nothing you have to write from scratch |
+
+## Copying over an existing manifest
+
+**Read your current `gates.manifest.json` before you replace it.** `gate init --practices`
+writes one containing `phases: { "7": [...] }` — the Phase 7 memory validator — and
+overwriting the file with this one silently deletes that gate. Merge the keys instead of
+replacing the file, or paste this file's keys into yours.
+
+Note the asymmetry, because it decides what a copy costs you: an **absent** `phases["4"]`
+inherits the built-in floor, while an **empty array** erases it. The manifest plain
+`gate init` writes is `{ "phases": { "4": [] }, "postMerge": [] }` — both erased. The one
+`--practices` writes omits `phases["4"]` entirely, so it still has the floor.
 
 ## Verify it before you trust it
 

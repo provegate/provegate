@@ -23,10 +23,32 @@ Then add the script — the name the manifest below invokes:
 
 Open `scripts/verify-route-guards.mjs` and adapt the two patterns at the top to your
 layout. It ships matching `*.route.ts` / `*.controller.ts` against a sibling
-`*.guard.test.ts`; if your routes live elsewhere or your tests are named differently, the
-check passes vacuously until you change them.
+`*.guard.test.ts`. If your routes live elsewhere, it **fails closed** rather than passing
+vacuously: a missing `src/routes` is treated as a misconfigured gate and errors, by design.
+Adapt `ROUTES_DIR` before you wire it, or the first run stops on a directory you do not
+have.
 
-Only then copy `gates.manifest.json` to your repository root.
+The manifest also declares `pnpm verify:workflow` for the `infra` class. That script comes
+from the practices pack:
+
+```sh
+npx gate init --practices   # writes scripts/verify/, prints the wiring steps
+```
+
+```jsonc
+// package.json
+{ "scripts": { "verify:workflow": "node scripts/verify/verify-workflow.mjs" } }
+```
+
+If you do not want the pack, **delete the `infra` rule from the manifest before copying
+it** — a rule naming a script that does not exist is a Phase 4 failure waiting for the
+first infra item.
+
+Both scripts wired, or the `infra` rule removed: only then copy `gates.manifest.json`.
+
+**And read the manifest you already have first.** `gate init --practices` writes one
+containing `phases: { "7": [...] }`, the Phase 7 memory validator, and replacing the file
+deletes that gate silently. Merge keys rather than overwriting.
 
 ## `phases["4"]`
 
@@ -69,7 +91,7 @@ happens in `phases["4"]` and nowhere else.
   {
     "id": "route-deny-test",
     "when": { "targetsMatch": ["src/routes/**"] },
-    "requireLine": "Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
+    "requireLine": "^\\s*-?\\s*Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
     "message": "targets touch routes - name a runnable deny-path test line"
   }
 ]
@@ -93,8 +115,15 @@ moment.
    Deny test: `pnpm vitest run src/routes/admin.guard.test.ts`
    ```
 
-   The backticks and the **runner prefix** are both part of the pattern: prose promising a
-   deny test does not satisfy it, and neither does a bare path.
+   Three things in that pattern are load-bearing. The **backticks** mean a bare sentence
+   does not satisfy it. The **runner prefix** means a bare path does not. The **anchor**
+   (`^\s*-?\s*`, compiled with the `m` flag by the readiness lint) means the line must
+   *start* with the evidence — without it, *"we will add a Deny test: `pnpm vitest …` next
+   sprint"* satisfies the cap from the middle of a paragraph.
+
+   The prefix list is finite and it is yours to extend: mirror your own
+   `commands.allowedPrefixes` from `workflow.config.json`. A repo whose tests run under
+   `make` or `deno` must add those alternatives, or this cap refuses a legitimate line.
 
    That prefix is not decoration, and it is the one thing to keep if you adapt this cap.
    The shipped PRD template carries a placeholder under its own hard-caps reminder —
@@ -122,9 +151,13 @@ that fires on every armed PRD.
 Runs after the local merge; a failure reverts the merge and leaves the feature branch
 intact.
 
-Note what is **not** here: `pnpm verify:route-guards`. Post-merge is not the place to
-re-run a domain gate that already ran at Phase 4 on the same code — it doubles the cost of
-every landing to re-prove something the merge cannot have broken.
+Note what is **not** here: `pnpm verify:route-guards`. That is a **cost decision, not a
+safety claim** — the merge genuinely can break this invariant. A route added on base while
+this branch deleted a guard test produces a merged tree that fails a check neither side
+failed alone. The trade is that it doubles the cost of every landing to catch a case that
+requires two items touching the same surface, which the conflict-surface lease already
+makes rare. If your routes are edited by several items at once, add it here; you will be
+paying for a real risk rather than a hypothetical one.
 
 ## `wiringExceptions`
 
@@ -137,13 +170,26 @@ every landing to re-prove something the merge cannot have broken.
 is what satisfies that. Delete the manifest rule and keep the script, and the audit fails;
 that is the point, and it is why this key stays empty here.
 
+**If you also installed the practices pack**, expect one disagreement, measured in a
+scratch adopter repo built exactly from these instructions: `gate check --wiring` passes
+(the manifest rule is an executing surface it knows about) while the pack's
+`scripts/verify/verify-gates-wired.mjs` **fails** on the same repo — it counts CI steps,
+git hooks, the bundle and `ship:pre`, and not manifest class defaults. So a manifest-wired
+domain gate reads as unwired to it. Until the two agree, either also invoke the script from
+CI, or record it in that script's exceptions file. This is a known duplication in the
+tooling, not something your manifest did wrong.
+
 ## Commands this manifest assumes exist
 
 | Command | Where it comes from |
 | ------- | ------------------- |
 | `pnpm check-types`, `pnpm lint`, `pnpm build`, `pnpm test` | yours — workspace scripts |
 | `pnpm verify:route-guards` | yours, installed in **Step 1** above from `examples/route-guard-coverage/check.mjs` |
-| `pnpm verify:workflow` | the **practices pack**: `gate init --practices` writes `scripts/verify/verify-workflow.mjs`, and its `NEXT_STEPS.md` tells you to add `"verify:workflow": "node scripts/verify/verify-workflow.mjs"`. The pack creates files and never edits your `package.json` — that line is yours to paste. Without the pack, delete the `infra` rule rather than leaving a command that cannot resolve |
+| `pnpm verify:workflow` | the **practices pack** — see Step 1. The pack creates files and never edits your `package.json`; the script line is yours to paste. Without the pack, delete the `infra` rule rather than leaving a command that cannot resolve |
+
+**Nothing in this table is provided by copying the manifest.** Step 1 exists because a
+cookbook entry that is not runnable as copied fails at Phase 4 with an error about a
+missing script, which reads as a broken tool rather than an unfinished install.
 
 ## Verify it before you trust it
 

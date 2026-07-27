@@ -314,6 +314,65 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   and the placeholder is legitimate as a reminder — the defect was a pattern loose enough to
   accept a reminder as evidence.
 
+- **Phase 6 remediation — the independent round returned DO NOT CLOSE with five blocking
+  items, and every factual claim in it was verified against source before being accepted.**
+  All five taken:
+
+  1. **Neither manifest was runnable as copied (routine).** The single-package entry shipped
+     a `classDefaults.hotfix` rule invoking `npm run test:smoke`, a script the README itself
+     called "probably not written yet" — so the first hotfix would fail at Phase 4 with an
+     error about a missing script. The shipped file now has `classDefaults: {}` and the
+     hotfix rule moved into the README as a snippet to add *after* writing the script.
+     **Declared deviation from task 1.1**, which required exactly one additive rule in the
+     file: a cookbook entry that is not runnable as copied is the defect this PRD exists to
+     prevent, and the additive-only lesson is still taught by the snippet and by the
+     monorepo entry's three live rules. The monorepo's Step 1 now covers **both** adopter
+     scripts before the copy — `verify:route-guards` and `verify:workflow` — and states the
+     delete-the-`infra`-rule alternative inline rather than only in a table.
+  2. **Copying a cookbook manifest over the practices one silently deletes a gate
+     (routine).** Verified in `init.ts:102`: `--practices` writes
+     `{ phases: { '7': [PACK_BRAIN_GATE] } }`. Both cookbook READMEs and the brownfield page
+     now say to merge keys rather than replace the file, and both fixtures assert the
+     warning is present.
+  3. **The brownfield ladder described an impossible sequence and a false green (routine).**
+     Rung 1 ran `gate init --practices`, which already scaffolds everything, and rung 2 then
+     told the adopter to run `gate init` — which would skip it all. Worse, rung 2 claimed an
+     empty manifest makes `gate run` "walk the phases, run nothing, and report green": false
+     twice over, because the built-in gates and the PRD's §11 commands run regardless.
+     Rewritten against the source: `--practices` writes a manifest with `phases["4"]`
+     **absent**, which inherits the floor; plain `gate init` writes `phases: {"4": []}`,
+     an **empty array that erases** it. The two look equally empty and behave oppositely,
+     and that asymmetry is now the point of the rung. The test reads the literal out of
+     `init.ts`, so a change there fails the test rather than quietly making the page false.
+  4. **The monorepo README contradicted the shipped script (routine).** It said a
+     differently located routes tree makes the check "pass vacuously"; `check.mjs:33-36`
+     fails closed with exit 2 and says so in a comment. Corrected.
+  5. **Two hard-cap claims were false (plausible).** "Prose promising a deny test does not
+     satisfy it" — it did: the pattern was unanchored and `lintPrd` compiles it with `m`, so
+     *"we will add a Deny test: `pnpm vitest …` next sprint"* passed. The pattern is now
+     anchored with `^\s*-?\s*`. And the runner-prefix list is finite, so it refuses
+     legitimate lines under `make` or `deno`; the READMEs now say to mirror the adopter's own
+     `commands.allowedPrefixes`. The post-merge paragraph claimed a merge "cannot have
+     broken" the route-guard invariant — it can (a route added on base, a guard test deleted
+     on the branch), so it is now stated as a cost decision with the case where you would
+     include it.
+
+  **Test defects taken.** The cap test called `RegExp.test` rather than production: it now
+  runs through `lintPrd` with the cookbook manifest, covering armed/not-armed/satisfied, and
+  a mutation to a wrong-but-non-empty `targetsMatch` fails it. The `m` flag was missing from
+  every pattern assertion — production compiles it — and removing the anchor now fails a
+  test. README coverage moved from a global count of `**Catches**` labels to a per-key
+  section check. Cross-links were code-formatted paths rather than Markdown links; they are
+  links now.
+
+  **Measured while re-proving it, and worth an adopter's attention:** in a scratch repo
+  built exactly from the monorepo instructions, `gate check --wiring` passes while the
+  practices pack's `verify-gates-wired.mjs` **fails** on the same repo — the packed script
+  counts CI, hooks, the bundle and `ship:pre` as executing surfaces and not manifest class
+  defaults. That is the known package-vs-script duplication STATUS.md already records and
+  PRD-023 is scoped to fix. Recorded in the monorepo README so an adopter meets it with an
+  explanation instead of a mystery.
+
 - **7.6 — the docs assertions read outside this package's turbo cache key.**
   `test/content-adoption.test.ts` reads `apps/docs/content/docs/*`, which
   `provegate#test` does not hash (`verify:turbo-inputs` PASS confirms the task declares no
@@ -337,6 +396,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | ---------- | ------- | ----- |
 | 2026-07-27 | 0.0 | Pre-flight cleared: PRD-019 Ship Verified, lease held, baseline green. 0.3 reconciled the PRD's Memory Inputs with the plan's Memory Context (same divergence PRD-022 found) and disposed the new `assert-absent-needs-an-independent-cause` record, which `gate check` had refused the claim over. |
 | 2026-07-27 | 1.0-8.0 | Both cookbook entries + READMEs, the real-parser fixture, `brownfield.mdx`, the practices-first docs edits, cross-links, the docs fixture, and the pack allowlist. Five mutation checks, each failing exactly its own test. |
+| 2026-07-27 | 10.0 | Independent round (Codex) returned **DO NOT CLOSE** with five blocking items. Every factual claim verified against source first — all held. All five taken, plus seven test defects. Re-proved end to end in a second scratch adopter repo built from the corrected instructions. 946 tests green. |
 | 2026-07-27 | 9.4 | The adopter walk-through found a real defect in the published hard cap: the canonical `requireLine` is satisfied by the shipped PRD template's own placeholder, so the cap never fires on a `gate new` PRD. Pattern corrected in both files, re-measured end to end, pinned by a regression that reads the template. Recorded as a declared deviation from task 2.1. |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-020 (Approved), readiness iteration 3 PASS 8.5, and watch items W1–W8, after owner Go. No implementation started. Phase 4 entry is blocked on PRD-019 Ship Verified (task 0.2). |
 
