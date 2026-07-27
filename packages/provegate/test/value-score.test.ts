@@ -60,6 +60,16 @@ describe('the recompute (FR-2)', () => {
     expect(scoreValueHeader(DEFAULT_CONFIG, prd('> **Value**: 4.1 (MF/UI/TL/AR/RM: 5/4/4/4/3)')).problem).toBeNull();
   });
 
+  it('rejects a BARE INTEGER total as malformed — the spec requires the decimals', () => {
+    // Found by independent review: the pattern accepted `Value: 4 (...)`, which
+    // parsed as 4.00 and then failed as a MISMATCH against 4.10. That sends the
+    // author to re-derive numbers that were never wrong. It is a malformed
+    // declaration and the message must say so.
+    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
+    expect(issue).toMatch(/malformed: total "4" must be written with at most two decimal places/);
+    expect(issue).not.toMatch(/recompute/);
+  });
+
   it('rejects a total with three decimals, as malformed rather than as a mismatch', () => {
     // Two different failures that read differently on purpose: one says the
     // number is unreadable, the other says the arithmetic is wrong.

@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -34,10 +35,14 @@ interface Entry {
  * and bare all occur — so the parser tolerates all three rather than pinning
  * whichever one this repo happened to write today. */
 function entries(): Entry[] {
-  return readdirSync(changesetDir)
+  return parseEntries(changesetDir);
+}
+
+function parseEntries(dir: string): Entry[] {
+  return readdirSync(dir)
     .filter((f) => f.endsWith('.md') && f !== 'README.md')
     .map((file) => {
-      const text = readFileSync(join(changesetDir, file), 'utf8');
+      const text = readFileSync(join(dir, file), 'utf8');
       const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text);
       const bumps = new Map<string, string>();
       if (match === null) return { file, bumps, body: text };
@@ -94,15 +99,23 @@ describe('the release entry for the config-surface change (FR-12, W9)', () => {
   });
 
   it('the front-matter parser tolerates the quote styles changesets emit', () => {
-    // Guards the parser itself: pinning one style would make this suite fail on
-    // a correctly-written entry the next changesets version happens to format
-    // differently, which is a false red about a real release.
-    const parse = (fm: string): string | undefined => {
-      const kv = /^\s*['"]?([^'":]+)['"]?\s*:\s*['"]?([a-z]+)['"]?\s*$/.exec(fm);
-      return kv?.[2];
-    };
-    expect(parse("'provegate': minor")).toBe('minor');
-    expect(parse('"provegate": minor')).toBe('minor');
-    expect(parse('provegate: minor')).toBe('minor');
+    // Exercises the REAL parser through a temp directory, not a copy of its
+    // regex. An earlier version duplicated the expression locally and asserted
+    // against the duplicate — breaking `entries()` would not have failed it,
+    // which is the defect this whole file exists to avoid.
+    const dir = mkdtempSync(join(tmpdir(), 'provegate-cs-'));
+    try {
+      const styles = ["'provegate': minor", '"provegate": minor', 'provegate: minor'];
+      styles.forEach((fm, i) => {
+        writeFileSync(join(dir, `e${i}.md`), `---\n${fm}\n---\n\nupgrade the CLI first\n`);
+      });
+      const parsed = parseEntries(dir);
+      expect(parsed).toHaveLength(styles.length);
+      for (const entry of parsed) {
+        expect(entry.bumps.get('provegate'), entry.file).toBe('minor');
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

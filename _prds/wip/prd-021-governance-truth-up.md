@@ -511,7 +511,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    belongs to PRD-018, which creates the file; this PRD proves only the edit case. Phase 4
    preflight re-checks `_state/locks` before committing, because the measurement goes stale.
    - **Targets:** `packages/provegate/test/config-value-scoring.test.ts`,
-     `packages/provegate/src/core/run/open.ts` (read-only reference — no behavior change)
+     `packages/provegate/src/core/run/open.ts` (FR-5 reads it; **FR-13(c) also edits it** —
+     the claim prints the rejected tokens, so the earlier "read-only, no behavior change"
+     note is superseded)
 6. **FR-6**: Prove the decision at the unit and the sweep at the **command**. The
    arithmetic and cutoff matrix is a unit test over `value-score.ts` and `lintPrd`: custom
    valid weights → a total computed from them; a wrong total → the failure names declared
@@ -1103,6 +1105,9 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/config/defaults.ts`
 - `packages/provegate/src/core/config/validate.ts`
 - `packages/provegate/src/core/config/load.ts`
+- `packages/provegate/src/core/run/open.ts`
+- `packages/provegate/src/core/state/index.ts`
+- `packages/provegate/test/cli-state.test.ts`
 - `packages/provegate/test/config-value-scoring.test.ts`
 - `packages/provegate/test/doc-claims-script.test.ts`
 - `packages/provegate/test/content-canon.test.ts`

@@ -448,6 +448,47 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 
 ## Deferrals & Decisions
 
+- **Phase 6 remediation — the consistency-sweep brief returned ten findings and every one
+  held.** Briefing the round as a sweep across named sections rather than a defect hunt was
+  the plan's own instruction (task 14.2), taken from the readiness history, and it produced
+  exactly the class that history predicted. All ten verified against source, all ten fixed:
+
+  1. **A production defect the tests missed: a bare integer total was accepted.**
+     `totalToHundredths` used `\d+(\.\d{1,2})?`, so `Value: 4 (…)` parsed as 4.00 and failed
+     as a **mismatch** against 4.10 — sending the author to re-derive numbers that were
+     never wrong. FR-2 requires it to be malformed. Fixed, with the missing reject fixture.
+  2. **The `enforceFrom` validation message said the opposite of the rule.** It reused the
+     `countOrZero` spec, whose message is "0 disables it"; for a cutoff, 0 means *enforce
+     from the very first item*. A dedicated `cutoff` spec now says so. This is the sweep's
+     rule 1 caught as a **two-ways** statement, in the one place an adopter reads it.
+  3. **An all-rejected Conflict Surface read as "declares no Conflict Surface".**
+     `candidateFromPrd` returned null when no glob survived, so an author whose every token
+     was malformed was told they had declared nothing — the one message that hides the
+     reason. It now returns the candidate with its rejections and `open.ts` refuses naming
+     each one; the notes also reach every refusal path, not only the success return.
+  4. **A test that could not fail.** The "declaring axes drops a default `enforceFrom`"
+     case supplied its own `enforceFrom`, and the shipped default has none — merge and
+     replacement both produced 4. Rebuilt around the WEIGHTS, where the two behaviours
+     actually differ.
+  5. **A test asserting against a copy of the parser.** The changeset quote-style case
+     duplicated the front-matter regex locally, so breaking the real `entries()` would not
+     have failed it. It now drives the real parser over a temp directory.
+  6. **`AGENT_BOOTSTRAP.md` still said the recompute "lands in wave 2"** — the governance
+     truth-up leaving intact the false claim about **itself**. `verify:doc-claims` passed it
+     because the sentence carries no `verify:*` token, which is an honest limit of that
+     grammar and is why a human sweep still earns its place. Corrected, and the configurable
+     axes, the presence-triggered default and this repo's opt-in are now documented there.
+  7. **A comment stating a falsehood about the thing this PRD measures.** `validate.ts`
+     claimed the shipped weights sum to `0.9999999999999999`; they sum to exactly 1, as this
+     plan already recorded. Replaced with a set that genuinely exhibits the hazard.
+  8-10. **Three edited files were outside the Conflict Surface** — `core/run/open.ts`,
+     `core/state/index.ts`, `test/cli-state.test.ts` — and `open.ts` was declared
+     "read-only, no behavior change" while FR-13(c) edits it. All three claimed, and the
+     superseded note corrected.
+
+  The pack counterpart was then re-ported and the ledger reconciled, so the adopter's copy
+  carries the same enforcement facts minus this repository's own opt-in.
+
 - **10.5 finding — FR-13's stated defect was already fixed; its remedy was still needed, for
   the opposite reason.** The FR says `declaredGlobs` "drops every claimed path that does not
   contain `/`", and names PRD-018 and PRD-021 as losing their root-level claims. Measured

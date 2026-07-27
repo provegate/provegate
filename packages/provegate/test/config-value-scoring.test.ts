@@ -71,14 +71,19 @@ describe('valueScoring resolution — the loader exception (FR-1)', () => {
     expect(Object.keys(resolved.valueScoring.weights).sort()).toEqual(['A', 'B', 'C']);
   });
 
-  it('declaring axes also drops a default enforceFrom rather than inheriting it', () => {
-    // The whole object is replaced, so nothing is filled in for it. Proven
-    // against a default that HAS the key, since the shipped one does not.
+  it('declaring axes drops the DEFAULT weights entirely, key for key', () => {
+    // An earlier version of this test supplied `enforceFrom: 4` and asserted it
+    // came back as 4 — which recursive merge and wholesale replacement both
+    // produce, because the shipped default has no `enforceFrom` to inherit. It
+    // could not fail. The property that distinguishes the two behaviours is
+    // the WEIGHTS: under a merge, `TL`, `AR` and `RM` survive from the default.
     const resolved = resolve({
-      valueScoring: { axes: ['A', 'B'], weights: { A: 0.5, B: 0.5 }, enforceFrom: 4 },
+      valueScoring: { axes: ['A', 'B'], weights: { A: 0.5, B: 0.5 } },
     });
-    expect(resolved.valueScoring.enforceFrom).toBe(4);
-    expect(resolved.valueScoring.axes).toEqual(['A', 'B']);
+    expect(Object.keys(resolved.valueScoring.weights).sort()).toEqual(['A', 'B']);
+    for (const inherited of ['MF', 'UI', 'TL', 'AR', 'RM']) {
+      expect(resolved.valueScoring.weights, inherited).not.toHaveProperty(inherited);
+    }
   });
 
   it('weights WITHOUT axes is a legal partial retune of the default axes', () => {
@@ -193,10 +198,10 @@ describe('valueScoring validation (FR-1)', () => {
     // explicit opt-in rather than the shipped default.
     expect(issuesOf({ valueScoring: { enforceFrom: 0 } })).toEqual([]);
     expect(issuesOf({ valueScoring: { enforceFrom: 1.5 } }).join(' ')).toMatch(
-      /valueScoring\.enforceFrom: must be a non-negative integer/,
+      /valueScoring\.enforceFrom: must be a non-negative work-item id/,
     );
     expect(issuesOf({ valueScoring: { enforceFrom: -1 } }).join(' ')).toMatch(
-      /valueScoring\.enforceFrom: must be a non-negative integer/,
+      /valueScoring\.enforceFrom: must be a non-negative work-item id/,
     );
   });
 

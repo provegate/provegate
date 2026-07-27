@@ -253,6 +253,19 @@ function claimPrdLocked(
   const surfaceNotes = (candidate.rejected ?? []).map(
     (r) => `Conflict Surface token not claimed: \`${r.token}\` — ${r.reason}`,
   );
+  if (globs.length === 0) {
+    // Every declared token was refused. Say WHY, rather than "you declared
+    // nothing" — the author declared several things and none of them parsed,
+    // which is a different problem with a different fix.
+    return {
+      ...base,
+      ok: false,
+      issues: [
+        `${normalized} declares a Conflict Surface but no token in it is a claimable path`,
+        ...surfaceNotes,
+      ],
+    };
+  }
 
   // Preconditions BEFORE any mutation: slug + containment + destination
   // resolution happen while every victim still sits untouched on disk — an
@@ -354,6 +367,7 @@ function claimPrdLocked(
       ...base,
       ok: false,
       issues: [
+        ...surfaceNotes,
         ...malformed.map((m) => `malformed lease (fail closed): ${m}`),
         'ownership is unknowable while malformed leases exist — repair or delete them explicitly, then re-run',
       ],
@@ -412,6 +426,7 @@ function claimPrdLocked(
       blockers: blockers.map(asBlocker),
       ok: false,
       issues: [
+        ...surfaceNotes,
         ...conflicts.map(
           (c) =>
             `surface overlap with STALE lease ${c.a === normalized ? c.b : c.a}: ${c.shared.slice(0, 5).join(', ')}${c.shared.length > 5 ? ', …' : ''}`,

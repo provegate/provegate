@@ -9,6 +9,7 @@ import type { ConfigIssue, WorkflowConfig } from './types.js';
 
 type Spec =
   | { kind: 'string' }
+  | { kind: 'cutoff' }
   | { kind: 'number' }
   | { kind: 'countOrZero' }
   | { kind: 'boolean' }
@@ -28,6 +29,11 @@ const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
 const bool: Spec = { kind: 'boolean' };
 /** A cadence: a count where 0 is a legal value meaning "off", unlike `num`. */
 const countOrZero: Spec = { kind: 'countOrZero' };
+/** A cutoff id: a non-negative integer where 0 means "enforce everywhere" — the
+ * OPPOSITE of `countOrZero`'s 0. Reusing that spec produced a validation error
+ * telling an adopter `0 disables it`, which is exactly backwards and would have
+ * shipped as advice. */
+const cutoff: Spec = { kind: 'cutoff' };
 
 const artifactKind = obj({ dir: str, prefix: str });
 
@@ -71,7 +77,7 @@ const CONFIG_SPEC = obj({
   classes: strArr,
   verifyScriptPattern: str,
   templates: obj({ prd: strOrEmpty }),
-  valueScoring: obj({ axes: strArr, weights: numRec, enforceFrom: countOrZero }),
+  valueScoring: obj({ axes: strArr, weights: numRec, enforceFrom: cutoff }),
   memory: obj({
     enabled: bool,
     root: str,
@@ -108,6 +114,14 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
       // arithmetic — both must fail here rather than silently arm a warning.
       if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
         issues.push({ path, message: 'must be a non-negative integer (0 disables it)' });
+      }
+      return;
+    case 'cutoff':
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+        issues.push({
+          path,
+          message: 'must be a non-negative work-item id (0 enforces from the very first item)',
+        });
       }
       return;
     case 'number':
@@ -371,10 +385,12 @@ function validateValueScoring(vs: {
     }
     hundredths += Math.round(weight * 100);
   }
-  // Compared in integer hundredths, never float equality: 0.25+0.25+0.2+0.15+0.15
-  // is 0.9999999999999999 in IEEE 754, and a `=== 1` test would reject the
-  // shipped default. Only reported when every weight was scalable, so a bad
-  // decimal form does not also produce a confusing sum error.
+  // Compared in integer hundredths, never float equality. The shipped five
+  // weights happen to sum to exactly 1 as doubles — an earlier version of this
+  // comment claimed otherwise and was simply wrong — but plenty of legal sets
+  // do not: 0.06 + 0.57 + 0.37 is 0.9999999999999999, and a `=== 1` test would
+  // reject it. Only reported when every weight was scalable, so a bad decimal
+  // form does not also produce a confusing sum error.
   if (scalable && Object.keys(weights).length > 0 && hundredths !== 100) {
     issues.push({
       path: 'valueScoring.weights',

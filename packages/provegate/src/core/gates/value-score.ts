@@ -88,7 +88,11 @@ function declarationLines(block: string): string[] {
  * exact on both sides rather than only on the computed one.
  */
 function totalToHundredths(raw: string): number | null {
-  if (!/^\d+(\.\d{1,2})?$/.test(raw)) return null;
+  // One or two decimals, and a bare integer is NOT one of them. FR-2 requires
+  // the declared form to carry its decimals: `4` reads as 4.00 to arithmetic
+  // and then fails as a MISMATCH, which sends the author to re-derive numbers
+  // that were never wrong. It is a malformed declaration and must say so.
+  if (!/^\d+\.\d{1,2}$/.test(raw)) return null;
   const [whole, frac = ''] = raw.split('.');
   return Number(whole) * 100 + Number(frac.padEnd(2, '0'));
 }

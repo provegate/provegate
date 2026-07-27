@@ -47,8 +47,8 @@
     },
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
-      "pack": "65fa18cd5b46923f",
-      "repo": "e72f24972610641d"
+      "pack": "6083eb45e7cfa526",
+      "repo": "f9664d50c0ed05a2"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",

@@ -209,7 +209,12 @@ export function candidateFromPrd(
   // hash this buffer, not a later re-read of the path (codex prd-007 r21).
   const source = readFileSync(found[0]!, 'utf8');
   const { globs, rejected } = parseConflictSurface(source);
-  if (globs.length === 0) return null;
+  // An entirely-rejected surface is NOT "declares no Conflict Surface". The
+  // author wrote paths; every one was refused. Returning null there collapses
+  // two different situations into one message and throws away the only
+  // information that could fix it, so the candidate is returned with an empty
+  // glob list and the reasons attached, and the caller decides.
+  if (globs.length === 0 && rejected.length === 0) return null;
   // Stamp as an execution-phase entry — validated non-empty at config load.
   const executionPhase = config.executionPhases[0];
   if (executionPhase === undefined) {

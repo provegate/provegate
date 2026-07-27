@@ -172,8 +172,21 @@ Before a candidate enters the pipeline, score it on five weighted dimensions (1�
 | AR — Adoption & Reach | improves OSS adoption surface (docs, DX, examples) | 0.15 |
 | RM — Risk & Maintenance | low regression risk / low standing maintenance (5 = safest) | 0.15 |
 
-Notation in the PRD header: `Value: 3.55 (MF/UI/TL/AR/RM: 4/5/2/3/3)`. The declared
-total must equal the weighted sum — a mechanical recompute check lands in wave 2.
+Notation in the PRD header: `Value: 3.55 (MF/UI/TL/AR/RM: 4/5/2/3/3)`. The declared total
+must equal the weighted sum, and that is **enforced mechanically**: `gate check PRD-NNN`
+recomputes it from the weights above and refuses a header whose arithmetic does not hold,
+while `gate check --value-score` sweeps the whole corpus — which is what catches a score
+edited after its item passed readiness.
+
+The axes, their weights, and the cutoff are **configuration**, not constants: they live in
+`workflow.config.json` under `valueScoring`, and the table above is a projection of the
+shipped defaults, pinned to them by a test. The shipped default omits `enforceFrom`
+entirely, which means presence-triggered — an item with no header passes. **This repository
+opts in at PRD-017**, so from that id a missing header is a failure here.
+
+Changing the axes is a corpus migration rather than a config edit: run
+`gate check --value-score` first to see which items would break, then land the axis change
+and the header rewrites in one commit.
 
 - **Thresholds** (provisional — recalibrate after the first ~10 scored candidates):
   ≥ 3.40 stays a candidate; ≥ 4.00 is top tier (front of queue).
