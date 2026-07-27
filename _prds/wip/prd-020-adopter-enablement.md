@@ -359,6 +359,9 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
   ("this file must exist", "this manifest must not drift"), and the trap this record names
   is a scenario that removes the very mechanism the absence is evidence about. Every
   assert-absent in the new example tests must survive its own mutation check.
+- applied: `notes-column-runs-commands` — this PRD writes §11-shaped tables into example
+  READMEs and its own plan carries backticked commands. Named by the task plan's Memory
+  Context but missing from this section until pre-flight 0.3; the two lists now agree.
 - reviewed: `turbo-cache-masks-out-of-input-reads` — example fixtures are read by the
   package test task, so they are declared inputs or a cached green replays over them.
 

@@ -81,17 +81,19 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight and ownership
-  - [ ] 0.1 Run `gate open PRD-020 --worktree` from the base checkout; confirm the lease
-        covers the PRD Conflict Surface and record branch/worktree in the Progress Log.
-  - [ ] 0.2 W5 — verify the dependency before touching a shared page: confirm
-        `_state/prds.json` records PRD-019 as Ship Verified, and record the check in the
-        Progress Log. If it is not, STOP — the remaining tasks are blocked, not deferred.
-  - [ ] 0.3 Open the three Memory Context records; confirm the paths and commands each
-        one names still exist and note any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.4 Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and
-        `pnpm --filter provegate test test/pack.test.ts` in the Progress Log; a
-        pre-existing red is ledgered, never normalized silently.
+- [x] 0.0 Pre-flight and ownership
+  - [x] 0.1 Claimed with `gate open PRD-020 --worktree` — 9 surface globs; branch `feat/prd-020-adopter-enablement`, worktree `.worktrees/prd-020-adopter-enablement`. `pnpm install --frozen-lockfile` + `pnpm build` first: a linked worktree inherits no `node_modules`.
+        Original: Run `gate open PRD-020 --worktree` from the base checkout; confirm the lease covers the PRD Conflict Surface and record branch/worktree in the Progress Log.
+
+  - [x] 0.2 `_state/prds.json` records PRD-019 **Ship Verified** (and PRD-022, which landed after this plan was written). Not blocked. Note for anyone reading the locks from here: `_state/locks/` does not exist in a linked worktree — leases live in the main checkout (`locks-on-main-not-worktree`), where PRD-020's is the only one.
+        Original: W5 — verify the dependency before touching a shared page: confirm `_state/prds.json` records PRD-019 as Ship Verified, and record the check in the Progress Log. If it is not, STOP — the remaining tasks are blocked, not deferred.
+
+  - [x] 0.3 All three read and still accurate, all `status: active`. **Same divergence PRD-022 found**: this plan's Memory Context named `notes-column-runs-commands`, which the PRD's `## Memory Inputs` did not, while the PRD named `append-only-manifest-union-driver`, which the plan did not. The PRD is what the gate parses, so it now declares the union. Also added during the claim: `assert-absent-needs-an-independent-cause`, written by PRD-022 yesterday, whose watch overlaps three of this PRD's targets — `gate check` refused the claim until it had a disposition, which is the contract working as designed.
+        Original: Open the three Memory Context records; confirm the paths and commands each one names still exist and note any stale finding in **Deferrals & Decisions**.
+
+  - [x] 0.4 Baseline green: `pnpm test` 7/7 tasks, `pnpm verify:workflow` PASS, `pnpm --filter provegate test test/pack.test.ts` 9 passed. Nothing pre-existing red.
+        Original: Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and `pnpm --filter provegate test test/pack.test.ts` in the Progress Log; a pre-existing red is ledgered, never normalized silently.
+
 
 - [ ] 1.0 FR-1 — Single-package cookbook entry
   - [ ] 1.1 Write
