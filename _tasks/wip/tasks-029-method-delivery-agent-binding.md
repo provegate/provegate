@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-029-method-delivery-agent-binding.md](../../_prds/wip/prd-029-method-delivery-agent-binding.md)
 > **Readiness**: [readiness-029-method-delivery-agent-binding.md](../../_readiness/wip/readiness-029-method-delivery-agent-binding.md)
-> **Status**: In Progress
+> **Status**: Code Complete
 > **Readiness Score**: 8.35/10 (PASS, iteration 8)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-27
@@ -229,18 +229,18 @@ a record is evidence only while it is true.
   - [x] 7.6 Record in **Deferrals & Decisions** that automated staleness detection is deferred
         to PRD-030 by scope, with the PRD's Non-Goal as the reference.
 
-- [ ] 8.0 Phase 5 — Testing
-  - [ ] 8.1 `pnpm --filter provegate test test/config.test.ts` (FR-1)
-  - [ ] 8.2 `pnpm --filter provegate test test/prompts.test.ts` (FR-2)
-  - [ ] 8.3 `pnpm --filter provegate test test/prompts.test.ts` (FR-3)
-  - [ ] 8.4 `pnpm --filter provegate test test/content-placeholders.test.ts` (FR-4)
-  - [ ] 8.5 `pnpm --filter provegate test test/init.test.ts` (FR-5)
-  - [ ] 8.6 `pnpm --filter provegate test test/prompts.test.ts` (FR-5, printed set + reinstall)
-  - [ ] 8.7 `pnpm --filter provegate test test/prompts.test.ts` (FR-6)
-  - [ ] 8.8 `pnpm verify:pack-drift` (FR-7)
-  - [ ] 8.9 `pnpm --filter provegate test test/pack.test.ts` (FR-7)
-  - [ ] 8.10 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`, `pnpm build`.
-  - [ ] 8.11 Record every result in the **Verification Ledger** with evidence. A listed-but-not-run
+- [x] 8.0 Phase 5 — Testing
+  - [x] 8.1 `pnpm --filter provegate test test/config.test.ts` (FR-1)
+  - [x] 8.2 `pnpm --filter provegate test test/prompts.test.ts` (FR-2)
+  - [x] 8.3 `pnpm --filter provegate test test/prompts.test.ts` (FR-3)
+  - [x] 8.4 `pnpm --filter provegate test test/content-placeholders.test.ts` (FR-4)
+  - [x] 8.5 `pnpm --filter provegate test test/init.test.ts` (FR-5)
+  - [x] 8.6 `pnpm --filter provegate test test/prompts.test.ts` (FR-5, printed set + reinstall)
+  - [x] 8.7 `pnpm --filter provegate test test/prompts.test.ts` (FR-6)
+  - [x] 8.8 `pnpm verify:pack-drift` (FR-7)
+  - [x] 8.9 `pnpm --filter provegate test test/pack.test.ts` (FR-7)
+  - [x] 8.10 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`, `pnpm build`.
+  - [x] 8.11 Record every result in the **Verification Ledger** with evidence. A listed-but-not-run
         command is never `passed`.
 
 - [ ] 9.0 Phase 6 — Final Auditing
@@ -275,19 +275,19 @@ it must be `passed` and name the review artifact path.
 
 | Gate               | Command / Check                                                  | Scope | Result  | Evidence | Notes                                            |
 | ------------------ | ---------------------------------------------------------------- | ----- | ------- | -------- | ------------------------------------------------ |
-| FR-1               | `pnpm --filter provegate test test/config.test.ts`               | pkg   | pending |          | enabled-false default; null and empty; containment |
-| FR-2               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | pending |          | ordered dispositions; unmatched and symlink fail  |
-| FR-3               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | pending |          | escape first and recursive; four diagnostics      |
-| FR-4               | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | pending |          | nine required; empty policy; terminality          |
-| FR-5               | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | pending |          | refused run byte-identical; re-run skips          |
-| FR-5               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | pending |          | printed set; no old banner after reinstall        |
-| FR-6               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | pending |          | adapter destinations and grammar                  |
-| FR-7               | `pnpm verify:pack-drift`                                          | repo  | pending |          | pairs reconcile on both sides                     |
-| FR-7               | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | pending |          | shipped-file allowlist matches the tarball        |
-| types              | `pnpm check-types`                                                | repo  | pending |          | zero errors                                       |
-| lint               | `pnpm lint`                                                       | repo  | pending |          | zero warnings                                     |
-| test               | `pnpm test`                                                       | repo  | pending |          | added tests pass; existing unchanged              |
-| build              | `pnpm build`                                                      | repo  | pending |          | clean build                                       |
+| FR-1               | `pnpm --filter provegate test test/config.test.ts`               | pkg   | passed  | 15 passed | enabled-false default; null and empty; containment |
+| FR-2               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | passed  | 34 passed | ordered dispositions; unmatched and symlink fail  |
+| FR-3               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | passed  | 34 passed | escape first and recursive; four diagnostics      |
+| FR-4               | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | passed  | 15 passed | nine required; empty policy; terminality          |
+| FR-5               | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | passed  | 44 passed | refused run byte-identical; re-run skips          |
+| FR-5               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | passed  | 34 passed | printed set; no old banner after reinstall        |
+| FR-6               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | passed  | 34 passed | adapter destinations and grammar                  |
+| FR-7               | `pnpm verify:pack-drift`                                          | repo  | passed  | 49 pairs | pairs reconcile on both sides                     |
+| FR-7               | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | passed  | 9 passed | shipped-file allowlist matches the tarball        |
+| types              | `pnpm check-types`                                                | repo  | passed  | 5/5 tasks | zero errors                                       |
+| lint               | `pnpm lint`                                                       | repo  | passed  | 4/4 tasks | zero warnings                                     |
+| test               | `pnpm test`                                                       | repo  | passed  | 1087 passed | added tests pass; existing unchanged              |
+| build              | `pnpm build`                                                      | repo  | passed  | 4/4 tasks | clean build                                       |
 | independent-review | `_docs/reviews/review-029-method-delivery-agent-binding.md`      | repo  | pending |          | verdict pass, critical = 0                        |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -323,6 +323,7 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 8.0 | Phase 5 green. Every §11 row executed and recorded with evidence — nine FR rows and the four floor commands, no ad-hoc additions and no omissions. Baseline 1026 → **1087**, 61 new tests, every pre-existing one unmodified. |
 | 2026-07-27 | 7.0 | 1079 → **1087**. Eight migration tests. The ordering one asserts `report.created` puts the store before `workflow.config.json`, rather than trusting `initWorkspace`'s comment that activation is written last. |
 | 2026-07-27 | 6.0 | 1073 → **1079**. `verify:pack-drift` green at 49 pairs — no `PACK_MAP` entry was needed: the store is rendered, not packed, so the pack gains instructions rather than files. |
 | 2026-07-27 | 5.6 | The adapter prose test failed on its first run against the generated BANNER, which appears in every rendered file by design. Fixed by stripping the banner from both sides — the failure is what made the filter honest rather than permissive. |
