@@ -213,20 +213,20 @@ a record is evidence only while it is true.
   - [x] 6.5 `packages/provegate/test/pack.test.ts` and `test/practices-pack.test.ts` green with
         the additions.
 
-- [ ] 7.0 Migration & Rollback Plan
-  - [ ] 7.1 **Forward**: a repository that has not opted in is byte-identical to the pre-PRD
+- [x] 7.0 Migration & Rollback Plan
+  - [x] 7.1 **Forward**: a repository that has not opted in is byte-identical to the pre-PRD
         build. Hold it with a test, not an assertion in prose.
-  - [ ] 7.2 **Activation for an existing repository**: confirm by fixture that the only path is
+  - [x] 7.2 **Activation for an existing repository**: confirm by fixture that the only path is
         printing the block for the human to paste, and that no existing config is edited.
-  - [ ] 7.3 **Reinstall**: confirm the printed set is the complete unit, and that deleting it
+  - [x] 7.3 **Reinstall**: confirm the printed set is the complete unit, and that deleting it
         and re-running produces a store with no file carrying the previous version's banner.
         This is task 4.6's test, referenced here because it is the migration story.
-  - [ ] 7.4 **Rollback**: deleting the printed set plus removing the `prompts` block returns the
+  - [x] 7.4 **Rollback**: deleting the printed set plus removing the `prompts` block returns the
         repository to its pre-install state; `templates.prd` must be cleared in the same edit or
         `gate new` reads a path that no longer exists. Record this in `NEXT_STEPS.md`.
-  - [ ] 7.5 **Deployment order**: confirm the prompt plan's actions inherit `initWorkspace`'s
+  - [x] 7.5 **Deployment order**: confirm the prompt plan's actions inherit `initWorkspace`'s
         ordering (`init.ts:265-275`) and that the config write stays last.
-  - [ ] 7.6 Record in **Deferrals & Decisions** that automated staleness detection is deferred
+  - [x] 7.6 Record in **Deferrals & Decisions** that automated staleness detection is deferred
         to PRD-030 by scope, with the PRD's Non-Goal as the reference.
 
 - [ ] 8.0 Phase 5 — Testing
@@ -301,6 +301,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 7.6 — automated staleness detection is deferred to PRD-030 by scope, per this PRD's Non-Goals. After a package upgrade the store does not change and nothing detects it; every generated file names the producing version, and reading that banner is the disclosed mechanism. Recorded here because a reviewer will read the absence as a gap rather than a boundary.
+- 7.1 — "byte-identical for a non-adopter" is held by comparing the PLAN, not by a sentence: `planInit` emits no `.provegate/`, `.claude/` or `.cursor/` action, and the starter config it writes carries no `prompts` block. Adding the block to `DEFAULT_CONFIG` changes nothing for such a repository because `enabled` gates every consumer.
 - 6.1 — `PACK_MAP` gains NO entry. The pack is a static source→destination table and the store is a config-dependent render, so the only pack change is instructional: `NEXT_STEPS.md` §5 tells the adopter to run `gate init --prompts` separately and states the one-way boundary. `verify:pack-drift` stays at 49 pairs, which is the evidence that nothing rendered entered the pack.
 - 5.1–5.4 — landed WITH parent 4 rather than after it. FR-5 requires every run to print the complete generated set, and that set includes the two adapter destinations outside the store, so `renderAdapters` is a dependency of `planPrompts` rather than a successor to it. The task order read the other way; the dependency did not.
 - 4.5 — the reinstall pair is deliberate: one test asserts that deleting only the store directory LEAVES v1 adapters in place (the defect readiness iteration 6 found, kept as a regression guard), and the next asserts the corrected procedure leaves no path carrying the old banner. The first would pass on a broken implementation, which is why it is paired rather than alone.
@@ -321,6 +323,7 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 7.0 | 1079 → **1087**. Eight migration tests. The ordering one asserts `report.created` puts the store before `workflow.config.json`, rather than trusting `initWorkspace`'s comment that activation is written last. |
 | 2026-07-27 | 6.0 | 1073 → **1079**. `verify:pack-drift` green at 49 pairs — no `PACK_MAP` entry was needed: the store is rendered, not packed, so the pack gains instructions rather than files. |
 | 2026-07-27 | 5.6 | The adapter prose test failed on its first run against the generated BANNER, which appears in every rendered file by design. Fixed by stripping the banner from both sides — the failure is what made the filter honest rather than permissive. |
 | 2026-07-27 | 4.0 | 1066 → **1073**. End-to-end verified on a scratch repo: opt-in prints the block with nine `null` keys and refuses; filled config renders the store plus 7 Claude commands, 1 Cursor rule, 1 Codex snippet. `.mdc` line 1 is `---`, and the `globs` line reproduces `source-snapshot/rules/prd-workflow.mdc:3` byte for byte. The only file left carrying `{{` is `PLACEHOLDERS.md` — verbatim by disposition, exactly as specified. |
