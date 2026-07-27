@@ -494,6 +494,28 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
   the parser judge it. That is this item's characteristic defect appearing for the seventh
   time, in the fix for the sixth.
 
+- **Phase 6 round 2 — the confirming round.** Five of seven fixes **hold**. It
+  independently found the exponent hole that self-check had already caught (its snapshot
+  predated the fix, and it said so). Two findings were real and open:
+
+  1. **"The notes reach every refusal path" was false.** The regex insertion reached 4 of
+     12 refusal sites; ordinary overlap refusal and gate-policy failure both dropped them.
+     The plan claimed every outcome — a claim exceeding its mechanism, in the work item
+     about claims exceeding their mechanisms. All 12 now carry them, and it matters most on
+     the paths that were missing: an author refused for an overlap is already re-reading
+     their surface, which is exactly when a silently-dropped token costs them a second
+     round.
+  2. **Two stale restatements of the total grammar, one edit apart.** The doc comment still
+     said "one or two decimal places, **or none**" after `4` had been made malformed, and
+     the diagnostic said "at most two decimal places", which reads as though none were also
+     fine — the case it rejects. Both corrected, and the message now says what the accepted
+     form IS.
+
+  That is the eighth and ninth appearance of this item's characteristic defect, both inside
+  the remediation for the seventh. The record it produced (`a-rule-corrected-survives-where-it-is-restated`)
+  is written about prose sections; these were a code comment and an error string, which is
+  the same failure in a place the record did not name. Worth noting for whoever extends it.
+
   The pack counterpart was then re-ported and the ledger reconciled, so the adopter's copy
   carries the same enforcement facts minus this repository's own opt-in.
 

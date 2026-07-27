@@ -261,6 +261,7 @@ function claimPrdLocked(
       ...base,
       ok: false,
       issues: [
+        ...surfaceNotes,
         `${normalized} declares a Conflict Surface but no token in it is a claimable path`,
         ...surfaceNotes,
       ],
@@ -316,6 +317,7 @@ function claimPrdLocked(
         ...base,
         ok: false,
         issues: [
+          ...surfaceNotes,
           `cannot verify gate policy for a worktree claim: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`,
         ],
       };
@@ -519,6 +521,7 @@ function claimPrdLocked(
             globs,
             ok: false,
             issues: [
+              ...surfaceNotes,
               `steal aborted, victims restored: lease of ${l.prd} ${mismatch}`,
               ...stranded,
             ],
@@ -565,6 +568,7 @@ function claimPrdLocked(
         globs,
         ok: false,
         issues: [
+          ...surfaceNotes,
           `existing lease ${stampSource?.file ?? '(unknown)'} stamps only ${typeof priorWt === 'string' ? 'worktree' : 'branch'} — worktree metadata is incomplete; repair or delete it before re-claiming`,
           ...stranded,
         ],
@@ -691,7 +695,8 @@ function claimPrdLocked(
         ...base,
         globs,
         ok: false,
-        issues: [`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
+        issues: [
+          ...surfaceNotes,`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
       };
     }
 
@@ -816,7 +821,8 @@ function claimPrdLocked(
           ...base,
           globs,
           ok: false,
-          issues: [`claim rolled back: ${reuse.refusal}`, ...notes],
+          issues: [
+            ...surfaceNotes,`claim rolled back: ${reuse.refusal}`, ...notes],
         };
       }
       if (reusable) {
@@ -846,6 +852,7 @@ function claimPrdLocked(
             globs,
             ok: false,
             issues: [
+              ...surfaceNotes,
               notes.length === 0
                 ? `claim rolled back: ${msg}`
                 : `claim rollback INCOMPLETE: ${msg}`,
@@ -886,7 +893,7 @@ function claimPrdLocked(
         }
         const stranded = rollback();
         dropQuarantineDir();
-        return { ...base, globs, ok: false, issues: [...issues, ...stranded] };
+        return { ...base, globs, ok: false, issues: [...surfaceNotes, ...issues, ...stranded] };
       }
     }
 

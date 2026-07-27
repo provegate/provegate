@@ -66,7 +66,7 @@ describe('the recompute (FR-2)', () => {
     // author to re-derive numbers that were never wrong. It is a malformed
     // declaration and the message must say so.
     const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
-    expect(issue).toMatch(/malformed: total "4" must be written with at most two decimal places/);
+    expect(issue).toMatch(/malformed: total "4" must be written with one or two decimal places/);
     expect(issue).not.toMatch(/recompute/);
   });
 
@@ -92,7 +92,7 @@ describe('the recompute (FR-2)', () => {
     // Two different failures that read differently on purpose: one says the
     // number is unreadable, the other says the arithmetic is wrong.
     const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.100 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
-    expect(issue).toMatch(/malformed: total "4\.100" must be written with at most two decimal places/);
+    expect(issue).toMatch(/malformed: total "4\.100" must be written with one or two decimal places/);
     expect(issue).not.toMatch(/recompute/);
   });
 });

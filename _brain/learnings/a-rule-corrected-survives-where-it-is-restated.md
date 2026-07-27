@@ -36,8 +36,16 @@ reading surfaces the five other places the rule appears, and no gate compares tw
 statements of the same rule for agreement. The defect is invisible from where the fix is
 made and obvious from anywhere else.
 
+**It is not only prose.** The same item's implementation reproduced the pattern three more
+times, and twice the survivor was code: a regex capture group and a `totalToHundredths`
+parser each encoded half of one grammar rule, so tightening the parser left the capture
+truncating input the rule now forbade; and an error string kept describing the old
+acceptance while the doc comment above it kept the old wording. A rule lives wherever it is
+restated, and a comment, a diagnostic message and a validation regex are all restatements.
+
 **How to apply:** when a revision changes a rule, list every section that restates it
-BEFORE editing, and edit them together. When briefing a review round on a revised
+BEFORE editing, and edit them together — including the code comment, the error message, and
+any second place the rule is enforced. When briefing a review round on a revised
 specification, ask for a consistency sweep across named sections rather than a defect hunt
 — the finding rate is the same and the class is different. And treat "the score is moving
 by hundredths across rounds" as the signal: it means each round is paying for one survivor,

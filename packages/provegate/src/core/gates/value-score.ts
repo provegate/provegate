@@ -89,10 +89,15 @@ function declarationLines(block: string): string[] {
 /**
  * Parse a decimal total into integer hundredths.
  *
- * One or two decimal places, or none. Three decimals, exponent notation, and a
- * form the pattern let through but arithmetic would round are all malformed —
+ * One or two decimal places, and NOT none: `4.1` and `4.10` are the accepted
+ * forms, `4` is not. A bare integer reads as 4.00 to arithmetic and then fails
+ * as a mismatch, sending the author to re-derive numbers that were never wrong.
+ * Three decimals and exponent notation are malformed for the same reason —
  * stricter than the snapshot's `Number()` parse, and what keeps the comparison
  * exact on both sides rather than only on the computed one.
+ *
+ * (An earlier revision of this comment still said "or none" after the rule had
+ * changed. Same paragraph, opposite meanings, one edit apart.)
  */
 function totalToHundredths(raw: string): number | null {
   // One or two decimals, and a bare integer is NOT one of them. FR-2 requires
@@ -142,7 +147,9 @@ export function scoreValueHeader(config: WorkflowConfig, content: string): Value
     return {
       problem: {
         kind: 'malformed',
-        why: `total "${match[1]!}" must be written with at most two decimal places`,
+        // Says what the accepted form IS. "at most two decimal places" reads
+        // as though none were also fine, which is the case this rejects.
+        why: `total "${match[1]!}" must be written with one or two decimal places`,
       },
     };
   }
