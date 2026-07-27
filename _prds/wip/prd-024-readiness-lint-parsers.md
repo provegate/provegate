@@ -1,0 +1,449 @@
+# PRD-024: Readiness Lint Parsers — Read the Span the Claim Lives In
+
+> **Status**: Draft
+>
+> **Created**: 2026-07-27
+> **Updated**: 2026-07-27
+> **Author**: Claude Opus 5, for owner review
+> **Audience**: Implementing Agent
+> **Slug**: `readiness-lint-parsers`
+> **Cycle Phase**: 1 (PRD Generation)
+> **PRD Class**: infra
+> **Class Rationale**: Three defects in the readiness lint's own document readers. No
+> application behavior, no user-facing surface, no new flag or config key: the CLI's
+> observable interface is unchanged and only its verdicts move. Not `test-hardening`
+> because production parser code changes, not only tests.
+> **Autonomous Close**: operator-gated
+> **Value**: 3.75 (MF/UI/TL/AR/RM: 5/4/3/2/4)
+
+<!-- 0.25*5 + 0.25*4 + 0.20*3 + 0.15*2 + 0.15*4
+     = 1.25 + 1.00 + 0.60 + 0.30 + 0.60 = 3.75 -->
+
+---
+
+## 1. Introduction / Overview
+
+Split from PRD-023 on owner direction, 2026-07-27, after six independent readiness rounds
+scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold. The
+diagnosis recorded there was size: three unrelated engineering problems held together by a
+thesis rather than a shared surface, in a document where two live defects hid through five
+adversarial reviews. This PRD is the first of the three pieces and the one with no
+dependency on the others.
+
+**Three defects, one shape: each lint reads the wrong span of the document and reports a
+confident answer about the span it did not read.** All three were found by inspection
+during PRD-023's drafting and remediation rounds, and all three are measured:
+
+| # | Lint | Reads | Should read | Symptom |
+| - | ---- | ----- | ----------- | ------- |
+| a | §11 verification commands (`safety.ts::parseVerificationCommands`) | every backticked span on an `\| FR-N` row | the **Command** column only | a backticked word in Scope or Notes becomes a gate command — allowlisted, it silently joins the gate; non-allowlisted, it fails the lint for prose |
+| b | §9 Open Questions exemption (`prd-ready.ts::lintPrd`) | `/\(none\b\|deferred/i` anywhere in the bullet | an actual deferral target | a genuine unresolved question is invisible whenever it merely *mentions* the word |
+| c | §9 Open Questions selection (`prd-ready.ts:149-153`) | lines matching `^\s*-\s+\S` | the section's whole claim | a section written as prose paragraphs reports **zero unresolved items whatever it contains** |
+
+Defect (b) was measured on PRD-023's own draft: it listed three questions and the lint
+reported two, because one named `verify-deferred`. Defect (c) was measured empirically by
+the iteration-5 reviewer, who injected a bold, unresolved `**Q5 open …**` paragraph into
+PRD-023 and watched `lintPrd` return `{ ok: true, issues: [] }`. Defect (a) is predicted
+in full by `_brain/learnings/notes-column-runs-commands.md`, whose interim guidance ends
+with "fix it in the parser".
+
+**Why these three belong together and nothing else does.** They share a failure mode, a
+fix discipline, and a blast radius. Each turns a silent pass into a failure, so each needs
+the same corpus pass over live PRDs before it lands. None touches the practices pack, the
+wiring audit, `init.ts`, CI, or the published CLI surface. That is the whole scope.
+
+---
+
+## 2. Goals
+
+### Primary Goals
+
+- [ ] Make each of the three lints read the span its claim is about.
+- [ ] Fix the grammar rather than teach the parser more Markdown, per
+      `narrow-the-grammar-not-the-parser`.
+- [ ] Land each fix with a corpus pass over live wip PRDs, run by a command that actually
+      executes the lint — not a bundle that never calls it.
+- [ ] Retire `notes-column-runs-commands`'s interim guidance in the same change that
+      removes its hazard, so the record does not outlive its fix.
+
+### Success Metrics
+
+| Metric | Current | Target | Measurement |
+| ------ | ------- | ------ | ----------- |
+| Lints reading a wrong span of the document | 3 | 0 | the FR fixtures |
+| Backticked tokens outside the Command column that reach the gate | every one on an FR row | 0 | FR-1 fixture |
+| Unresolved questions hidden by the word "deferred" | 1 measured (PRD-023 draft: 3 listed, 2 reported) | 0 | FR-2 fixture |
+| Unresolved questions hidden by paragraph form | unbounded — a paragraph §9 reports 0 whatever it holds | 0 | FR-3 fixture, seeded from the reviewer's injected-Q5 case |
+| Corpus commands that do not execute the rule they verify | 1 (`verify:workflow` for the readiness lint) | 0 | §11 rows name a command that calls `lintPrd` |
+
+---
+
+## 3. User Stories
+
+#### User Story 1
+
+```
+As an author running `gate check` on a PRD,
+I want the readiness lint to count the questions my §9 actually contains,
+so that a green verdict means the section is resolved rather than mis-read.
+```
+
+**Acceptance Criteria:**
+
+- [ ] An unresolved question fails the lint regardless of whether it is a bullet or a
+      paragraph, and regardless of whether its text happens to contain "deferred".
+- [ ] A legitimately deferred entry with a deferral target still passes.
+
+#### User Story 2
+
+```
+As an implementing agent whose PRD's §11 Notes column explains a command,
+I want prose in Notes to stay prose,
+so that the runner executes the commands I declared and nothing else.
+```
+
+**Acceptance Criteria:**
+
+- [ ] A backticked token in the Scope or Notes cell is neither executed nor linted as a
+      command.
+- [ ] Every backticked command in the Command column is still parsed exactly as today.
+
+#### User Story 3
+
+```
+As a maintainer landing a stricter lint,
+I want the corpus pass to run the lint I changed,
+so that "the corpus is green" is evidence rather than an assertion.
+```
+
+**Acceptance Criteria:**
+
+- [ ] The corpus command invokes `lintPrd` over every wip PRD and asserts per-file
+      outcomes.
+
+---
+
+## 4. Functional Requirements
+
+Each FR carries the exact target paths the implementing agent will touch. Use
+`path/to/file.ts::SymbolName` notation for symbol-level targets.
+
+1. **FR-1 — Scope §11 command extraction to the Command column.**
+   `parseVerificationCommands` iterates every backtick span on an `| FR-N` row, so a
+   backticked word in the Scope or Notes cell becomes a gate command. Extract from the
+   **second cell** only.
+
+   **Splitting the row on `|` is safe by contract, and the contract already exists.** The
+   PRD template forbids a pipe character inside a backticked command in this table, so the
+   constraint that makes the fix sound is one every conforming artifact already carries.
+   State it in the code, not only here: a row that does not split into at least three
+   cells is malformed and must be reported, never silently skipped —
+   `unparseable-command-must-fail-loudly`.
+
+   **The interim guidance retires in the same change.**
+   `_brain/learnings/notes-column-runs-commands.md` predicted this defect exactly and its
+   "how to apply" tells authors to keep backticks out of Notes. That workaround is
+   obsolete the moment the parser is scoped. Edit the record — do not delete it — so the
+   trap and its resolution stay discoverable together.
+   - **Targets:** `packages/provegate/src/core/gates/safety.ts::parseVerificationCommands`,
+     `_brain/learnings/notes-column-runs-commands.md`,
+     `packages/provegate/test/lint-parsers.test.ts` (new)
+2. **FR-2 — The Open Questions exemption needs a deferral target, not a substring.**
+   `lintPrd` filters `/\(none\b|deferred/i` over each bullet, so any bullet that mentions
+   the word is exempt. Require what the template already states — "every entry explicitly
+   deferred **with a link**" — so the exemption needs a deferral target: a Markdown link
+   or a `PRD-NNN` identifier.
+
+   **Do not fix this by deleting the `deferred` exemption.** The template promises a
+   deferral-with-a-link escape and removing it outright would break PRDs that legitimately
+   use it. The `(none` exemption is unchanged: it marks an empty section, not a deferred
+   entry.
+   - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
+     `packages/provegate/test/lint-parsers.test.ts`
+3. **FR-3 — The Open Questions section must be a bullet list, so prose cannot hide in it.**
+   The filter keeps only lines matching `^\s*-\s+\S`, so a §9 written as bold paragraphs —
+   PRD-023's was, and PRD-021's still is — reports zero unresolved items whatever it
+   contains. Per `narrow-the-grammar-not-the-parser`, restrict what the document may
+   contain rather than teaching the filter to read paragraphs: the section must be a
+   bullet list, and a section holding non-bullet prose other than a leading explanatory
+   line fails.
+
+   **The destination for resolved history is named here, because the obvious one is a
+   trap.** Authors moving resolved decisions out of §9 will reach for a heading like
+   "Resolved Open Questions". `lintPrd` selects the section by the regex
+   `.*Open Questions.*` over headings (`prd-ready.ts:149`), so that heading would be read
+   as the live section and rebuild the defect under a new name. PRD-023 already
+   demonstrates the working shape: a `## Decision Record` section, whose heading contains
+   none of the selector's words. Say so in the failure message, so an author hitting this
+   lint is told where the content goes.
+   - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
+     `packages/provegate/test/lint-parsers.test.ts`
+4. **FR-4 — A corpus pass that runs the lint it verifies.** All three fixes turn a silent
+   pass into a failure, so each needs a corpus pass over live artifacts before it lands.
+   PRD-023 named `pnpm verify:workflow` for this and that command never calls `lintPrd` —
+   the bundle executes only the scripts in its `CHECKS` array
+   (`scripts/verify/verify-workflow.mjs:15-24, 62-64`), so it would have reported green
+   over a corpus it never read. No corpus sweep flag exists for the readiness lint and
+   this PRD does not add one.
+
+   The runnable form is a package test: iterate every PRD under the **configured wip
+   directory**, call `lintPrd` with the real config and manifest, and assert the expected
+   outcome per file. Read the directory from config rather than hardcoding `_prds/wip`, so
+   the test follows a repository that renames it.
+
+   **Scope to wip deliberately.** Completed PRDs are historical artifacts and are never
+   rewritten to manufacture compliance. **Report, never edit:** a wip PRD that newly fails
+   is a finding for its author. PRD-021's §9 is known to be in the failing shape today and
+   is under its own readiness iteration — its author owns it, and this PRD does not touch
+   it. If it is still failing when this work reaches Phase 4, stop and hand back rather
+   than editing another PRD to make this one's corpus green.
+   - **Targets:** `packages/provegate/test/lint-parsers.test.ts`
+
+---
+
+## 5. Non-Goals (Out of Scope)
+
+- **Any other PRD's §9.** FR-4 reports; it never edits. PRD-021 is the known case.
+- **A `gate check --prds` corpus sweep flag.** PRD-026 adds sweep flags for the review and
+  durable-artifact sections; a readiness-lint sweep is a plausible follow-on and is not
+  needed to prove these three fixes.
+- **The wiring audit, the practices pack, `init.ts`, CI, or the manifest.** Those are
+  PRD-025 and PRD-026. This PRD's blast radius stops at two parser functions and one test
+  file.
+- **Rewriting completed PRDs to satisfy the stricter lints.** Historical artifacts stand.
+- **Teaching either parser more Markdown.** The fix for (c) is a grammar restriction. A
+  hand-rolled Markdown reader never reaches renderer parity, which is the whole point of
+  `narrow-the-grammar-not-the-parser`.
+
+---
+
+## 6. Acceptance Criteria (Gherkin Style)
+
+- **Given** an `| FR-N |` row whose Notes cell holds a backticked word, **When** the §11
+  parser runs, **Then** that word is not returned as a command — and **given** the same
+  row's Command cell, **Then** its command is returned exactly as today.
+- **Given** an `| FR-N |` row that does not split into at least three cells, **When** the
+  parser runs, **Then** it reports the row as malformed rather than skipping it.
+- **Given** an Open Questions bullet that is genuinely unresolved and happens to contain
+  the word "deferred", **When** the lint runs, **Then** it is counted as unresolved.
+- **Given** an Open Questions bullet explicitly deferred **with** a link or a `PRD-NNN`
+  identifier, **When** the lint runs, **Then** it is exempt.
+- **Given** an Open Questions section written as bold paragraphs containing an unresolved
+  question, **When** the lint runs, **Then** it fails — this is the reviewer's injected-Q5
+  case, which returns clean today.
+- **Given** an Open Questions section that is a bullet list holding `(none)`, **When** the
+  lint runs, **Then** it passes.
+- **Given** a section whose heading is "Resolved Open Questions", **When** the lint selects
+  the Open Questions section, **Then** the failure message names the trap — the selector
+  matches that heading, so it is not a valid destination for resolved history.
+- **Given** every PRD in the configured wip directory, **When** the corpus test runs,
+  **Then** each file's outcome matches its expectation, and a newly failing file is
+  reported by name rather than edited.
+
+---
+
+## 7. Technical Considerations
+
+### Architecture
+
+- **One shape, three instances.** Every defect here is a reader whose span is wider or
+  narrower than the claim it reports on. The fix in each case is to name the span: the
+  Command column, a deferral target, a bullet list. Nothing here needs new machinery.
+- **Grammar over parser.** (c) is the sharp case and the temptation is to teach the filter
+  to recognize bold paragraphs. That is the road to renderer parity. Restrict what §9 may
+  contain and say where the rest goes.
+- **Fail loudly on malformed input.** (a)'s cell split introduces a new way for a row to be
+  wrong. A parser that cannot classify a row must report it, never drop it —
+  `unparseable-command-must-fail-loudly`, and the reason `false-green-on-missing-file`
+  exists.
+
+### Dependencies
+
+- **None on PRD-025 or PRD-026.** This is the piece of PRD-023 with no ordering
+  constraint, which is why it is first.
+- **`prd-ready.ts` overlap, measured 2026-07-27:** PRD-021 claims it, and PRD-026 claims
+  `lintPrd` for its Durable Artifacts declaration lint. Re-run `gate queue` before
+  claiming — this PRD's own overlap list is not evidence, as three stale counts in the
+  PRD-023 wave demonstrated.
+- No new runtime dependencies; `packages/provegate` stays at zero.
+
+### Rollback
+
+Revert the two parser functions and delete the test file. The `notes-column-runs-commands`
+edit reverts with them — its interim guidance is only obsolete while the parser is scoped.
+No state, artifact, config, or published-surface migration exists: no flag, config key, or
+pack file changes, so an adopter sees only a lint that counts correctly.
+
+---
+
+## 8. Implementation Scope
+
+### In Scope
+
+- [ ] `packages/provegate/src/core/gates/safety.ts::parseVerificationCommands` — column scoping
+- [ ] `packages/provegate/src/core/gates/prd-ready.ts::lintPrd` — the two §9 fixes
+- [ ] `packages/provegate/test/lint-parsers.test.ts` (new) — fixtures + the wip corpus pass
+- [ ] `_brain/learnings/notes-column-runs-commands.md` — retire the interim guidance
+
+---
+
+## 9. Open Questions
+
+- (none) — the three defects are measured and their fixes are stated; nothing here awaits
+  an owner decision.
+
+<!-- BULLET LIST, deliberately: this PRD's FR-3 makes a paragraph-form section a lint
+failure, and a PRD proposing that rule must not be written in the shape it forbids. -->
+
+---
+
+## 10. References
+
+- `_brain/learnings/notes-column-runs-commands.md` — predicts FR-1 exactly; retired by it
+- `_brain/learnings/narrow-the-grammar-not-the-parser.md` — governs FR-3
+- `_brain/learnings/unparseable-command-must-fail-loudly.md` — governs FR-1's malformed-row
+  case
+- `_brain/learnings/false-green-on-missing-file.md` — the class all three defects belong to
+- PRD-023 §4 FR-7 and `_readiness/wip/readiness-023-gate-self-hosting.md` §9 finding R —
+  where these three were found and where the `verify:workflow` corpus-command defect was
+  measured
+
+---
+
+## Memory Inputs
+
+- applied: `narrow-the-grammar-not-the-parser` — FR-3 is this record's direct application:
+  the §9 reader is a hand-rolled Markdown scanner, so the fix restricts what the section
+  may contain instead of teaching it to read paragraphs.
+- applied: `notes-column-runs-commands` — FR-1 implements the fix this record's interim
+  guidance was standing in for, and retires that guidance in the same change.
+- applied: `unparseable-command-must-fail-loudly` — FR-1's cell split creates a new
+  malformed-row case, and the parser must report it rather than drop it.
+- applied: `false-green-on-missing-file` — all three defects are false greens produced by a
+  reader that answers about a span it did not read; the fixtures assert the failure, not
+  just the pass.
+- applied: `assert-absent-needs-an-independent-cause` — every "this token is NOT a command"
+  and "this section does NOT pass" assertion here needs a cause independent of the
+  scenario. Each deny fixture is paired with a positive control on the same input: the
+  Command column still yields its command, and a conforming §9 still passes.
+- reviewed: `fixture-must-reach-production-shape` — the fixtures call `lintPrd` and
+  `parseVerificationCommands` with the config and manifest `gate check` passes them, not
+  with hand-built arguments.
+
+---
+
+## Memory Outputs
+
+- learning: `_brain/learnings/lint-must-name-the-span-it-judges.md` — that a
+  section-scoped lint reporting a confident zero is the signature of a reader whose span is
+  narrower than its claim, and that three independent instances shipped in one codebase
+  before any was noticed.
+
+---
+
+## Conflict Surface
+
+Resource paths (globs) this PRD claims **exclusive write ownership** of. The lock
+lease mirrors these as `ownedPaths`; the path-conflict gate fails when two active
+execution-phase claims overlap. If nothing is claimed, write `- none`.
+
+> **Rule:** never declare shared append-only manifests here (lockfiles, package
+> manifests, agent entry docs) — they are excluded from overlap by
+> `workflow.config.json` `sharedAppendOnly`.
+
+- `packages/provegate/src/core/gates/safety.ts`
+- `packages/provegate/src/core/gates/prd-ready.ts`
+- `packages/provegate/test/lint-parsers.test.ts`
+- `_brain/learnings/notes-column-runs-commands.md`
+- `_brain/learnings/lint-must-name-the-span-it-judges.md`
+
+**Contested, measured with `gate queue` on 2026-07-27:**
+`packages/provegate/src/core/gates/prd-ready.ts` is claimed by PRD-021 and by PRD-026.
+Serialize; do not run this concurrently with either. Re-run `gate queue` before claiming
+rather than trusting this paragraph.
+
+---
+
+## Durable Artifacts
+
+Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none` path
+against the merge diff). Never leave empty — write `none` explicitly. Narrow scope:
+only **this PRD's** durable knowledge.
+
+- Review artifact: `_docs/reviews/review-024-readiness-lint-parsers.md`
+- Learning: `_brain/learnings/lint-must-name-the-span-it-judges.md` — the Memory Output
+  above, repeated here because the two lists are one contract
+- Learning: `_brain/learnings/notes-column-runs-commands.md` — FR-1 retires this record's
+  interim guidance; the record is edited, not deleted, so the trap and its resolution stay
+  discoverable together
+- Decision: `none` — no architectural decision is taken here; three readers are scoped to
+  the spans they already claimed to read
+
+---
+
+## 11. Verification Commands
+
+Commands the runner executes in **Phase 5**. **Every FR needs at least one table row
+with a runnable backticked command** (allowlisted prefix, no shell metacharacters,
+single line — and never a pipe character inside a backticked command in this table).
+`gate check` lints this section; `gate run` executes it and refuses unsafe rows.
+
+| FR   | Command / Check                                            | Scope | Notes |
+| ---- | ---------------------------------------------------------- | ----- | ----- |
+| FR-1 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | a Notes-cell backtick is not a command, the Command cell still is, and a row that does not split into three cells is reported rather than skipped |
+| FR-2 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | an unresolved question mentioning the word is counted; one deferred with a link or a work-item id is exempt |
+| FR-3 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | the injected paragraph-form question fails, a bullet list holding none passes, and the failure message names the heading trap |
+| FR-4 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | the corpus pass: every PRD in the configured wip directory run through the readiness lint, expected outcome asserted per file |
+| FR-4 | `pnpm --filter provegate test`                              | pkg   | the whole package suite stays green — no existing readiness fixture changed meaning |
+
+Cross-cutting floor (run before Code Complete):
+
+- `pnpm check-types` — zero errors
+- `pnpm lint` — zero warnings
+- `pnpm test` — added tests pass; existing tests unchanged
+- `pnpm build` — clean build
+- `pnpm verify:workflow` — the repo bundle stays green
+
+Hard caps (when your gates manifest configures them):
+
+- Deny test: `packages/provegate/test/lint-parsers.test.ts` — each of the three lints must
+  **fail** on its defect input. A fixture that only passes on good input is not evidence.
+- Contract test: n/a — no client→server payload ships.
+
+Before Phase 2 PASS, run: `gate check PRD-024`
+
+---
+
+## 12. DO NOT (Anti-Patterns)
+
+Explicit forbidden moves for this PRD. Catches drift the agent might otherwise
+rationalize.
+
+- DO NOT introduce `any`; use `unknown` + narrowing.
+- DO NOT touch paths outside the Conflict Surface without recording the decision.
+- DO NOT teach either parser to read paragraphs, bold runs, or nested structures. The fix
+  for FR-3 is a grammar restriction. A hand-rolled Markdown reader never reaches renderer
+  parity.
+- DO NOT delete the `deferred` exemption to fix FR-2. The template promises a
+  deferral-with-a-link escape; removing it breaks PRDs that legitimately use it.
+- DO NOT silently skip a §11 row that fails to split into cells. An unclassifiable row is
+  reported or the change is a new false green replacing an old one.
+- DO NOT edit another PRD to make FR-4's corpus pass green. A newly failing wip PRD is a
+  finding for its author; report it and stop. PRD-021 is the known case.
+- DO NOT extend FR-4 to completed PRDs. Historical artifacts are never rewritten to
+  manufacture compliance.
+- DO NOT name `pnpm verify:workflow` as the corpus command. That bundle runs its `CHECKS`
+  array and never calls `lintPrd`; PRD-023 made exactly this mistake and it survived five
+  independent review rounds.
+- DO NOT delete `notes-column-runs-commands.md` when its hazard is fixed. Edit it, so the
+  trap and its resolution stay discoverable together.
+- DO NOT write this PRD's own §9 as paragraphs. FR-3 makes that a failure and a PRD
+  proposing the rule must not be written in the shape it forbids.
+
+---
+
+## Changelog
+
+| Date       | Author | Changes       |
+| ---------- | ------ | ------------- |
+| 2026-07-27 | Claude Opus 5, on owner direction | **Split from PRD-023 (owner decision, 2026-07-27), carrying its FR-7 a/b/c plus the corpus-command defect iteration 6 found in it.** PRD-023 sat between 6.65 and 7.19 across four independent rounds without converging; the recorded diagnosis was size, and the evidence was two live defects hiding through five adversarial reviews. This is the piece with no dependency on the other two. Nothing is newly invented here: FR-1 is PRD-023 FR-7(a) with its malformed-row case named, FR-2 is FR-7(b), FR-3 is FR-7(c) with the heading trap moved into the failure message, and FR-4 replaces the `pnpm verify:workflow` corpus row that PRD-023 iteration 6 proved never calls `lintPrd`. Created with `gate new` |
