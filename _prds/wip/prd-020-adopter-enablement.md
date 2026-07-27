@@ -362,14 +362,22 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - applied: `notes-column-runs-commands` — this PRD writes §11-shaped tables into example
   READMEs and its own plan carries backticked commands. Named by the task plan's Memory
   Context but missing from this section until pre-flight 0.3; the two lists now agree.
+- applied: `evidence-pattern-satisfied-by-the-template` — written BY this PRD at Phase 7 and
+  applied back to it: the monorepo cookbook's hard cap now requires a runner prefix, and a
+  regression asserts the shipped template's placeholder does not satisfy it.
 - reviewed: `turbo-cache-masks-out-of-input-reads` — example fixtures are read by the
   package test task, so they are declared inputs or a cached green replays over them.
 
 ## Memory Outputs
 
-- none — adoption examples and their gates are fully derivable from the manifests and
-  tests this PRD ships. Append an exact learning path only if a brownfield adoption
-  surfaces a trap the examples cannot state.
+- learning: `_brain/learnings/evidence-pattern-satisfied-by-the-template.md` — a gate that
+  requires an evidence line can be satisfied by the placeholder in the artifact template
+  the same tool ships, so it passes on every generated artifact and fires only for an
+  author who deleted a reminder nobody told them to delete.
+
+Appended at Phase 7 under the escape hatch this section opened at Phase 1. It was surfaced
+by the adopter walk-through, not anticipated: the canonical hard-cap pattern this PRD was
+told to copy verbatim turned out to be inert against a `gate new` PRD.
 
 ---
 
@@ -380,8 +388,10 @@ against the merge diff). Never leave empty — write `none` explicitly. Narrow s
 only **this PRD's** durable knowledge.
 
 - Review artifact: `_docs/reviews/review-020-adopter-enablement.md`
-- Learning: `none` — expected to be a content PRD; add a `_brain/learnings/` record only
-  if the close surfaces a non-derivable trap (declare it here before Phase 4 if so).
+- Learning: `_brain/learnings/evidence-pattern-satisfied-by-the-template.md` — the close
+  did surface a non-derivable trap (the published hard-cap pattern is satisfied by the PRD
+  template's own placeholder), so the `none` above is replaced by the exact path. Every
+  Memory Output repeats here; the two lists are proved against the same merge diff.
 
 ---
 
