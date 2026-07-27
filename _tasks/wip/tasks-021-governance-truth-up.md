@@ -365,32 +365,36 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Re-read PRD §12 and confirm none of the DO NOTs was introduced. Give a named line to the four this implementation could plausibly violate: a literal header pattern, a `=== null` id guard, registering a removed token, and a weights-only config rejected.
 
 
-- [ ] 14.0 Phase 6 — independent adversarial audit
-  - [ ] 14.1 Independent review by a different model family; write
-        `_docs/reviews/review-021-governance-truth-up.md`.
-  - [ ] 14.2 **Brief it as a consistency sweep, not only a defect hunt.** Five readiness
-        rounds on this PRD each found one defect, and every one was created by the fix for
-        the round before — a rule corrected in its owning FR left the old rule stated
-        elsewhere. Ask for every rule to be checked across §7, §8, §12, Migration, the
-        Gherkin criteria and §11, not just inside the FR that owns it.
-  - [ ] 14.3 Point it at the two things the tests cannot self-check: that the generated
-        header pattern is genuinely built from config rather than a literal that happens to
-        match, and that each reject fixture fails for the reason it names.
-  - [ ] 14.4 Spec-vs-code audit: every FR target appears in the diff; every file in the
-        diff appears in the Conflict Surface.
-  - [ ] 14.5 `git add` the review artifact — an untracked durable artifact fails the close
-        gate (`durable-artifact-must-commit`).
+- [x] 14.0 Phase 6 — independent adversarial audit
+  - [x] 14.1 Two rounds by Codex, a different model family, read-only, scoped to the diff. Both returned **DO NOT CLOSE**; twelve findings between them, all remediated. `_docs/reviews/review-021-governance-truth-up.md` — verdict pass, Critical 0, High 0, Medium 0.
+        Original: Independent review by a different model family; write `_docs/reviews/review-021-governance-truth-up.md`.
 
-- [ ] 15.0 Phase 7 — durable learning and close preparation
-  - [ ] 15.1 Run the `_brain` capture protocol. The PRD declares Memory Outputs `none`;
-        append an exact path to **both** Memory Outputs and Durable Artifacts before
-        writing a record. The likely candidate is already visible from readiness: a rule
-        corrected in one section survives in the others, and the reviewer instruction that
-        finds it is "sweep for stale copies", not "find defects".
-  - [ ] 15.2 `pnpm verify:brain` and `pnpm verify:durable-artifacts`.
-  - [ ] 15.3 Update `STATUS.md` and `_state/prds.json`.
-  - [ ] 15.4 Leave the Operator Handoff acceptance row for the owner
-        (`operator-acceptance-no-self-accept`); the merge gate refuses until it exists.
+  - [x] 14.2 **Done, and it is the reason the round found what it found.** Ten findings, two of them "states it two ways" and one a production defect the whole suite had missed. A defect hunt would plausibly have found the third and none of the rest.
+        Original: **Brief it as a consistency sweep, not only a defect hunt.** Five readiness rounds on this PRD each found one defect, and every one was created by the fix for the round before — a rule corrected in its owning FR left the old rule stated elsewhere. Ask for every rule to be checked across §7, §8, §12, Migration, the Gherkin criteria and §11, not just inside the FR that owns it.
+
+  - [x] 14.3 Both covered: the pattern is generated from `config.valueScoring.axes` (a three-axis config scores its own header while the default calls it malformed), and every reject fixture asserts `not.toMatch(/recompute/)` so a malformed case cannot pass as an arithmetic failure.
+        Original: Point it at the two things the tests cannot self-check: that the generated header pattern is genuinely built from config rather than a literal that happens to match, and that each reject fixture fails for the reason it names.
+
+  - [x] 14.4 **The audit found a fourteenth finding.** Every FR target is in the diff except three, each resolved: `STATUS.md` carried a fourth stale claim — the deferral cap "gate-enforced in wave 2" — while `verify:deferred` runs, and **the practices template already said it correctly**; the two practices files FR-10 names were opened and were already right for an adopter, so the ledger was reconciled rather than the divergence propagated. Every file in the diff is claimed.
+        Original: Spec-vs-code audit: every FR target appears in the diff; every file in the diff appears in the Conflict Surface.
+
+  - [x] 14.5 Committed with the close-out; `verify:review-artifact` PASS across 21 artifacts.
+        Original: `git add` the review artifact — an untracked durable artifact fails the close gate (`durable-artifact-must-commit`).
+
+
+- [x] 15.0 Phase 7 — durable learning and close preparation
+  - [x] 15.1 Two records: `docs-outlive-the-gate-they-promise` (declared at Phase 1 with an instruction to write it only if the close confirmed the pattern — it did, and sharpened the direction) and `a-rule-corrected-survives-where-it-is-restated` (from the readiness history's own shape). Both declared in Memory Outputs **and** Durable Artifacts; the PRD had them disagreeing, which is this item's characteristic defect inside the item that names it.
+        Original: Run the `_brain` capture protocol. The PRD declares Memory Outputs `none`; append an exact path to **both** Memory Outputs and Durable Artifacts before writing a record. The likely candidate is already visible from readiness: a rule corrected in one section survives in the others, and the reviewer instruction that finds it is "sweep for stale copies", not "find defects".
+
+  - [x] 15.2 `pnpm verify:brain` PASS, `pnpm verify:durable-artifacts` PASS.
+        Original: `pnpm verify:brain` and `pnpm verify:durable-artifacts`.
+
+  - [x] 15.3 `STATUS.md` updated with the dated entry and the shipped line; `_state/prds.json` rebuilt.
+        Original: Update `STATUS.md` and `_state/prds.json`.
+
+  - [x] 15.4 Left for the owner. Two rows pending in Operator Handoff — the 12.5 control-artifact acceptance and the 15.4 close acceptance. The agent signs neither.
+        Original: Leave the Operator Handoff acceptance row for the owner (`operator-acceptance-no-self-accept`); the merge gate refuses until it exists.
+
 
 ---
 ## Verification Ledger
@@ -422,7 +426,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | build | `pnpm build` | root | passed | `pnpm build` — clean | clean; must precede the built-CLI rows |
 | gate-check | `node packages/provegate/dist/cli.js check PRD-021` | repo | passed | `[check] ok — PRD-021 passes the readiness lint` | readiness lint |
 | gate-wiring | `node packages/provegate/dist/cli.js check --wiring` | repo | passed | `[check --wiring] ok — every gate is wired or excepted` | wire-or-delete |
-| independent-review | `_docs/reviews/review-021-governance-truth-up.md`                 | repo  | pending |          | verdict pass, Critical: 0 |
+| independent-review | `_docs/reviews/review-021-governance-truth-up.md` | repo | passed | Codex, 2 rounds: DO NOT CLOSE ×2 → 12 findings, plus 2 found by the implementer's own checks. All 14 remediated. Verdict pass, Critical 0, High 0, Medium 0 | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
