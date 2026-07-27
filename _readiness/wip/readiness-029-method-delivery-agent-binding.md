@@ -1,5 +1,50 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 5 (Codex via an independent Claude session that wrote its own brief) — 4.53/10,
+> ITERATE. The lowest score of the five, and the round found the thing four rounds of aimed
+> briefs could not: the scoring protocol has been prescribing the remedy since round one and
+> nobody read the table.** `prompts/phase-2-readiness-scorer.md` §Score Interpretation gives
+> **4–5.9 → "Major rework needed. Return to Phase 1."** and 6–7.9 → "iterate and re-score".
+> The five scores are 4.48, 5.73, 5.90, 5.63, 4.53. **Every one is in the 4–5.9 band; not one
+> has ever been in 6–7.9.** Five rounds applied the wrong band's action. The flat trajectory
+> was never noise about the document — it was the process running the wrong instruction.
+>
+> This round was commissioned differently on purpose: a separate session chose its own angles,
+> because four rounds of increasingly targeted briefs were written by the session that also
+> authored every remediation between them. It aimed at the *adopter lifecycle traced
+> mechanically*, at stale copies of the **newest** fix rather than the old counts, and at
+> codebase claims no round had touched — and it deliberately did not re-check the token
+> registry, the file inventory or the loader ordering, which it confirmed are settled.
+>
+> **Six findings are the mechanism, and together they say the tool installs once and can never
+> be run again against the same repository.** The upgrade path does not terminate: after an
+> upgrade every rendered file differs, so deleting one and re-running `init` fails preflight on
+> the rest, and selective application is impossible. An excepted edit **permanently blocks
+> `init`**, because nothing tells `init` an exception exists and PRD-029 forbids itself an
+> exceptions store. The **receipt's own participation in preflight is unspecified and both
+> readings break** — as a destination it blocks `init` forever, as a non-destination `init`
+> overwrites an existing file, and PRD-030 already picks the second horn in writing. **An
+> existing repository can never be activated**, because `init` never edits an existing config,
+> which also breaks PRD-032's prescribed method for deriving its own value set. And
+> **presence-based activation does not survive the loader**: `mergeConfig` deep-merges defaults,
+> so once `prompts` has defaults `merged.prompts` is always present and the `unconfigured`
+> state is unreachable — the mechanism this codebase **deliberately rejected for `memory`**,
+> with the rationale written at `defaults.ts:95-101` and never mentioned in the PRD.
+>
+> **PRD-030 carries nine live restatements of the design iteration 4 removed**, including the
+> exact FR-1-versus-FR-5 contradiction iteration 3 blocked on, surviving two remediations that
+> each claimed to close it — and a §11 verification row asserting the opposite of the FR it
+> verifies. The successors are where the mechanism now lives and they have never been scored.
+>
+> Verified and closed, recorded so a later round does not re-spend on them: FR-2's corpus
+> measurement is exact, FR-5's 16/7/9 arithmetic is exact, the loader ordering is correct, the
+> containment reference is real, `{{!NAME}}` is now reachable, the five-versus-six state defect
+> is closed, both control files are excluded from the orphan rule, and the method-content cap
+> is **not** tripped — the registry is an extraction artifact absent from the snapshot, so the
+> new columns are not snapshot-traceable content. Lint green on all four by direct `lintPrd`.
+>
+> <details><summary>Iteration 4 (5.63 ITERATE)</summary>
+>
 > **Iteration 4 (Codex, independent) — 5.63/10, ITERATE. The first decline, and the round
 > answered the question the brief was built around: the structural blocker did not lift.
 > Ownership returned as hash-qualified membership.** The counterexample is concrete and rated
@@ -42,6 +87,8 @@
 > wording round is not the right instrument.** Pause readiness; make an owner decision on what
 > grants overwrite authority; write that model independently of these four documents; re-enter
 > readiness afterwards.
+>
+> </details>
 >
 > <details><summary>Iteration 3 (5.90 ITERATE)</summary>
 >
@@ -109,12 +156,12 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 5.63/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — **not implementable; the structural blocker did not lift.** Ownership returned as hash-qualified membership: receipt path membership supplies overwrite capability and hash equality exercises it, which is what FR-8 forbids. `sync` cannot truthfully rewrite the receipt while preserving divergences. **The reviewer's instruction is to pause readiness** and make an owner decision on what grants overwrite authority, written independently of these four documents |
-| Iteration              | 4                                                                                                                                                                                                                                                                                                        |
+| Score                  | 4.53/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — **and the protocol's own band table prescribes the remedy: 4–5.9 is "Major rework needed. Return to Phase 1."** All five scores are in that band; none has reached 6–7.9, whose action is the iterate-and-re-score this item has received five times. Six findings are mechanism: the upgrade path does not terminate, an excepted edit permanently blocks `init`, the receipt's preflight status breaks either way, an existing repository cannot be activated, and presence-based activation is erased by the config loader |
+| Iteration              | 5                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
-| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD**                                                                                                                                                                                                  |
+| Scored by              | **Codex (gpt-5.x), commissioned by a separate Claude session that wrote its own brief — independent in model family AND in framing; neither authored the PRD**                                                                                                                                                                                                  |
 | Self-scored            | **no**                                                                                                                                                                                                                                                                                                   |
 | Date                   | 2026-07-27                                                                                                                                                                                                                                                                                               |
 | PRD Lint               | passed — `lintPrd` green by direct invocation with the real config, manifest, content and root: `{ ok: true, issues: [] }`. The CLI wrapper was not used: `findRecord` writes `_state/prds.json`, which the read-only sandbox refused with `EPERM`. The reviewer stated this rather than implying a run     |
@@ -237,7 +284,29 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 4** (the current score). Earlier rows are kept below it.
+**Iteration 5** (the current score). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                                              |
+| --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 5.5/10      | Lint-green and well-targeted, but §6 and §11 specify a build boundary FR-6 itself disproves; adapter destinations unstated |
+| 2         | Completeness             | 20%    | 3.5/10      | No activation surviving the loader, no path from an existing config, no terminating upgrade, no init/exception interaction |
+| 3         | Technical Depth          | 20%    | 5.0/10      | Purity, token grammar and dispositions are strong and exactly measured; the no-overwrite decision was never traced through |
+| 4         | Multi-Tenancy & Security | 10%    | 7.5/10      | No tenant surface; containment reuses the real prefix-resolving behaviour; symlink refused; the deny test is real         |
+| 5         | Scope & Testability      | 15%    | 5.0/10      | Ten FRs is right; FR-6's row verifies a boundary that does not exist and three successor rows cannot discriminate         |
+| 6         | Migration & Rollback     | 20%    | 2.5/10      | The dimension `infra` inflates for exactly this: upgrade does not terminate, rename bricks `init`, 031→032 leaves an orphan |
+| **Total** | **Weighted**             |        | **4.53/10** | **ITERATE — band action: return to Phase 1**                                                                            |
+
+Arithmetic re-derived here: `5.5×.15 + 3.5×.20 + 5.0×.20 + 7.5×.10 + 5.0×.15 + 2.5×.20 = 4.525`.
+Codex independently scored 4.33 — same band, same verdict.
+
+Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four PRDs.
+Method content checked against the snapshot: `PLACEHOLDERS.md` is absent from
+`source-snapshot/prompts/` and unmentioned in its `MANIFEST.md`, so the registry is an
+extraction artifact and its new columns are not snapshot-traceable content.
+
+<details><summary>Iteration 4 scorecard (5.63)</summary>
+
+**Iteration 4.**
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                                          |
 | --------- | ------------------------ | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -252,6 +321,8 @@ Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md`
 Arithmetic re-derived here: `7.0×.15 + 5.5×.20 + 5.0×.20 + 7.0×.10 + 6.5×.15 + 4.0×.20 = 5.625`.
 
 Hard caps checked: **none tripped.** Lint passed by direct `lintPrd` invocation.
+
+</details>
 
 <details><summary>Iteration 3 scorecard (5.90)</summary>
 
@@ -499,13 +570,59 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 4   | 2026-07-27 | 5.63  | ITERATE | **The first decline, and the round answered the question the brief was built around: the structural blocker did not lift.** Ownership returned as **hash-qualified membership**, with a `routine` counterexample: a user writes `.claude/commands/prd-3.md` themselves, byte-identical to version 1's render, because they want it pinned; `init` no-ops and records the path; after an upgrade `sync` sees bytes matching the receipt hash and overwrites. The tool never wrote that file — and an identical file **absent** from the receipt would not be eligible, so path membership supplies the capability and hash equality only exercises it. That is exactly what FR-8 says no command may do, and the "I can reproduce these bytes so nothing is lost" argument fails three ways: the current package reproduces the *new* bytes, the receipt holds a hash rather than the old content, and equality proves no change since a baseline, never consent. Three more structural, all `routine`: **`sync` cannot truthfully rewrite the receipt** — it leaves excepted and diverged files alone and then writes the whole receipt from the new plan, so the file records a hash the path does not hold, and an implementer must choose whether the receipt means "these bytes were present" or "these are expected bytes"; **`retired` still has no durable home**, reported once and erased by the next receipt write, invisible thereafter outside `prompts.dir` and reclassified as a *failing* tree orphan inside it; and **the two-file model has no complete invariant**, since `prompts-exceptions.json` lives under `prompts.dir`, is neither a plan path nor a receipt entry, and is a tree orphan unless excluded. Four self-contradictions from this round's own remediation, each verified here: **`{{!NAME}}` is not a token candidate under the rule written five lines above it** (`!` is not uppercase), so the escape is unreachable by its own grammar; **fragment terminality "at build time" is unwired** because the package `build` script is only `tsup`, in a document that declares `gate-wire-or-delete` applied; PRD-030 says "a sixth classification" at line 170 and "the five per-path states" at line 458; PRD-032 still says the render refuses on a sentinel after the switch to `null`. Two policy gaps rated `plausible`: an empty-string value resolves a required token and deletes it from the output, and an unknown key in `values` has no defined meaning. And the memory test the brief set: **`a-record-declared-is-not-a-record-applied` was declared as a Memory Output by this revision and was not applied to it**, on four pieces of evidence — declaring the learning reproduced the failure it describes, the fourth consecutive instance and now self-referential. W19 open; W18, W20, W21, W22 partially closed; W23 and W24 partially, with the surviving items named |
 
+| 5   | 2026-07-27 | 4.53  | ITERATE | **Commissioned differently on purpose — a separate session chose its own brief — and it found what four aimed rounds could not: the protocol has been prescribing the remedy all along.** `phase-2-readiness-scorer.md` §Score Interpretation maps **4–5.9 to "Major rework needed. Return to Phase 1"** and 6–7.9 to "iterate and re-score". The five scores are 4.48, 5.73, 5.90, 5.63, 4.53 — **every one in the 4–5.9 band, none ever in 6–7.9** — so five rounds ran the wrong band's action. The flat trajectory was the process, not the document. **Six findings are mechanism.** The upgrade path does not terminate: after an upgrade every rendered file differs, so deleting one and re-running `init` fails preflight on the rest and selective application is impossible — the two documents were written the same sitting and do not compose. An excepted edit **permanently blocks `init`**, because nothing tells `init` an exception exists and PRD-029 forbids itself an exceptions store. The **receipt's own preflight status is unwritten and both readings break**: as a destination it blocks `init` forever, as a non-destination `init` overwrites an existing file, and PRD-030 already picks the second horn in writing. **An existing repository can never be activated** — `init` never edits an existing config — which also breaks PRD-032's prescribed method for deriving its own value set. **Presence-based activation does not survive the loader**: `mergeConfig` deep-merges defaults, so `merged.prompts` is always present and `unconfigured` is unreachable; this repository rejected exactly that mechanism for `memory` and wrote the rationale at `defaults.ts:95-101`, which the PRD never mentions. And the "fails at build time" claim FR-6 itself disproves survives in five other places, two of them §6 and §11 — the executable sections. **PRD-030 carries nine live restatements of the removed design**, including the FR-1-versus-FR-5 contradiction iteration 3 blocked on, alive through two remediations that each claimed to close it, plus a §11 row asserting the opposite of the FR it verifies. Cross-item: PRD-031 and PRD-032 both claim `AGENT_BOOTSTRAP.md` with compatible prerequisites, and PRD-031 landing after PRD-032 leaves this repository's store un-regenerable by any owner. The reviewer **rejected one Codex finding and downgraded two** with evidence, and recorded eight verified-and-closed items so a later round does not re-spend on them |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 5.63/10, iteration 4, scored independently by Codex. The first decline in the
+**ITERATE — 4.53/10, iteration 5. The lowest of the five, and the only round that examined the
+process rather than the document.**
+
+**The protocol answered this four rounds ago and nobody read the table.**
+`prompts/phase-2-readiness-scorer.md` §Score Interpretation:
+
+| Score | Verdict | Action |
+| --- | --- | --- |
+| 6–7.9 | Good start | Iterate on identified gaps, re-score after improvements. |
+| **4–5.9** | **Significant gaps** | **Major rework needed. Return to Phase 1.** |
+
+4.48, 5.73, 5.90, 5.63, 4.53. **Every score is in the 4–5.9 band. Not one has ever reached
+6–7.9.** Five rounds applied the 6–7.9 action to a document that has never been there. The
+trajectory was never noise about the document; it was the process executing the wrong
+instruction, in the repository whose method that instruction is.
+
+**The document is not implementable, and the remaining problem is design.** An agent building
+PRD-029 and PRD-030 as written produces a tool that installs correctly once and can never be
+run again against the same repository: the upgrade path refuses, the exception path refuses,
+the receipt refuses itself, and the activation predicate is erased by the loader before any
+command sees it. None of that is reachable by rewording, because the answers are not elsewhere
+in the documents.
+
+The iteration-4 decision is sound and was not re-litigated. The failure is in how it was
+applied: **the overwrite was subtracted from every verb and nothing was put in its place.**
+Iteration 3 blocked because one file was doing four jobs; iteration 4 removed the jobs; what is
+missing now is the state machine those jobs were badly approximating.
+
+**The next step is Phase 1, and its first artifact is one owner-authored page** — outside all
+four PRDs — answering a single question: *under a no-overwrite rule, what is the complete set
+of state transitions for a generated store, and which actor performs each?* It must cover
+concretely: install into a repository that already has a config; upgrade; upgrade with one
+excepted file; add and remove an adapter; rename `prompts.dir`; and the receipt's own second
+write. Every one is currently undefined or defined into a dead end. Then: decide activation
+against the codebase rather than the prose (`prompts.enabled`, the shape `memory` already
+uses); fix the landing order so PRD-031 precedes PRD-032 or owns the regeneration; rewrite all
+four documents against that model **in one sitting**; and only then re-enter readiness.
+
+Two process facts belong in the record. **Scoring one document while its three successors are
+edited in parallel is why contradictions keep migrating into the ones nobody is scoring** —
+three consecutive rounds now, and PRD-030 is where the mechanism actually lives. And this
+round is the first evidence that *who writes the brief* changes what is found: four aimed
+briefs, all written by the session that also wrote every remediation, never examined the band
+table, the loader's activation semantics, or whether the named verification commands can
+discriminate. An unaimed session found all three in one pass. The first decline in the
 sequence, and the most useful round of the four.**
 
 The brief asked one question directly: did the structural blocker lift, or did ownership
