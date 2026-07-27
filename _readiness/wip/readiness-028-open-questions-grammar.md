@@ -1,5 +1,18 @@
 # Readiness Assessment: PRD-028 — Open Questions Grammar
 
+> **Iteration 2 (Codex, independent) — 6.55/10, ITERATE — and a HARD CAP is tripped.** The
+> score rose 0.37 and that is not the headline. **A sixth hiding place exists**, and it is in
+> the form the PRD adopted specifically because it was supposed to have none:
+> `Deferred to [PRD-123](_prds/wip/prd-123-who-owns-authorization.md)` satisfies every stated
+> predicate while the basename **suffix** is author-controlled free text and the target need
+> not exist. Because nothing proves the link points at a follow-up PRD, the rule does **not**
+> implement the snapshot line it claims to restore — which trips the **method-content
+> traceability cap**. That is a REJECT-class signal independent of the score, and the
+> Method-Fidelity 5 that lifted this item over the value threshold rests on the same
+> disproved premise: at MF 4 the total is 3.30, below 3.40 again.
+>
+> <details><summary>Iteration 1 (6.18 ITERATE)</summary>
+>
 > **Iteration 1 (Codex, independent) — 6.18/10, ITERATE.** Seven [P1]s, and the first one
 > falsifies the PRD's central thesis: **"the exempt form carries no free text" is false of
 > the form the PRD chose.** `Deferred: [Who owns authorization?](background.md)` is an exact
@@ -12,14 +25,16 @@
 > `---` separator, which the grammar forbids — so under the literal rule **every** §9 in the
 > repository fails, including this PRD's own.
 
+> </details>
+
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-028-open-questions-grammar.md`   |
-| Score                  | 6.18/10                                        |
-| Verdict                | ITERATE — seven [P1] items. The exemption approach is falsified by a fifth hiding place, the prescribed reader cannot enforce the stated grammar, and the declared Value of 3.50 actually computes to 3.30, below the 3.40 candidate threshold |
-| Iteration              | 1                                              |
+| Score                  | 6.55/10                                        |
+| Verdict                | ITERATE — six [P1] items, and the **method-content traceability hard cap is tripped**: the adopted form does not prove its link points at a follow-up PRD, so it does not implement the snapshot rule it claims to restore. Sixth hiding place in six attempts |
+| Iteration              | 2                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD** |
@@ -153,6 +168,7 @@ independently of the score.**
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 2   | 2026-07-27 | 6.55  | ITERATE | **Score up 0.37; a hard cap tripped, which matters more.** **(A, OPEN — the sixth hiding place)** the free text moved from the link *label* into the link *target*: `Deferred to [PRD-123](_prds/wip/prd-123-who-owns-authorization.md)` satisfies every predicate the PRD states, because only the basename **prefix** is constrained and the suffix is author-controlled — and since existence is deliberately unchecked, nothing proves PRD-123 is a real follow-up. The target is also never constrained to the configured artifact directory, so `docs/prd-123-who-owns-authorization.md` passes too. The rule therefore does **not** implement `source-snapshot/.../phase-2-readiness-scorer.md:210`, and the **method-content traceability cap is tripped**. **(G, PARTIALLY CLOSED)** the 3.55 arithmetic is exact and the weights match config, but the Method-Fidelity 5 was justified by "this exactly restores the snapshot", which finding A disproves; at MF 4 the total is 3.30, below the 3.40 candidate threshold — the item fails triage on the same premise it fails the cap on. **(C, OPEN)** the history says five while the Gherkin enumerates six distinct cases and labels continuation and comment both "3"; the prior rounds record them separately. **(B, PARTIALLY CLOSED)** line-kind validation is feasible but **not through `sectionsMatching`**, which blanks non-text lines; the workable route is `scanDocument` plus the exported `sectionBounds` — and **comments are not a `LineKind` at all**, they are emitted as `text` carrying a mask (`scan.ts:382, 412`), so the rule as written cannot be followed literally. **(new)** the corpus fixture specifies a four-argument call, but production now passes **five** — `cli.ts:721` adds the PRD number, and omitting it disables value-score presence enforcement (`value-score.ts:176, 197`), so the fixture still would not reach production shape. **(D, PARTIALLY CLOSED)** the Phase-3 table is specified as both a prerequisite list and a lasting test oracle; expecting named files to stay red **is** the allowlist the PRD forbids. **(F, PARTIALLY CLOSED)** `_prds/**` does not cover the config, the manifest, or the live memory store the lint reads. **(E, CLOSED)**. Confirmed: the snapshot line reads exactly as quoted, the shipped lint is still the permissive substring check, the arithmetic is exact, and the rollback asymmetry is sound. |
 | 1   | 2026-07-27 | 6.18  | ITERATE | **First independent round on the split-out §9 PRD, and it falsifies the PRD's central thesis in one finding.** "The exempt form carries no free text" is false of the form the PRD chose: `Deferred: [Who owns authorization?](background.md)` is exact and carries the question in the link label — the **fifth** hiding place, arriving in the round immediately after the PRD declared that a fifth would be evidence the approach is wrong. **(B)** the prescribed reader fails in both directions: `sectionsMatching` blanks fenced and raw-HTML lines to `''`, which the grammar calls "blank", and retains the terminal `---`, which the grammar forbids — so literally every §9 in the repository fails, including this PRD's own, verified by direct invocation. **(C)** the four-round history was transferred unfaithfully: the substring defect predates the rounds, the continuation case is missing, and the count is four in FR-1, five in §11 and "four" in the Gherkin for five cases. **(D)** the corpus table is wrong about this wave's own work — seven PRDs, six failing, and **PRD-024 is listed as conforming while carrying a same-line tail** its narrowing reintroduced. **(E)** `prd-ready.test.ts` is dangling again, and it also lints completed PRD-002, whose exemption has a tail. **(F)** the conditional `turbo.json` branch is unscoped. **(G)** the declared Value of 3.50 computes to **3.30** — the PRD's own comment says so — which is below the 3.40 candidate threshold, so as scoped this is not a valid candidate and falls under expand-don't-delete. Confirmed sound: both diagnoses, the heading-identity and cardinality rules, the FR-block/§11 split boundary, the four-argument call shape, and the rollback asymmetry. |
 
 ---

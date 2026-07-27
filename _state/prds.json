@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T11:35:03.571Z",
+  "generatedAt": "2026-07-27T11:48:05.926Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.8,
+        "score": 7.34,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -1022,7 +1022,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.18,
+        "score": 6.55,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
