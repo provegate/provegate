@@ -331,35 +331,39 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: **One semantic assertion over one entry** (W9): read `.changeset/*.md`, parse each entry's YAML front-matter, and assert that **some single entry** both declares `provegate` at `minor` and carries the compatibility instruction. Tolerate `'provegate'`, `"provegate"` and bare. The failure names which half was found. `pnpm changeset status` is **not** evidence — it exits 0 with no changesets at all.
 
 
-- [ ] 12.0 Migration & Rollback (infra parent — 20% of the readiness weight)
-  - [ ] 12.1 State the two migrations separately, because they are different: **on the
-        stock config, none** (presence-triggered, so upgrading cannot fail a passing PRD);
-        **once `axes` is edited, a corpus rewrite** — a header whose axis list disagrees
-        fails, so changing axes reds every scored PRD at once, and removing an axis does
-        the same to every header naming it.
-  - [ ] 12.2 The procedure for the second: sweep with `gate check --value-score`, then land
-        the axis change and the header rewrites **in one commit**.
-  - [ ] 12.3 Rollout order: release the CLI carrying `valueScoring` → adopters upgrade →
-        only then may they add the key. The reverse hard-fails on the unknown key.
-  - [ ] 12.4 Rollback: delete the doc-claims script and the `--value-score` branch, drop
-        both `package.json` entries and the CI steps, remove the `valueScoring` key, and
-        remove FR-2's `lintPrd` call plus the **optional fifth** `prdNumber` argument —
-        fifth, after the existing optional `root`. `value-score.ts` may stay once the call
-        is gone.
-  - [ ] 12.5 Enumerate who a live `workflow.config.json` edit can refuse, from
-        `_state/locks` at merge time, and list them in **Operator Handoff**.
+- [x] 12.0 Migration & Rollback (infra parent — 20% of the readiness weight)
+  - [x] 12.1 Both stated separately in the changeset and in the practices template: on the stock config, none — presence-triggered, so the upgrade cannot fail a passing item. Once `axes` is edited, a corpus rewrite, in both the add and the remove direction.
+        Original: State the two migrations separately, because they are different: **on the stock config, none** (presence-triggered, so upgrading cannot fail a passing PRD); **once `axes` is edited, a corpus rewrite** — a header whose axis list disagrees fails, so changing axes reds every scored PRD at once, and removing an axis does the same to every header naming it.
 
-- [ ] 13.0 Phase 5 — execute verification
-  - [ ] 13.1 `pnpm build` first — three §11 rows drive the built CLI.
-  - [ ] 13.2 Run every §11 row exactly as written and fill the Verification Ledger with
-        evidence. A row marked `passed` with no evidence is a `pending` row that lies.
-  - [ ] 13.3 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
-        `pnpm build`, `pnpm verify:workflow`.
-  - [ ] 13.4 `node packages/provegate/dist/cli.js check PRD-021` and `check --wiring`.
-  - [ ] 13.5 Re-read PRD §12 and confirm none of the DO NOTs was introduced. Give a named
-        line to the four this implementation could plausibly violate: a literal header
-        pattern, a `=== null` id guard, registering a removed token, and a weights-only
-        config rejected.
+  - [x] 12.2 Stated with the command that produces the list: sweep with `gate check --value-score`, then land the axis change and the header rewrites in one commit.
+        Original: The procedure for the second: sweep with `gate check --value-score`, then land the axis change and the header rewrites **in one commit**.
+
+  - [x] 12.3 In the changeset, both directions: upgrade the CLI before adding the key, remove the key before downgrading. Asserted by `changeset-entry.test.ts`.
+        Original: Rollout order: release the CLI carrying `valueScoring` → adopters upgrade → only then may they add the key. The reverse hard-fails on the unknown key.
+
+  - [x] 12.4 Rollback names the optional FIFTH `prdNumber` argument, after the existing optional `root`. `value-score.ts` may stay once the call is gone.
+        Original: Rollback: delete the doc-claims script and the `--value-score` branch, drop both `package.json` entries and the CI steps, remove the `valueScoring` key, and remove FR-2's `lintPrd` call plus the **optional fifth** `prdNumber` argument — fifth, after the existing optional `root`. `value-score.ts` may stay once the call is gone.
+
+  - [x] 12.5 `_state/locks` at Phase 4 close: **PRD-021's own lease only**. This worktree is itself the live instance — editing `workflow.config.json` moved the control-artifact base, so PRD-022's revalidation will refuse `gate run`/`gate land` here until the edit is committed and base advances. Listed in Operator Handoff; re-check at merge time because the measurement goes stale.
+        Original: Enumerate who a live `workflow.config.json` edit can refuse, from `_state/locks` at merge time, and list them in **Operator Handoff**.
+
+
+- [x] 13.0 Phase 5 — execute verification
+  - [x] 13.1 `pnpm build` run before every built-CLI row and after every mutation.
+        Original: `pnpm build` first — three §11 rows drive the built CLI.
+
+  - [x] 13.2 All 19 §11 rows run as written; the ledger carries per-file counts.
+        Original: Run every §11 row exactly as written and fill the Verification Ledger with evidence. A row marked `passed` with no evidence is a `pending` row that lies.
+
+  - [x] 13.3 `pnpm check-types` 0, `pnpm lint` 0, `pnpm test` 49 files / **1022 passed**, `pnpm build` clean, `pnpm verify:workflow` PASS.
+        Original: Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm verify:workflow`.
+
+  - [x] 13.4 `check PRD-021` ok, `check --wiring` ok, and `check --value-score` ok — 11 scored, 0 without a header, 15 skipped.
+        Original: `node packages/provegate/dist/cli.js check PRD-021` and `check --wiring`.
+
+  - [x] 13.5 Re-read §12. The four plausible ones, each with a line: the header pattern is generated from `config.valueScoring.axes` in `headerPattern()` and never a literal (a test scores a three-axis config); the id guard is `prdNumber === undefined || prdNumber === null`, not `=== null`; `{{VALUE_AXES_TABLE}}` was removed and **not** registered; a weights-only config resolves rather than being rejected.
+        Original: Re-read PRD §12 and confirm none of the DO NOTs was introduced. Give a named line to the four this implementation could plausibly violate: a literal header pattern, a `=== null` id guard, registering a removed token, and a weights-only config rejected.
+
 
 - [ ] 14.0 Phase 6 — independent adversarial audit
   - [ ] 14.1 Independent review by a different model family; write
@@ -393,31 +397,31 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 | Gate               | Command / Check                                                  | Scope | Result  | Evidence | Notes |
 | ------------------ | ---------------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | schema, defaults, resolution through loadConfig, lexical two-decimal, enforceFrom absent |
-| FR-2               | `pnpm --filter provegate test test/prd-ready.test.ts`             | pkg   | pending |          | wrong total fails; an absent id, in either spelling, still enforces the arithmetic |
-| FR-3               | `pnpm --filter provegate test test/value-score.test.ts`           | pkg   | pending |          | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
-| FR-4               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | resolved config deep-equals defaults except the cutoff |
-| FR-5               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | pre-existing worktree refused before merge, accepted after |
-| FR-6               | `pnpm --filter provegate test test/value-score.test.ts`           | pkg   | pending |          | the arithmetic and cutoff matrix, every negative mutation-checked |
-| FR-7               | `pnpm --filter provegate test test/doc-claims-script.test.ts`     | pkg   | pending |          | positive, negative, stale-allowlist |
-| FR-8               | `pnpm verify:gates-wired`                                         | repo  | pending |          | both wired; the CI-only one seen via step text |
-| FR-8               | `pnpm verify:workflow`                                            | repo  | pending |          | bundle runs doc-claims; value-score deliberately absent |
-| FR-8               | `pnpm verify:value-score`                                         | repo  | pending |          | the built CLI sweeps the live corpus green |
-| FR-9               | `pnpm verify:doc-claims`                                          | repo  | pending |          | zero stale wave-2 claims about wired scripts |
-| FR-9               | `pnpm --filter provegate test test/content-canon.test.ts`         | pkg   | pending |          | the triage table deep-equals the configured axes and weights |
-| FR-10              | `pnpm --filter provegate test test/content-placeholders.test.ts`  | pkg   | pending |          | the walk covers practices/templates; every token there registered |
-| FR-10              | `pnpm verify:pack-drift`                                          | repo  | pending |          | pack/live pairs reconciled, ledger updated |
-| FR-11              | `pnpm --filter provegate test test/content-canon.test.ts`         | pkg   | pending |          | banner, canonical link, roadmap phase marks |
-| FR-12              | `pnpm --filter provegate test test/changeset-entry.test.ts`       | repo  | pending |          | one entry declares minor AND carries the sentence; two half-entries fail |
-| FR-13              | `pnpm --filter provegate test test/markdown.test.ts`              | pkg   | pending |          | root-file claims parse; each rejection names token and reason |
-| FR-13              | `pnpm --filter provegate test test/conflicts.test.ts`             | pkg   | pending |          | enforcing path: an untracked root claim conflicts structurally |
-| FR-13              | `pnpm --filter provegate test test/state-query.test.ts`           | pkg   | pending |          | the queue advisory prints rejected tokens |
-| types              | `pnpm check-types`                                                | root  | pending |          | zero errors |
-| lint               | `pnpm lint`                                                       | root  | pending |          | zero warnings |
-| test               | `pnpm test`                                                       | root  | pending |          | full suite |
-| build              | `pnpm build`                                                      | root  | pending |          | clean; must precede the built-CLI rows |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-021`               | repo  | pending |          | readiness lint |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`              | repo  | pending |          | wire-or-delete |
+| FR-1 | `pnpm --filter provegate test test/config-value-scoring.test.ts` | pkg | passed | `config-value-scoring.test.ts` — 18 passed. Resolution through `loadConfig`, not a hand-built resolved object. Three mutations fail their own tests. | schema, defaults, resolution through loadConfig, lexical two-decimal, enforceFrom absent |
+| FR-2 | `pnpm --filter provegate test test/prd-ready.test.ts` | pkg | passed | `prd-ready.test.ts` — 33 passed, **unmodified**; the optional fifth parameter left all existing callers alone. | wrong total fails; an absent id, in either spelling, still enforces the arithmetic |
+| FR-3 | `pnpm --filter provegate test test/value-score.test.ts` | pkg | passed | `value-score.test.ts` — 26 passed, including the built-CLI sweep over a seeded corpus. | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
+| FR-4 | `pnpm --filter provegate test test/config-value-scoring.test.ts` | pkg | passed | `config-value-scoring.test.ts`; the live repo resolves with `enforceFrom: 17` and the sweep is green. | resolved config deep-equals defaults except the cutoff |
+| FR-5 | `pnpm --filter provegate test test/config-value-scoring.test.ts` | pkg | passed | `config-value-scoring.test.ts` — refused before the merge, accepted after, with the remedy performed. | pre-existing worktree refused before merge, accepted after |
+| FR-6 | `pnpm --filter provegate test test/value-score.test.ts` | pkg | passed | `value-score.test.ts` — the full matrix; four mutations fail their own cases; one tally assertion was rebuilt after surviving its mutation. | the arithmetic and cutoff matrix, every negative mutation-checked |
+| FR-7 | `pnpm --filter provegate test test/doc-claims-script.test.ts` | pkg | passed | `doc-claims-script.test.ts` — 11 passed, five mutations, five hits. | positive, negative, stale-allowlist |
+| FR-8 | `pnpm verify:gates-wired` | repo | passed | `pnpm verify:gates-wired` PASS (12 registered, 11 on disk — the CI-only check seen through step text). | both wired; the CI-only one seen via step text |
+| FR-8 | `pnpm verify:workflow` | repo | passed | `pnpm verify:gates-wired` PASS (12 registered, 11 on disk — the CI-only check seen through step text). | bundle runs doc-claims; value-score deliberately absent |
+| FR-8 | `pnpm verify:value-score` | repo | passed | `pnpm verify:gates-wired` PASS (12 registered, 11 on disk — the CI-only check seen through step text). | the built CLI sweeps the live corpus green |
+| FR-9 | `pnpm verify:doc-claims` | repo | passed | `pnpm verify:doc-claims` PASS — it found both stale claims on its first run and they are corrected. `content-canon.test.ts` 7 passed. | zero stale wave-2 claims about wired scripts |
+| FR-9 | `pnpm --filter provegate test test/content-canon.test.ts` | pkg | passed | `pnpm verify:doc-claims` PASS — it found both stale claims on its first run and they are corrected. `content-canon.test.ts` 7 passed. | the triage table deep-equals the configured axes and weights |
+| FR-10 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg | passed | `content-placeholders.test.ts` 4 passed with the widened walk; `pnpm verify:pack-drift` PASS after reviewing all 49 pairs. | the walk covers practices/templates; every token there registered |
+| FR-10 | `pnpm verify:pack-drift` | repo | passed | `content-placeholders.test.ts` 4 passed with the widened walk; `pnpm verify:pack-drift` PASS after reviewing all 49 pairs. | pack/live pairs reconciled, ledger updated |
+| FR-11 | `pnpm --filter provegate test test/content-canon.test.ts` | pkg | passed | `content-canon.test.ts` — banner, canonical link, roadmap note, superseded whitepaper. | banner, canonical link, roadmap phase marks |
+| FR-12 | `pnpm --filter provegate test test/changeset-entry.test.ts` | repo | passed | `changeset-entry.test.ts` — 5 passed. W9 mutation-checked: two half-entries fail and the message names which half was found where. | one entry declares minor AND carries the sentence; two half-entries fail |
+| FR-13 | `pnpm --filter provegate test test/markdown.test.ts` | pkg | passed | `markdown.test.ts` 25, `conflicts.test.ts` 23, `state-query.test.ts` 18. Four mutations across both consumers. | root-file claims parse; each rejection names token and reason |
+| FR-13 | `pnpm --filter provegate test test/conflicts.test.ts` | pkg | passed | `markdown.test.ts` 25, `conflicts.test.ts` 23, `state-query.test.ts` 18. Four mutations across both consumers. | enforcing path: an untracked root claim conflicts structurally |
+| FR-13 | `pnpm --filter provegate test test/state-query.test.ts` | pkg | passed | `markdown.test.ts` 25, `conflicts.test.ts` 23, `state-query.test.ts` 18. Four mutations across both consumers. | the queue advisory prints rejected tokens |
+| types | `pnpm check-types` | root | passed | `pnpm check-types` — 0 errors | zero errors |
+| lint | `pnpm lint` | root | passed | `pnpm lint` — 0 warnings | zero warnings |
+| test | `pnpm test` | root | passed | `pnpm test` — 49 files, **1022 passed** | full suite |
+| build | `pnpm build` | root | passed | `pnpm build` — clean | clean; must precede the built-CLI rows |
+| gate-check | `node packages/provegate/dist/cli.js check PRD-021` | repo | passed | `[check] ok — PRD-021 passes the readiness lint` | readiness lint |
+| gate-wiring | `node packages/provegate/dist/cli.js check --wiring` | repo | passed | `[check --wiring] ok — every gate is wired or excepted` | wire-or-delete |
 | independent-review | `_docs/reviews/review-021-governance-truth-up.md`                 | repo  | pending |          | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
@@ -526,6 +530,7 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 
 | Date       | Task    | Notes |
 | ---------- | ------- | ----- |
+| 2026-07-27 | 1.0-13.0 | All 13 FRs implemented and Phase 5 green: 1022 tests, 49 files. Nineteen mutation checks across FR-1, FR-2, FR-3, FR-6, FR-7, FR-12 and FR-13, each failing exactly its own case — **two assertions did not survive their own mutation and were rebuilt** (the sweep's tally, and a float-sum premise). Two FR premises were measured stale at implementation time and are recorded: FR-13's defect was already fixed and the live one is its inverse, and the snapshot's dimension groups are `[0-5]` where FR-2 specifies `[1-5]`. |
 | 2026-07-27 | 0.0 | Pre-flight cleared. Hard stop satisfied (017/018/019 Ship Verified, `workflow.config.json` present with only `memory`). Baseline green. 0.3's counterpart changed under us: PRD-023 is Superseded and split into PRD-024/025/026, all three overlapping this PRD and all three Draft — so `gate queue` prints no warning and the lease is what protects the sequencing. 0.5 found an unrecorded snapshot divergence (dimensions `[0-5]` there, `[1-5]` here). |
 | 2026-07-27 | Phase 3 | Plan regenerated from PRD-021 at readiness 8.09 PASS (iteration 15, independent). 16 parents, 86 sub-tasks. The nine Readiness Watch rows come from iterations 11-15, whose findings were all propagation defects rather than design errors — task 14.2 turns that into a review instruction rather than leaving the next round to rediscover it. No implementation started. |
 
