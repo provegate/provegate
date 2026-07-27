@@ -439,9 +439,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    Absent and `null` mean the same thing and take the documented null-id path below. That
    equivalence is what keeps this a **one-caller change**. Measured on 2026-07-27: 44 call
-   sites, 42 of them in `test/prd-ready.test.ts` passing three or four arguments, plus
-   `test/content-templates.test.ts:99` and `test/example-manifests.test.ts:127`. Only
-   `cli.ts:655` passes the number. Making the parameter required would edit all 44 and pull
+   sites — **41** in `test/prd-ready.test.ts` passing three or four arguments, plus
+   `test/content-templates.test.ts:99`, `test/example-manifests.test.ts:127`, and
+   `cli.ts:655`. Only `cli.ts` passes the number.
+
+   Note what "the null path" means at those call sites: they **omit** the argument, so the
+   gate receives `undefined`, not `null`. The contract equates the two, and FR-6's matrix
+   must cover **both spellings** under a configured cutoff — an implementation that checks
+   `prdNumber === null` and not `undefined` would enforce presence on every existing caller
+   the moment this repo sets `enforceFrom`, which is the shipped-template test at
+   `content-templates.test.ts:99` turning red on an artifact nobody changed. Making the parameter required would edit all 44 and pull
    two test files this PRD does not otherwise touch into its Conflict Surface, to buy
    nothing — the null path already exists and is load-bearing.
 
@@ -679,8 +686,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
     changeset is diagnosable.
 
     Because the axes are now part of the published config surface (FR-1), the note must
-    also say that `valueScoring.axes` and `valueScoring.weights` are set together and
-    replace the defaults wholesale.
+    also state the merge rule **as FR-1 defines it, in both directions** — an earlier draft
+    of this sentence stated only half of it and would have published false adopter guidance:
+    supplying `valueScoring.axes` requires the complete matching `weights` set and replaces
+    the defaults wholesale, while supplying `weights` alone is a legal partial retune of the
+    default axes, checked by the sum rule. A changeset that tells an adopter both keys are
+    mandatory together makes the common case — nudging one weight — look unsupported.
     - **Targets:** `.changeset/` (new entry),
       `packages/provegate/test/changeset-entry.test.ts` (new)
 13. **FR-13**: Make a repo-root Conflict Surface claim real. `declaredGlobs`
@@ -1289,8 +1300,12 @@ rationalize.
   pattern validates nothing.
 - DO NOT specify dimensions as "a single digit". The rubric's range is 1–5, and a single
   digit admits 0 and 6–9, which lets `9/9/9/9/9` recompute consistently and pass.
-- DO NOT let `deepMerge` produce a weight set for axes the adopter never declared —
-  `axes` and `weights` are supplied together and replace the defaults wholesale.
+- DO NOT let `deepMerge` produce a weight set for axes the adopter never declared. When
+  `axes` is supplied, the whole `valueScoring` object replaces the default before the merge
+  and the weight set must match the declared axes exactly. This is **not** a rule that
+  weights may never appear alone: with `axes` absent there are no undeclared axes to
+  produce, so a weights-only config is an ordinary partial retune of the defaults and the
+  sum rule is what keeps it honest.
 - DO NOT assert that a shipped template lacks a section by grepping for what the section
   would contain. `practices/templates/AGENT_BOOTSTRAP.template.md` has a triage section at
   line 108 that greps for the weight values and for `Value` both miss, and two rounds
@@ -1341,6 +1356,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 13 (ITERATE 7.98) answered. One blocker, and it was the same propagation defect a third time: making weights-only overrides legal in FR-1 left FR-12's changeset note and a DO NOT rule still saying `axes` and `weights` are supplied together — so routine implementation would either violate FR-1 or publish false adopter guidance. Both now state the rule in both directions. Two non-blocking items also taken: the caller census was off by one (41 in `prd-ready.test.ts`, not 42), and the existing callers **omit** the fifth argument rather than passing `null`, so FR-6's matrix must cover `undefined` and `null` both — an implementation checking only `=== null` would red the shipped-template test the moment this repo sets `enforceFrom` |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 12 (ITERATE 7.95, "converging") answered. Two contract inconsistencies, both introduced at the previous remediation seam. **The fifth `lintPrd` parameter was not compilable as written** — a required parameter cannot follow the optional `root?: string` — so it is `prdNumber?: number \| null`, optional, with absent and `null` meaning the same thing. That is what keeps it a one-caller change: measured, there are 44 call sites, 42 in `prd-ready.test.ts`, and a required parameter would edit all of them and pull two untouched test files into the Conflict Surface to buy nothing. The rollback note now names the fifth ordinal too. **Weights without axes was unspecified and defaulted to the wrong answer**: the loader rule covered `axes` present, so a weights-only override merged recursively and passed with default-filled keys, contradicting the wholesale-replacement prose. Decided in the adopter's favour — a weights-only config retunes the default axes, which is legitimate, and the sum rule already catches an incoherent partial. Three loader/validation rules are now stated separately with fixtures pinning the partial case in both directions |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 10's four [P1]s and three [P2]s answered, each re-verified against source before being written. **A** was the load-bearing one and it moved an FR's target: `deepMerge` recurses into plain objects, so `weights` merges while `axes` replaces, and a three-axis config reaches validation carrying five default weight keys — the replacement is a LOADER rule, `load.ts::resolveConfig` joins FR-1's targets, and the proof is a resolution test rather than a validation fixture. **B** requires case-insensitive uniqueness of axis identifiers, resolving the `A`/`a` ambiguity on the identifier side rather than by dropping the snapshot's `/i`. **C** withdraws "adopter migration: none" for the scored corpus: changing `axes` reds every scored PRD, so the rule is sweep with `gate check --value-score`, then land the axis change and the header rewrites in one commit. **D** replaces register-and-remove with register-**or**-remove — registering `{{VALUE_AXES_TABLE}}` after removing it would red `content-placeholders.test.ts`'s orphan check — and pins the inline table to `DEFAULT_CONFIG`. **E** corrects "one copy of the weight table" to one authority and two projections, one pinned and one manual, which is the same stale-claim defect this PRD exists to fix, committed by the PRD itself. **F** requires at most one `Value` line inside the metadata block. **G** replaces the overlap enumeration with a dated measurement and an instruction to read the queue. Also disposes the three memory records written by PRD-020 and PRD-022 whose watches now overlap this PRD's targets |
 | 2026-07-25 | Claude Opus 5, on owner direction | **Readiness iteration 9 remediation — the independent Codex round's four [P1]s. Owner decision: make the axes configurable.** The blocking finding was a false premise two self-scored rounds asserted four times: `practices/templates/AGENT_BOOTSTRAP.template.md` was said to have no triage section. It has one at line 108, and line 111 tells adopters to **"define your own axes"** — so an `MF/UI/TL/AR/RM`-only gate cannot score the method it ships with. The owner chose configurable axes over rewriting the shipped template to canonical axes, which would have needed a snapshot addendum and removed an adopter capability. **FR-1** gains `axes: string[]` (ordered, default MF/UI/TL/AR/RM), `weights` keyed by those axes with exact set-equality validation in both directions, an axis-identifier charset that is load-bearing rather than cosmetic (FR-2 interpolates identifiers into the header pattern, so the charset is what keeps a configured axis from altering the pattern's meaning), a 2–10 axis-count bound, and a `deepMerge` rule so `axes` and `weights` replace the defaults wholesale instead of an adopter inheriting weights for axes they never declared. **FR-2** builds the header pattern *from* config rather than a literal, and **dimensions become `[1-5]`** — the previous "each dim a single digit" admitted 0 and 6–9, so `9/9/9/9/9` recomputed consistently and passed. A header whose axis list disagrees with the config now fails as malformed rather than reading as a missing header. **FR-6** is corrected: it said "`null` id with no header → fails", contradicting FR-2's remediation and the existing `content-templates.test.ts`, which lints the header-less shipped template and asserts zero issues. **FR-10** repairs the placeholder that declares the axes — `{{VALUE_AXES_TABLE}}` is unregistered in `PLACEHOLDERS.md`, `content-placeholders.test.ts` walks only `prompts/` and `templates/` so `practices/templates/` was never covered, and nothing substitutes the token, so `gate init --practices` writes it literally into an adopter's bootstrap; the fix registers the token, widens the walk, and renders a default table naming the config key, while leaving installer substitution explicitly out of scope. **FR-13** now exports `isRootRelativeFilename` by name, because PRD-023 FR-3 consumes it and "one predicate for two sections" is only true if one is exposed. **FR-12** replaces W9's two independent greps — satisfiable by two different files — with one semantic assertion over a single changeset entry. **Rollback** now removes FR-2's `lintPrd` call; the earlier text called `value-score.ts` "uncalled", which it would not be |
