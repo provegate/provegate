@@ -1206,6 +1206,9 @@ resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019
   accidentally satisfy the generated header pattern. Today it cannot (the template emits
   no `Value:` line, which is why presence-triggering is the default), and that fact must be
   pinned rather than assumed, because FR-10 edits templates in the same change.
+- applied: `docs-outlive-the-gate-they-promise` — written BY this PRD at Phase 7 and applied
+  back to it: it watches `_brain/PROTOCOL.md`, which FR-9 corrects, and its rule is exactly
+  what `verify:doc-claims` implements. The contract catching its own output.
 
 ## Memory Outputs
 
