@@ -1,0 +1,110 @@
+---
+title: Brownfield adoption
+description: Four rungs into an existing repository, and what stays unprotected at each one.
+---
+
+Greenfield adoption is one command. An existing repository is different: it already has
+CI, conventions, and work in flight, and any step that asks it to stop and convert is a
+step nobody takes.
+
+So adopt in rungs. Each one is independently useful, each one leaves the repo working, and
+each one names what it does **not** yet protect — because stopping is allowed, and stopping
+without knowing what you left open is not.
+
+## Rung 1 — scaffold, and run the artifact checks next to the CI you already have
+
+```sh
+npx gate init --practices
+```
+
+One command does two things: it creates the workflow tree (artifact directories × lifecycle
+states, the state and locks directories, `workflow.config.json`, `gates.manifest.json`) and
+it installs the practices pack — the agent bootstrap and artifact templates plus
+`scripts/verify/`.
+
+**It never overwrites.** Every existing file is reported as skipped, so running it in a
+repository that already has a `docs/` or a `package.json` you care about is safe; the
+output lists exactly what was created and what was left alone.
+
+The pack creates files and wires nothing. Add the script it names and run it in CI
+alongside everything already there:
+
+```jsonc
+// package.json
+{ "scripts": { "verify:workflow": "node scripts/verify/verify-workflow.mjs" } }
+```
+
+Nothing about how you work changes yet. These checks read artifacts — review records,
+durable artifact declarations, deferral rows — and fail when a claim is not backed.
+
+**Stop here and this stays unprotected:** everything about *code*. Nothing runs your tests,
+nothing sequences phases, nothing stops a merge. The pack audits the paperwork around the
+work, not the work.
+
+## Rung 2 — start using the lifecycle
+
+Nothing to install; rung 1 already scaffolded it. `gate status`, `gate queue` and
+`gate open` now work: you can claim a work item, get a lease over its declared file
+surface, and see conflicts with anyone else's claim before either of you writes code.
+
+**Stop here and this stays unprotected:** the phase-4 gates, and what is unprotected
+depends on which manifest you have — this is the one piece of fresh-install behaviour worth
+knowing exactly.
+
+- `gate init --practices` writes `{ "phases": { "7": [ … ] } }`. `phases["4"]` is
+  **absent**, and an absent key inherits the built-in floor, so Phase 4 still runs your
+  configured check-types, lint, build and test.
+- Plain `gate init` writes `{ "phases": { "4": [] }, "postMerge": [] }`. An **empty array
+  erases** rather than inherits, so Phase 4 runs nothing and the post-merge re-check runs
+  nothing.
+
+That asymmetry is the trap: the two files look equally "empty" and behave oppositely. If
+you took the plain install, `gate run` still executes the built-in gates and the
+verification commands your PRD declares in §11 — it is not a blanket green — but **no
+floor command runs at all**, which is exactly the protection everyone assumes is on. Rung 3
+is what turns it on.
+
+## Rung 3 — fill the floors from the cookbook
+
+Copy the entry that matches your repo shape and change the script names to yours. **Read
+your existing `gates.manifest.json` first and merge keys rather than replacing the file** —
+the `--practices` manifest carries the Phase 7 memory validator, and overwriting it deletes
+that gate silently.
+
+- [`examples/manifests/single-package/`](https://github.com/rayvaz/provegate/tree/main/packages/provegate/examples/manifests/single-package) — one package at the root, npm scripts
+- [`examples/manifests/monorepo/`](https://github.com/rayvaz/provegate/tree/main/packages/provegate/examples/manifests/monorepo) — a workspace, plus one domain gate
+
+Both ship as `gates.manifest.json` next to a README that annotates every key with the
+failure that key catches. Check the result before you rely on it:
+
+```sh
+npx gate run PRD-001 --dry-run
+```
+
+The dry run prints the exact chain your manifest produces, and executes nothing.
+
+**Stop here and this stays unprotected:** anything specific to your domain. The floor is
+type-check, lint, build, test — the four checks that are the same in every repository. It
+cannot know that your routes need guard tests or that your migrations need a rollback.
+
+## Rung 4 — turn on class defaults and hard caps
+
+Class defaults add commands to Phase 4 for a given work-item class, optionally scoped to a
+path (`when.diffMatches`), so a check that only matters for route changes costs nothing on
+the items that never touch routes. Hard caps refuse a *specification* whose targets touch a
+sensitive path without a required line in the PRD body — a documentation gate that fires at
+readiness, before implementation, not after.
+
+The monorepo cookbook entry ships one of each, and walks the cap firing end to end.
+
+**Stop here and this stays unprotected:** every guarantee you have not declared. The gates
+run what you wrote down and nothing else — a green run means every *declared* check passed
+on this diff, which is exactly the claim, no larger. There is no rung at which the tool
+starts knowing what you forgot to name.
+
+## What no rung protects
+
+A direct `git merge` bypasses the runner entirely, and so does anything else that does not
+go through `gate run` or `gate land`. The gates bind the path through the tool; they are
+not a branch protection rule. If you need the guarantee enforced against every path into
+the branch, that belongs in your forge's settings, next to this — not instead of it.

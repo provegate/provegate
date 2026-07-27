@@ -35,9 +35,25 @@ Pair it with a manifest hard cap so the _PRD_ names the deny test before scoring
     {
       "id": "route-deny-test",
       "when": { "targetsMatch": ["src/routes/**"] },
-      "requireLine": "Deny test: `[^`]+`",
+      "requireLine": "^\\s*-?\\s*Deny test: `(?:pnpm|npm|npx|yarn|bun|node|tsx|vitest) [^`]+`",
       "message": "targets touch routes - name a runnable deny-path test line",
     },
   ],
 }
 ```
+
+The runner prefix in `requireLine` is load-bearing, and it was added by measurement:
+the shipped PRD template carries a placeholder line, `` Deny test: `path/to/x.test.ts` ``,
+under its hard-caps reminder. A pattern of `` Deny test: `[^`]+` `` matches that
+placeholder, so the cap passes on every PRD `gate new` produces and fires only after an
+author happens to delete the line. Requiring a runner prefix makes the pattern mean what
+the message says — *name a runnable deny-path test line* — and the placeholder no longer
+satisfies it. The `^\s*-?\s*` anchor is the second half: `lintPrd` compiles this with the
+`m` flag, so without an anchor a sentence like *"we will add a Deny test: `pnpm vitest …`
+next sprint"* satisfies the cap from the middle of a paragraph.
+
+The prefix list is finite and it is **yours to extend**. Mirror your own
+`commands.allowedPrefixes` in `workflow.config.json`: a repo whose tests run under `make`
+or `deno` must add those alternatives **in both places** — the config allowlist so the runner will
+execute the command, and this pattern so the cap will accept the line naming it. The two
+lists moving together is what keeps "runnable" meaning the same thing in both.

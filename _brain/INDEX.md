@@ -34,6 +34,7 @@
 - [cleanup after verified merge](learnings/cleanup-after-verified-merge.md) — learning lands before merge; teardown only after the merge is verified
 - [assert absent needs an independent cause](learnings/assert-absent-needs-an-independent-cause.md) — a negative assertion is vacuous when the scenario also removes what would have created the artifact
 - [strictness added during extraction is a behavior change](learnings/strictness-added-during-extraction-is-a-behavior-change.md) — a "safer" guard added while sharing logic relocates a decision the callers already owned
+- [evidence pattern satisfied by the template](learnings/evidence-pattern-satisfied-by-the-template.md) — a required-line gate can be satisfied by the placeholder in the template the same tool ships
 
 ## Project gotchas
 

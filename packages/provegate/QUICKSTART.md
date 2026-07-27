@@ -188,5 +188,7 @@ not replace reading it.
 
 - `METHOD.md` — the method spec (classes, gates, locks, deferral governance)
 - `prompts/PLACEHOLDERS.md` — adapt the prompts to your project
-- `gates.manifest.json` — add your own gates (`examples/` shows two patterns)
+- [`examples/manifests/`](examples/README.md#manifest-cookbook) — the **manifest cookbook**: a complete `gates.manifest.json` for a
+  single-package repo and for a monorepo, each key annotated with the failure it catches
+- `gates.manifest.json` — add your own gates (`examples/` shows two plugin patterns)
 - `gate check --wiring` — keeps every gate you add wired or honestly excepted

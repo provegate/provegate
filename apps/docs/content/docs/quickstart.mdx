@@ -11,13 +11,27 @@ size, the honest answer is printed in METHOD.md — don't use the workflow.
 
 ```sh
 npm install -D provegate
-npx gate init
+npx gate init --practices
 ```
 
 `gate init` creates the artifact tree (`_prds/`, `_readiness/`, `_tasks/`, `_docs/`
 with `wip/completed/deferred` states), the state and locks directories, and two
 starter configs (`workflow.config.json`, `gates.manifest.json`). It never overwrites
-anything — re-run it any time. Check the result:
+anything — re-run it any time.
+
+**`--practices` is the recommended install.** It adds the agent bootstrap and artifact
+templates plus `scripts/verify/` — the checks that hold the artifacts to what they claim.
+Without them you get the lifecycle and no one auditing it. Plain `gate init` remains
+available for a repository that wants only the tree.
+
+What the pack wires, and what it leaves to you: `--practices` writes a
+`gates.manifest.json` with the Phase 7 memory validator already in it, and that is the only
+thing it wires. Everything else is a printed manual step — the `package.json` scripts to
+add, the CI job to run them in, and the agent-entry shims to paste. That list is
+`NEXT_STEPS.md`, printed at the end of the install and kept in the package. Editing your
+`package.json` and your CI config is not something a scaffold should do without you.
+
+Check the result:
 
 ```sh
 npx gate status
@@ -96,9 +110,15 @@ your git repo root, and `gate init` scaffolds only the workflow tree (`_prds/`,
 The one thing to configure is which gate commands run — and nothing assumes pnpm
 or turbo.
 
-`gate init` writes an **empty** `gates.manifest.json` (no gates until you wire
-your own). Add your commands there — `phases."4"` is the floor the run executes,
-`postMerge` runs after the local merge:
+What `gate init` leaves you depends on which mode you ran, and the two differ in a way
+worth knowing: `--practices` writes `{ "phases": { "7": [ … ] } }` — `phases."4"` is
+**absent**, and an absent key inherits the built-in floor (`pnpm check-types`, `lint`,
+`build`, `test`), so Phase 4 already runs. Plain `gate init` writes
+`{ "phases": { "4": [] }, "postMerge": [] }`, and an **empty array erases** rather than
+inherits, so no floor command runs at all.
+
+Either way, write your own commands in once your script names are known —
+`phases."4"` is the floor the run executes, `postMerge` runs after the local merge:
 
 ```json
 {
