@@ -7,6 +7,14 @@
       ".cursor/rules/brain.mdc"
     ]
   },
+  "sharedAppendOnly": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "_brain/INDEX.md"
+  ],
   "valueScoring": {
     "enforceFrom": 17
   }
