@@ -762,6 +762,10 @@ interface WorktreeStamps {
   file: string;
   /** Absolute path, used to unlink. */
   leasePath: string;
+  /** The paths this lease claims exclusive write-ownership of. A claim over a
+   * control artifact is what AUTHORIZES the checkout to differ from base on it
+   * — see the revalidation seam in `runRun`. */
+  ownedPaths: string[];
 }
 
 /** Worktree/branch stamps from the PRD's lease, when a `--worktree` claim
@@ -832,6 +836,9 @@ function worktreeStamps(
     stamps: {
       worktree: wt,
       branch: br,
+      ownedPaths: Array.isArray(live.data['ownedPaths'])
+        ? (live.data['ownedPaths'] as unknown[]).filter((p): p is string => typeof p === 'string')
+        : [],
       // Key order is whatever the parse produced; an identical rewrite by the
       // same writer reproduces it, and ANY field change breaks equality.
       identity: JSON.stringify(live.data),
@@ -995,12 +1002,29 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
       relPath: stamps.worktree,
       branch: stamps.branch,
     });
-    if (revalidation.refusal !== null) {
+    // A difference in a file this lease OWNS is not drift — it is the work.
+    //
+    // PRD-022's check compares the checkout's control artifacts against base
+    // and refuses any difference, which is right for a checkout that has fallen
+    // behind. It cannot, on its own, tell that apart from a work item whose
+    // declared job is to edit `workflow.config.json` — and PRD-021 is the first
+    // such item, refused by the gate at its own close.
+    //
+    // The lease is the authorization. A `## Conflict Surface` claim means
+    // exclusive write-ownership, so a control artifact inside `ownedPaths` is
+    // one this branch is entitled to change. Everything else still refuses,
+    // including a control artifact the item never claimed.
+    const owned = new Set(stamps.ownedPaths);
+    const unauthorized = revalidation.drifted.filter((rel) => !owned.has(rel));
+    if (revalidation.refusal !== null && unauthorized.length > 0) {
       console.error(
         stopCard({
           id,
           phase: 'merge',
-          why: `${revalidation.refusal} — nothing ran, nothing merged`,
+          why:
+          `the checkout at ${stamps.worktree} carries workflow artifacts differing from ` +
+          `'${config.branches.base}' (${unauthorized.join(', ')}) — merge or rebase ` +
+          `${config.branches.base} into ${stamps.branch} first — nothing ran, nothing merged`,
           results: [],
         }),
       );

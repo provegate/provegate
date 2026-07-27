@@ -498,6 +498,36 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
   the parser judge it. That is this item's characteristic defect appearing for the seventh
   time, in the fix for the sixth.
 
+- **CLOSE-TIME BLOCKER, and a declared deviation — PRD-022's revalidation refused this PRD
+  at its own close.** `gate land` stopped with *"the checkout carries workflow artifacts
+  differing from 'main' (workflow.config.json)"*. The diagnosis is not staleness: the
+  branch **adds** `valueScoring` to that file, which is FR-4's declared work, and
+  `workflow.config.json` is in this PRD's Conflict Surface and in its lease's `ownedPaths`.
+
+  So PRD-022's check compares a checkout's control artifacts against base and refuses any
+  difference — correct for a checkout that has fallen behind, and unable on its own to tell
+  that apart from **a work item whose declared job is to edit the file**. Its fixture
+  modelled drift caused by base advancing; nothing modelled a branch intentionally editing
+  what it owns. PRD-021 is the first item to hit it, and every future item that edits a
+  control artifact would hit it too — including any adopter's.
+
+  **Fixed here as a declared deviation**, in `cli.ts` (which this PRD owns): the seam now
+  filters the drifted list against the lease's `ownedPaths`. **The lease is the
+  authorization** — a `## Conflict Surface` claim means exclusive write-ownership, so a
+  control artifact inside it is one the branch is entitled to change. Everything else still
+  refuses, and the refusal names only the unauthorized paths rather than every artifact
+  that happens to differ. `WorktreeStamps` gains `ownedPaths` to carry it.
+
+  Mutation-checked in both directions: ignoring ownership fails the owned case; treating
+  every control artifact as authorized fails four tests including the unowned one. Both
+  halves are pinned in `revalidate.test.ts`, PRD-022's own fixture, because that is where
+  the next reader will look.
+
+  **Not taken:** widening the primitive in `core/run/worktree.ts`, which is outside this
+  Conflict Surface. Authorization is a lease concept and the seam is where the lease is
+  read, so the call site is arguably the right home anyway — but the scope boundary decided
+  it, not the aesthetics.
+
 - **Phase 6 round 2 — the confirming round.** Five of seven fixes **hold**. It
   independently found the exponent hole that self-check had already caught (its snapshot
   predated the fix, and it said so). Two findings were real and open:

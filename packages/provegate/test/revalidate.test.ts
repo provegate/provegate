@@ -260,14 +260,19 @@ const MANIFEST = {
  * Everything it needs it creates: it never reads the developer's `.env*`, and
  * a linked worktree inherits none of this repository's toolchain
  * (`fresh-worktree-env-gap`). */
-function fixture(tag: string, opts: { advanceBase?: boolean } = {}): Fixture {
+function fixture(tag: string, opts: { advanceBase?: boolean; claims?: string[] } = {}): Fixture {
   const root = newRepo(tag);
   expect(cli(root, ['init']).code).toBe(0);
   expect(cli(root, ['new', 'drift-case']).code).toBe(0);
 
   const prdPath = join(root, '_prds/wip/prd-001-drift-case.md');
   const prd = readFileSync(prdPath, 'utf8')
-    .replace(/## Conflict Surface\n[\s\S]*?(?=\n## |$)/, '## Conflict Surface\n\n- `src/x/**`\n\n')
+    .replace(
+      /## Conflict Surface\n[\s\S]*?(?=\n## |$)/,
+      `## Conflict Surface\n\n${['src/x/**', ...(opts.claims ?? [])]
+        .map((g) => `- \`${g}\``)
+        .join('\n')}\n\n`,
+    )
     .replace('> **Status**: Draft', '> **Status**: Approved')
     // The template ships placeholders; a fixture that leaves them in is a
     // fixture `gate check` refuses, which would make the unaffected-command
@@ -406,6 +411,39 @@ describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
         'carries workflow artifacts',
       );
     }
+    expect(existsSync(fx.marker)).toBe(false);
+  });
+
+  it('a control artifact the LEASE OWNS may differ from base — that is the work', () => {
+    // PRD-021 was refused by this gate at its own close: its declared job is to
+    // add a key to `workflow.config.json`, and the check could not tell a work
+    // item editing a file it owns from a checkout that had fallen behind.
+    //
+    // The lease is the authorization. A `## Conflict Surface` claim means
+    // exclusive write-ownership, so a control artifact inside `ownedPaths` is
+    // one this branch is entitled to change.
+    // The surface is declared BEFORE the claim, which is the only order that
+    // works: `gate open --worktree` reads the PRD from the main checkout, so a
+    // widening committed inside the worktree is invisible to it.
+    const fx = fixture('owned', { advanceBase: false, claims: ['gates.manifest.json'] });
+    writeFileSync(
+      join(fx.wt, 'gates.manifest.json'),
+      `${JSON.stringify({ ...MANIFEST, hardCaps: [] }, null, 2)}\n`,
+    );
+
+    const result = cli(fx.wt, ['run', 'PRD-001']);
+    expect(result.stderr).not.toContain('carries workflow artifacts');
+    expect(existsSync(fx.marker)).toBe(true);
+  });
+
+  it('an UNOWNED control artifact still refuses, and only that one is named', () => {
+    // The other half. Ownership authorizes exactly what it covers — a file the
+    // item never claimed is still drift, and the refusal must name it alone
+    // rather than every artifact that happens to differ.
+    const fx = fixture('unowned');
+    const result = cli(fx.wt, ['run', 'PRD-001']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('gates.manifest.json');
     expect(existsSync(fx.marker)).toBe(false);
   });
 
