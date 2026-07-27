@@ -1,0 +1,243 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js';
+import { defaultManifest } from '../src/core/gates/manifest.js';
+import { lintPrd } from '../src/core/gates/prd-ready.js';
+import { scoreValueHeader, valueScoreIssue } from '../src/core/gates/value-score.js';
+
+/**
+ * PRD-021 FR-2 / FR-6 — the recompute, its cutoff, and the shapes that must not
+ * pass.
+ *
+ * Every negative here is mutation-checked in the same pass: revert the rule and
+ * exactly its own case fails. A reject fixture that survives its own mutation is
+ * a defect in the test, not evidence about the code.
+ */
+
+const here = dirname(fileURLToPath(import.meta.url));
+const manifest = defaultManifest(DEFAULT_CONFIG);
+
+const withScoring = (over: Partial<WorkflowConfig['valueScoring']>): WorkflowConfig => ({
+  ...DEFAULT_CONFIG,
+  valueScoring: { ...DEFAULT_CONFIG.valueScoring, ...over },
+});
+
+/** A metadata block carrying `line`, then a body. The header lives before the
+ * first `---` in every template, which is what the gate scopes its search to. */
+const prd = (line: string, body = ''): string =>
+  ['# PRD-001: Fixture', '>', line, '>', '---', '', body].join('\n');
+
+const VALID = '> **Value**: 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)';
+
+describe('the recompute (FR-2)', () => {
+  it('accepts a header whose arithmetic is exact', () => {
+    // .25*5 + .25*4 + .20*4 + .15*4 + .15*3 = 4.10
+    expect(scoreValueHeader(DEFAULT_CONFIG, prd(VALID)).problem).toBeNull();
+  });
+
+  it('names BOTH numbers on a mismatch', () => {
+    // A failure that says only "wrong" makes the author recompute by hand to
+    // find out which side moved.
+    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.15 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
+    expect(issue).toBe('value header declares 4.15 but its dimensions recompute to 4.10');
+  });
+
+  it('compares exactly — no tolerance band', () => {
+    // The snapshot allows |stated - computed| <= 0.005 because its weights are
+    // unvalidated constants. FR-1's two-decimal rule makes every legal total
+    // exactly representable, so 4.11 against 4.10 is a mismatch here and would
+    // have passed there. Recorded as a divergence, and this is its test.
+    expect(
+      valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.11 (MF/UI/TL/AR/RM: 5/4/4/4/3)')),
+    ).toMatch(/declares 4\.11 but its dimensions recompute to 4\.10/);
+  });
+
+  it('reads the total with one or two decimals, and 4.1 means 4.10', () => {
+    expect(scoreValueHeader(DEFAULT_CONFIG, prd('> **Value**: 4.1 (MF/UI/TL/AR/RM: 5/4/4/4/3)')).problem).toBeNull();
+  });
+
+  it('rejects a total with three decimals, as malformed rather than as a mismatch', () => {
+    // Two different failures that read differently on purpose: one says the
+    // number is unreadable, the other says the arithmetic is wrong.
+    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.100 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
+    expect(issue).toMatch(/malformed: total "4\.100" must be written with at most two decimal places/);
+    expect(issue).not.toMatch(/recompute/);
+  });
+});
+
+describe('the header grammar (FR-2)', () => {
+  it('accepts the bold-delimited form the templates actually write', () => {
+    for (const line of [
+      '> **Value**: 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)',
+      '**Value**: 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)',
+      '> **Value:** 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)',
+      '> **Value**: 4.10 — top tier (MF/UI/TL/AR/RM: 5/4/4/4/3)',
+    ]) {
+      expect(scoreValueHeader(DEFAULT_CONFIG, prd(line)).problem, line).toBeNull();
+    }
+  });
+
+  it('allows trailing prose after the dimensions', () => {
+    // Not anchored on the closing paren, following the snapshot.
+    expect(
+      scoreValueHeader(DEFAULT_CONFIG, prd(`${VALID} — re-scored at iteration 7`)).problem,
+    ).toBeNull();
+  });
+
+  it('rejects dimension 0 and dimension 6 as malformed', () => {
+    // `[1-5]`, not "a single digit". A 0 would let 0/0/0/0/0 recompute
+    // consistently and pass; 6-9 are outside the rubric. Note this is ALSO a
+    // divergence from the snapshot, whose groups are [0-5] — it accepts a 0.
+    for (const dims of ['0/4/4/4/3', '5/4/4/4/6']) {
+      const issue = valueScoreIssue(DEFAULT_CONFIG, prd(`> **Value**: 4.10 (MF/UI/TL/AR/RM: ${dims})`));
+      expect(issue, dims).toMatch(/malformed: does not match the configured axes/);
+      expect(issue, dims).not.toMatch(/recompute/);
+    }
+  });
+
+  it('is built from the CONFIGURED axes, not a literal', () => {
+    const three = withScoring({ axes: ['A', 'B', 'C'], weights: { A: 0.5, B: 0.3, C: 0.2 } });
+    const header = '> **Value**: 4.20 (A/B/C: 5/3/4)'; // .5*5 + .3*3 + .2*4 = 4.20
+    expect(scoreValueHeader(three, prd(header)).problem).toBeNull();
+    // The same header under the default axes is malformed, not absent: the
+    // author renamed an axis and must be told, rather than falling through to
+    // "no header" and passing on presence-triggering.
+    expect(valueScoreIssue(DEFAULT_CONFIG, prd(header))).toMatch(
+      /malformed: does not match the configured axes \(MF\/UI\/TL\/AR\/RM\)/,
+    );
+  });
+
+  it('rejects the right names in the wrong ORDER', () => {
+    // Order is contractual because the dimensions are positional; a reordered
+    // header silently scores each dimension against the wrong weight.
+    expect(valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.10 (UI/MF/TL/AR/RM: 4/5/4/4/3)'))).toMatch(
+      /malformed: does not match the configured axes/,
+    );
+  });
+});
+
+describe('scoping and duplicates (FR-2)', () => {
+  it('ignores a header written in the BODY — that is documentation', () => {
+    // A PRD documenting the format carries matching lines in prose and fences.
+    // Scoping to the metadata block is what lets it do that; the snapshot has
+    // no such problem only because it takes the first hit anywhere.
+    const doc = prd(VALID, ['Example:', '', '```', '> **Value**: 9.99 (MF/UI/TL/AR/RM: 5/5/5/5/5)', '```'].join('\n'));
+    expect(scoreValueHeader(DEFAULT_CONFIG, doc).problem).toBeNull();
+  });
+
+  it('rejects TWO declarations inside the metadata block', () => {
+    // Once scoped, a second line in the block is a real duplicate — two totals,
+    // with the gate silently scoring the earlier one.
+    const two = [
+      '# PRD-001: Fixture',
+      '>',
+      VALID,
+      '> **Value**: 3.00 (MF/UI/TL/AR/RM: 3/3/3/3/3)',
+      '>',
+      '---',
+    ].join('\n');
+    expect(valueScoreIssue(DEFAULT_CONFIG, two)).toMatch(
+      /malformed: 2 value headers in the metadata block/,
+    );
+  });
+
+  it('an unreadable header is malformed, not absent', () => {
+    // The difference decides whether presence-triggering excuses it. "I could
+    // not read this" must never become "there was nothing to read".
+    const garbled = prd('> **Value**: 4.10 (MF/UI/TL/AR: 5/4/4/4/3)');
+    expect(scoreValueHeader(DEFAULT_CONFIG, garbled).problem?.kind).toBe('malformed');
+  });
+});
+
+describe('the cutoff (FR-2, FR-6)', () => {
+  const at17 = withScoring({ enforceFrom: 17 });
+
+  it('with no cutoff configured, a header-less item passes', () => {
+    expect(valueScoreIssue(DEFAULT_CONFIG, prd(''))).toBeNull();
+  });
+
+  it('with a cutoff, a pre-cutoff item may omit the header and one at it may not', () => {
+    expect(valueScoreIssue(at17, prd(''), 16)).toBeNull();
+    expect(valueScoreIssue(at17, prd(''), 17)).toMatch(/missing the value header — required from id 17/);
+    expect(valueScoreIssue(at17, prd(''), 21)).toMatch(/missing the value header/);
+  });
+
+  it('an ABSENT id skips presence in both spellings, and keeps the arithmetic', () => {
+    // The residual FR-2 states, and the reason it is guarded on absence rather
+    // than on `=== null`: every existing caller omits the argument, so it
+    // arrives as `undefined`. A strict null test would enforce presence on all
+    // of them the moment a repo sets `enforceFrom`.
+    expect(valueScoreIssue(at17, prd(''))).toBeNull();
+    expect(valueScoreIssue(at17, prd(''), null)).toBeNull();
+    expect(valueScoreIssue(at17, prd(''), undefined)).toBeNull();
+    // …but a header that is PRESENT and wrong still fails at any id, because
+    // the arithmetic never depended on the id.
+    const wrong = prd('> **Value**: 4.15 (MF/UI/TL/AR/RM: 5/4/4/4/3)');
+    for (const id of [undefined, null, 1, 99] as (number | null | undefined)[]) {
+      expect(valueScoreIssue(at17, wrong, id), String(id)).toMatch(/recompute/);
+    }
+  });
+
+  it('enforceFrom 0 enforces everywhere', () => {
+    expect(valueScoreIssue(withScoring({ enforceFrom: 0 }), prd(''), 1)).toMatch(/missing the value header/);
+  });
+});
+
+describe('the seam into lintPrd (FR-2)', () => {
+  const READY = [
+    '# PRD-001: Fixture',
+    '>',
+    VALID,
+    '>',
+    '---',
+    '',
+    '## 4. Functional Requirements',
+    '',
+    '1. **FR-1**: does a thing',
+    '   - **Targets:** `src/x.ts`',
+    '',
+    '## 11. Verification Commands',
+    '',
+    '| FR   | Command / Check | Scope | Notes |',
+    '| ---- | --------------- | ----- | ----- |',
+    '| FR-1 | `node -e "0"`   |       |       |',
+    '',
+    // `lintPrd` requires this section, and a fixture that omits it fails for a
+    // reason that has nothing to do with the value header — which is how a
+    // green here would end up proving something else.
+    '## 12. DO NOT (Anti-Patterns)',
+    '',
+    '- DO NOT ship a fixture that is not a valid work item.',
+    '',
+  ].join('\n');
+
+  it('lintPrd surfaces the value issue', () => {
+    const wrong = READY.replace('4.10', '4.15');
+    expect(lintPrd(DEFAULT_CONFIG, manifest, wrong).issues).toContainEqual(
+      'value header declares 4.15 but its dimensions recompute to 4.10',
+    );
+  });
+
+  it('lintPrd passes a correct one, and the id is the FIFTH argument', () => {
+    // Position matters: `root` already occupies the fourth. Passing the number
+    // fourth would displace it and silently disable the memory contract's
+    // store loading.
+    expect(lintPrd(DEFAULT_CONFIG, manifest, READY).issues).toEqual([]);
+    expect(lintPrd(DEFAULT_CONFIG, manifest, READY, undefined, 1).issues).toEqual([]);
+  });
+
+  it('the SHIPPED PRD template does not accidentally satisfy the generated pattern', () => {
+    // `evidence-pattern-satisfied-by-the-template`, applied to this gate. The
+    // template emits no value header, which is exactly why presence-triggering
+    // is the shipped default — and FR-10 edits templates in the same change, so
+    // the fact is pinned rather than assumed.
+    const template = readFileSync(resolve(here, '../templates/prd-template.md'), 'utf8');
+    expect(scoreValueHeader(DEFAULT_CONFIG, template).problem).toEqual({ kind: 'absent' });
+    // …and it therefore lints clean, which an existing test also depends on.
+    expect(lintPrd(DEFAULT_CONFIG, manifest, template).issues).not.toContainEqual(
+      expect.stringContaining('value header'),
+    );
+  });
+});

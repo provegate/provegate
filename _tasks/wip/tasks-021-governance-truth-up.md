@@ -161,56 +161,57 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Fixtures for the adopter cases: `valueScoring` absent entirely; `weights` set with no `enforceFrom`; a three-axis config with matching weights; weights naming an axis `axes` omits; `axes` naming an identifier `weights` omits. In the first two, a header-less PRD passes.
 
 
-- [ ] 2.0 FR-2 — the recompute as a package gate
-  - [ ] 2.1 Create `core/gates/value-score.ts` and export it from `core/gates/index.ts`.
-  - [ ] 2.2 Build the header pattern **from `config.valueScoring.axes`**, never a literal:
-        axis segment = validated identifiers joined by `/`; dimension segment =
-        `axes.length` groups of `[1-5]` joined by `/`. Accept an optional leading `>`,
-        `Value` with optional surrounding `**`, a colon inside or outside the bold run,
-        the total, any non-`(` filler, then the parenthesised pair. Do **not** anchor on
-        the closing paren.
-  - [ ] 2.3 Dimensions are `[1-5]`, not "a single digit". Reject fixtures must include a
-        `0` and a `6`, each failing as **malformed** rather than as an arithmetic mismatch
-        — the two messages read differently and must not be collapsed.
-  - [ ] 2.4 Search **only the metadata block** (before the first `---`); zero matches is
-        "no header", one is the declaration, **two or more is malformed**. Negative
-        fixture: two `Value` lines with different totals in the block.
-  - [ ] 2.5 Parse the declared total lexically into integer hundredths: one or two decimal
-        places only. Three decimals, exponent notation, and a bare integer are malformed.
-  - [ ] 2.6 Recompute as `Σ weightHundredths × dim` and require **exact** equality. Record
-        the divergence from the snapshot's `0.005` tolerance in **Deferrals & Decisions**:
-        the tolerance exists there because its weights are unvalidated constants.
-  - [ ] 2.7 A header whose axis list disagrees with the configured axes — right count,
-        wrong names, or right names in the wrong order — fails as **malformed**.
-  - [ ] 2.8 Call it from `lintPrd`. The id is the **optional fifth** parameter:
-        `lintPrd(config, manifest, content, root?: string, prdNumber?: number | null)`.
-        A required parameter cannot follow the optional `root`.
-  - [ ] 2.9 Guard on **absence**, not on `null`. Existing callers omit the argument and
-        supply `undefined`; a `=== null` test enforces presence on all 44 call sites the
-        moment this repo sets `enforceFrom`, and the first casualty is
-        `content-templates.test.ts:99`, which lints the shipped header-less template and
-        asserts zero issues.
-  - [ ] 2.10 Update the one caller that has an id — `cli.ts::runCheck`, which already
-        resolved the record. Leave the other 43 untouched; that is what the optional
-        parameter buys.
-  - [ ] 2.11 Enforcement modes: `enforceFrom` absent → presence-triggered; set → a PRD
-        with id `< enforceFrom` may omit the header, one at or after it may not. In every
-        mode a present-and-wrong header fails at any id, and a malformed header fails at
-        any id.
-  - [ ] 2.12 `evidence-pattern-satisfied-by-the-template` — assert the shipped
-        `templates/prd-template.md` does **not** satisfy the generated pattern. It carries
-        no `Value:` line today, which is why presence-triggering is the default; pin the
-        fact rather than assuming it, because FR-10 edits templates in the same change.
+- [x] 2.0 FR-2 — the recompute as a package gate
+  - [x] 2.1 `core/gates/value-score.ts` created and exported from `core/gates/index.ts`.
+        Original: Create `core/gates/value-score.ts` and export it from `core/gates/index.ts`.
 
-- [ ] 3.0 FR-3 — the corpus sweep
-  - [ ] 3.1 Add `gate check --value-score` beside the `--wiring` branch in `runCheck`.
-  - [ ] 3.2 Iterate `_state/prds.json` records (each carries `number` and
-        `artifacts.prd`), apply FR-2's decision to each, print one line per failure with
-        the declared and recomputed totals, and report pre-cutoff skips with their reason.
-  - [ ] 3.3 Weights come from the loaded config and nowhere else — no fallback table, no
-        `--print-weights`, no parity test.
-  - [ ] 3.4 Add the flag to `unknownOption`'s allowlist for `check`, or the command
-        refuses its own flag.
+  - [x] 2.2 `headerPattern(axes)` builds the axis and dimension segments from the configured identifiers; case-insensitive, following the snapshot's `/i`; not anchored on the closing paren. Mutation-checked indirectly by the configured-axes test: a three-axis config scores its own header while the default config calls the same header malformed.
+        Original: Build the header pattern **from `config.valueScoring.axes`**, never a literal: axis segment = validated identifiers joined by `/`; dimension segment = `axes.length` groups of `[1-5]` joined by `/`. Accept an optional leading `>`, `Value` with optional surrounding `**`, a colon inside or outside the bold run, the total, any non-`(` filler, then the parenthesised pair. Do **not** anchor on the closing paren.
+
+  - [x] 2.3 `([1-5])` per dimension. Reject fixtures cover `0` and `6`, both **malformed** and asserted `not.toMatch(/recompute/)` so the two failure kinds cannot collapse. Mutation: `([0-9])` fails exactly this test. **The snapshot divergence 0.5 found is now recorded in the module doc comment** — the snapshot's groups are `[0-5]`, so it accepts a 0.
+        Original: Dimensions are `[1-5]`, not "a single digit". Reject fixtures must include a `0` and a `6`, each failing as **malformed** rather than as an arithmetic mismatch — the two messages read differently and must not be collapsed.
+
+  - [x] 2.4 `metadataBlock()` slices before the first `---`; `declarationLines()` counts openers there. Zero → absent, one → the declaration, two+ → malformed. Mutation: searching the whole document fails exactly the body-documentation test.
+        Original: Search **only the metadata block** (before the first `---`); zero matches is "no header", one is the declaration, **two or more is malformed**. Negative fixture: two `Value` lines with different totals in the block.
+
+  - [x] 2.5 `totalToHundredths` accepts `\d+(\.\d{1,2})?` only; `4.100` is malformed and asserted not to mention recompute.
+        Original: Parse the declared total lexically into integer hundredths: one or two decimal places only. Three decimals, exponent notation, and a bare integer are malformed.
+
+  - [x] 2.6 Exact equality in integer hundredths. Mutation: a `Math.abs(...) > 1` band fails exactly the no-tolerance test. **An arithmetic bug was caught here by its own test** — the first version divided the hundredths sum by 100 a second time, turning 4.10 into 0.04; Σ(weightHundredths × dim) IS the total in hundredths.
+        Original: Recompute as `Σ weightHundredths × dim` and require **exact** equality. Record the divergence from the snapshot's `0.005` tolerance in **Deferrals & Decisions**: the tolerance exists there because its weights are unvalidated constants.
+
+  - [x] 2.7 Wrong names and right-names-wrong-order both malformed, each with its own test.
+        Original: A header whose axis list disagrees with the configured axes — right count, wrong names, or right names in the wrong order — fails as **malformed**.
+
+  - [x] 2.8 `lintPrd(config, manifest, content, root?, prdNumber?)` — fifth and optional. All 190 existing tests in `prd-ready.test.ts`, `content-templates.test.ts` and `example-manifests.test.ts` pass **unmodified**.
+        Original: Call it from `lintPrd`. The id is the **optional fifth** parameter: `lintPrd(config, manifest, content, root?: string, prdNumber?: number | null)`. A required parameter cannot follow the optional `root`.
+
+  - [x] 2.9 `prdNumber === undefined || prdNumber === null` — both spellings take the absence path, asserted for `undefined`, explicit `null`, and omitted. Mutation: `=== null` alone fails exactly that test.
+        Original: Guard on **absence**, not on `null`. Existing callers omit the argument and supply `undefined`; a `=== null` test enforces presence on all 44 call sites the moment this repo sets `enforceFrom`, and the first casualty is `content-templates.test.ts:99`, which lints the shipped header-less template and asserts zero issues.
+
+  - [x] 2.10 `cli.ts:655` now passes `found.record.number`. No other call site touched.
+        Original: Update the one caller that has an id — `cli.ts::runCheck`, which already resolved the record. Leave the other 43 untouched; that is what the optional parameter buys.
+
+  - [x] 2.11 All four modes tested: no cutoff → header-less passes; cutoff set → pre-cutoff passes, at-or-after fails; present-and-wrong fails at any id; `enforceFrom: 0` enforces everywhere.
+        Original: Enforcement modes: `enforceFrom` absent → presence-triggered; set → a PRD with id `< enforceFrom` may omit the header, one at or after it may not. In every mode a present-and-wrong header fails at any id, and a malformed header fails at any id.
+
+  - [x] 2.12 `evidence-pattern-satisfied-by-the-template` discharged: the shipped `templates/prd-template.md` scores `{ kind: 'absent' }` against the generated pattern, and lints clean. Pinned rather than assumed, because FR-10 edits templates in the same change.
+        Original: `evidence-pattern-satisfied-by-the-template` — assert the shipped `templates/prd-template.md` does **not** satisfy the generated pattern. It carries no `Value:` line today, which is why presence-triggering is the default; pin the fact rather than assuming it, because FR-10 edits templates in the same change.
+
+
+- [x] 3.0 FR-3 — the corpus sweep
+  - [x] 3.1 `--value-score` branch in `runCheck`, beside `--wiring`, same shape.
+        Original: Add `gate check --value-score` beside the `--wiring` branch in `runCheck`.
+
+  - [x] 3.2 Iterates `buildState` records, applies FR-2's decision, prints one line per failure with both numbers, and prints each pre-cutoff skip **with its reason**. A record naming an unreadable file is a failure, not a skip: state and tree disagreeing is a finding.
+        Original: Iterate `_state/prds.json` records (each carries `number` and `artifacts.prd`), apply FR-2's decision to each, print one line per failure with the declared and recomputed totals, and report pre-cutoff skips with their reason.
+
+  - [x] 3.3 Weights come from the loaded config only. No fallback table, no `--print-weights`, no parity test.
+        Original: Weights come from the loaded config and nowhere else — no fallback table, no `--print-weights`, no parity test.
+
+  - [x] 3.4 `--value-score` added to `unknownOption`'s allowlist, or the command would refuse its own flag.
+        Original: Add the flag to `unknownOption`'s allowlist for `check`, or the command refuses its own flag.
+
 
 - [ ] 4.0 FR-4 / FR-5 — this repo's cutoff and the control-artifact edit
   - [ ] 4.1 Merge `{"valueScoring": {"enforceFrom": 17}}` into the existing root
@@ -444,6 +445,13 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 ---
 
 ## Deferrals & Decisions
+
+- **3.2 decision — the sweep's tally counts scored and header-less separately.** The first
+  version printed "26 scored item(s) recompute exactly". Eleven of those twenty-six carry a
+  header; the other fifteen have none, and nothing was recomputed for them. Folding the two
+  together makes the summary claim more than the sweep did — the exact shape of defect this
+  work item exists to remove, committed by the work item. It now reads
+  `11 scored, 15 without a header, 0 skipped by the cutoff`.
 
 - **1.6 finding — two assertions written on false premises, caught by their own runs.** The
   float-sum hazard is real but its usual witnesses are not: the shipped five weights sum to

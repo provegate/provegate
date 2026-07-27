@@ -29,6 +29,8 @@ import {
   lintPrd,
   loadManifest,
   parsePrdClass,
+  scoreValueHeader,
+  valueScoreIssue,
 } from './core/gates/index.js';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname as pathDirname } from 'node:path';
@@ -621,8 +623,63 @@ function runMemory(args: string[]): number {
   return 0;
 }
 
+/**
+ * `gate check --value-score` — the corpus sweep.
+ *
+ * `gate check PRD-NNN` only covers the item in front of it, which cannot catch
+ * a score edited AFTER its PRD passed Phase 2. This applies the same decision
+ * to every record in state and reports each failure with both numbers.
+ *
+ * Pre-cutoff skips are printed rather than silent: a sweep that says nothing
+ * about the items it did not check reads as a sweep that checked them.
+ */
+function runValueScoreSweep(config: WorkflowConfig, root: string): number {
+  const state = buildState(config, root);
+  const failures: string[] = [];
+  const skipped: string[] = [];
+  // Counted separately on purpose. An item with no header and no cutoff is not
+  // "scored and passing" — nothing was recomputed for it — and a summary that
+  // folds the two together claims more than the sweep did, which is the exact
+  // shape of defect this work item exists to remove.
+  let scored = 0;
+  let headerless = 0;
+
+  for (const record of state.records) {
+    const rel = record.artifacts.prd;
+    if (!rel) continue;
+    let content: string;
+    try {
+      content = readFileSync(resolve(root, rel), 'utf8');
+    } catch (error) {
+      // A record naming a file we cannot read is a finding, not a skip: the
+      // state snapshot and the tree disagree.
+      failures.push(`${record.prd}: cannot read ${rel} (${error instanceof Error ? error.message : String(error)})`);
+      continue;
+    }
+    const cutoff = config.valueScoring.enforceFrom;
+    if (cutoff !== undefined && record.number < cutoff && scoreValueHeader(config, content).problem?.kind === 'absent') {
+      skipped.push(`${record.prd}: no header, and id ${record.number} is before the cutoff of ${cutoff}`);
+      continue;
+    }
+    if (scoreValueHeader(config, content).problem?.kind === 'absent') headerless++;
+    else scored++;
+    const issue = valueScoreIssue(config, content, record.number);
+    if (issue !== null) failures.push(`${record.prd}: ${issue}`);
+  }
+
+  for (const line of skipped) console.log(`[check --value-score] skipped ${line}`);
+  const tally = `${scored} scored, ${headerless} without a header, ${skipped.length} skipped by the cutoff`;
+  if (failures.length > 0) {
+    console.error(`[check --value-score] ${failures.length} failure(s) — ${tally}:`);
+    for (const line of failures) console.error(`  - ${line}`);
+    return 1;
+  }
+  console.log(`[check --value-score] ok — ${tally}`);
+  return 0;
+}
+
 function runCheck(args: string[]): number {
-  const unknown = unknownOption(args, ['--wiring']);
+  const unknown = unknownOption(args, ['--wiring', '--value-score']);
   if (unknown !== null) {
     console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
@@ -641,6 +698,8 @@ function runCheck(args: string[]): number {
     return 0;
   }
 
+  if (args.includes('--value-score')) return runValueScoreSweep(config, root);
+
   const idArg = args.find((a) => !a.startsWith('-'));
   if (!idArg) {
     console.error('usage: gate check PRD-XXX | gate check --wiring');
@@ -652,7 +711,7 @@ function runCheck(args: string[]): number {
     return 1;
   }
   const content = readFileSync(resolve(root, found.record.artifacts.prd), 'utf8');
-  const report = lintPrd(config, manifest, content, root);
+  const report = lintPrd(config, manifest, content, root, found.record.number);
   if (!report.ok) {
     console.error(`[check] ${found.id} is not ready:`);
     for (const issue of report.issues) console.error(`  - ${issue}`);
