@@ -354,6 +354,11 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
   record's rule decides how `pack-manifest.json` is treated when two items touch it.
 - applied: `false-green-on-missing-file` — every example must be checked by a gate that
   exits non-zero when the example file is absent, or a deleted example passes as adopted.
+- applied: `assert-absent-needs-an-independent-cause` — pairs with
+  `false-green-on-missing-file` above and sharpens it. The example gates are negative
+  ("this file must exist", "this manifest must not drift"), and the trap this record names
+  is a scenario that removes the very mechanism the absence is evidence about. Every
+  assert-absent in the new example tests must survive its own mutation check.
 - reviewed: `turbo-cache-masks-out-of-input-reads` — example fixtures are read by the
   package test task, so they are declared inputs or a cached green replays over them.
 
