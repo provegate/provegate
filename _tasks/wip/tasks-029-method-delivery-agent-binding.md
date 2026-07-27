@@ -248,7 +248,7 @@ a record is evidence only while it is true.
         fresh session, **never the implementing session**. Tier: high.
   - [x] 9.2 Spec-vs-code audit: every FR's stated behaviour against what was built, and every
         §12 DO NOT confirmed not violated.
-  - [ ] 9.3 **Restatement sweep** — for every rule the implementation changed, re-read §2, §3,
+  - [x] 9.3 **Restatement sweep** — for every rule the implementation changed, re-read §2, §3,
         §6, §11, §12 and the Memory Inputs against the FR that owns it. Eight readiness rounds
         produced eight instances of a rule corrected where owned and stale where restated, four
         of them inside the fixes. Do this as a separate step **after** the fixes, and do not
@@ -256,14 +256,14 @@ a record is evidence only while it is true.
   - [x] 9.4 Save `_docs/reviews/review-029-method-delivery-agent-binding.md` and set the
         `independent-review` ledger row.
 
-- [ ] 10.0 Phase 7 — Learning
+- [x] 10.0 Phase 7 — Learning
   - [x] 10.1 `_brain/learnings/shipped-content-needs-a-delivery-gate.md`
   - [x] 10.2 `_brain/learnings/derive-the-requirement-from-the-consumer.md`
   - [x] 10.3 `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md` — also resolves
         the forward link already recorded in `score-band-prescribes-the-action`.
   - [x] 10.4 Append one `_brain/INDEX.md` pointer per record and per ADR-0002. Append only.
   - [x] 10.5 `pnpm verify:brain` green; every Durable Artifact present in the merge diff.
-  - [ ] 10.6 Write `_docs/wip/summary-029-method-delivery-agent-binding.md`.
+  - [x] 10.6 Write `_docs/wip/summary-029-method-delivery-agent-binding.md`.
 
 ---
 
@@ -301,6 +301,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 9.3 — the sweep found two places the IMPLEMENTATION EXCEEDS the spec, and neither is fixed by editing an FR: adapter membership is validated in the resolved pass while FR-1 assigns shape checks to the raw pass (membership of a closed set is arguably shape, and it sits beside `validateValueScoring` where value-set constraints already live), and `prompts.dir` gets lexical path rules no FR mentions (FR-1 specifies only filesystem containment; the lexical half is what Phase 6's M1 required, and the spec never asked because it never noticed). The spec was scored at 8.35 — rewriting a requirement after the fact is the weakening the method guards against, so both go to the successor's scope review.
 - 9.x/m4 — the Codex snippet stays without a banner. FR-6 specifies exactly a heading and a table, and adding one would put the code outside the spec that was scored 8.35. The reviewer's point is fair — it is the one artifact a human pastes into a file they own — and it is a spec change for a later item, not a Phase 4 edit.
 - 7.6 — automated staleness detection is deferred to PRD-030 by scope, per this PRD's Non-Goals. After a package upgrade the store does not change and nothing detects it; every generated file names the producing version, and reading that banner is the disclosed mechanism. Recorded here because a reviewer will read the absence as a gap rather than a boundary.
 - 7.1 — "byte-identical for a non-adopter" is held by comparing the PLAN, not by a sentence: `planInit` emits no `.provegate/`, `.claude/` or `.cursor/` action, and the starter config it writes carries no `prompts` block. Adding the block to `DEFAULT_CONFIG` changes nothing for such a repository because `enabled` gates every consumer.
