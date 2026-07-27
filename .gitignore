@@ -25,3 +25,6 @@ _state/prd-metrics.jsonl
 .env.*
 !.env.example
 .gstack/
+
+# codex CLI session cache — ephemeral, per-machine
+.context/
