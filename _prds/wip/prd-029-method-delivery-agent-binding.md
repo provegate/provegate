@@ -554,6 +554,12 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   the required-value set is computed as the tokens the RENDERED corpus consumes minus the
   config-backed ones, never read off the registry, and a test asserts the derived count so it
   moves when the corpus moves.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — the third of this PRD's own outputs,
+  watching `_prds/**` and `_readiness/**`, which the merge diff necessarily changes. It is the
+  record of why this document has the shape it has: four rounds put every mechanism defect in
+  the store-lifecycle layer while measuring the layers beneath exact, so the layer was removed
+  rather than repaired. Applied at the level of the item's scope, which is the only level it
+  could be applied at.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
   `packages/provegate/src/core/run/**`. Four rounds found this record declared and not applied
   to that round's own new refusals. It is applied here by **removing** a refusal rather than
