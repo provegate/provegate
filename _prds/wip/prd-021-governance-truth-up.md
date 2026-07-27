@@ -1209,9 +1209,19 @@ resolves that pair from its side; PRD-017 is resolved by the 017 → 018 → 019
 
 ## Memory Outputs
 
-- none — the checker's rules live in its own allowlist and tests. Append an exact learning
-  path only if reconciling the docs surfaces a governance trap that is not derivable from
-  the checker.
+- learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — a document that
+  describes a check as future work keeps describing it that way after the check ships, and
+  the stale direction is the inverse of the intuitive one: three of four "wave 2" claims
+  here were already true, and the two defects were shipped-things-called-unshipped.
+- learning: `_brain/learnings/a-rule-corrected-survives-where-it-is-restated.md` — across
+  five consecutive readiness rounds on this item, every finding was created by the fix for
+  the round before it: a rule corrected in its owning FR while the old version survived in
+  another section. The remedy is a reviewer instruction, not a gate — brief a sweep across
+  named sections rather than a defect hunt.
+
+Appended at Phase 7 under the escape hatch this section opened at Phase 1. It is not
+derivable from the checker or from the code: the evidence is the shape of five rounds, and
+the actionable half is how the sixth round was briefed.
 
 ---
 
@@ -1222,10 +1232,15 @@ against the merge diff). Never leave empty — write `none` explicitly. Narrow s
 only **this PRD's** durable knowledge.
 
 - Review artifact: `_docs/reviews/review-021-governance-truth-up.md`
-- Learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — the promise-vs-shipped
-  gap is the recurring shape here (three of four wave-2 claims were already true); record
-  it if the close confirms the pattern, otherwise downgrade this entry to `none` before
-  Phase 4.
+- Learning: `_brain/learnings/docs-outlive-the-gate-they-promise.md` — **the close
+  confirmed the pattern and sharpened its direction.** `verify:doc-claims` found two stale
+  claims on its first run, and both were the INVERSE of the expected defect: a wired,
+  CI-running script described as future work. The record carries that measurement, because
+  a checker written for the intuitive direction would have found nothing.
+- Learning: `_brain/learnings/a-rule-corrected-survives-where-it-is-restated.md` — the
+  readiness history's own shape: five rounds, five findings, every one created by the fix
+  for the round before it. Every Memory Output repeats here; the two lists are proved
+  against the same merge diff.
 
 ---
 
