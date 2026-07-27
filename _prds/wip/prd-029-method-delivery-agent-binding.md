@@ -1,4 +1,4 @@
-# PRD-029: Method Delivery — Agent Protocol Binding
+# PRD-029: Method Delivery — One-Way Protocol Install
 
 > **Status**: Draft
 >
@@ -15,8 +15,8 @@
 > **Slug**: `method-delivery-agent-binding`
 > **Cycle Phase**: 1 (PRD Generation)
 > **PRD Class**: infra
-> **Class Rationale**: workflow tooling — the installer, the config surface and a render step; it adds no capability to the gated method itself, it delivers the method that already exists.
-> **Value**: 4.70 (MF/UI/TL/AR/RM: 5/5/5/5/3)
+> **Class Rationale**: workflow tooling — a config key, a render step and an installer branch; it adds no capability to the gated method itself, it delivers the method that already exists.
+> **Value**: 4.85 (MF/UI/TL/AR/RM: 5/5/5/5/4)
 > **Autonomous Close**: operator-gated
 
 <!-- Autonomous Close declares whether the gated close may run without a human stop:
@@ -46,35 +46,27 @@ comprehension.
 
 The parent project did not have this gap.
 `docs/research/provegate-bootstrap/source-snapshot/rules/prd-workflow.mdc` is a
-glob-attached rule mapping each phase to its prompt file, with four per-phase siblings
-beside it. **Extraction carried the method and left the delivery mechanism behind.**
+glob-attached rule mapping each phase to its prompt file. **Extraction carried the method and
+left the delivery mechanism behind.**
 
-This PRD builds the delivery core: a rendered, tool-neutral protocol store in the consuming
-repository, thin per-tool adapters that point into it, and a receipt of what was rendered.
-Delivery is a **render**, not a copy — the shipped corpus carries placeholder tokens that
-`prompts/PLACEHOLDERS.md` declares, and `core/run/new.ts:112-149` already renders the PRD
-template this way.
-
-> **Scope note.** This is the delivery core of a four-item split (W1), revised against
-> readiness iterations 2 and 3 (W9–W24), recorded in
-> `_readiness/wip/readiness-029-method-delivery-agent-binding.md`. Reconciliation, exceptions,
-> upgrade and rollback are **PRD-030**; the Phase 3 autonomy content and the
-> `AGENT_BOOTSTRAP` proceed rule are **PRD-031**; this repository consuming its own store is
-> **PRD-032**.
+> ## This ships a ONE-WAY INSTALL, and that is the whole scope
 >
-> Four owner decisions shape this revision. **Conditional content is an enumerated token**
-> whose fragments ship in the package, so PRD-031 stays code-free and parallel to PRD-030.
-> **This PRD writes a receipt**, and **the receipt makes no ownership claim.**
+> `gate init --prompts` renders the protocols into a consuming repository and **behaves
+> exactly like every other `init` plan: additive-only, `wx`, an existing path is reported as
+> skipped and never touched.** There is no upgrade path, no receipt, no reconciliation, no
+> exception store and no `sync`. Re-installing after a package upgrade is: **delete the store
+> directory, run the command again.** That is stated in the command's own output, in the
+> store's generated README and in `NEXT_STEPS.md`, not buried here.
 >
-> The fourth was taken at iteration 4 and it is the one that makes the third true. Iteration 3
-> declared that the receipt claims nothing; iteration 4 showed the claim had merely changed
-> vocabulary, because `gate sync --prompts` overwrote a file when its bytes matched the
-> receipt hash **and its path was in the receipt** — so membership granted a capability that
-> content alone did not. **No command overwrites an existing file.** `sync` reports a diff and
-> writes nothing; the apply path is the human deleting the file and re-running
-> `gate init --prompts`, which is additive-only and fills an absent path. The deletion is the
-> act of consent, and it is the human's. The authority question is now answered by
-> construction rather than by a sentence promising restraint.
+> This boundary is the remediation. Four independent readiness rounds scored the previous
+> ten-FR version 5.73, 5.90, 5.63 and 4.53, and **every mechanism defect in the final round
+> lived in the lifecycle** — an upgrade path that could not terminate, an exception that
+> permanently blocked `init`, a receipt whose own preflight status broke under either reading,
+> an activation predicate the config loader erased. The parts beneath those layers were
+> re-measured exact in that same round and called strong. So the layers are gone: they are
+> **PRD-030's**, and PRD-030's first requirement is now to author the state-transition model
+> they were missing, before it builds anything. **A promise not made is not a gap; a broken
+> upgrade path is.**
 
 ---
 
@@ -84,26 +76,23 @@ template this way.
 
 - [ ] Every phase protocol reaches a consuming repository's filesystem, resolved against
       that repository's `workflow.config.json`.
-- [ ] Every file in the package's source directories has a disposition, and a file that
-      matches no rule **fails the plan by name** rather than being silently dropped.
-- [ ] Token handling has a grammar: a literal that is not a token is never consumed, and
-      malformed, undeclared and unresolved are three distinct failures.
-- [ ] An adopter is asked for exactly the values the render consumes — never for one that
-      cannot change a byte of the output.
-- [ ] The render is planned in full before anything is written, and an incomplete store is a
-      named state rather than an undetected one.
-- [ ] No command overwrites an existing file, so the receipt cannot confer a capability and
-      PRD-030 can reconcile without either side claiming a path.
+- [ ] Activation is an explicit opt-in that survives the config loader.
+- [ ] Every file in the package's source directories has a disposition, and one matching no
+      rule **fails the plan by name** rather than being silently dropped.
+- [ ] A placeholder with no value fails the render by name; a literal that is not a token is
+      never consumed.
+- [ ] The installer's existing contract is unchanged: additive-only, nothing overwritten, and
+      a repository that has not opted in behaves byte-identically to today.
 
 ### Success Metrics
 
-| Metric                                                       | Current | Target | Measurement                                                       |
-| ------------------------------------------------------------ | ------- | ------ | ------------------------------------------------------------------- |
-| Phase protocols reachable on a repo's filesystem after init   | none    | all    | store inventory after `gate init --prompts` in a scratch repo        |
-| Package files with no disposition                             | n/a     | 0      | the plan fails naming any unmatched file                            |
-| Values an adopter must supply that cannot affect the output   | n/a     | 0      | required set derived from the rendered corpus, asserted by test      |
-| Legitimate documents or values the render refuses             | n/a     | 0      | the token candidate rule and the `null` unset marker, both by test   |
-| Existing files any command overwrites                         | n/a     | 0      | `init` refuses a differing destination; `sync` writes nothing         |
+| Metric                                                       | Current | Target | Measurement                                                     |
+| ------------------------------------------------------------ | ------- | ------ | ----------------------------------------------------------------- |
+| Phase protocols reachable on a repo's filesystem after init   | none    | all    | store inventory after `gate init --prompts` in a scratch repo      |
+| Package files with no disposition                             | n/a     | 0      | the plan fails naming any unmatched file                          |
+| Values an adopter must supply that cannot affect the output   | n/a     | 0      | required set derived from the rendered corpus, asserted by test    |
+| Existing files any command in this PRD writes over            | n/a     | 0      | additive-only `wx`; an existing path is skipped and reported      |
+| Behaviour change for a repository that has not opted in       | n/a     | none   | byte-identical to the pre-PRD build, held by test                 |
 
 ---
 
@@ -119,46 +108,28 @@ so that the gated method I installed is the method my agent follows.
 
 **Acceptance Criteria:**
 
-- [ ] `gate init --prompts` writes a `prompts` config block naming exactly the values the
-      render consumes, and writes the store once they resolve.
-- [ ] Running it before those values are supplied **fails with the list**, and writes no
-      store file at all.
-- [ ] No pre-existing agent entrypoint (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules/brain.mdc`)
-      is overwritten, shadowed, or reordered.
+- [ ] After opting in and supplying the required values, `gate init --prompts` writes the
+      store and the adapters.
+- [ ] Running it before those values are supplied **fails with the list**, writing nothing.
+- [ ] No pre-existing file anywhere is overwritten, shadowed, or reordered — including
+      `CLAUDE.md`, `AGENTS.md` and `.cursor/rules/brain.mdc`.
 
 #### User Story 2
 
 ```
-As a reader of a repository that has a store,
-I want to know exactly which files are in it and why,
-so that a file present in the package but absent from the store is a decision I can find.
+As an adopter whose package was upgraded,
+I want to know plainly what this tool will and will not do about it,
+so that I am not waiting for an upgrade path that does not exist.
 ```
 
 **Acceptance Criteria:**
 
-- [ ] Every source file has a disposition; an unmatched one fails the plan naming the file
-      and the dispositions available.
-- [ ] Every rendered file carries a generated-file banner, placed so that a format requiring
-      frontmatter on line 1 still has it on line 1.
-- [ ] `PLACEHOLDERS.md` reaches the store **unsubstituted** — it is the token registry, and
-      rendering it would consume the very tokens it documents.
-
-#### User Story 3
-
-```
-As the maintainer of a repository whose store was written months ago,
-I want to know which paths hold render output and from which package version,
-so that the next tool along can tell an upgrade apart from an edit without either of us
-claiming to own a file.
-```
-
-**Acceptance Criteria:**
-
-- [ ] The receipt lists every path the executed plan produced, including adapters outside
-      `prompts.dir`, and records the package version.
-- [ ] It says nothing about ownership, and no command derives a right to overwrite from it.
-- [ ] It is written from the executed plan, never from a walk of the directory afterwards,
-      and it excludes itself.
+- [ ] Re-running `gate init --prompts` reports every existing path as skipped and changes
+      nothing.
+- [ ] The command's output, the store's generated README and `NEXT_STEPS.md` all state that
+      reinstalling means deleting the store directory, and that reconciliation is a later
+      release.
+- [ ] Nothing in the shipped documentation implies a `sync`, a receipt or an exception.
 
 ---
 
@@ -167,367 +138,261 @@ claiming to own a file.
 Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
-1. **FR-1**: `WorkflowConfig` gains a `prompts` block: `dir` (string, default
-   `.provegate`), `adapters` (ordered subset of `claude-code`, `cursor`, `codex`; default
-   all three), and `values` (`Record<string, string | null>` — see FR-5 for why `null`).
-   Validation is split to match the loader's real two-pass shape — **`validateConfig` runs on
-   the RAW parsed object at `load.ts:267`, `mergeConfig` at 272, `validateResolvedConfig`
-   plus `memoryPathsContained` on the MERGED object at 273** — so shape and unknown-key
-   checks for `prompts` go in the raw pass, and `prompts.dir` containment goes in the
-   resolved pass beside `memoryPathsContained`. Containment **realpaths the longest existing
-   prefix of the candidate and reattaches the missing tail**, and realpaths the root, before
-   comparing: the default `.provegate` does not exist on first use, and a literal
-   realpath-both-sides implementation would refuse every fresh repository.
-   `memoryPathsContained` already solves it this way and is the reference.
+1. **FR-1**: `WorkflowConfig` gains a `prompts` block shaped **exactly like `memory`**, which
+   is the activation mechanism this codebase already chose and documented:
+   `enabled` (boolean, **default `false`**), `dir` (default `.provegate`), `adapters`
+   (ordered subset of `claude-code`, `cursor`, `codex`; default all three), and `values`
+   (`Record<string, string | null>`).
+
+   **`enabled` is the predicate, never presence.** `mergeConfig` is
+   `deepMerge(DEFAULT_CONFIG, parsed)` at `load.ts:216`, so once the block has defaults
+   `merged.prompts` is always present and a presence test can never be false.
+   `defaults.ts:95-101` says exactly this about `memory`: *"the conventional layout an opt-in
+   repository gets, **not an implicit activation**: nothing reads them while `enabled` is
+   false."* This FR copies that precedent rather than rediscovering why it exists.
+
+   Validation splits across the loader's real two passes: shape and unknown-key checks —
+   including an unknown key inside `values` — in `validateConfig` on the raw object at
+   `load.ts:267`; `prompts.dir` containment in the resolved pass at 273, beside
+   `memoryPathsContained`, whose longest-existing-prefix resolution it reuses so a
+   not-yet-created `.provegate` is not refused.
    - **Targets:** `packages/provegate/src/core/config/types.ts::WorkflowConfig`,
      `packages/provegate/src/core/config/types.ts::PromptsConfig`,
      `packages/provegate/src/core/config/defaults.ts`,
      `packages/provegate/src/core/config/validate.ts::validateConfig`,
-     `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`,
-     `packages/provegate/src/core/config/load.ts`
+     `packages/provegate/src/core/config/validate.ts::validateResolvedConfig`
 
 2. **FR-2**: The source domain is **every regular file at any depth** under the package's
-   `prompts/` and `templates/`. Dispositions are an **ordered** list; the first match wins,
-   exact-path rules precede pattern rules, and **a file matching no rule fails the plan by
-   name**, listing the dispositions available. That refusal is what makes the domain total.
+   `prompts/` and `templates/`. Dispositions are an **ordered** list; first match wins, exact
+   paths precede patterns, and **a file matching no rule fails the plan by name**, listing the
+   dispositions available. That refusal is what makes the domain total.
 
-   | # | Rule                                                    | Disposition                    | Destination                                  |
-   | - | ------------------------------------------------------- | ------------------------------ | -------------------------------------------- |
-   | 1 | any symlink                                             | **refuse the plan by name**    | —                                            |
-   | 2 | `prompts/README.md`, `templates/README.md` (exact)      | not emitted                    | —                                            |
-   | 3 | `prompts/PLACEHOLDERS.md` (exact)                       | copied verbatim, FR-4 exempt   | `<dir>/prompts/PLACEHOLDERS.md`              |
-   | 4 | `prompts/_fragments/**` (any depth)                     | not emitted — render **input** | —                                            |
-   | 5 | `prompts/**/*.md` (any depth)                           | rendered                       | `<dir>/prompts/<path relative to prompts/>`  |
-   | 6 | `templates/*-template.md` (direct children only)        | rendered                       | `<dir>/templates/<basename>`                 |
+   | # | Rule                                               | Disposition                    | Destination                                  |
+   | - | -------------------------------------------------- | ------------------------------ | -------------------------------------------- |
+   | 1 | any symlink                                        | **refuse the plan by name**    | —                                            |
+   | 2 | `prompts/README.md`, `templates/README.md` (exact) | not emitted                    | —                                            |
+   | 3 | `prompts/PLACEHOLDERS.md` (exact)                  | copied verbatim, FR-3 exempt   | `<dir>/prompts/PLACEHOLDERS.md`              |
+   | 4 | `prompts/_fragments/**`                            | not emitted — render **input** | —                                            |
+   | 5 | `prompts/**/*.md`                                  | rendered                       | `<dir>/prompts/<path relative to prompts/>`  |
+   | 6 | `templates/*-template.md` (direct children only)   | rendered                       | `<dir>/templates/<basename>`                 |
 
-   Rule 5 **preserves the relative path**, so `prompts/adapters/codex-starter.md` lands at
-   `<dir>/prompts/adapters/codex-starter.md`. Rule 6 is restricted to direct children so no
-   flattening happens. Rule 4 precedes rule 5 deliberately: fragments are inputs and must
-   never be reachable as outputs. After the plan is built and before anything is written,
-   destinations are compared **case-folded and Unicode-normalised (NFC)** and any collision
-   fails the plan naming both sources. Symlinks are refused rather than followed or skipped:
-   following one reads outside the shipped tree, skipping one silently drops content — the
-   refusal is a deliberate portability policy and its diagnostic names the file so an adopter
-   can replace it with a regular file. The store additionally receives a **generated**
-   `<dir>/README.md`. `workflow.config.json` is the render's **input** and stays at the
-   repository root; it is never moved, copied, or emitted.
+   Rule 5 preserves the relative path; rule 6 is restricted to direct children so nothing
+   flattens. Rule 4 precedes rule 5 deliberately: fragments are inputs and must never be
+   reachable as outputs. Destinations are compared **case-folded and NFC-normalised** and a
+   collision fails the plan naming both sources. Symlinks are refused rather than followed
+   (which reads outside the shipped tree) or skipped (which drops content silently); the
+   diagnostic names the file so an adopter can replace it with a regular file. The store also
+   receives a **generated** `<dir>/README.md` stating that the tree is generated, which package
+   version produced it, and that reinstalling means deleting the directory.
 
-   *Corpus measurement, not specification* — the rules above are the specification, and this
-   is what they currently select: 12 rendered protocols, 7 rendered templates, 1 verbatim, 2
-   not emitted. A test pins the resulting path set so the measurement cannot drift unnoticed.
+   *Corpus measurement, not specification* — the rules are the specification; today they select
+   12 rendered protocols, 7 rendered templates, 1 verbatim and 2 not emitted, and a test pins
+   the resulting path set.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::DISPOSITIONS`,
      `packages/provegate/src/core/run/prompts.ts::planStore`,
      `packages/provegate/src/core/run/prompts.ts::assertNoCollision`
 
 3. **FR-3**: `renderPrompts(packageDir, config)` returns a `Map<string, string>` of
-   repo-relative path to content. It is pure — no filesystem writes, no clock, no
-   environment read — so the same package version and config always produce the same bytes.
-   Every **rendered** file carries a generated-file banner naming the package version and the
-   reproducing command, as a Markdown comment. The banner is the first line **except in a
-   file whose format requires frontmatter first**, where it is the first line after the
-   closing `---`: every `.cursor/rules/*.mdc` in this repository and in the source snapshot
-   opens with `---` on line 1, and a banner above it moves the frontmatter and the rule may
-   not attach. The verbatim file of FR-2 carries no banner, because a banner would be a
-   substitution.
-   - **Targets:** `packages/provegate/src/core/run/prompts.ts::renderPrompts`,
-     `packages/provegate/src/core/run/prompts.ts::bannerFor`,
-     `packages/provegate/src/core/run/prompts.ts::GENERATED_BANNER`
+   repo-relative path to content, and is **pure** — no writes, no clock, no environment read.
+   Every rendered file carries a generated-file banner naming the package version and the
+   reproducing command; the banner is the first line **except where a format requires
+   frontmatter first**, in which case it follows the closing `---` (every `.cursor/rules/*.mdc`
+   here and in the snapshot opens with `---` on line 1). The verbatim file of FR-2 carries no
+   banner, because a banner would be a substitution.
 
-4. **FR-4**: Token handling has a grammar, and substitution is **one pass over the source**.
-   - There are **two candidate classes**, and the escape class is matched first: an **escape
-     candidate** is `{{` followed immediately by one or more `!`, and a **token candidate** is
-     `{{` followed immediately by an uppercase ASCII letter. Matching escapes first is stated
-     because it is load-bearing: under a token-only rule `{{!NAME}}` is not a candidate at all
+   Token handling has a grammar and substitution is **one pass over the source**:
+   - Two candidate classes, **escape matched first**: an **escape candidate** is `{{` followed
+     by one or more `!`; a **token candidate** is `{{` followed by an uppercase ASCII letter.
+     The order is load-bearing — under a token-only rule `{{!NAME}}` is not a candidate at all
      and the escape below would be unreachable.
-   - Text like `{{lowercase}}`, `{{ spaced }}` or `{{1}}` is in neither class and passes
-     through untouched — a rule that treated every `{{` as a token would refuse ordinary
-     documents that happen to contain brace pairs.
+   - Text in neither class — `{{lowercase}}`, `{{ spaced }}`, `{{1}}` — passes through
+     untouched.
    - A token candidate is a **token** when it matches `{{` + `[A-Z][A-Z0-9_]*` + `}}` **on one
-     line**. A candidate that does not close on the same line, or whose identifier leaves the
-     charset — `{{Name}}`, `{{FOO-BAR}}` — is **malformed** and fails by name.
+     line**; otherwise it is **malformed** and fails by name.
    - A well-formed token absent from the registry is **undeclared** and fails. In a method
-     corpus an unregistered `{{JSON}}` is far more likely an author's typo than deliberate
-     Mustache, so the policy is to refuse and let the author say which they meant. **The cost
-     is stated rather than hidden:** a protocol that wants to quote template syntax literally
-     must escape it, and the escape exists for exactly that.
-   - **Escape:** `{{!NAME}}` renders as the literal `{{NAME}}`, and the escape is recursive —
-     `{{!!NAME}}` renders as `{{!NAME}}` — so any literal a document needs can be written. No
-     shipped file uses it today (`grep` finds zero `{{!` in the package); it exists so a future
-     protocol can document a token without the render consuming it.
-   - Every source occurrence is collected **before** any replacement, and each is replaced
-     exactly once with its value treated as **opaque**: a configured value containing `{{X}}`
-     is emitted as-is and never re-scanned, so replacement order cannot matter.
-   - Three failures, three messages: **malformed**, **undeclared** (well-formed, absent from
-     the registry), **unresolved** (declared, no value). Each names the file and line;
-     unresolved additionally names the registry meaning and the supplying key.
-   - The refusal is proved against the **shipped corpus with an empty `values` map**.
-   - **Targets:** `packages/provegate/src/core/run/prompts.ts::scanTokens`,
+     corpus an unregistered `{{JSON}}` is likelier an author's typo than deliberate Mustache;
+     the cost is stated rather than hidden, and the escape is the remedy.
+   - `{{!NAME}}` renders the literal `{{NAME}}`, recursively: `{{!!NAME}}` renders `{{!NAME}}`.
+   - Occurrences are collected **before** any replacement and each is replaced once with its
+     value treated as **opaque**, so a value containing `{{X}}` is emitted as-is and
+     replacement order cannot matter.
+   - Three failures, three messages — malformed, undeclared, unresolved — each naming file and
+     line. The refusal is proved against the **shipped corpus with an empty `values` map**.
+   - **Targets:** `packages/provegate/src/core/run/prompts.ts::renderPrompts`,
+     `packages/provegate/src/core/run/prompts.ts::scanTokens`,
      `packages/provegate/src/core/run/prompts.ts::substituteOnce`,
-     `packages/provegate/src/core/run/prompts.ts::TOKEN_GRAMMAR`
+     `packages/provegate/src/core/run/prompts.ts::bannerFor`
 
-5. **FR-5**: The required-value set is **derived from the rendered corpus**, never from the
-   registry. It is the tokens FR-4 finds in the files FR-2 dispositions as *rendered*, minus
+4. **FR-4**: The required-value set is **derived from the rendered corpus**, never from the
+   registry. It is the tokens FR-3 finds in the files FR-2 dispositions as *rendered*, minus
    those a config field supplies. Measured today the rendered corpus uses 16 distinct tokens,
-   seven of them config-backed, so **nine** values are required of an adopter; the registry's
-   other four — `{{LINK_TO_VISION_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`,
-   `{{PROJECT_SPECIFIC_HARD_RULES}}`, `{{VISION_OR_DECISIONS_DOC}}` — occur in **zero**
-   rendered files and only in `practices/templates/AGENT_BOOTSTRAP.template.md`, so requiring
-   them would make an adopter answer four questions that cannot change one byte of the store.
-   Config-backed tokens resolve automatically: `{{BASE_BRANCH}}` → `branches.base`,
-   `{{ID_PREFIX}}` → `idPattern.prefix`, `{{CMD_CHECK_TYPES}}` / `{{CMD_LINT}}` /
-   `{{CMD_TEST}}` / `{{CMD_BUILD}}` → the matching `commands.*`, `{{MEMORY_ROOT}}` →
-   `memory.root`. The mapping is derived from `PLACEHOLDERS.md`, and the registry is validated
-   independently: a row whose config-field cell names a path `WorkflowConfig` does not have
-   fails at build time.
+   seven config-backed, so **nine** are required of an adopter; the registry's other four —
+   `{{LINK_TO_VISION_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`, `{{PROJECT_SPECIFIC_HARD_RULES}}`,
+   `{{VISION_OR_DECISIONS_DOC}}` — occur in **zero** rendered files and only in
+   `practices/templates/AGENT_BOOTSTRAP.template.md`. Config-backed tokens resolve
+   automatically: `{{BASE_BRANCH}}`, `{{ID_PREFIX}}`, the four `{{CMD_*}}`, `{{MEMORY_ROOT}}`.
+   The mapping derives from `PLACEHOLDERS.md`, and a registry row naming a config path
+   `WorkflowConfig` lacks fails a package test.
 
-   **Unset is `null`, not a sentinel string.** `gate init --prompts` scaffolds each required
-   key with JSON `null`, and the command prints each key's meaning. A `null` and an absent key
-   are both unset; every string is a value. An in-band sentinel would make some legitimate
-   string unrepresentable, which is a data-model collision rather than a policy.
+   **Unset is `null` or absence**, never an in-band marker, which would make some legitimate
+   string unrepresentable. **The empty string is legal per token**: the registry gains an
+   `empty` column, `allowed` for prose blocks a project may have nothing to say in
+   (`{{DOMAIN_CHECKS}}`, `{{ENV_NOTES}}`), refused elsewhere — an empty `{{ARCHITECTURE_DOC}}`
+   renders a protocol telling an agent to read nothing.
 
-   **The empty string is a value, and whether it is a legal one is per token.** The registry
-   gains an `empty` column: a token marked `allowed` accepts `""` — `{{DOMAIN_CHECKS}}` and
-   `{{ENV_NOTES}}` are prose blocks a project may legitimately have nothing to say in —
-   and every other token refuses it, because an empty `{{ARCHITECTURE_DOC}}` renders a
-   protocol instructing an agent to read nothing. A global rule in either direction is wrong:
-   refusing `""` everywhere overshoots, accepting it everywhere fails open.
+   **Discovering the required set never depends on a write.** `gate init --prompts` prints the
+   complete `prompts` block — every required key with `null`, every meaning — whether or not it
+   writes a config file. A repository that already has a `workflow.config.json` therefore learns
+   exactly what to paste, and **that is the only activation path an existing repository has**,
+   stated here rather than left to be discovered.
 
-   **An unknown key in `values` is refused** by the raw-pass validation of FR-1, naming the
-   key. It is either a typo or a stale entry left behind when a token was removed from the
-   corpus, and both are worth saying out loud rather than ignoring.
+   A token may additionally be declared **enumerated**: the registry names its legal values and
+   the package ships one fragment per value at `prompts/_fragments/<TOKEN>.<value>.md`; the
+   config supplies the key and the render substitutes the fragment. A value outside the set
+   fails by name; a declared value with no fragment, and a fragment containing a token
+   candidate, each fail a **package test and the render** — **not "at build time"**, because
+   the package's `build` is a single `tsup` invocation with no content validation, and a
+   requirement wired to a boundary that does not exist is the `gate-wire-or-delete` failure.
+   Interacting legal values across two enumerated tokens are **out of scope and refused**; a
+   composite enumeration is the answer if one is ever needed. This PRD ships the mechanism and
+   **zero** enumerated tokens.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::requiredValues`,
      `packages/provegate/src/core/run/prompts.ts::CONFIG_BACKED`,
-     `packages/provegate/src/core/config/types.ts::PromptsConfig`,
+     `packages/provegate/src/core/run/prompts.ts::enumeratedTokens`,
+     `packages/provegate/prompts/PLACEHOLDERS.md`,
      `packages/provegate/test/content-placeholders.test.ts`
 
-6. **FR-6**: A token may be declared **enumerated** in the registry: its cell names its legal
-   values, and the package ships one fragment per value at
-   `prompts/_fragments/<TOKEN>.<value>.md`. The config supplies the **key**, not the text —
-   `"AUTONOMY_MODE": "human-gated"` — and the render substitutes the fragment's content. A
-   configured value outside the declared set fails by name, listing them. A declared value
-   with no fragment file fails at build time.
+5. **FR-5**: `gate init --prompts` installs the store and the adapters **under the installer's
+   existing contract, unchanged**: writes are `wx`, an existing path is reported as skipped and
+   never touched, and `--dry-run` prints the plan and writes nothing. There is **no preflight
+   comparison and no mismatch refusal** — this plan behaves like the base and practices plans,
+   which is what keeps `gate init`'s additive-only promise intact for every caller rather than
+   carving out an exception that would then have to be scoped.
 
-   **Fragments are terminal, and that is enforced on surfaces that actually run.** A fragment
-   containing a token candidate fails (a) `assertFragmentTerminal` at render time, so no
-   adopter can ever receive an unresolved fragment token, and (b) a package test over the
-   shipped `_fragments/` tree, so the defect is caught before publication. It is **not**
-   claimed as a build-time check: the package's `build` script is a single `tsup` invocation
-   with no content validation, and an adopter does not build package content at install — a
-   requirement wired to a boundary that does not exist is the `gate-wire-or-delete` failure,
-   and this FR names its executing surfaces instead. Without the rule, a fragment's token
-   survives into the output unresolved, because FR-4 substitutes in one pass and rescanning
-   would break the opacity guarantee that makes replacement order irrelevant.
+   The command refuses **before writing any store file** when a required value is unresolved,
+   listing each token with its meaning. It composes with `--practices` and works without it.
+   `templates.prd` is set to the rendered PRD template only in a starter config it writes
+   itself; an existing config is never edited and the value to set is printed. **`gate init
+   --practices` alone installs no store** — `PACK_MAP` is a static table and cannot emit a
+   config-dependent render — and `NEXT_STEPS.md` names the command that does.
 
-   **The ceiling is stated rather than discovered.** Two enumerated tokens select fragments
-   independently; **legal-value interactions between tokens are out of scope and are refused
-   rather than approximated.** If a future requirement needs one, the answer is a single
-   composite enumeration covering the valid combinations — not a cross-token validator and
-   not a conditional language. That keeps this mechanism at one indirection, which is the
-   whole reason it was chosen over a block syntax.
-
-   This PRD ships the mechanism and **zero** enumerated tokens; PRD-031 ships the first one.
-   - **Targets:** `packages/provegate/src/core/run/prompts.ts::enumeratedTokens`,
-     `packages/provegate/src/core/run/prompts.ts::fragmentFor`,
-     `packages/provegate/src/core/run/prompts.ts::assertFragmentTerminal`,
-     `packages/provegate/prompts/PLACEHOLDERS.md`
-
-7. **FR-7**: Activation has **five named states** and one invariant, stated here and restated
-   nowhere: a **complete** store exists if and only if the config declares `prompts`, every
-   required value resolves, and every planned path holds its planned bytes.
-
-   | State                   | Condition                                                              |
-   | ----------------------- | ---------------------------------------------------------------------- |
-   | `unconfigured`          | no `prompts` in the config; every command in this PRD is inert          |
-   | `configured-unresolved` | declared, at least one required value unset; **no store file written**  |
-   | `configured-complete`   | declared, all values resolve, every planned path matches the plan       |
-   | `configured-incomplete` | declared and resolvable, but some planned path is absent or differs     |
-   | `store-without-config`  | `prompts` removed from the config while a store tree remains on disk    |
-
-   The plan is **built in full and validated before a single byte is written**: one package
-   version is pinned per plan, all content is produced in memory, and every destination is
-   preflighted. A destination whose bytes differ from the plan **fails the plan** rather than
-   being skipped; one whose bytes already match is a no-op. Writes are then per-file and
-   ordinary — **there is no multi-file atomicity and this document does not claim any.** An
-   interruption, a disk error or a concurrent run leaves `configured-incomplete`, which is a
-   named state precisely because it is reachable, and the next run detects it at preflight and
-   either completes it or names the mismatched paths.
-
-   **Mismatch refusal is scoped to the prompt plan only.** `gate init`'s base and practices
-   plans keep their existing additive-only, skip-if-present behaviour; applying this rule to
-   them would turn "an existing file is skipped" into "a modified file aborts the run", which
-   would break the byte-identical promise this PRD makes for repositories without `prompts`.
-   The refusal's diagnostic names the path and directs the adopter to PRD-030's
-   `gate doctor --prompts` and `gate sync --prompts`, which are where a deliberate local edit
-   is meant to be handled.
-
-   `gate init --practices` does **not** install a store: `PACK_MAP` is a static
-   source-to-destination table and cannot emit a config-dependent render; the pack installs
-   the instructions. `templates.prd` is set to the rendered PRD template **only in the starter
-   config `gate init --prompts` writes**; an existing config is never edited and the command
-   prints the value to set. `gate init --dry-run --prompts` prints the plan and writes nothing.
+   **Re-installation is deletion plus re-run**, stated in the command's own summary. No command
+   in this PRD deletes anything.
    - **Targets:** `packages/provegate/src/core/run/init.ts::planPrompts`,
-     `packages/provegate/src/core/run/init.ts::preflightPromptPlan`,
      `packages/provegate/src/core/run/init.ts::starterConfig`,
+     `packages/provegate/src/core/run/init.ts::runInit`,
      `packages/provegate/src/cli.ts::runInit`
 
-8. **FR-8**: The store carries `<prompts.dir>/provegate.lock.json`: the package version the
-   plan was executed from, and for **every path in that plan** the hash of its planned
-   content. It covers paths outside `prompts.dir` — the adapters — because it is a record of
-   a plan, not of a directory. It is written from the executed plan, never from a walk of the
-   filesystem, and it **excludes itself**: a file cannot contain its own hash.
+6. **FR-6**: `renderAdapters(config)` emits one adapter per configured tool, each carrying a
+   **path and no protocol prose**, at destinations this FR names explicitly:
+   - `claude-code` → `.claude/commands/prd-<phase>.md`, one per phase: banner, one `#` heading,
+     one fixed directive sentence, one fenced block whose info string is empty and whose sole
+     line is the store-relative protocol path. Nothing else.
+   - `cursor` → `.cursor/rules/prd-workflow.mdc`: frontmatter first with exactly `description`,
+     `globs` (derived from `config.dirs.artifacts`) and `alwaysApply` in that order; then the
+     banner; then one `##` heading; then one table of exactly two columns (`Phase`, `Protocol`)
+     with one row per phase **in phase order**, each cell a phase name or a store path.
+   - `codex` → `<dir>/AGENTS.md.provegate.snippet`: one `##` heading and the same table.
+     **A snippet, never a write to `AGENTS.md`.**
 
-   **It has exactly one writer: `gate init --prompts`.** Not a role, not a shared contract —
-   one command. PRD-030 reads it and never writes it, which is what makes the earlier
-   contradiction impossible: a reporter cannot record a hash for content it declined to place.
-
-   **It is a receipt and it grants nothing.** It states that these paths held this render
-   output at this version. Because no command overwrites an existing file — FR-7's preflight
-   refuses one, and PRD-030's `sync` only reports — **there is no capability for its
-   membership to confer.** That is the difference between this revision and the previous one,
-   which asserted the same restraint while `sync` overwrote a path precisely because the
-   receipt listed it. A user's own file that happens to match the render is recorded and is
-   still never rewritten, because nothing rewrites anything.
-
-   The questions an ownership manifest must answer — how a path is acquired, when it is
-   retired, what a rename means, what happens when the config is removed — do not arise, and
-   now they do not arise for a structural reason rather than a declared one.
-   - **Targets:** `packages/provegate/schemas/prompts-lock.schema.json`,
-     `packages/provegate/src/core/run/prompts.ts::writeReceipt`
-
-9. **FR-9**: Adapters are validated by a **normative grammar**, not by comparing prose lines
-   against protocols. Each generated adapter is produced from a fixed skeleton in which only
-   store paths and phase names vary, and the grammar states exactly what is permitted:
-   - `.claude/commands/prd-<phase>.md` — the banner, one `#` heading (`<phase name>`), one
-     paragraph consisting of the single fixed directive sentence, and one fenced block whose
-     info string is empty and whose sole line is the store-relative protocol path. No other
-     block is permitted.
-   - `.cursor/rules/prd-workflow.mdc` — YAML frontmatter first, containing exactly
-     `description`, `globs` and `alwaysApply` in that order; then the banner; then one `##`
-     heading; then one table with exactly two columns (`Phase`, `Protocol`) and one row per
-     phase **in phase order**, each row's cells being a phase name and a store-relative path
-     and nothing else.
-   - `AGENTS.md.provegate.snippet` — one `##` heading and the same table under the same rules.
-
-   The test validates that grammar. The previous line-comparison predicate is dropped: it
-   could not simultaneously accept a legitimate Cursor table row and reject protocol prose
-   appended to a line containing a path, and it passed novel duplicated prose. The two
-   tool-shaped protocols the package already ships — `prompts/adapters/codex-starter.md` and
-   `cursor-bootstrap.md`, which `prompts/README.md` calls "tool-shaped entry points" — are
-   **protocols rendered by FR-2**, are legitimate pointer targets, and are not adapters.
+   A test validates that grammar. `planPractices` states that agent-entrypoint files are
+   deliberately absent from the pack so an existing entrypoint is never touched; that invariant
+   holds unchanged for `CLAUDE.md`, `AGENTS.md` and `.cursor/rules/brain.mdc`, and is
+   **narrowed** — a file at a provegate-namespaced path the adopter does not own is a generated
+   adapter, not an entrypoint. The narrowing is written into the `planPractices` comment and
+   into an ADR. The two tool-shaped protocols the package ships under `prompts/adapters/`,
+   which `prompts/README.md` calls "tool-shaped entry points", are **protocols rendered by
+   FR-2** and legitimate pointer targets, not adapters.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::renderAdapters`,
      `packages/provegate/src/core/run/prompts.ts::ADAPTER_GRAMMAR`,
-     `packages/provegate/src/core/run/prompts.ts::validateAdapter`
+     `packages/provegate/src/core/run/init.ts::planPractices`,
+     `packages/provegate/practices/shims/AGENTS.md.snippet`,
+     `_brain/adr/ADR-0002-agent-protocol-delivery.md`
 
-10. **FR-10**: The Codex adapter is a **snippet, never a write** to `AGENTS.md`.
-    `planPractices` states that agent-entrypoint files are deliberately absent from the pack
-    so an existing entrypoint is never touched or shadowed; that invariant holds unchanged
-    for `CLAUDE.md`, `AGENTS.md` and `.cursor/rules/brain.mdc`. It is **narrowed, not
-    broken**: a file at a provegate-namespaced path the adopter does not own is a generated
-    adapter, not an entrypoint. The distinction is written into the `planPractices` comment
-    and into an ADR. `gate init --practices` additionally gains the adopter instructions:
-    `NEXT_STEPS.md` names `gate init --prompts`, the values to supply, where the store lands,
-    and — because nothing claims a path — that removing an adapter from `prompts.adapters`,
-    renaming `prompts.dir`, or removing `prompts` leaves the previous files on disk for the
-    adopter to delete. `PACK_MAP` gains only static files; no rendered output enters the pack,
-    and `verify:pack-drift` is green on both sides.
-    - **Targets:** `packages/provegate/src/core/run/init.ts::planPractices`,
-      `packages/provegate/src/core/run/init.ts::PACK_MAP`,
-      `packages/provegate/practices/shims/AGENTS.md.snippet`,
-      `packages/provegate/practices/NEXT_STEPS.md`,
-      `packages/provegate/test/pack-manifest.json`,
-      `_brain/adr/ADR-0002-agent-protocol-delivery.md`
+7. **FR-7**: `gate init --practices` gains the adopter instructions: `NEXT_STEPS.md` names
+   `gate init --prompts`, says the required values are printed by that command, says where the
+   store lands, and **states the one-way boundary in the adopter's own words** — this version
+   installs once, reinstalling means deleting the store directory, and reconciliation is a
+   later release. `PACK_MAP` gains only static files; no rendered output enters the pack, and
+   `verify:pack-drift` is green on both sides.
+   - **Targets:** `packages/provegate/practices/NEXT_STEPS.md`,
+     `packages/provegate/src/core/run/init.ts::PACK_MAP`,
+     `packages/provegate/test/pack-manifest.json`,
+     `packages/provegate/test/practices-pack.test.ts`,
+     `packages/provegate/test/pack.test.ts`
 
 ---
 
 ## 5. Non-Goals (Out of Scope)
 
-- **Interpreting a divergence — PRD-030.** This PRD writes a receipt; PRD-030 adds the
-  exceptions store, `gate doctor --prompts`, `gate sync --prompts` and the wiring.
-- **Deleting or tracking a path the current plan does not produce.** A retired adapter, a
-  renamed `prompts.dir` or a removed `prompts` block leaves files on disk. Because the receipt
-  claims nothing, nothing is orphaned in a sense that obliges this tool; the files are the
-  adopter's, `NEXT_STEPS.md` says so, and no command deletes them.
-- **Interacting enumerated values — FR-6 refuses them by design.** If a requirement for one
-  arrives, it is a composite enumeration, not a conditional language.
-- **Multi-file write atomicity.** FR-7 plans in full before writing and names the incomplete
-  state; it does not claim a transaction it cannot implement without a staging directory.
-- **Any enumerated token's content — PRD-031.**
+- **Every part of the store lifecycle — PRD-030.** No receipt, no ledger, no reconciliation,
+  no `doctor --prompts`, no `sync`, no exceptions, no upgrade path, no rollback. Four readiness
+  rounds located every mechanism defect in that layer; it is removed here, and PRD-030's first
+  requirement is now to author the state-transition model it needs before it builds anything.
+- **Editing an adopter's existing `workflow.config.json`.** The block is printed, never written
+  into a file that exists. That is the only activation path for an existing repository and FR-4
+  says so.
+- **Any enumerated token's content — PRD-031.** FR-4 ships the mechanism and zero tokens.
 - **This repository consuming its own store — PRD-032.**
-- **Migrating repositories that already installed the pack.** `gate init` is additive-only.
+- **Overwriting, deleting, or reconciling anything.** The installer's additive-only contract is
+  unchanged and no exception to it is carved.
 - **A machine-checkable Phase 3 "Go" gate**, and **an agent driver for Phases 4–7.**
 - **Rewriting phase-protocol content.** This PRD renders `prompts/` and never edits it, except
-  `PLACEHOLDERS.md`, and there only to add the enumerated-token column, which is registry
-  structure rather than method prose.
+  `PLACEHOLDERS.md` and there only for the `empty` and enumerated columns, which are registry
+  structure rather than method prose. The registry is absent from `source-snapshot/prompts/` and
+  unmentioned in its `MANIFEST.md`, so it is an extraction artifact and its columns are not
+  snapshot-traceable content.
 - **A prompts registry, marketplace, or remote fetch.** Nothing here reaches the network.
 
 ---
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** a scratch repository, **When** `gate init --prompts` runs before any value is
-  supplied, **Then** it writes the `prompts` block with `null` for each required key, writes
-  **no** store file, and exits non-zero naming each unresolved token with its meaning.
-- **Given** the same repository with those values filled, **When** the command is re-run,
-  **Then** the store and the receipt are written and every rendered file resolves every token.
-- **Given** a `values` entry whose string looks like a marker, **When** the render runs,
-  **Then** it is treated as a value; only `null` and absence are unset.
+- **Given** a repository whose config omits `prompts` or sets `enabled: false`, **When** every
+  command runs, **Then** behaviour is byte-identical to the pre-PRD build.
+- **Given** `DEFAULT_CONFIG` now contains a `prompts` block, **When** a config that never
+  mentions `prompts` is resolved, **Then** `merged.prompts.enabled` is `false` and no store
+  code executes — presence is never the predicate.
+- **Given** a repository that already has a `workflow.config.json`, **When**
+  `gate init --prompts` runs, **Then** the config is byte-identical afterwards and the command
+  prints the complete `prompts` block with every required key and its meaning.
+- **Given** required values still unset, **When** the command runs, **Then** it writes **no**
+  store file and names each unresolved token.
+- **Given** every required value supplied, **When** the command runs, **Then** the store and
+  the adapters are written and every rendered file resolves every token.
+- **Given** a store that already exists, **When** the command is re-run, **Then** every
+  existing path is reported as **skipped**, nothing is written over, and the summary states
+  that reinstalling means deleting the directory first.
 - **Given** a package file matching no disposition rule — a `.txt` beside a protocol, or a
   nested `templates/legacy/x-template.md` — **When** the plan is built, **Then** it fails
   naming that file and the dispositions available.
 - **Given** a symlink under `prompts/`, **When** the plan is built, **Then** it is refused by
-  name, neither followed nor silently skipped.
+  name, neither followed nor skipped.
 - **Given** a file under `prompts/_fragments/`, **When** the plan is built, **Then** rule 4
   matches before rule 5 and it is not emitted.
-- **Given** a fragment containing a token candidate, **When** the package is built, **Then**
-  it fails: fragments are terminal.
-- **Given** a source file containing `{{lowercase}}` or `{{ spaced }}`, **When** the render
-  runs, **Then** the text passes through untouched and nothing is reported.
-- **Given** a source file containing `{{TO` at end of line and `KEN}}` on the next, **When**
-  the render runs, **Then** it fails as **malformed**.
-- **Given** `{{!CMD_TEST}}` and `{{!!CMD_TEST}}`, **When** the render runs, **Then** the
-  output contains `{{CMD_TEST}}` and `{{!CMD_TEST}}` respectively.
-- **Given** a configured value containing `{{ID_PREFIX}}`, **When** the render runs, **Then**
-  that text is emitted verbatim and is not reported as unresolved.
-- **Given** the registry's four tokens that appear in no rendered file, **When** the required
-  set is derived, **Then** none of them is required.
-- **Given** an enumerated token configured outside its declared set, **When** the render runs,
-  **Then** it fails naming the legal values.
-- **Given** a store interrupted mid-write, **When** the state is classified, **Then** it is
-  `configured-incomplete`, and the next run either completes it or names the mismatched paths.
-- **Given** an existing destination whose bytes differ from the prompt plan, **When**
-  `gate init --prompts` runs, **Then** it fails naming that path and directing the adopter to
-  `gate doctor --prompts`.
-- **Given** an existing file the **base or practices** plan would write, **When**
-  `gate init --practices` runs, **Then** it is skipped as before and the run succeeds — the
-  mismatch rule is prompt-plan-only.
-- **Given** a completed store, **When** the receipt is read, **Then** it lists every path the
-  plan produced including adapters outside `prompts.dir`, records the package version, and
-  does not list itself.
-- **Given** a user-authored file at a planned adapter path whose bytes match the render,
-  **When** the package is upgraded and `gate sync --prompts` runs, **Then** the file is
-  reported and **not** rewritten — no command in this chain overwrites an existing file.
-- **Given** a token candidate `{{!NAME}}`, **When** it is classified, **Then** the escape
-  class matches before the token class and the escape is reachable.
-- **Given** a required token whose registry `empty` column is not `allowed` and whose value
-  is `""`, **When** the render runs, **Then** it fails naming the token.
+- **Given** `{{!CMD_TEST}}` and `{{!!CMD_TEST}}`, **When** the render runs, **Then** the output
+  contains `{{CMD_TEST}}` and `{{!CMD_TEST}}` — the escape class matches before the token class.
+- **Given** `{{lowercase}}` or `{{ spaced }}`, **When** the render runs, **Then** the text
+  passes through untouched.
+- **Given** `{{TO` at end of line and `KEN}}` on the next, **When** the render runs, **Then**
+  it fails as malformed.
+- **Given** a value whose text contains `{{ID_PREFIX}}`, **When** the render runs, **Then** it
+  is emitted verbatim and not reported as unresolved.
+- **Given** a required token whose registry `empty` column is not `allowed` and whose value is
+  `""`, **When** the render runs, **Then** it fails naming the token.
 - **Given** an unknown key in `prompts.values`, **When** the config loads, **Then** the raw
   pass refuses it by name.
+- **Given** a fragment containing a token candidate, **When** the package test suite runs,
+  **Then** it fails — and no requirement anywhere claims a build-time boundary.
 - **Given** the rendered `.cursor/rules/prd-workflow.mdc`, **When** its first line is read,
-  **Then** it is `---`, the frontmatter keys are exactly the three named in FR-9 in order, and
+  **Then** it is `---`, the frontmatter keys are exactly the three named in FR-6 in order, and
   the banner follows the closing `---`.
 - **Given** every generated adapter, **When** the grammar test runs, **Then** each conforms to
   its skeleton and nothing else is present.
-- **Given** a repository whose config `gate init --prompts` wrote, **When** `gate new` runs,
-  **Then** it reads the rendered template because that config's `templates.prd` names it.
-- **Given** a repository whose config already existed, **When** `gate init --prompts` runs,
-  **Then** the config is byte-identical afterwards and the command prints the `templates.prd`
-  value to set.
-- **Given** a repository whose `prompts.dir` does not yet exist, **When** containment is
-  checked, **Then** it resolves the longest existing prefix and is not refused.
-- **Given** an existing `AGENTS.md`, **When** `gate init --prompts` runs, **Then** the file is
-  byte-identical afterwards and the Codex adapter is emitted as a snippet.
-- **Given** `prompts` is absent from the config, **When** every command in this PRD runs,
-  **Then** behaviour is byte-identical to the pre-PRD build.
+- **Given** an existing `AGENTS.md`, **When** the command runs, **Then** it is byte-identical
+  afterwards and the Codex adapter is emitted as a snippet inside the store.
+- **Given** `gate init --practices` alone, **When** it completes, **Then** no store exists and
+  `NEXT_STEPS.md` names the command that creates one and states the one-way boundary.
 
 ---
 
@@ -535,59 +400,42 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Architecture
 
-**Nothing overwrites, and that is what makes the receipt harmless.** Iteration 3's
-remediation declared that the receipt claims nothing and left `sync` overwriting files whose
-paths it listed; iteration 4 showed that membership was therefore still a capability, and that
-renaming it "content" changed nothing an adopter would experience. The fix is not a better
-sentence. **No command in this chain overwrites an existing file**: `init` refuses a
-destination whose bytes differ, and `sync` reports. Replacing a file is `rm` followed by
-`init`, and the `rm` is the human's. With no write authority anywhere, the receipt cannot
-confer one, and its four would-be jobs collapse to the single job it can honestly do — saying
-what a plan produced, for a reader who wants to tell an upgrade from an edit.
+**The scope is the remediation.** Readiness iterations 2–5 scored the ten-FR predecessor 5.73,
+5.90, 5.63 and 4.53, and iteration 5's six mechanism defects were all in one layer: an upgrade
+that could not terminate, an exception that permanently blocked `init`, a receipt whose own
+preflight status broke under either reading, an activation predicate the config loader erased.
+The layer beneath them — dispositions, token grammar, the derived value set — was re-measured
+exact in that same round and called strong. **Removing the layer removes the defects, and it
+removes them by not promising what the design could not deliver.**
 
-The receipt has one writer, `gate init --prompts`, and one reader, PRD-030. Acquisition,
-retirement, rename and relinquish are not answered here because they are not asked: a path
-this tool no longer produces is a path it says nothing about, and the human who wants it gone
-deletes it.
+**No preflight is the load-bearing simplification.** The predecessor added a mismatch refusal to
+`init`, which then had to be scoped away from the base and practices plans, and which made the
+prescribed apply path — delete one file, re-run — fail on every other file. Dropping it returns
+this plan to the contract every other `init` plan already has: additive-only, skip what exists,
+report it. One rule, no exception to scope, no dead end.
 
-**Totality comes from the refusal, not from the rules.** No finite rule list covers a
-directory anyone may add a file to. What makes the domain total is that an unmatched file
-fails.
+**Activation follows `memory`, deliberately.** `mergeConfig` deep-merges defaults, so a presence
+test on `prompts` can never be false once the block has defaults. `defaults.ts:95-101` already
+records this decision for `memory` and states the reasoning; the predecessor picked the rejected
+mechanism without mentioning the precedent. `enabled: false` is the shape, copied rather than
+re-derived.
 
-**A candidate rule, not a brace rule.** Requiring a token candidate to begin `{{` + uppercase
-is the cheapest way to stop the grammar refusing ordinary documents. The alternative — treat
-every `{{` as a token and refuse what does not parse — makes the render hostile to prose it
-was never meant to interpret, which is the overshoot shape two rounds have now found here.
-
-**`null` rather than a sentinel string.** Any in-band marker makes one legitimate string
-unrepresentable. `null` is out of band, costs a union type, and removes the collision
-entirely.
-
-**Enumerated tokens, with the ceiling stated.** Conditional content needs one capability: pick
-one of N package-shipped fragments by a configured key. Fragments are terminal and that is
-enforced, so the mechanism cannot grow a second level by accident, and interacting
-enumerations are refused rather than approximated. `narrow-the-grammar-not-the-parser` argues
-for exactly this over a block syntax.
-
-**No transaction is claimed.** Planning in full before writing removes the mixed-version
-failure; it does not make N writes atomic, and saying otherwise would be a promise the code
-cannot keep. `configured-incomplete` exists because the state is reachable.
+**Discovery without a write.** Printing the config block regardless of whether one is written is
+what lets an existing repository — including this one — learn its required values. The
+predecessor tied discovery to scaffolding, which only happens where no config exists, which is
+nowhere that matters.
 
 **Prerequisites and serialization.** PRD-026 declares `core/run/init.ts`, `cli.ts`,
 `practices/NEXT_STEPS.md`, `test/init.test.ts`, `test/pack-manifest.json` and
-`test/practices-pack.test.ts` — six paths this PRD also claims. The collision is
-additive-versus-deletion rather than semantic, but they are modify-in-place files and this
-repository runs one serialized merge channel per package. Intended order: **this PRD first,
-PRD-026 absorbing its pack entries.** PRD-024 does not overlap. PRD-030 and PRD-031 are
-strictly downstream and disjoint from each other. **Re-run `gate queue` before Phase 3 rather
-than trusting this paragraph.**
+`test/practices-pack.test.ts` — six paths this PRD also claims, additively rather than
+semantically. Intended order: **this PRD first, PRD-026 absorbing its pack entries.** PRD-024
+does not overlap. PRD-030, PRD-031 and PRD-032 are strictly downstream. **Re-run `gate queue`
+before Phase 3 rather than trusting this paragraph** — it has gone stale twice here within hours.
 
 ### Dependencies
 
 - No new runtime dependency. `packages/provegate` takes zero, permanently.
-- No prerequisite work item. PRD-030, PRD-031 and PRD-032 depend on this one; PRD-026 is a
-  merge-order constraint.
-- Nothing here reaches the network, and nothing adds a push code path.
+- No prerequisite work item. Nothing here reaches the network; nothing adds a push code path.
 
 ---
 
@@ -595,13 +443,12 @@ than trusting this paragraph.**
 
 ### In Scope
 
-- [ ] `packages/provegate/src/core/config` — the `prompts` surface, split across both passes
-- [ ] `packages/provegate/src/core/run/prompts.ts` — dispositions, grammar, render, adapters, receipt
-- [ ] `packages/provegate/src/core/run/init.ts` — `--prompts` plan, prompt-plan preflight, starter config, `PACK_MAP`
+- [ ] `packages/provegate/src/core/config` — the `prompts` block and its two-pass validation
+- [ ] `packages/provegate/src/core/run/prompts.ts` — dispositions, render, token grammar, values, adapters
+- [ ] `packages/provegate/src/core/run/init.ts` — the `--prompts` plan, starter config, `PACK_MAP`
 - [ ] `packages/provegate/src/cli.ts` — `init --prompts`
-- [ ] `packages/provegate/schemas/prompts-lock.schema.json` — the receipt contract
-- [ ] `packages/provegate/prompts/PLACEHOLDERS.md` — the enumerated-token column
-- [ ] `packages/provegate/practices` — NEXT_STEPS and shim text
+- [ ] `packages/provegate/prompts/PLACEHOLDERS.md` — the `empty` and enumerated columns
+- [ ] `packages/provegate/practices/NEXT_STEPS.md` — adopter instructions and the one-way boundary
 - [ ] `_brain/adr/ADR-0002-agent-protocol-delivery.md` — the delivery decision
 
 ---
@@ -614,16 +461,15 @@ than trusting this paragraph.**
 
 ## 10. References
 
-- `_readiness/wip/readiness-029-method-delivery-agent-binding.md` — iterations 1–3; W1, W9–W24
-- `packages/provegate/prompts/PLACEHOLDERS.md` — the registry FR-5 derives from and FR-6 extends
+- `_readiness/wip/readiness-029-method-delivery-agent-binding.md` — iterations 1–5; this scope cut answers iteration 5's band action
+- `packages/provegate/src/core/config/defaults.ts:95-101` — the `memory` activation precedent FR-1 copies
+- `packages/provegate/src/core/config/load.ts:216, 267-273` — the deep merge and the two validation passes
+- `packages/provegate/prompts/PLACEHOLDERS.md` — the registry FR-4 derives from and extends
 - `packages/provegate/prompts/README.md` — calls `adapters/` "tool-shaped entry points"
-- `packages/provegate/src/core/config/load.ts:256-273` — the real two-pass validation order
-- `packages/provegate/src/core/config/load.ts::memoryPathsContained` — the prefix-realpath containment FR-1 reuses
 - `packages/provegate/src/core/run/new.ts:112-170` — the existing substitution and template fallback
-- `packages/provegate/src/core/run/init.ts::planPractices` — the entrypoint invariant FR-10 narrows
-- `.cursor/rules/brain.mdc:1` — frontmatter on line 1, the constraint FR-3's banner respects
-- `AGENT_BOOTSTRAP.md` — the ten stop-and-ask checkpoints
-- PRD-030, PRD-031, PRD-032 — the rest of the split
+- `packages/provegate/src/core/run/init.ts::planPractices` — the entrypoint invariant FR-6 narrows
+- `packages/provegate/package.json` — `build` is one `tsup` invocation, which is why FR-4 names tests
+- PRD-030, PRD-031, PRD-032 — the deferred lifecycle, method content, and dogfood
 
 ---
 
@@ -639,49 +485,51 @@ ceremonial answer this contract exists to prevent.
 Required in a memory-enabled repository, alongside Memory Outputs below.
 
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
-  `packages/provegate/src/core/run/**`. **Three rounds running this record was declared and
-  not applied to that round's own new refusals**, which is now itself a Memory Output below.
-  Applied here to each refusal this revision introduces: the token candidate rule stops the
-  grammar refusing `{{lowercase}}`; `null` replaces the sentinel that made one legitimate
-  string unrepresentable; the mismatch preflight is scoped to the prompt plan so ordinary
-  `gate init` keeps its skip-if-present behaviour; and the symlink refusal is stated as a
-  deliberate portability policy with a diagnostic that names the remedy.
-- applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers `_prds/**`.
-  Three rounds, three instances, the last being a count corrected in one FR while three other
-  sections kept the old one under a changelog claiming otherwise. FR-2's corpus figures are
-  now labelled a measurement rather than a specification, which is what the DO NOT was really
-  trying to say, and the DO NOT is reworded to match instead of contradicting the body.
-- applied: `narrow-the-grammar-not-the-parser` — FR-4's candidate rule and FR-6's terminal
-  fragments with a stated ceiling. Both narrow what the input may be rather than growing the
-  reader; the alternative in each case was a more capable parser.
+  `packages/provegate/src/core/run/**`. Four rounds found this record declared and not applied
+  to that round's own new refusals. It is applied here by **removing** a refusal rather than
+  scoping it: FR-5 has no preflight, so `gate init`'s additive-only contract needs no carve-out
+  and no caller changes behaviour. The refusals that remain are the render's own, and each
+  names its remedy.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers `_prds/**`. Five
+  rounds, five instances. The structural answer here is that a deleted mechanism has no
+  restatements to go stale: there is no receipt, no exception and no sync anywhere in this
+  document, so the class of defect that produced nine live contradictions in PRD-030 cannot
+  recur in it.
+- applied: `narrow-the-grammar-not-the-parser` — FR-3's two candidate classes and FR-4's
+  terminal fragments with a stated ceiling. Both narrow what the input may be rather than
+  growing the reader.
+- applied: `gate-wire-or-delete` — FR-4 names package tests and the render as the surfaces
+  enforcing fragment rules, because the package's `build` is one `tsup` invocation. A
+  requirement wired to a boundary that does not exist was iteration 5's finding, in a document
+  that declared this record applied.
 - applied: `evidence-pattern-satisfied-by-the-template` — its watch covers
-  `packages/provegate/templates/**`, which FR-2 renders. FR-4's refusal is proved against the
+  `packages/provegate/templates/**`, which FR-2 renders. FR-3's refusal is proved against the
   shipped corpus with an empty values map, and the `PLACEHOLDERS.md` exemption is by
   disposition rather than a token allowlist.
-- applied: `false-green-on-missing-file` — FR-2's unmatched-file refusal and FR-7's preflight:
-  a check over a file set fails on the unexpected member, a plan over destinations fails on
-  the one whose bytes disagree.
+- applied: `false-green-on-missing-file` — FR-2's unmatched-file refusal: a check over a file
+  set fails on the unexpected member rather than skipping it.
 - applied: `fixture-must-reach-production-shape` — its watch covers
-  `packages/provegate/src/cli.ts`, which FR-7 targets. The `--prompts` regressions run through
-  the real argument path.
+  `packages/provegate/src/cli.ts`, which FR-5 targets. The `--prompts` regressions run through
+  the real argument path, not by calling `planPrompts` with tidier arguments than the CLI
+  supplies.
 - applied: `assert-absent-needs-an-independent-cause` — its watch covers
-  `packages/provegate/test/**`. FR-7's "no store file written when unresolved" and FR-10's
-  "AGENTS.md byte-identical" both need a scenario in which something would otherwise have
-  written.
-- applied: `absence-must-be-asserted` — FR-7's `configured-unresolved` is a "must NOT exist"
+  `packages/provegate/test/**`. FR-5's "no store file written when a value is unresolved" and
+  FR-6's "AGENTS.md byte-identical" both need a scenario in which something would otherwise
+  have written.
+- applied: `absence-must-be-asserted` — the unresolved-value case is a "must NOT exist"
   requirement over the whole store, so the test asserts the destination set is empty rather
   than grepping for one absent path.
-- applied: `adr-section-blank-line-reads-empty` — its watch covers `_brain/adr/**`, and FR-10
-  writes ADR-0002. `## Context` must be followed immediately by prose or `verify:brain` fails.
-- applied: `gate-wire-or-delete` — the reason no reconciliation check ships here. FR-8 writes
-  the receipt and reads nothing; the check and its wiring are PRD-030's, together.
-- applied: `two-parsers-wrong-together` — FR-5 and FR-6 both derive from `PLACEHOLDERS.md`, so
-  the registry is one authority. FR-4's grammar is that reader's specification and the
-  registry's rows are its corpus.
-- reviewed: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`,
-  which this PRD no longer targets; that edit is PRD-031's.
-- reviewed: `known-red-ledger-must-expire` — FR-8 writes a receipt and no allowlist; the
-  exceptions store and its expiry are PRD-030's, where this record binds.
+- applied: `adr-section-blank-line-reads-empty` — its watch covers `_brain/adr/**`, and FR-6
+  writes ADR-0002. `## Context` must be followed immediately by prose or `verify:brain` fails;
+  the parser fix is an open deferral, so the ADR is written around it.
+- reviewed: `two-parsers-wrong-together` — FR-4 derives the mapping and the enumerated values
+  from `PLACEHOLDERS.md`, so the registry is one authority; FR-3's grammar is its reader's
+  specification.
+- reviewed: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`, which
+  this PRD does not target; that edit is PRD-031's. Recorded because the whole item is an
+  instance of the pattern.
+- not-applicable: `known-red-ledger-must-expire` — this PRD has no allowlist and no ledger; the
+  record binds on PRD-030, where the exceptions store now lives.
 - not-applicable: `push-is-human-by-omission` — no code path here reaches a remote, and the
   record's rule is preserved by adding nothing.
 
@@ -702,30 +550,23 @@ Phase 7 compares against this PRD as committed on the base branch — not agains
 state.
 
 - adr: `_brain/adr/ADR-0002-agent-protocol-delivery.md` — the decision that shipped method
-  content reaches agents as a rendered store, that the record of it is a **receipt claiming
-  nothing** rather than an ownership manifest, that conditional content is an enumerated token
-  resolving to terminal package-shipped fragments, and the narrowing of the entrypoint
-  invariant that made the adapters possible.
-- learning: `_brain/learnings/shipped-content-needs-a-delivery-gate.md` — packaging a
-  protocol is not delivering it: content published in a package but never installed into a
-  consuming repository is invisible to every agent, and no existing gate detects that,
-  because every gate checks what the artifacts say rather than what the agent read.
+  content reaches agents as a rendered store installed **one way**, that conditional content is
+  an enumerated token resolving to terminal package-shipped fragments, and the narrowing of the
+  entrypoint invariant that made generated adapters possible.
+- learning: `_brain/learnings/shipped-content-needs-a-delivery-gate.md` — packaging a protocol
+  is not delivering it: content published in a package but never installed into a consuming
+  repository is invisible to every agent, and no existing gate detects it, because every gate
+  checks what the artifacts say rather than what the agent read.
 - learning: `_brain/learnings/derive-the-requirement-from-the-consumer.md` — a required-input
-  set derived from the catalogue rather than from what the consumer actually reads produces
-  refusals nobody can satisfy meaningfully; the catalogue is a superset by construction, and
-  the failure looks like diligence.
-- learning: `_brain/learnings/a-record-declared-is-not-a-record-applied.md` — across three
-  independent rounds on this item, two memory records were declared `applied` and then
-  violated by the same session in the same document. The failure is positional rather than
-  intentional: a session applies a record to the defect it has just been shown and not to the
-  rules it is about to write, so the check has to be a step in the remediation — sweep the
-  new rules against every declared record before the artifact is re-scored — rather than a
-  disposition line.
-- learning: `_brain/learnings/one-file-one-claim.md` — an artifact asked to be a receipt, an
-  ownership manifest, a reconciliation scope and a migration state at once cannot be owned by
-  anyone, and the contradiction surfaces as field-level ownership prose that the first write
-  path violates; dropping the strongest claim — here, ownership — collapsed four unanswerable
-  lifecycle questions into none, because they were all consequences of claiming.
+  set derived from the catalogue rather than from what the consumer reads produces refusals
+  nobody can satisfy meaningfully; the catalogue is a superset by construction and the failure
+  looks like diligence.
+- learning: `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md` — when successive
+  independent reviews put every mechanism defect in one layer of a work item while measuring
+  the layers around it exact, the answer is to remove that layer from the item rather than
+  repair it in place; the reviews were locating a scope error and reporting it as a sequence of
+  design errors, and four remediations each fixed the named counterexample and produced a new
+  one.
 
 ---
 
@@ -743,7 +584,6 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/run/init.ts`
 - `packages/provegate/src/core/config/**`
 - `packages/provegate/src/cli.ts`
-- `packages/provegate/schemas/prompts-lock.schema.json`
 - `packages/provegate/prompts/PLACEHOLDERS.md`
 - `packages/provegate/practices/shims/**`
 - `packages/provegate/practices/NEXT_STEPS.md`
@@ -758,8 +598,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `_brain/adr/ADR-0002-agent-protocol-delivery.md`
 - `_brain/learnings/shipped-content-needs-a-delivery-gate.md`
 - `_brain/learnings/derive-the-requirement-from-the-consumer.md`
-- `_brain/learnings/a-record-declared-is-not-a-record-applied.md`
-- `_brain/learnings/one-file-one-claim.md`
+- `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md`
 
 ---
 
@@ -769,11 +608,10 @@ Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none`
 against the merge diff). Never leave empty — write `none` explicitly. Narrow scope:
 only **this PRD's** durable knowledge.
 
-- ADR: `_brain/adr/ADR-0002-agent-protocol-delivery.md` — rendered-store delivery, a receipt that claims nothing, enumerated tokens over a template language, grammar-checked adapters, and the narrowed entrypoint invariant
+- ADR: `_brain/adr/ADR-0002-agent-protocol-delivery.md` — one-way rendered-store delivery, enumerated tokens over a template language, grammar-checked adapters, the narrowed entrypoint invariant
 - `_brain/learnings/shipped-content-needs-a-delivery-gate.md` — packaging is not delivery; no existing gate detects content that ships and never installs
 - `_brain/learnings/derive-the-requirement-from-the-consumer.md` — a requirement derived from the catalogue rather than the consumer refuses what nobody can satisfy
-- `_brain/learnings/a-record-declared-is-not-a-record-applied.md` — a declared memory record is applied to the defect just shown, not to the rules about to be written; make the sweep a step
-- `_brain/learnings/one-file-one-claim.md` — an artifact with four jobs has no owner; drop the strongest claim and the lifecycle questions disappear with it
+- `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md` — when every defect across rounds lands in one layer, the reviews are locating a scope error; remove the layer
 - `_brain/INDEX.md` — one pointer line per record above, per the memory protocol
 - `_docs/reviews/review-029-method-delivery-agent-binding.md` — the independent Phase 6 artifact
 
@@ -786,20 +624,16 @@ with a runnable backticked command** (allowlisted prefix, no shell metacharacter
 single line — and never a pipe character inside a backticked command in this table).
 `gate check` lints this section; `gate run` executes it and refuses unsafe rows.
 
-| FR    | Command / Check                                                  | Scope | Notes                                                                                                                       |
-| ----- | ---------------------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------- |
-| FR-1  | `pnpm --filter provegate test test/config.test.ts`               | pkg   | raw-pass shape refusals, resolved-pass containment, a non-existent dir accepted via prefix realpath, a symlinked root accepted  |
-| FR-2  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | ordered dispositions with rule 4 before rule 5; unmatched file and symlink each fail by name; nested paths preserved            |
-| FR-3  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | identical bytes across runs; banner on every rendered file; the mdc keeps frontmatter on line 1                                 |
-| FR-4  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | lowercase and spaced braces pass through; line-broken is malformed; the escape is recursive; opaque values are not rescanned    |
-| FR-5  | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | nine required; the four practices-only tokens excluded; a marker-looking string is a value and only null is unset               |
-| FR-6  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | illegal enumerated value fails naming the set; a fragment containing a candidate fails at build time                            |
-| FR-7  | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | five states; unresolved writes zero store files; a mismatched prompt destination fails while the practices plan still skips     |
-| FR-8  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | the receipt covers adapters outside the store dir, excludes itself, and is built from the plan rather than a walk               |
-| FR-9  | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | frontmatter keys and order, table columns and row order, the fenced path block; anything beyond the skeleton fails              |
-| FR-10 | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | a fixture that already has AGENTS.md and would otherwise be written leaves it byte-identical                                    |
-| FR-10 | `pnpm verify:pack-drift`                                         | repo  | the new pairs reconcile on both sides with no orphan packed file and no lost live copy                                        |
-| FR-10 | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | the shipped-file allowlist matches the packed tarball after the additions                                                     |
+| FR   | Command / Check                                                  | Scope | Notes                                                                                                                         |
+| ---- | ---------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------- |
+| FR-1 | `pnpm --filter provegate test test/config.test.ts`               | pkg   | a config never mentioning prompts resolves to enabled false; an unknown values key is refused in the raw pass; a missing dir passes containment |
+| FR-2 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | ordered dispositions with rule 4 before rule 5; unmatched file and symlink each fail by name; nested paths preserved              |
+| FR-3 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | escape class matched first and recursive; lowercase and spaced braces pass through; malformed and undeclared are distinct         |
+| FR-4 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | nine required; the four practices-only tokens excluded; the per-token empty policy; a fragment carrying a candidate fails         |
+| FR-5 | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | unresolved writes zero store files; a re-run reports every existing path skipped; an existing config stays byte-identical         |
+| FR-6 | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | each adapter conforms to its named destination and skeleton; a fixture that already has AGENTS.md leaves it byte-identical        |
+| FR-7 | `pnpm verify:pack-drift`                                         | repo  | the new pairs reconcile on both sides with no orphan packed file and no lost live copy                                          |
+| FR-7 | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | the shipped-file allowlist matches the packed tarball after the additions                                                       |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -826,52 +660,40 @@ rationalize.
 
 - DO NOT introduce `any`; use `unknown` + narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
-- DO NOT **specify** the emitted set by count. The specification is the ordered disposition
-  list plus the unmatched-file refusal; the corpus figures in FR-2 are a labelled measurement
-  and a pinning test holds them. A count presented as the rule is what disagreed with itself
-  three times.
-- DO NOT overwrite an existing file, anywhere in this chain. `init` refuses a destination
-  whose bytes differ; `sync` reports. Replacing a file is the human deleting it and re-running
-  `init`, and the deletion is the consent.
-- DO NOT let the receipt claim, imply, or be read as ownership, and DO NOT add a second
-  writer. One command writes it: `gate init --prompts`.
-- DO NOT derive any capability from a path appearing in the receipt. The previous revision
-  promised this in prose while `sync` overwrote paths because they were listed; the promise is
-  now kept by there being no write to authorize.
-- DO NOT build the receipt by walking the directory, and DO NOT include the receipt in itself.
-- DO NOT follow a symlink and DO NOT silently skip one. Refuse by name, with the remedy.
-- DO NOT render `PLACEHOLDERS.md`, and DO NOT exempt anything from the token check with a
-  token allowlist. Exemption is by disposition, one file, named in FR-2.
-- DO NOT treat every `{{` as a token. A candidate begins `{{` plus an uppercase letter;
-  anything else is prose and passes through.
-- DO NOT re-scan a substituted value, and DO NOT make the escape non-recursive. Both make some
-  legitimate text unwritable.
-- DO NOT use an in-band sentinel for unset. `null` and absence are unset; every string is a
-  value.
-- DO NOT derive the required-value set from the registry. It covers `practices/templates/`
-  too, and four of its rows appear in nothing this PRD renders.
-- DO NOT add a conditional block syntax, and DO NOT let a fragment contain a token. The
-  mechanism is one indirection and terminal fragments are what hold it there.
-- DO NOT approximate interacting enumerated values. They are refused; a composite enumeration
-  is the answer if one is ever needed.
-- DO NOT claim atomicity FR-7 does not implement. Plan fully, write per file, name the
-  incomplete state.
-- DO NOT apply the mismatch refusal to the base or practices plan. Those keep skip-if-present,
-  or the byte-identical promise for repositories without `prompts` is broken.
-- DO NOT write any store file while a required value is unresolved.
-- DO NOT validate an adapter by comparing its lines against protocol prose, and DO NOT write
-  protocol prose into a generated adapter.
-- DO NOT delete or rewrite `prompts/adapters/*` — shipped protocols this PRD renders.
+- DO NOT add a receipt, a ledger, a reconciliation check, an exceptions store, a `doctor`
+  branch, a `sync` verb, or any upgrade path. They are PRD-030's, and four readiness rounds put
+  every mechanism defect in that layer.
+- DO NOT add a preflight or a mismatch refusal to any `init` plan. This plan is additive-only
+  like every other one; an exception would have to be scoped, and the scoping is what produced
+  a prescribed apply path that could not run.
+- DO NOT overwrite or delete anything, and DO NOT edit an adopter's existing
+  `workflow.config.json`. The block is printed.
+- DO NOT make presence of the `prompts` block the activation predicate. `mergeConfig`
+  deep-merges defaults, so it can never be false. `enabled` is the predicate, as `memory` does.
+- DO NOT claim a build-time boundary. The package's `build` is one `tsup` invocation; name
+  tests or the render.
+- DO NOT state the emitted set as a count *as the specification*. The rules plus the
+  unmatched-file refusal are the specification; the corpus figures are a labelled measurement
+  with a pinning test.
+- DO NOT follow a symlink or silently skip one. Refuse by name, with the remedy.
+- DO NOT render `PLACEHOLDERS.md`, and DO NOT exempt anything from the token check with a token
+  allowlist. Exemption is by disposition, one file, named in FR-2.
+- DO NOT treat every `{{` as a token, and DO NOT match the token class before the escape class
+  — `{{!NAME}}` is not a token candidate and the escape would be unreachable.
+- DO NOT re-scan a substituted value, and DO NOT use an in-band sentinel for unset.
+- DO NOT derive the required-value set from the registry; it covers `practices/templates/` too.
+- DO NOT add a conditional block syntax, let a fragment contain a token, or approximate
+  interacting enumerated values.
+- DO NOT write protocol prose into a generated adapter, and DO NOT delete or rewrite
+  `prompts/adapters/*` — shipped protocols this PRD renders.
 - DO NOT edit any file under `packages/provegate/prompts/` except `PLACEHOLDERS.md`, and there
-  only for the enumerated-token column.
+  only for the `empty` and enumerated columns.
 - DO NOT overwrite, reorder, or append to `CLAUDE.md`, `AGENTS.md`, or
   `.cursor/rules/brain.mdc`.
-- DO NOT put a banner above frontmatter.
-- DO NOT move, copy, or emit `workflow.config.json` into the store.
+- DO NOT put a banner above frontmatter, and DO NOT emit `workflow.config.json` into the store.
 - DO NOT render a template without giving it a reader.
 - DO NOT let the render read the clock, the environment, or the network.
-- DO NOT add a reconciliation check, an exceptions store, or a `doctor` branch here.
-- DO NOT change behaviour for a repository whose config omits `prompts`.
+- DO NOT change behaviour for a repository that has not opted in.
 - DO NOT add a runtime dependency to `packages/provegate`, and DO NOT add a code path that
   reaches a git remote.
 
@@ -879,10 +701,7 @@ rationalize.
 
 ## Changelog
 
-| Date       | Author | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: no command overwrites an existing file.** Iteration 4 showed the previous round's "the receipt claims nothing" was vocabulary rather than mechanism — `sync` overwrote a file when its bytes matched the receipt hash **and its path was listed**, so membership was still a capability. `sync` is now report-only (PRD-030); replacing a file is the human deleting it and re-running `init`. The receipt gets **one writer**, `init`, so a reporter can no longer record hashes for content it declined to place. Four self-contradictions from the previous round are fixed: the **escape becomes its own candidate class matched first**, because under the token-only rule `{{!NAME}}` was not a candidate and the escape was unreachable; fragment terminality names **render time and a package test** instead of a `build` script that is one `tsup` invocation; the undeclared-token policy is stated with its cost; and the empty string becomes a **per-token registry column** rather than a global rule in either direction, with unknown `values` keys refused in the raw pass. |
-| 2026-07-27 | owner  | **Iteration 3 remediation (W18–W24), on a third owner decision: the receipt claims nothing.** Iteration 3's blocking finding was structural — one file being a receipt, an ownership manifest, a reconciliation scope and a migration state, split between two writers by prose that its own `sync` path contradicted. Dropping the ownership claim collapses W18 and W19 together: there are no per-field owners (whoever executes a plan writes the whole file), and acquisition, retirement, rename and relinquish do not arise because nothing is acquired. FR-7 gains `configured-incomplete`, stops claiming a transaction it cannot implement, and **scopes mismatch refusal to the prompt plan** so ordinary `gate init` keeps skip-if-present. FR-6 makes fragment terminality build-time enforced and **states the ceiling**: interacting enumerations are refused, not approximated. FR-4 adds a candidate rule so `{{lowercase}}` is prose, makes the escape recursive, and drops a false claim that the shipped corpus needs it. FR-5 replaces the sentinel string with `null`. FR-1 reuses `memoryPathsContained`'s prefix-realpath so a fresh repository is not refused. FR-9's adapter grammar is normative. Counts swept: ten stop-and-ask checkpoints, nine required values, and the DO NOT reworded to forbid specifying by count rather than contradicting FR-2's labelled measurement. |
-| 2026-07-27 | owner  | **Iteration 2 remediation (W9–W17).** Eight FRs to ten: the receipt, and enumerated tokens. Render domain total by refusal, symlink refusal, path-preserving destinations, normalized collision detection. Token grammar with one-line tokens and opaque one-pass substitution. Required set derived from the rendered corpus. Four activation states with preflight. Positive adapter grammar. Banner after frontmatter. `_brain/INDEX.md` claimed. |
-| 2026-07-27 | owner  | **W1 split taken.** Thirteen FRs become eight; integrity to PRD-030, method policy to PRD-031, dogfood to PRD-032. Six internal contradictions closed at their root. `prompts/adapters/*` reclassified as shipped tool-shaped protocols, `PLACEHOLDERS.md` copied verbatim.                                                                                                                                                                                                                                                                                                                     |
-| 2026-07-27 | owner  | Initial draft. Scope set by owner decision on three questions: rendered prompts editable with a drift ledger; all three adapters in v1; the autonomy exception config-bound.                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Date       | Author | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Scope cut to a one-way install, answering iteration 5's band action (4–5.9 → return to Phase 1).** Ten FRs become seven. **The entire store lifecycle is removed** — no receipt, no reconciliation, no `sync`, no exceptions, no upgrade path — because four independent rounds put every mechanism defect in that layer while measuring the layers beneath it exact. **The preflight goes with it**, returning this plan to the additive-only, skip-if-present contract every other `init` plan has; the predecessor's carve-out is what made its prescribed apply path unrunnable. **Activation becomes `prompts.enabled: false`**, copying the shape `memory` uses at `defaults.ts:95-101`, because `mergeConfig` deep-merges defaults and a presence test can never be false. **Discovery no longer depends on a write**: the config block is printed whether or not one is written, which is the only activation path an existing repository has. FR-6 names each adapter's destination, which no previous version did. FR-4 names package tests rather than a build boundary that does not exist. The one-way limit is stated in the command's output, the store's README and `NEXT_STEPS.md`. |
+| 2026-07-27 | owner  | Superseded shape: four remediation rounds against readiness iterations 1–4 (split, ledger, enumerated tokens, no-overwrite). Preserved in git history at `607954a`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

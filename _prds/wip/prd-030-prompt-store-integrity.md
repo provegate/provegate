@@ -46,27 +46,28 @@ trust a recorded hash, it **recomputes the render and compares**. The ledger exi
 distinguish two divergences that look identical on disk: bytes that changed because the
 package changed, and bytes that changed because a human changed them on purpose.
 
-**PRD-029 writes that receipt and is its only writer.** By an owner decision taken at
-readiness iteration 4, **nothing in this chain overwrites an existing file.** `gate init
---prompts` refuses a destination whose bytes differ from its plan; this PRD's `gate sync
---prompts` **reports and writes nothing at all.** Replacing a file is the human deleting it
-and re-running `init`, which is additive-only and fills an absent path — the deletion is the
-act of consent, and it is theirs.
+**PRD-029 ships a one-way install and writes nothing but the store**: no receipt, no ledger,
+no reconciliation. That was the answer to its readiness iteration 5, which found every
+mechanism defect of the previous design in this layer — an upgrade path that could not
+terminate, an exception that permanently blocked `init`, a receipt whose own preflight status
+broke under either reading. **This PRD owns that layer in full**, and it does not inherit a
+half-built version of it.
 
-That decision is what makes this PRD honest. Its previous shape had `sync` overwrite a file
-whose bytes matched the receipt hash **and whose path the receipt listed**, which meant
-membership granted a capability while the documents claimed the receipt granted nothing.
-Iteration 4 produced the counterexample: a user's own `.claude/commands/prd-3.md`, written by
-hand to match version 1 because they wanted it pinned, recorded by a no-op `init` and then
-overwritten by a version-2 `sync`. With no write path, there is no capability for membership
-to confer, and no argument to make about whether reproducible bytes imply consent.
+Which is why **FR-1 is a precondition and not an implementation**. Five independent readiness
+rounds on PRD-029 scored 4.48, 5.73, 5.90, 5.63 and 4.53, and iteration 5 diagnosed the cause:
+each round repaired the counterexample it was given, inside a design whose state transitions
+had never been written down. This PRD does not repeat that. Before any code is specified, one
+document answers one question — *what is the complete set of state transitions for a generated
+store, and which actor performs each?* — covering, concretely: install into a repository that
+already has a config; upgrade; upgrade with one deliberately edited file; adding and removing
+an adapter; renaming the store directory; removing the config block; and the receipt's own
+second write. Every one of those was undefined or defined into a dead end in the version
+iteration 5 rejected.
 
-**Exceptions live in their own file**, `<prompts.dir>/prompts-exceptions.json`, owned entirely
-here — and their job is now much smaller than it was. They authorize nothing. An exception
-suppresses a `diverged` finding so a repository with a deliberate local edit can keep a green
-check, and that is all it does. It still carries an owner, a reason and a review date, and it
-still **expires**, because a suppression that cannot go stale is a permanent bypass with a
-comment attached.
+An intentional local edit remains legitimate, recorded, attributable and **expiring** — an
+allowlist that cannot go stale is a permanent bypass with a comment attached. What authority
+an exception carries, and whether anything overwrites at all, are questions FR-1 answers rather
+than questions this introduction settles.
 
 ---
 
@@ -138,19 +139,27 @@ so that my change is neither silently reverted nor silently forgotten.
 Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
-1. **FR-1**: Exceptions live in `<prompts.dir>/prompts-exceptions.json`, a separate
-   schema-validated file this PRD owns end to end. The receipt PRD-029 writes is **read-only
-   here** — not by a prose rule about fields, but because it is a different file and this PRD
-   never writes it except through FR-5's plan execution, which rewrites the whole thing the
-   same way `init` does. An unreadable or schema-invalid exceptions file is refused **by
-   name** rather than read as "no exceptions": a store whose exception state cannot be parsed
-   is one nobody can reason about, and defaulting to empty would silently convert every
-   accepted divergence back into a failure — or, worse, be repaired by a subsequent write
-   that drops entries nobody reviewed. An **absent** file is legitimately empty, and the two
-   cases are distinguished.
-   - **Targets:** `packages/provegate/schemas/prompts-exceptions.schema.json`,
-     `packages/provegate/src/core/run/prompts.ts::readExceptions`,
-     `packages/provegate/src/core/run/prompts.ts::writeExceptions`
+1. **FR-1**: **Precondition FR — nothing else in this PRD is specified until this lands.**
+   Author `_docs/design/prompt-store-state-model.md`: the complete set of state transitions for
+   a generated store under this package's constraints, and the actor performing each. It must
+   name, for every transition, what is read, what is written, by whom, and what happens when
+   the step is interrupted:
+
+   | Transition                                    | Must answer                                              |
+   | --------------------------------------------- | -------------------------------------------------------- |
+   | install into a repo that already has a config | how activation is recorded when no file may be edited     |
+   | upgrade                                       | what changes, who applies it, and how it terminates       |
+   | upgrade with one deliberately edited file     | whether the edit survives, and what authority says so     |
+   | add / remove an adapter                       | what happens to the previous file, and who may delete it  |
+   | rename the store directory                    | how the old tree is discovered, or that it is not         |
+   | remove the config block                       | what remains discoverable, stated as a limit if none      |
+   | the receipt's own second write                | who writes it, and whether it is itself a destination     |
+
+   The document is owner-approved before FR-2 onward are written. It is a **Phase 1 artifact**:
+   readiness iteration 5 established that four remediation rounds inside a design without this
+   model each fixed a named counterexample and produced a new one, so producing it is the work
+   rather than a preamble to it.
+   - **Targets:** `_docs/design/prompt-store-state-model.md`
 
 2. **FR-2**: An `exceptions` entry **suppresses a `diverged` finding and authorizes nothing.** It names the exact path (not a
    glob), an `owner` present in `config.owners`, a `reason`, and a `reviewBy` date. Four
@@ -249,10 +258,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 5. Non-Goals (Out of Scope)
 
-- **Creating the store, and creating the ledger.** PRD-029 owns the config surface, the
-  render rules, token resolution, adapters, the installer, and the ledger's `packageVersion`
-  and `generated` fields. This PRD is inert until that one is Ship Verified, and it adds
-  `exceptions` rather than bootstrapping a file that does not exist.
+- **Creating the store.** PRD-029 owns the config surface, the render rules, token resolution,
+  adapters and the installer, and it writes **no** receipt — its scope is a one-way install.
+  This PRD is inert until that one is Ship Verified, and everything about persistence,
+  reconciliation and upgrade originates here.
 - **Editing method content.** No file under `packages/provegate/prompts/` is touched here;
   that is PRD-031's surface.
 - **This repository adopting a store.** PRD-032. The check must exist before dogfooding it
@@ -336,6 +345,7 @@ paragraph.
 ### Dependencies
 
 - **PRD-029 Ship Verified.** Hard prerequisite, not a merge-order note.
+- **FR-1's state model, owner-approved.** A hard precondition on this PRD's own FR-2 onward.
 - No new runtime dependency. `packages/provegate` takes zero, permanently.
 - Nothing here reaches the network, and nothing adds a push code path.
 
@@ -457,6 +467,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/prompts-integrity.test.ts`
 - `scripts/verify/verify-prompts.mjs`
 - `.github/workflows/ci.yml`
+- `_docs/design/prompt-store-state-model.md`
 - `_brain/learnings/recompute-beats-recorded-state.md`
 
 ---
@@ -482,7 +493,7 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR   | Command / Check                                              | Scope | Notes                                                                                                          |
 | ---- | ------------------------------------------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------- |
-| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the ledger validates against its schema and records one entry per emitted path                                   |
+| FR-1 | `test -f _docs/design/prompt-store-state-model.md`            | repo  | the state model exists; its seven transitions and their actors are what FR-2 onward are written against            |
 | FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | expired, orphaned, self-resolved and unauthorized-owner exceptions each fail, every fixture mutating one green baseline |
 | FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the six per-path states including a persisting retired; both control files excluded from the orphan rule; absent store exits non-zero |
 | FR-4 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the json shape matches the memory report's contract and unknown options are refused                              |
@@ -551,6 +562,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                             |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **PRD-029 cut to a one-way install, so this PRD owns the whole lifecycle and inherits no half-built version of it.** FR-1 becomes a **precondition**: one owner-approved document giving the complete state transitions for a generated store and the actor for each, covering the seven cases that were undefined or defined into a dead end in the design readiness iteration 5 rejected. That is the Phase 1 artifact iteration 5 demanded, located in the item that needs it. Nothing here is specified until it lands. |
 | 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: `sync` never overwrites, it only reports.** Iteration 4's counterexample was an adopter's own hand-written `.claude/commands/prd-3.md`, byte-identical to version 1, recorded by a no-op `init` and then overwritten by a version-2 `sync` — so receipt membership granted a capability while both documents promised it granted nothing. `sync` is now a **reporter**: it prints classifications and unified diffs, writes not one byte including the receipt, and exits non-zero when anything would change. The apply path is the human deleting a file and re-running `init`, whose additive-only contract makes deletion sufficient and makes the irreversible step theirs. Consequences: the receipt has **one writer** (`init`), so a reporter can no longer record hashes for content it declined to place; `retired` **persists** instead of being erased by the write that reports it; exceptions **suppress a finding and authorize nothing**; both control files are excluded from the tree-orphan rule by name; and FR-6 states the config-removal limit — with no `prompts` block there is no locator, which is accepted rather than worked around. §11 corrected from five per-path states to six. |
 | 2026-07-27 | owner  | **Iteration 3 remediation (W18, W19).** Owner decision: the receipt claims nothing. Exceptions move out of it into `prompts-exceptions.json`, owned end to end here — inside the receipt they would force a plan executor to preserve state it does not own, which is the shape iteration 3 rejected. FR-5 is restated as a plan executor writing the whole receipt, so the read-never-rewritten contradiction disappears. FR-3's domain becomes the current plan unioned with the on-disk receipt, and `retired` replaces the ownership lifecycle: a path the plan stopped producing is reported once and never deleted, because nothing was claimed. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W15).** Owner decision: PRD-029 writes the ledger as a manifest of generated paths, so FR-1 now *extends* it with `exceptions` rather than creating it, and no bootstrap for a ledgerless store is needed or specified. FR-3's domain becomes the ledger's `generated` list rather than a directory walk, which is what makes the adapters outside `prompts.dir` countable; `orphan` splits into ledger-orphan and tree-orphan, and the tree scan's confinement to `prompts.dir` is stated rather than implied. An unreadable or schema-invalid ledger now fails by name instead of reading as a store with no exceptions. |

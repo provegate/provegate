@@ -108,7 +108,8 @@ so that an upgrade cannot leave this repository's agents on a stale protocol.
 
 - [ ] A `scripts/verify/` check re-renders and compares, and is a member of the
       `verify:workflow` bundle and the CI hygiene job.
-- [ ] The check fails when a store file is edited by hand without a recorded exception.
+- [ ] The check fails when a store file is edited by hand without a recorded exception, per
+      whatever PRD-030's state model establishes.
 - [ ] The check does not run as a package test, and a comment says why.
 
 ---
@@ -121,8 +122,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 1. **FR-1**: `workflow.config.json` gains the `prompts` block for this repository: `dir`
    (`.provegate`), `adapters` (all three), and `values` filled for **every key the installed
    package requires** — the set PRD-029 FR-5 derives from the rendered corpus, obtained by
-   running `gate init --prompts` and reading what it scaffolds, **never by copying a count
-   from this document.** That is deliberate: PRD-031 adds `{{AUTONOMY_MODE}}` to the rendered
+   running `gate init --prompts` and reading the `prompts` block it **prints**, **never by
+   copying a count from this document.** PRD-029 FR-4 prints that block whether or not it
+   writes a config, which matters here because this repository already has a
+   `workflow.config.json` and nothing would be scaffolded. That is deliberate: PRD-031 adds `{{AUTONOMY_MODE}}` to the rendered
    corpus, so the required set has one size before it lands and another after, and a
    hardcoded list here would make this item's correctness depend on landing order. Each value
    carries this repository's real answer — `{{ARCHITECTURE_DOC}}` is `AGENT_BOOTSTRAP.md`,
@@ -435,5 +438,6 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                              |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-07-27 | owner  | **PRD-029 cut to a one-way install.** FR-1's derivation now reads the `prompts` block PRD-029 **prints** rather than one it scaffolds — this repository already has a config, so nothing is scaffolded, which readiness iteration 5 found breaks the prescribed method. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** FR-1 no longer hardcodes thirteen values: PRD-031 adds a token to the rendered corpus and PRD-029 derives the required set from that corpus, so a copied count would make this item wrong depending on merge order. The set is now obtained from what `gate init --prompts` scaffolds against the installed package, which removes the ordering dependency rather than documenting it. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1). Last in the chain: it needs both the store and the check. FR-6 is new — the parent never checked that an ignore rule or a narrowed turbo input could hide a committed generated tree from the gate that reads it. |
