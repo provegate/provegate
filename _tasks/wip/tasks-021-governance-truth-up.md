@@ -106,30 +106,25 @@ Records to open and confirm still accurate before the dependent task starts (tas
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight and ownership
-  - [ ] 0.1 Hold a PRD-021 lease before editing anything. If claiming `--worktree`, the
-        PRD file must be committed **on `main`** — a claim from a checkout parked on
-        another branch is refused with "missing or uncommitted on 'main'", which is the
-        refusal, not a bug. Record branch/worktree in the Progress Log.
-  - [ ] 0.2 **Hard stop** — confirm PRD-018 and PRD-019 read `Ship Verified` in
-        `_state/prds.json`. FR-4 merges a key into a `workflow.config.json` PRD-018
-        creates; if that file is absent, the dependency was violated — **stop, do not
-        create it**, or the two PRDs each land a different first version of a control
-        artifact.
-  - [ ] 0.3 Run `gate queue` and record the live overlap. Do not trust this plan's or the
-        PRD's enumeration — both have gone stale three times. PRD-023 is the live
-        counterpart and a concurrent session may be revising it.
-  - [ ] 0.4 Open the nine Memory Context records; confirm the paths and commands each one
-        names still exist; note any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.5 Re-measure the four facts the FRs depend on, because each was wrong in an
-        earlier revision and each is one command: `deepMerge` recurses into plain objects
-        (`load.ts:195-205`) and runs before `validateResolvedConfig` (`load.ts:243-244`);
-        `lintPrd` is four-arity with `root?: string` fourth (`prd-ready.ts:108-113`);
-        `content-placeholders.test.ts:59` fails on orphan declarations; the source
-        snapshot's header regex carries `/i` (`verify-prd-ready.mjs:292`).
-  - [ ] 0.6 Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and
-        `node packages/provegate/dist/cli.js check --wiring`; a pre-existing red is
-        ledgered, never normalized silently.
+- [x] 0.0 Pre-flight and ownership
+  - [x] 0.1 Lease refreshed with `gate open PRD-021 --worktree` — 36 surface globs; branch `feat/prd-021-governance-truth-up`, worktree `.worktrees/prd-021-governance-truth-up`, `pnpm install --frozen-lockfile` + `pnpm build`. The plain claim taken earlier could not become a worktree claim until the main checkout returned to `main`: it had been parked on another session's feature branch, and `gate open --worktree` correctly refused with "missing or uncommitted on 'main'". That refusal was accurate, not a bug.
+        Original: Hold a PRD-021 lease before editing anything. If claiming `--worktree`, the PRD file must be committed **on `main`** — a claim from a checkout parked on another branch is refused with "missing or uncommitted on 'main'", which is the refusal, not a bug. Record branch/worktree in the Progress Log.
+
+  - [x] 0.2 Cleared: PRD-017, PRD-018 and PRD-019 all read `Ship Verified`. Root `workflow.config.json` exists and carries exactly one key, `memory` — so FR-4 merges `valueScoring` into a file PRD-018 created, which is what task 4.1 requires.
+        Original: **Hard stop** — confirm PRD-018 and PRD-019 read `Ship Verified` in `_state/prds.json`. FR-4 merges a key into a `workflow.config.json` PRD-018 creates; if that file is absent, the dependency was violated — **stop, do not create it**, or the two PRDs each land a different first version of a control artifact.
+
+  - [x] 0.3 **Re-measured, and the answer changed since Phase 3.** PRD-023 is now `Superseded`: a concurrent session split it into **PRD-024 readiness-lint-parsers, PRD-025 wiring-audit-completion, PRD-026 duplicate-consolidation**, all Draft/ITERATE. `gate queue` reports **no overlap warning**, and that silence is not evidence — the advisory only compares READY items, and all three are Draft. Read against their declared surfaces, all three overlap this PRD: 024 on `prd-ready.ts`; 025 on `config/types.ts`, `config/defaults.ts`, `config/validate.ts`, `changeset-entry.test.ts` and `.changeset/`; 026 on `cli.ts`, `prd-ready.ts` and `practices/templates/AGENT_BOOTSTRAP.template.md`. PRD-021 holds the lease and is IN-FLIGHT, so `gate open` refuses any of them while it is held — the sequencing is protected, but by the lease rather than by the advisory.
+        Original: Run `gate queue` and record the live overlap. Do not trust this plan's or the PRD's enumeration — both have gone stale three times. PRD-023 is the live counterpart and a concurrent session may be revising it.
+
+  - [x] 0.4 All nine read; all nine `status: active` and still accurate.
+        Original: Open the nine Memory Context records; confirm the paths and commands each one names still exist; note any stale finding in **Deferrals & Decisions**.
+
+  - [x] 0.5 All four re-measured and confirmed: `deepMerge` recurses at `load.ts:202` and runs at `243`, before `validateResolvedConfig(merged)` at `244`; `lintPrd` is four-arity with `root?: string` fourth (`prd-ready.ts:108-113`); the orphan rule is `content-placeholders.test.ts:59-61`; the snapshot regex carries `/i` (`verify-prd-ready.mjs:292`). **The measurement also found a divergence the PRD does not yet record** — see Deferrals.
+        Original: Re-measure the four facts the FRs depend on, because each was wrong in an earlier revision and each is one command: `deepMerge` recurses into plain objects (`load.ts:195-205`) and runs before `validateResolvedConfig` (`load.ts:243-244`); `lintPrd` is four-arity with `root?: string` fourth (`prd-ready.ts:108-113`); `content-placeholders.test.ts:59` fails on orphan declarations; the source snapshot's header regex carries `/i` (`verify-prd-ready.mjs:292`).
+
+  - [x] 0.6 Baseline green: `pnpm test` 7/7 tasks, `pnpm verify:workflow` PASS, `check --wiring` ok.
+        Original: Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and `node packages/provegate/dist/cli.js check --wiring`; a pre-existing red is ledgered, never normalized silently.
+
 
 - [ ] 1.0 FR-1 — the `valueScoring` config surface
   - [ ] 1.1 Add the type: `{ enforceFrom?: number, axes: string[], weights: Record<string, number> }`.
@@ -452,6 +447,17 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 
 ## Deferrals & Decisions
 
+- **0.5 finding — a snapshot divergence the PRD does not record.** FR-2 specifies
+  dimensions as `[1-5]` and justifies it against an earlier *draft of this PRD* that said
+  "a single digit". Measured at `verify-prd-ready.mjs:292`, the frozen snapshot's own
+  groups are `[0-5]` — it accepts a **0** dimension. So `[1-5]` diverges from the source in
+  a second, unrecorded way: it is stricter than the snapshot, not merely stricter than a
+  bad draft. The rubric's range genuinely is 1-5 and the strictness is right, but the
+  method-content rule requires a divergence to be recorded rather than discovered later.
+  FR-2 already records the tolerance divergence in the same paragraph; this one belongs
+  beside it. Recorded here now and to be written into the PRD at task 2.3.
+
+
 - **The plan this replaces.** The 82-task plan of 2026-07-25 scored the FR set that shipped
   the gate as `scripts/verify/verify-value-score.mjs`. Nothing in it was checked off.
 
@@ -461,6 +467,7 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 
 | Date       | Task    | Notes |
 | ---------- | ------- | ----- |
+| 2026-07-27 | 0.0 | Pre-flight cleared. Hard stop satisfied (017/018/019 Ship Verified, `workflow.config.json` present with only `memory`). Baseline green. 0.3's counterpart changed under us: PRD-023 is Superseded and split into PRD-024/025/026, all three overlapping this PRD and all three Draft — so `gate queue` prints no warning and the lease is what protects the sequencing. 0.5 found an unrecorded snapshot divergence (dimensions `[0-5]` there, `[1-5]` here). |
 | 2026-07-27 | Phase 3 | Plan regenerated from PRD-021 at readiness 8.09 PASS (iteration 15, independent). 16 parents, 86 sub-tasks. The nine Readiness Watch rows come from iterations 11-15, whose findings were all propagation defects rather than design errors — task 14.2 turns that into a review instruction rather than leaving the next round to rediscover it. No implementation started. |
 
 ---
