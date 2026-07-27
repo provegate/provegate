@@ -257,12 +257,12 @@ a record is evidence only while it is true.
         `independent-review` ledger row.
 
 - [ ] 10.0 Phase 7 — Learning
-  - [ ] 10.1 `_brain/learnings/shipped-content-needs-a-delivery-gate.md`
-  - [ ] 10.2 `_brain/learnings/derive-the-requirement-from-the-consumer.md`
-  - [ ] 10.3 `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md` — also resolves
+  - [x] 10.1 `_brain/learnings/shipped-content-needs-a-delivery-gate.md`
+  - [x] 10.2 `_brain/learnings/derive-the-requirement-from-the-consumer.md`
+  - [x] 10.3 `_brain/learnings/scope-out-the-layer-the-rounds-keep-hitting.md` — also resolves
         the forward link already recorded in `score-band-prescribes-the-action`.
-  - [ ] 10.4 Append one `_brain/INDEX.md` pointer per record and per ADR-0002. Append only.
-  - [ ] 10.5 `pnpm verify:brain` green; every Durable Artifact present in the merge diff.
+  - [x] 10.4 Append one `_brain/INDEX.md` pointer per record and per ADR-0002. Append only.
+  - [x] 10.5 `pnpm verify:brain` green; every Durable Artifact present in the merge diff.
   - [ ] 10.6 Write `_docs/wip/summary-029-method-delivery-agent-binding.md`.
 
 ---
@@ -323,6 +323,7 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 10.x | Three declared learnings written and indexed; `verify:brain` and `verify:workflow` green. `scope-out-the-layer-the-rounds-keep-hitting` also resolves the forward link `score-band-prescribes-the-action` has been carrying since it was written. |
 | 2026-07-27 | 8.0 | Phase 5 green. Every §11 row executed and recorded with evidence — nine FR rows and the four floor commands, no ad-hoc additions and no omissions. Baseline 1026 → **1087**, 61 new tests, every pre-existing one unmodified. |
 | 2026-07-27 | 7.0 | 1079 → **1087**. Eight migration tests. The ordering one asserts `report.created` puts the store before `workflow.config.json`, rather than trusting `initWorkspace`'s comment that activation is written last. |
 | 2026-07-27 | 6.0 | 1073 → **1079**. `verify:pack-drift` green at 49 pairs — no `PACK_MAP` entry was needed: the store is rendered, not packed, so the pack gains instructions rather than files. |
