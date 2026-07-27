@@ -118,7 +118,7 @@ a record is evidence only while it is true.
   - [x] 1.4 Declare the `prompts` shape in `validateConfig`'s raw-pass spec, including
         `adapters` membership. **Unknown `values` keys are not checked here** — that is task
         3.4's render diagnostic.
-  - [ ] 1.5 Add `promptsPathContained(root, config)` to
+  - [x] 1.5 Add `promptsPathContained(root, config)` to
         `packages/provegate/src/core/config/load.ts` beside `memoryPathsContained`, reusing its
         longest-existing-prefix resolution, and compose it into the resolved pass at line 273.
   - [x] 1.6 `packages/provegate/test/config.test.ts`: a config never mentioning `prompts`
@@ -126,28 +126,28 @@ a record is evidence only while it is true.
         not-yet-created `.provegate` passes containment; an escaping `dir` and a symlinked root
         are both refused **(deny test — PRD §11 hard cap)**.
 
-- [ ] 2.0 Render core (FR-2, FR-3)
-  - [ ] 2.1 Create `packages/provegate/src/core/run/prompts.ts` with the ordered `DISPOSITIONS`
+- [x] 2.0 Render core (FR-2, FR-3)
+  - [x] 2.1 Create `packages/provegate/src/core/run/prompts.ts` with the ordered `DISPOSITIONS`
         list exactly as the PRD's table states, rules 1–6 in order.
-  - [ ] 2.2 `planStore`: walk every regular file at any depth under the package's `prompts/`
+  - [x] 2.2 `planStore`: walk every regular file at any depth under the package's `prompts/`
         and `templates/`; first match wins; **a file matching no rule fails the plan by name**,
         listing the dispositions available.
-  - [ ] 2.3 Refuse symlinks by name — neither follow nor skip — with a diagnostic naming the
+  - [x] 2.3 Refuse symlinks by name — neither follow nor skip — with a diagnostic naming the
         file and the remedy.
-  - [ ] 2.4 `assertNoCollision`: compare destinations case-folded and NFC-normalised; a
+  - [x] 2.4 `assertNoCollision`: compare destinations case-folded and NFC-normalised; a
         collision fails the plan naming both sources.
-  - [ ] 2.5 `scanTokens`: two candidate classes with the **escape class matched first**
+  - [x] 2.5 `scanTokens`: two candidate classes with the **escape class matched first**
         (`{{` + `!`+, then `{{` + `[A-Z]`). Text in neither class passes through untouched.
-  - [ ] 2.6 `substituteOnce`: collect every source occurrence before replacing; replace each
+  - [x] 2.6 `substituteOnce`: collect every source occurrence before replacing; replace each
         exactly once; treat values as **opaque** and never re-scan output.
   - [ ] 2.7 Emit the four diagnostics — malformed, undeclared, unresolved, unused — each naming
         file and line (or key). Prove the refusal against the **shipped corpus with an empty
         `values` map**.
-  - [ ] 2.8 `bannerFor`: banner first, except where a format requires frontmatter first, where
+  - [x] 2.8 `bannerFor`: banner first, except where a format requires frontmatter first, where
         it follows the closing `---`. The verbatim file carries no banner.
   - [ ] 2.9 Generate `<dir>/README.md` stating the tree is generated, the producing version,
         that two adapter destinations live outside the directory, and the reinstall rule.
-  - [ ] 2.10 `packages/provegate/test/prompts.test.ts`: rule 4 before rule 5; a `.txt` and a
+  - [x] 2.10 `packages/provegate/test/prompts.test.ts`: rule 4 before rule 5; a `.txt` and a
         nested `templates/legacy/x-template.md` each fail by name; a symlink fails; nested
         paths preserved; the pinned path set; escape recursion; `{{lowercase}}` untouched;
         line-broken token malformed; an opaque value containing a token not re-scanned.
@@ -301,6 +301,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 2.5 — `ESCAPE_CANDIDATE` has no standalone constant: `substituteOnce` must match both candidate classes in ONE alternation to keep the escape ordered first, and a second pass would reintroduce the ordering bug readiness iteration 4 found. Documented in the module rather than left to a reader to rediscover.
+- 2.7/2.9 — the four diagnostics and the generated store README are deferred to parent 3, where `requiredValues` supplies the registry the `undeclared`/`unresolved`/`unused` messages need. `scanTokens` already emits `malformed`.
 - 1.4 — unknown `values` keys are deliberately NOT a raw-pass issue; a test asserts they pass config load, and the `unused` render diagnostic (task 3.4) owns them. Recorded because a reviewer will read the permissiveness as a gap.
 
 ---
@@ -314,6 +316,7 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 2.0 | prompts.ts core landed. 21 tests in `prompts.test.ts`. The corpus measurement is now machine-pinned: 12 rendered protocols, 7 rendered templates, 1 verbatim — the figures the PRD states as a measurement rather than a specification. |
 | 2026-07-27 | 1.6 | Mutation-checked: removing `promptsPathContained` from the resolved pass fails the escaping-dir deny test **and only that test** (1 failed / 14 passed). |
 
 ---
