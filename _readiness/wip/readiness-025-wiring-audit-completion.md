@@ -1,19 +1,29 @@
 # Readiness Assessment: PRD-025 — Wiring Audit Completion
 
+> **Iteration 2 (Codex, independent) — 7.00/10, ITERATE.** Up 0.72, the largest single-round
+> gain in this wave. B, D, F and G closed outright and the ledger relocation resolved the
+> architectural finding. What remains: the grammar is on its **third attempt and still not
+> closed** — command segmentation and interpreter option arity are missing — and the PRD
+> now **contradicts itself** on the one case it went out of its way to state.
+>
+> <details><summary>Iteration 1 (6.28 ITERATE)</summary>
+>
 > **Iteration 1 (Codex, independent) — 6.28/10, ITERATE.** The lowest of the three split
 > items, and the two blocking findings are design errors rather than gaps: a
 > **repository-local ledger and decision record were made hard requirements of shipped
 > package code** that runs in every adopter repo, and the ledger's own state machine
 > contradicts the classification the split forces on it.
 
+> </details>
+
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-025-wiring-audit-completion.md`  |
-| Score                  | 6.28/10                                        |
-| Verdict                | ITERATE — seven [P1] items; the matching grammar is still not lexically closed, and the ledger has no coherent lifecycle across the split |
-| Iteration              | 1                                              |
+| Score                  | 7.00/10                                        |
+| Verdict                | ITERATE — three [P1] items. The ledger relocation worked; the grammar's third attempt still leaves two layers unspecified, and three normative remnants of the ledger survive the move |
+| Iteration              | 2                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD** |
@@ -167,6 +177,7 @@ this ITERATE.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 2   | 2026-07-27 | 7.00  | ITERATE | **Second independent round, on the iteration-1 remediation plus the owner's ledger relocation. Largest single-round gain in this wave: +0.72.** B, D, F, G **CLOSED**; C, E, H, I **PARTIALLY CLOSED**; A **OPEN**. **(A, still open)** the four-layer grammar defines a lexer but not the layer *above* it: nothing says how a hook file or script body is **segmented into commands**, which production currently does with `text.split(/[\n;]|&&|\|\|/)` — including separators inside quotes (`wiring.ts:229`). Interpreter **option arity** is also missing, and the package-manager parser already demonstrates why it is needed via `VALUE_FLAGS` (`wiring.ts:108,157`): `node --require verify-foo.mjs app.mjs` would falsely wire `verify-foo`. The bundle grammar permits string literals and comments without defining escapes, comment placement, or multiple `CHECKS` declarations. **(M) the PRD contradicts itself on its own headline case**: the grammar states that a quoted script path **does** wire, and FR-3's verification row requires quoted-string forms **not** to wire — opposite expectations for the implementer and the test author, in the same edit. **(N) the ledger did not fully leave**: Implementation Scope still assigns `auditWiring` the ledger check and decision-record comparison, Rollback still says to delete the ledger file, and the deny-test requirement still demands an unclassified-script fixture. Left as-is, adopter-facing ledger enforcement returns to `auditWiring`. P2s: the symlink containment helper that would actually work is private in `config/load.ts`, which is outside Targets and the Conflict Surface, while the exported `containedPath` is write-oriented and checks the parent rather than a final symlink; and "two hardcoded paths" survives in Goals and FR-2 prose where the corrected metric says three. |
 | 1   | 2026-07-27 | 6.28  | ITERATE | **First independent round on the split-out PRD, and the lowest of the three.** Seven [P1]s. Two are design errors the split created rather than carried: **(C)** the repository-local ledger and decision record became hard requirements of `auditWiring`, which `gate check --wiring` runs for every adopter, so a fresh adopter fails as unclassified or missing-record and `gate init --practices` installs neither file; **(D)** the `method-pending` classification the split forced is contradicted by the state machine — `gate check --wiring` already exists, so the replacement is not pending — and PRD-026's forward targets contain neither the ledger nor the ADR, so the gate goes red after the deletion regardless. **(A)** the "closed grammar" written to answer iteration-6 finding U is enumerated but not lexically closed: no tokenization, quoting, escaping, or option arity, and the bundle rule says "parse structurally" without saying what it accepts. **(B)** `verifyScriptPattern` is a regex over script *names* and cannot select an unregistered *filename*, so the on-disk direction has no falsifiable predicate. **(E)** every ledger deny fixture can be red because ADR-0002 is simply absent. **(F)** FR-6 targets a test the Conflict Surface omits and PRD-021 claims. **(G)** the released-config rollback would break an adopter's config load, because validation rejects unknown keys. Confirmed: the three-surface delta, the zero-current-impact claim, the CI narrowing, the config keys, and that finding T was carried to the correct successor — this PRD's floor command survives it. |
 
 ---

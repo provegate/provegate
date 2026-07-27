@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T10:12:10.630Z",
+  "generatedAt": "2026-07-27T10:29:57.534Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.75,
+        "score": 6.83,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -911,7 +911,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.28,
+        "score": 7,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -948,7 +948,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.85,
+        "score": 6.54,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"

@@ -1,19 +1,29 @@
 # Readiness Assessment: PRD-024 — Readiness Lint Parsers
 
+> **Iteration 2 (Codex, independent) — 6.83/10, ITERATE.** Up 0.08. E and F closed
+> outright; six findings are partially closed and one is open. The remediation introduced
+> two of its own: an **unacknowledged public API break** (`parseVerificationCommands` is
+> exported and consumed as an array by two existing tests), and the paragraph hiding place
+> **moved one level down** into the indented continuation of an exempt bullet.
+>
+> <details><summary>Iteration 1 (6.75 ITERATE)</summary>
+>
 > **Iteration 1 (Codex, independent) — 6.75/10, ITERATE.** The three assigned PRD-023
 > defects transferred accurately and the split exposed new seams, all of them
 > specification gaps rather than internal contradictions. The sharpest is a fourth
 > instance of this PRD's own defect class: `lintPrd` has a **second, independent**
 > whole-row backtick scan that FR-1 does not scope.
 
+> </details>
+
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-024-readiness-lint-parsers.md`   |
-| Score                  | 6.75/10                                        |
-| Verdict                | ITERATE — six [P1] items; every assigned defect carried over correctly, but three of the four fixes are not yet falsifiable as written |
-| Iteration              | 1                                              |
+| Score                  | 6.83/10                                        |
+| Verdict                | ITERATE — three [P1] items. Two are defects the iteration-1 remediation introduced: a public API break with no changeset, and an exempt-bullet continuation that recreates the hiding place FR-3 removes |
+| Iteration              | 2                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD** |
@@ -153,6 +163,7 @@ method-content caps each checked explicitly.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 2   | 2026-07-27 | 6.83  | ITERATE | **Second independent round, on the iteration-1 remediation.** E (the `lintPrd` root argument) and F (turbo inputs) **CLOSED**; A, B, C, D, G, H **PARTIALLY CLOSED**; I **OPEN**. Two new [P1]s, both introduced by the remediation. **(J)** `parseVerificationCommands` is exported from the package's programmatic API (`gates/index.ts:16`) and consumed as an array by `safety.test.ts:62` and `content-templates.test.ts:104`, so widening it to `{commands, issues}` is a **public API break** — while the PRD still claims no published-surface migration and ships no changeset. Keep an array-returning wrapper and add an internal detailed parser, or specify the migration. **(K)** the hiding place moved one level down: FR-2 exempts a bullet by how it **opens** and FR-3 permits arbitrary indented **continuations**, so `- (none)` followed by an indented unresolved question satisfies both and hides exactly what the FR removes. Exempt forms must be single-line, or continuations beneath an exempt bullet must be refused; two deny fixtures. **(L)** FR-1 cannot be implemented inside its declared surface: it requires edits to `chain.ts` and `prd-ready.ts`, neither of which is in its Targets, Implementation Scope, or Conflict Surface, and the affected existing tests are absent too. P2s: the PRD-021 prerequisite was added in FR-4 but the introduction still calls this PRD dependency-free and Non-Goals still calls it a "known case"; the header still says only verdicts move while the corrected rollback says Phase-5 commands change; and the round count now contradicts itself **within two lines** — the fix for I created a new instance of I. |
 | 1   | 2026-07-27 | 6.75  | ITERATE | **First independent round on the split-out PRD.** Six [P1]s, all specification gaps rather than contradictions. The headline is finding A: `lintPrd` carries a **second** whole-row backtick scan independent of `parseVerificationCommands`, so scoping one parser leaves the other — a fourth instance of this PRD's own defect class, inside the PRD written to remove it. Also: the malformed-row requirement has no channel to report through; FR-2's "link or work-item id" is still substring-satisfiable; FR-3's leading-explanatory-line allowance re-creates the paragraph exemption and the grammar does not cover wrapped bullets, which this PRD's own `(none)` bullet is; the corpus fixture omits `lintPrd`'s fourth argument, measured to fail with an unrelated memory error; and the corpus test reads `_prds/wip` outside Turbo's declared inputs, which is the indexed `turbo-cache-masks-out-of-input-reads` record the PRD did not declare. Confirmed: all three assigned defects carried over accurately, the `verify:workflow` diagnosis is correct, config-driven wip enumeration is implementable, and the no-pipe template contract is real. |
 
 ---
