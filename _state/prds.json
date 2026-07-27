@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T16:18:12.366Z",
+  "generatedAt": "2026-07-27T16:29:35.020Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1059,9 +1059,9 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.48,
-        "verdict": "ITERATE",
-        "modelTierExecution": null,
+        "score": 8.35,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
         "modelTierAudit": "high"
       },
       "task": {

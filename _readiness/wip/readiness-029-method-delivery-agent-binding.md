@@ -1,5 +1,40 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> # ✅ PASS — 8.35/10, iteration 8
+>
+> **PRD-029 has no open finding. The reviewer could not fault it, and said so plainly rather
+> than manufacturing a ninth round.** All seven edits landed; six closed clean and the seventh
+> landed correctly while surfacing one inconsistency **in the successor documents, not here**.
+> Codex scored **8.85 PASS** independently and found the same single issue without being told
+> what the other had found. Band action for 8–8.9: *"Solid — proceed with minor notes flagged
+> as watch items."*
+>
+> **Trajectory: 4.48 → 5.73 → 5.90 → 5.63 → 4.53 → 6.03 → 7.48 → 8.35.** The turn was the
+> scope cut at iteration 6. What moved it afterwards was not new design — it was **sweeping
+> the same rule everywhere it is restated, three rounds running.**
+>
+> **Two scoring adjustments the reviewer disclosed and asked to be audited on, both audited
+> here and both upheld.** Its first pass came to 7.95 — below the line — and it raised two
+> dimensions on re-reading the rubric. Migration & Rollback 7.0 → 8.0: the dimension asks
+> *"Backward compatibility, deployment strategy, undo plan?"* (`phase-2-readiness-scorer.md:110`,
+> verified), and it had been deducting for automated staleness detection, which the rubric does
+> not ask about. **That correction runs against its own ceiling, stated at iteration 6 and held
+> at iteration 7, rather than toward a nicer number.** Completeness 8.0 → 8.5 removed a
+> double-count of the same residual across two dimensions. It also declined to follow Codex's
+> Migration score of 9.0, noting that is Codex's third position on that dimension in three
+> rounds and each move has been toward its own total.
+>
+> **Watch items on the PASS, neither blocking:** the `_brain/INDEX.md` claim added at iteration
+> 7 now makes the path-conflict gate refuse PRD-030 and PRD-031 together — correct — while both
+> still assert parallelism in six sentences (PRD-031 `:267`, `:279`, `:319`, verified). One
+> config line in `sharedAppendOnly` fixes six sentences and keeps the claim true, which is what
+> iteration 2's W17 actually offered as its second option. And
+> `_docs/design/prompt-store-state-model.md` still does not exist, with PRD-030's FR-1 verifying
+> only that a file is present in Phase 5 — fine while PRD-030 is a declared sketch, not fine the
+> moment its FR-2–FR-7 are rewritten from the model.
+>
+> <details><summary>Iteration 7 (7.48 ITERATE)</summary>
+>
 > **Iteration 7 (confirmation round, independent session + Codex) — 7.48/10, ITERATE. Six of
 > eight items closed, and the substantive change is that **no design decision remains in
 > PRD-029**.** Iteration 6 left one open — what authority defines the legal `prompts.values`
@@ -35,6 +70,8 @@
 > direction"*; it noted Codex had taken that position a round earlier and reversed without new
 > evidence. It also declined to follow Codex's Migration & Rollback score from 6.0 to 9.0 on
 > one fix, holding its own stated ceiling rather than adjusting it to reach a nicer total.
+>
+> </details>
 >
 > <details><summary>Iteration 6 (6.03 ITERATE)</summary>
 >
@@ -241,11 +278,11 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 7.48/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — 7.48, and **no design decision remains in PRD-029**. Six of eight items closed. Both open [P1]s were a rule corrected where owned and stale where restated: the unknown-key check still pointed at the config layer from §6 and §11, and "writes nothing" was stale in a second §6 criterion twelve lines from the correct one. Four sentences in PRD-029, three fixes outside it — all mechanical, none requiring a decision |
-| Iteration              | 7                                                                                                                                                                                                                                                                                                        |
-| Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
-| Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
+| Score                  | 8.35/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | **PASS** — 8.35, no open finding in PRD-029. Two watch items, both in the successors: PRD-030 and PRD-031 declare an `_brain/INDEX.md` overlap while asserting parallelism in six sentences, and PRD-030's state-model precondition verifies only file presence. Neither blocks this item, which is a hard prerequisite of both and serializes ahead of them regardless |
+| Iteration              | 8                                                                                                                                                                                                                                                                                                        |
+| Model Tier (Execution) | high                                                                                                                                                                                                                                                                                |
+| Model Tier (Audit)     | high — the Phase 6 reviewer must not be the implementing session                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x), commissioned by a separate Claude session that wrote its own brief — independent in model family AND in framing; neither authored the PRD**                                                                                                                                                                                                  |
 | Self-scored            | **no**                                                                                                                                                                                                                                                                                                   |
 | Date                   | 2026-07-27                                                                                                                                                                                                                                                                                               |
@@ -369,7 +406,30 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 7** (the current score). Earlier rows are kept below it.
+**Iteration 8** (the current score — PASS). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Contribution |
+| --------- | ------------------------ | ------ | ----------- | ------------ |
+| 1         | Clarity                  | 15%    | 8.5/10      | 1.275        |
+| 2         | Completeness             | 20%    | 8.5/10      | 1.700        |
+| 3         | Technical Depth          | 20%    | 8.5/10      | 1.700        |
+| 4         | Multi-Tenancy & Security | 10%    | 8.0/10      | 0.800        |
+| 5         | Scope & Testability      | 15%    | 8.5/10      | 1.275        |
+| 6         | Migration & Rollback     | 20%    | 8.0/10      | 1.600        |
+| **Total** | **Weighted**             |        | **8.35/10** | **PASS**     |
+
+Arithmetic re-derived here: `8.5×.15 + 8.5×.20 + 8.5×.20 + 8.0×.10 + 8.5×.15 + 8.0×.20 = 8.350`.
+Codex scored 8.85 PASS independently. Band 8–8.9: *"Solid — proceed with minor notes flagged as
+watch items."*
+
+Hard caps checked: **none tripped.** Security — `test/config.test.ts` named, and its escaping-dir
+and symlinked-root cases genuinely exercise the containment surface FR-1 adds. Contract — no
+client-to-server payload. Lint — `lintPrd` `{ ok: true, issues: [] }` on all four PRDs by direct
+invocation. Method content, runtime dependency, remote push: none.
+
+<details><summary>Iteration 7 scorecard (7.48)</summary>
+
+**Iteration 7.**
 
 | #         | Dimension                | Weight | Score       | Movement from 6.03                                                                                          |
 | --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -387,6 +447,8 @@ own 7.0) on the ground that it had called 6.0 the honest ceiling for this class 
 earlier and moved to 9.0 on a single fix.
 
 Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four.
+
+</details>
 
 <details><summary>Iteration 6 scorecard (6.03)</summary>
 
@@ -706,13 +768,51 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 7   | 2026-07-27 | 7.48  | ITERATE | **Confirmation round. Six of eight items closed, and the substantive change is that no design decision remains in PRD-029.** The `prompts.values` authority question from iteration 6 was answered and judged correct: the unknown-key check moves out of the raw pass into the render, because the legal key set is package Markdown the loader must not read, and a TypeScript constant would break the promise keeping PRD-031 parallel to PRD-030. **Both remaining [P1]s were this chain's signature defect** — a rule corrected where owned and stale where restated. The moved check still sent an implementer to the config layer from §6 and from the §11 FR-1 row, which would have put the test in the wrong file; "writes nothing" was right in three places and stale in a fourth **twelve lines from the correct one** plus a Memory Input rationale. The reviewer named the aggravating fact exactly: **this was not the line-break class — `grep "store file"` finds both in one command, so the sweep was not run** — which made the prior Changelog's "stated identically in all three places" false about its own document. [P2]s carried or cross-document: PRD-030's non-binding banner was scoped to §4 while the removed design is restated in §2, §6, §7 and §11, **the pattern applied to the fix for the pattern**; PRD-031 claimed a token becomes required "from the moment this PRD lands", true only while an upgrade path existed; and `_brain/INDEX.md`, carried three rounds, is a Durable Artifact of PRD-030 and PRD-031 and declared by neither. **First round in seven where every code citation checked out**, including a byte-exact verification that the stated `globs` algorithm reproduces `source-snapshot/rules/prd-workflow.mdc:3`. One Codex finding **rejected** — a dated Changelog row is history, per this repository's own `verify-doc-claims.mjs` exclusion and its comment that *"rewriting history to satisfy a linter is the wrong direction"*; Codex had held that position a round earlier and reversed without new evidence |
 
+| 8   | 2026-07-27 | 8.35  | **PASS** | **No open finding in PRD-029.** All seven edits landed; six closed clean and the seventh landed correctly while surfacing one inconsistency in the successors. Both PRD-029 sweeps verified **by reading every occurrence**: nothing routes an unknown `values` key to the config loader — FR-1:163, FR-1:167-170, FR-3:243, §6:439-442 and the §11 FR-3 row all agree — and "writes nothing" has one voice across User Story 1, FR-5 and §6, with the enumerating form appearing only where it enumerates. The false Changelog claim is **gone rather than reworded**, which was the right call for a claim false about its own document. Edit 2 was the one that could have gone wrong and did not: FR-1's §11 row now tests the *shape* (`null` and `""` both pass `stringOrNullRecord`) while FR-3's tests the four *diagnostics*, matching the layering FR-1 and FR-4 actually specify. **The one open item is [P2] and lives in the successors:** claiming `_brain/INDEX.md` made the path-conflict gate correctly refuse PRD-030 and PRD-031 together, while both still assert parallelism — six sentences, PRD-031 `:267`, `:279`, `:319` verified — the **eighth instance of the restatement pattern and the fourth time a fix for one instance created the next.** Recommended remedy is one line in `sharedAppendOnly`, which is what iteration 2's W17 offered as its second option and which matches how the index is actually written. **Two disclosed scoring adjustments, audited here and upheld:** Migration & Rollback 7.0 → 8.0 because the rubric asks *"backward compatibility, deployment strategy, undo plan"* (`phase-2-readiness-scorer.md:110`) and the reviewer had been deducting for automated staleness detection, which it does not ask — a correction **against its own ceiling**, set at iteration 6 and held at iteration 7; and Completeness 8.0 → 8.5 removing a residual double-counted across two dimensions. It declined Codex's Migration 9.0, noting that is Codex's third position on that dimension in three rounds, each move toward its own total |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.48/10, iteration 7. Six of eight items closed, and there is no design decision
+**PASS — 8.35/10, iteration 8, scored independently. Proceed to Phase 3 with the two watch
+items below flagged.**
+
+Eight rounds. The document is implementable and there is nothing left for an implementer to
+decide: the reinstall unit, the values-validation seam and its layering rationale, the
+containment location, the `globs` derivation, the four diagnostics and the adapter destinations
+are all written down. What remains is ordinary decomposition inside targets, grammars and tests
+the document names.
+
+**What actually moved this item, for whoever reads this next.** Five rounds sat in the 4–5.9
+band whose prescribed action is *return to Phase 1*, and were each given the 6–7.9 action
+instead. The turn came when the band action was finally taken and the scope was cut: every
+mechanism defect across four rounds had landed in the store-lifecycle layer while the layers
+beneath it measured exact, so the layer was removed rather than repaired. **The reviews were
+locating a scope error and reporting it as a sequence of design errors.** After the cut, nothing
+new was designed — three rounds of sweeping the same rule everywhere it is restated took it from
+6.03 to 8.35.
+
+**Watch items, both in the successors, neither blocking this item:**
+
+1. **The parallelism claim.** `_brain/INDEX.md` is now declared by PRD-030 and PRD-031, so the
+   path-conflict gate refuses them together — correct — while both still assert they may run in
+   parallel, in six sentences. One line in `workflow.config.json` `sharedAppendOnly` keeps the
+   claim true and matches how the index is actually written (append one pointer per record);
+   the alternative is dropping the claim and accepting serialization. Owner's call.
+2. **PRD-030's state-model precondition** verifies only that a file exists, in Phase 5. That is
+   acceptable while everything but its FR-1 is a declared sketch, and it stops being acceptable
+   the moment FR-2–FR-7 are rewritten from the model. Strengthen it then to PRD-031's precedent,
+   which asserts owner, date and manifest listing rather than mere presence.
+
+**One method observation belongs in the `_brain` capture at this item's close**, and no current
+record states it: eight rounds produced eight instances of a rule corrected where it is owned
+and left standing where it is restated, and **four of those were created by the fix for the
+previous one.** `a-rule-corrected-survives-where-it-is-restated` was declared `applied` in every
+version of this PRD. Declaring it did not apply it. What worked, in the end, was treating the
+sweep as a separate step performed after the fix — and the evidence that it is separate is that
+two of iteration 7's four items were findable by a single `grep` and were still missed. Six of eight items closed, and there is no design decision
 left in PRD-029.**
 
 That is the change worth recording. Iteration 6 left exactly one open question — what authority
