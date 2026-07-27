@@ -1,6 +1,6 @@
 # PRD-022: Control-Artifact Revalidation Beyond the Claim
 
-> **Status**: Approved
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25
