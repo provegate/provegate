@@ -24,3 +24,4 @@ _state/prd-metrics.jsonl
 .env
 .env.*
 !.env.example
+.gstack/
