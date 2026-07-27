@@ -139,14 +139,25 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - **Targets:** `docs/research/provegate-bootstrap/source-snapshot/addenda/autonomy-mode-and-proceed-rule-2026-07-27.md`,
      `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`
 
-2. **FR-2**: `prompts/phase-3-task-generator.md` replaces the self-granted exception with a
-   `{{AUTONOMY_MODE}}` block whose two renderings are fixed by the addendum: under
-   `human-gated`, the STOP rule stands with no exception and says so; under `autonomous`, the
-   snapshot's exception text renders unchanged, including its parenthetical. The token
-   resolves through PRD-029's existing `prompts.values` mechanism — **no config schema
-   change and no change to `core/run/prompts.ts`** — so this PRD adds a registry row and
-   method text, nothing more.
+2. **FR-2**: `prompts/phase-3-task-generator.md` replaces the self-granted exception with
+   `{{AUTONOMY_MODE}}`, declared **enumerated** in the registry with legal values
+   `human-gated` and `autonomous`. The two renderings ship as package fragments —
+   `prompts/_fragments/AUTONOMY_MODE.human-gated.md` and
+   `prompts/_fragments/AUTONOMY_MODE.autonomous.md` — and their wording is fixed by the
+   addendum: the human-gated fragment states that the STOP rule has no exception and that
+   this repository is configured human-gated; the autonomous fragment reproduces the
+   snapshot's exception text unchanged. The adopter's config carries the **key**, never the
+   prose.
+
+   This uses PRD-029 FR-6's enumerated-token mechanism, which exists precisely so this PRD
+   adds **no code target**: scalar `prompts.values` substitution cannot select a text block,
+   and putting the block text into an adopter's config would move method content out of the
+   package and fail provenance from the other side. Both were found at PRD-029's readiness
+   iteration 2. `_fragments/` is a render **input**, not an emitted path — PRD-029 FR-2 rule
+   4 — so the fragments never appear in a store.
    - **Targets:** `packages/provegate/prompts/phase-3-task-generator.md`,
+     `packages/provegate/prompts/_fragments/AUTONOMY_MODE.human-gated.md`,
+     `packages/provegate/prompts/_fragments/AUTONOMY_MODE.autonomous.md`,
      `packages/provegate/prompts/PLACEHOLDERS.md`
 
 3. **FR-3**: The shipped copy of the Phase 3 protocol is reconciled with the snapshot on the
@@ -175,12 +186,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`,
      `packages/provegate/test/content-prompts.test.ts`
 
-6. **FR-6**: `{{AUTONOMY_MODE}}` is registered in `PLACEHOLDERS.md` with its meaning, its
-   two legal values, and the note that it has no `workflow.config` field mapping because it
-   is supplied through `prompts.values`. The registry's own rule — a token not in the table
-   must not appear in any shipped prompt — is enforced by
-   `test/content-placeholders.test.ts`, which PRD-029 already extends to
-   `practices/templates/`; this FR must leave that test green.
+6. **FR-6**: `{{AUTONOMY_MODE}}` is registered in `PLACEHOLDERS.md` using the enumerated
+   column PRD-029 FR-6 adds: its meaning, its two legal values, and no `workflow.config`
+   field mapping, because the value is supplied through `prompts.values` as a key. The
+   registry's own rule — a token not in the table must not appear in any shipped prompt — is
+   enforced by `test/content-placeholders.test.ts`, and PRD-029 additionally fails at build
+   time when a declared enumerated value has no fragment file; this FR must leave both green.
+   Because PRD-029 derives the required-value set from the **rendered corpus**, adding this
+   token makes it required for every adopter from the moment this PRD lands — that is
+   intended, and PRD-032 must derive its own value set rather than hardcoding a count.
    - **Targets:** `packages/provegate/prompts/PLACEHOLDERS.md`
 
 ---
@@ -237,11 +251,17 @@ PRD-029's previous draft stated "read the snapshot first" as its precondition, a
 does not authorize — the snapshot says the opposite of what the change wants, so the only
 lawful paths are an addendum or abandoning the change.
 
-**No code, on purpose.** The earlier design put `autonomy` in the `prompts` config block,
-which would have made this PRD claim `core/config/**` and `core/run/prompts.ts` and
-serialize it against PRD-030. Expressing the value as a `prompts.values` entry gets the same
-outcome — the human sets it in `workflow.config.json`, the agent never assesses itself — with
-no schema change and no shared code. **That is what keeps 030 and 031 parallelizable.**
+**No code, on purpose — and the second attempt at it is the one that works.** The first
+design put `autonomy` in the `prompts` config block, which would have made this PRD claim
+`core/config/**` and serialize it against PRD-030. The second expressed it as a plain
+`prompts.values` entry, and PRD-029's readiness iteration 2 killed that too: scalar
+substitution cannot select a text block, and putting the block text in the config moves
+method prose into an adopter's file where the provenance rule cannot see it. The third —
+**an enumerated token whose fragments ship in the package** — gets the outcome with neither
+cost: the human sets a key in `workflow.config.json`, the agent never assesses itself, the
+prose stays in the package under the addendum's authority, and this PRD's target list
+contains no TypeScript file. **That is what keeps 030 and 031 parallelizable**, and it is
+PRD-029 FR-6 that pays for it.
 
 **Two copies, one wording, held by a test.** FR-5 edits the same rule in two files. This
 repository's records say plainly what happens next if nothing holds them together, and the
@@ -373,6 +393,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 
 - `packages/provegate/prompts/phase-3-task-generator.md`
 - `packages/provegate/prompts/orchestration-runner.md`
+- `packages/provegate/prompts/_fragments/**`
 - `packages/provegate/prompts/PLACEHOLDERS.md`
 - `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`
 - `packages/provegate/test/content-prompts.test.ts`
@@ -464,4 +485,5 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                 |
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Iteration 2 remediation (W16).** PRD-029's iteration 2 falsified the `prompts.values` design: scalar substitution cannot select a text block, and putting the block text in an adopter's config moves method prose out of the package. Owner decision: an **enumerated token** whose fragments ship at `prompts/_fragments/`, with the config carrying only the key. FR-2 now targets the two fragments; the target list still contains no TypeScript file, so this item stays parallel to PRD-030. FR-6 records the consequence for PRD-032: adding a token to the rendered corpus changes every adopter's required set, so PRD-032 must derive its values rather than hardcode a count. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1, W6). The parent's stated precondition — read the snapshot — was insufficient: the snapshot states the exception unconditionally, so FR-1 makes the owner-approved addendum a precondition FR rather than an assumption. `{{AUTONOMY_MODE}}` moved from a config key to a `prompts.values` entry, which removes every code target and makes this item parallel to PRD-030. FR-3 is new: the shipped copy already drops the snapshot's parenthetical. |
