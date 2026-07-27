@@ -7,7 +7,7 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `governance-truth-up`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task plan)
 >
 > <!-- Returned from Phase 3 by the owner scope change of 2026-07-25: the iteration-5
 > PASS (8.43) and the generated 82-task plan both scored the pre-relocation FR set and
@@ -293,13 +293,26 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    one keyed exception with one reason, not a change to `deepMerge`, which stays exactly as
    it is because every other config key wants recursive merge.
 
-   Two rules follow, and they are different rules:
-   - **Loader (`load.ts`):** `parsed.valueScoring?.axes` present → `valueScoring` is taken
-     from the parsed config verbatim, with no default fill-in of any of its keys.
-   - **Validation (`validate.ts`):** with `axes` present, the weight key set must exactly
-     equal the axis set. `axes` present without `weights`, or `weights` naming an axis
-     `axes` omits, is an error — now *reachable*, because the loader no longer silently
-     supplies the missing keys.
+   Three rules follow, and they are different rules. The third is the one an earlier
+   revision left implicit, and implicit was wrong in the direction that costs adopters:
+
+   - **Loader, `axes` supplied (`load.ts`):** `valueScoring` is taken from the parsed
+     config verbatim, with no default fill-in of any of its keys.
+   - **Loader, `axes` absent:** ordinary recursive merge, unchanged. A config supplying
+     only `weights` is **retuning the default axes**, which is a legitimate and common
+     thing to want — moving MF from .25 to .30 and UI to .20 while leaving TL/AR/RM alone.
+     Rejecting it would make every weight change a five-line rewrite for no safety gain,
+     because the sum rule already catches an incoherent partial: raising MF without
+     lowering something else resolves to 1.05 and fails validation naming the sum.
+   - **Validation (`validate.ts`):** the weight key set must exactly equal the *resolved*
+     axis set, however it was resolved, and the weights must sum to exactly 1. With `axes`
+     supplied this is now *reachable*, because the loader no longer silently fills the
+     missing keys; with `axes` absent it compares against the default axes, which is what a
+     partial override should be measured against.
+
+   Fixtures pin the partial case in both directions: a weights-only config retuning two of
+   five and still summing to 1 **resolves and passes**, and one retuning one of five to sum
+   to 1.05 **fails on the sum**, naming the sum rather than the axis set.
 
    The proof this needs is a **resolution** test, not a validation test: a three-axis
    config file resolved through `loadConfig` must produce exactly three weight keys. A
@@ -417,20 +430,47 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    (`core/gates/prd-ready.ts:108-113`), and `runCheck` passes the root in that slot
    (`cli.ts:655`). An earlier revision of this FR said "gains a fourth argument", which
    would have displaced `root` and silently broken the memory contract's store loading.
-   The id is therefore the **fifth** parameter, `prdNumber: number | null`, after the
-   optional `root`. `runCheck` already resolved the record via `findRecord` and has the
-   number in hand. Every call site and the rollback note in §Migration must name the
-   five-arity form; a rollback that restores a four-arity call is a different function. Deriving the id from the
+   The id is therefore the **fifth** parameter — and it must be **optional**, because a
+   required parameter cannot follow the optional `root?: string`:
+
+   ```ts
+   lintPrd(config, manifest, content, root?: string, prdNumber?: number | null)
+   ```
+
+   Absent and `null` mean the same thing and take the documented null-id path below. That
+   equivalence is what keeps this a **one-caller change**. Measured on 2026-07-27: 44 call
+   sites — **41** in `test/prd-ready.test.ts` passing three or four arguments, plus
+   `test/content-templates.test.ts:99`, `test/example-manifests.test.ts:127`, and
+   `cli.ts:655`. Only `cli.ts` passes the number.
+
+   Note what "the null path" means at those call sites: they **omit** the argument, so the
+   gate receives `undefined`, not `null`. The contract equates the two, and FR-6's matrix
+   must cover **both spellings** under a configured cutoff — an implementation that checks
+   `prdNumber === null` and not `undefined` would enforce presence on every existing caller
+   the moment this repo sets `enforceFrom`, which is the shipped-template test at
+   `content-templates.test.ts:99` turning red on an artifact nobody changed. Making the parameter required would edit all 44 and pull
+   two test files this PRD does not otherwise touch into its Conflict Surface, to buy
+   nothing — the null path already exists and is load-bearing.
+
+   `runCheck` already resolved the record via `findRecord` and has the number in hand. The
+   rollback note in §Migration names the same ordinal; a rollback that restores a
+   four-arity call is a different function. Deriving the id from the
    `# PRD-NNN:` heading inside the body would make the cutoff depend on a title string the
-   lint does not otherwise trust. Existing callers that have no id pass `null`, which
-   **skips the cutoff comparison and enforces the arithmetic unconditionally** — absence
-   of an id must not become absence of a check.
+   lint does not otherwise trust. Existing callers that have no id **omit the argument
+   entirely and therefore supply `undefined`** — they cannot pass `null`, because the
+   parameter does not exist until this PRD adds it. Both spellings take the same path:
+   **skip the cutoff comparison, enforce the arithmetic unconditionally** — absence of an
+   id must not become absence of a check. Write the guard against absence
+   (`prdNumber == null`, or an explicit `undefined || null` test), never `=== null`: the
+   strict form enforces presence on all 44 existing call sites the moment this repo sets
+   `enforceFrom`, and the first casualty is `content-templates.test.ts:99`, which lints the
+   shipped header-less template and asserts zero issues.
 
    **State the exact residual: a `null` id skips the *presence* requirement even where a
    cutoff is configured**, because presence is defined by id and there is no id. The
    arithmetic still runs, so a wrong header never escapes; only "you must have one" does.
    That is the correct trade and it is load-bearing rather than theoretical:
-   `packages/provegate/test/content-templates.test.ts:80` lints the **shipped PRD
+   `packages/provegate/test/content-templates.test.ts:99` lints the **shipped PRD
    template** through `lintPrd` and asserts `issues` is empty, and that template has no
    `Value:` header. It passes today because the caller supplies no id, and it must keep
    passing — which is also the cleanest mechanical proof of why FR-1 refuses an
@@ -476,7 +516,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    arithmetic and cutoff matrix is a unit test over `value-score.ts` and `lintPrd`: custom
    valid weights → a total computed from them; a wrong total → the failure names declared
    and recomputed; a malformed header → fails at any id; a pre-cutoff PRD with no header
-   → passes; an at-cutoff PRD with no header → fails; **`null` id with no header →
+   → passes; an at-cutoff PRD with no header → fails; **an absent id — both `undefined` (the
+   spelling every existing caller uses) and an explicit `null` — with no header →
    passes**, because presence is defined by id and there is no id (FR-2 states this
    residual and `packages/provegate/test/content-templates.test.ts` depends on it — it
    lints the header-less shipped template through `lintPrd` and asserts zero issues). A
@@ -652,8 +693,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
     changeset is diagnosable.
 
     Because the axes are now part of the published config surface (FR-1), the note must
-    also say that `valueScoring.axes` and `valueScoring.weights` are set together and
-    replace the defaults wholesale.
+    also state the merge rule **as FR-1 defines it, in both directions** — an earlier draft
+    of this sentence stated only half of it and would have published false adopter guidance:
+    supplying `valueScoring.axes` requires the complete matching `weights` set and replaces
+    the defaults wholesale, while supplying `weights` alone is a legal partial retune of the
+    default axes, checked by the sum rule. A changeset that tells an adopter both keys are
+    mandatory together makes the common case — nudging one weight — look unsupported.
     - **Targets:** `.changeset/` (new entry),
       `packages/provegate/test/changeset-entry.test.ts` (new)
 13. **FR-13**: Make a repo-root Conflict Surface claim real. `declaredGlobs`
@@ -908,8 +953,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   procedure any control-file change already requires.
 - **Rollback of this change:** delete the doc-claims script and the `--value-score`
   branch, drop both `package.json` entries and the CI steps, remove the `valueScoring`
-  key, **and remove FR-2's `lintPrd` call plus the fourth `number` argument it added to
-  that signature.** An earlier draft said `core/gates/value-score.ts` "may stay — uncalled,
+  key, **and remove FR-2's `lintPrd` call plus the optional FIFTH `prdNumber` argument it
+  added to that signature** — fifth, after the existing optional `root`, which the
+  four-arity form already occupies. An earlier draft said `core/gates/value-score.ts` "may stay — uncalled,
   it changes nothing"; it would not be uncalled, because FR-2 wires it into `lintPrd`,
   which is the whole reason the gate fires at `gate check` time. The file itself may stay
   once the call is gone. The config-surface addition is additive and inert when unused, so
@@ -1193,7 +1239,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR    | Command / Check                                                        | Scope | Notes                                                       |
 | ----- | ------------------------------------------------------------------------ | ----- | ------------------------------------------------------------- |
 | FR-1  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | schema, defaults, merge, lexical two-decimal accept/reject, and enforceFrom absent by default |
-| FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; a null id still enforces the arithmetic |
+| FR-2  | `pnpm --filter provegate test test/prd-ready.test.ts`                     | pkg   | the lint fails a wrong total; an absent id, in either spelling, still enforces the arithmetic |
 | FR-3  | `pnpm --filter provegate test test/value-score.test.ts`                   | pkg   | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
 | FR-4  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | resolved config deep-equals defaults except the cutoff         |
 | FR-5  | `pnpm --filter provegate test test/config-value-scoring.test.ts`          | pkg   | pre-existing worktree refused before merge, accepted after     |
@@ -1261,8 +1307,12 @@ rationalize.
   pattern validates nothing.
 - DO NOT specify dimensions as "a single digit". The rubric's range is 1–5, and a single
   digit admits 0 and 6–9, which lets `9/9/9/9/9` recompute consistently and pass.
-- DO NOT let `deepMerge` produce a weight set for axes the adopter never declared —
-  `axes` and `weights` are supplied together and replace the defaults wholesale.
+- DO NOT let `deepMerge` produce a weight set for axes the adopter never declared. When
+  `axes` is supplied, the whole `valueScoring` object replaces the default before the merge
+  and the weight set must match the declared axes exactly. This is **not** a rule that
+  weights may never appear alone: with `axes` absent there are no undeclared axes to
+  produce, so a weights-only config is an ordinary partial retune of the defaults and the
+  sum rule is what keeps it honest.
 - DO NOT assert that a shipped template lacks a section by grepping for what the section
   would contain. `practices/templates/AGENT_BOOTSTRAP.template.md` has a triage section at
   line 108 that greps for the weight values and for `Value` both miss, and two rounds
@@ -1313,6 +1363,9 @@ rationalize.
 
 | Date       | Author | Changes                                                                        |
 | ---------- | ------ | -------------------------------------------------------------------------------- |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 14 (ITERATE 7.99) answered. The axes/weights propagation defect is closed; one stale copy survived on the item introduced the round before. Three sites said existing callers "pass `null`" — they cannot, because the parameter does not exist until this PRD adds it; they **omit** it and supply `undefined`. FR-2's prose, FR-6's matrix, and the §11 FR-2 row now name both spellings, and the guard is specified as an absence test rather than `=== null`, because the strict form would enforce presence on all 44 existing call sites the moment this repo sets `enforceFrom` — first casualty `content-templates.test.ts:99`, which lints the shipped header-less template and asserts zero issues. Writing that §11 Notes cell also reproduced `notes-column-runs-commands` live: a backticked word in the Notes column was parsed as a verification command and `gate check` refused it as unsafe. Backticks removed; the record's interim workaround is the fix until PRD-023's FR-7(a) scopes the parser to the Command column |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 13 (ITERATE 7.98) answered. One blocker, and it was the same propagation defect a third time: making weights-only overrides legal in FR-1 left FR-12's changeset note and a DO NOT rule still saying `axes` and `weights` are supplied together — so routine implementation would either violate FR-1 or publish false adopter guidance. Both now state the rule in both directions. Two non-blocking items also taken: the caller census was off by one (41 in `prd-ready.test.ts`, not 42), and the existing callers **omit** the fifth argument rather than passing `null`, so FR-6's matrix must cover `undefined` and `null` both — an implementation checking only `=== null` would red the shipped-template test the moment this repo sets `enforceFrom` |
+| 2026-07-27 | Claude Opus 5 | Readiness iteration 12 (ITERATE 7.95, "converging") answered. Two contract inconsistencies, both introduced at the previous remediation seam. **The fifth `lintPrd` parameter was not compilable as written** — a required parameter cannot follow the optional `root?: string` — so it is `prdNumber?: number \| null`, optional, with absent and `null` meaning the same thing. That is what keeps it a one-caller change: measured, there are 44 call sites, 42 in `prd-ready.test.ts`, and a required parameter would edit all of them and pull two untouched test files into the Conflict Surface to buy nothing. The rollback note now names the fifth ordinal too. **Weights without axes was unspecified and defaulted to the wrong answer**: the loader rule covered `axes` present, so a weights-only override merged recursively and passed with default-filled keys, contradicting the wholesale-replacement prose. Decided in the adopter's favour — a weights-only config retunes the default axes, which is legitimate, and the sum rule already catches an incoherent partial. Three loader/validation rules are now stated separately with fixtures pinning the partial case in both directions |
 | 2026-07-27 | Claude Opus 5 | Readiness iteration 10's four [P1]s and three [P2]s answered, each re-verified against source before being written. **A** was the load-bearing one and it moved an FR's target: `deepMerge` recurses into plain objects, so `weights` merges while `axes` replaces, and a three-axis config reaches validation carrying five default weight keys — the replacement is a LOADER rule, `load.ts::resolveConfig` joins FR-1's targets, and the proof is a resolution test rather than a validation fixture. **B** requires case-insensitive uniqueness of axis identifiers, resolving the `A`/`a` ambiguity on the identifier side rather than by dropping the snapshot's `/i`. **C** withdraws "adopter migration: none" for the scored corpus: changing `axes` reds every scored PRD, so the rule is sweep with `gate check --value-score`, then land the axis change and the header rewrites in one commit. **D** replaces register-and-remove with register-**or**-remove — registering `{{VALUE_AXES_TABLE}}` after removing it would red `content-placeholders.test.ts`'s orphan check — and pins the inline table to `DEFAULT_CONFIG`. **E** corrects "one copy of the weight table" to one authority and two projections, one pinned and one manual, which is the same stale-claim defect this PRD exists to fix, committed by the PRD itself. **F** requires at most one `Value` line inside the metadata block. **G** replaces the overlap enumeration with a dated measurement and an instruction to read the queue. Also disposes the three memory records written by PRD-020 and PRD-022 whose watches now overlap this PRD's targets |
 | 2026-07-25 | Claude Opus 5, on owner direction | **Readiness iteration 9 remediation — the independent Codex round's four [P1]s. Owner decision: make the axes configurable.** The blocking finding was a false premise two self-scored rounds asserted four times: `practices/templates/AGENT_BOOTSTRAP.template.md` was said to have no triage section. It has one at line 108, and line 111 tells adopters to **"define your own axes"** — so an `MF/UI/TL/AR/RM`-only gate cannot score the method it ships with. The owner chose configurable axes over rewriting the shipped template to canonical axes, which would have needed a snapshot addendum and removed an adopter capability. **FR-1** gains `axes: string[]` (ordered, default MF/UI/TL/AR/RM), `weights` keyed by those axes with exact set-equality validation in both directions, an axis-identifier charset that is load-bearing rather than cosmetic (FR-2 interpolates identifiers into the header pattern, so the charset is what keeps a configured axis from altering the pattern's meaning), a 2–10 axis-count bound, and a `deepMerge` rule so `axes` and `weights` replace the defaults wholesale instead of an adopter inheriting weights for axes they never declared. **FR-2** builds the header pattern *from* config rather than a literal, and **dimensions become `[1-5]`** — the previous "each dim a single digit" admitted 0 and 6–9, so `9/9/9/9/9` recomputed consistently and passed. A header whose axis list disagrees with the config now fails as malformed rather than reading as a missing header. **FR-6** is corrected: it said "`null` id with no header → fails", contradicting FR-2's remediation and the existing `content-templates.test.ts`, which lints the header-less shipped template and asserts zero issues. **FR-10** repairs the placeholder that declares the axes — `{{VALUE_AXES_TABLE}}` is unregistered in `PLACEHOLDERS.md`, `content-placeholders.test.ts` walks only `prompts/` and `templates/` so `practices/templates/` was never covered, and nothing substitutes the token, so `gate init --practices` writes it literally into an adopter's bootstrap; the fix registers the token, widens the walk, and renders a default table naming the config key, while leaving installer substitution explicitly out of scope. **FR-13** now exports `isRootRelativeFilename` by name, because PRD-023 FR-3 consumes it and "one predicate for two sections" is only true if one is exposed. **FR-12** replaces W9's two independent greps — satisfiable by two different files — with one semantic assertion over a single changeset entry. **Rollback** now removes FR-2's `lintPrd` call; the earlier text called `value-score.ts` "uncalled", which it would not be |
 | 2026-07-25 | Claude Opus 5, via owner | **Readiness iteration 7 remediation (W13–W21). The blocking fix came from the source snapshot rather than from a judgement call.** `verify-prd-ready.mjs:280-306` already implements this gate and its comment states the design — *"Presence-triggered: only PRDs carrying a `**V-Skor:**` line are checked, so pre-triage PRDs are never retro-failed."* `validateVScore` takes no PRD number and has no cutoff guard; the snapshot's `ENFORCE_FROM_PRD = 248` is a separate repo-local constant for other checks, and its PRD template carries no value header. The earlier `enforceFrom: 1` default fused those two mechanisms and produced W13: the shipped `templates/prd-template.md` emits no `Value:` line, so an adopter's first `gate check` would fail on a header nothing asked for. **FR-1 now ships `enforceFrom` absent (presence-triggered) and FR-4's `17` becomes this repo's opt-in**; adding the line to the shipped template is refused as fabricated method content and moved to Non-Goals with the reason. **FR-2 gains the header grammar** (W14) — the specified bare form `Value: T (…)` matched zero files against the real `> **Value**: T (…)`, so the snapshot regex is ported with the colon-outside-bold adjustment, plus a stated rule for the declared total's own decimal form and a recorded divergence from the snapshot's 0.005 tolerance. **FR-9 pins the AGENT_BOOTSTRAP weight table to `DEFAULT_CONFIG` in `content-canon.test.ts`** (W15) rather than shipping the prose duplicate the relocation claimed to remove. Overlap list rebuilt from `gate queue` and now carries PRD-023 (five files) and the active PRD-017 lease (five surfaces), the latter added to Dependencies with the note that FR-1 extends a config surface PRD-017 is mid-flight on (W16, W17). FR-13(b) states the two `readyOverlaps` weaknesses it does **not** fix and why the enforcing path is where it matters (W18). Cross-reference drift fixed: FR-11 → FR-12, FR-6 → FR-7, §9 Q3's deleted parity test, W1–W7 → W1–W21 (W19). Stale corpus counts and the "`_state/locks` is empty" claim removed rather than re-measured, since both went stale within a day (W20). The self-expiring "until the root gates manifest exists" DO NOT replaced with the unconditional reduction (W21). Value re-scored 3.65 → 4.10 per iteration 7. **Written by the same session that scored iteration 7 — the next round must be independent of it** |

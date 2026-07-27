@@ -1,0 +1,44 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProveGate — prove it, then propagate</title>
+<link rel="icon" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/assets/favicon.svg">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/tokens/colors.css">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/tokens/typography.css">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/tokens/effects.css">
+<link rel="stylesheet" href="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/styles.css">
+<style>
+  html,body{margin:0;padding:0;background:var(--pg-bg)}
+  a{color:var(--pg-link);text-decoration:none}a:hover{color:var(--pg-link-hover)}
+  *{box-sizing:border-box}
+  ::selection{background:color-mix(in srgb,var(--pg-human) 30%,transparent)}
+  @media (prefers-reduced-motion:no-preference){
+    .pg-reveal{opacity:0;transform:translateY(12px);transition:opacity .5s cubic-bezier(0.2,0,0.1,1),transform .5s cubic-bezier(0.2,0,0.1,1)}
+    .pg-reveal.pg-in{opacity:1;transform:none}
+  }
+  @media (max-width:900px){
+    .pg-hero,.pg-how-grid,.pg-install-grid,.pg-pg-grid,.pg-cmp-grid,.pg-faq-grid,.pg-proof-grid{grid-template-columns:1fr !important}
+    .pg-footer-grid{grid-template-columns:1fr 1fr !important}
+    .pg-navlinks{display:none !important}
+    .pg-problem-grid{grid-template-columns:1fr !important}
+  }
+  @media (max-width:560px){.pg-footer-grid{grid-template-columns:1fr !important}.pg-phasedetail{grid-template-columns:1fr !important}}
+  @keyframes pg-blink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+  .pg-caret{animation:pg-blink 1s steps(1) infinite}
+  :focus-visible{outline:2px solid var(--pg-focus-ring);outline-offset:2px;border-radius:var(--pg-radius-sm)}
+  .pg-navtoggle{display:none !important}
+  @media (max-width:900px){.pg-navtoggle{display:inline-flex !important}.pg-nav-cta{display:none !important}}
+  @media (prefers-reduced-motion:reduce){.pg-caret{animation:none}}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/design-system-65dbccbb-e0cf-4e22-a545-f46d23ba07f9/_ds_bundle.js"></script>
+<script src="ds-overrides.jsx"></script></head>
+<body><div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="landing-sections.jsx"></script>
+<script type="text/babel" src="landing-extras.jsx"></script>
+<script type="text/babel" src="landing-app.jsx"></script>
+<script type="text/babel">ReactDOM.createRoot(document.getElementById("root")).render(<window.ProveGateLanding />);</script>
+</body></html>

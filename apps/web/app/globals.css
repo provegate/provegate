@@ -61,3 +61,101 @@ a:hover {
     transition: none;
   }
 }
+
+/* The hero terminal caret. Motion-gated: under reduced motion the finished
+   state renders with no caret at all, and the animation is switched off too. */
+@keyframes pg-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+.pg-caret {
+  animation: pg-blink 1s steps(1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-caret {
+    animation: none;
+  }
+}
+
+/* Label kept for screen readers where the visual chrome already names the
+   control (the manifest editor's filename bar). */
+.pg-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--pg-human) 30%, transparent);
+}
+
+/* Responsive: two-column section grids collapse to one, the primary nav
+   becomes a drawer, and the footer steps down 4 → 2 → 1. */
+.pg-navtoggle {
+  display: none;
+}
+
+/* A grid item's automatic minimum size is its MIN-CONTENT width, so a wide
+   monospace block (the handoff card, a terminal, a code block) inflates its own
+   `1fr` track instead of scrolling inside it — at 375px that pushed the hero
+   track to 576px. `min-width: 0` restores `minmax(0, 1fr)`, and each terminal
+   surface then scrolls in its own container, which is the rule the body's
+   `overflow-x: hidden` assumes. */
+.pg-hero > *,
+.pg-how-grid > *,
+.pg-install-grid > *,
+.pg-play-grid > *,
+.pg-cmp-grid > *,
+.pg-faq-grid > *,
+.pg-proof-grid > *,
+.pg-problem-grid > *,
+.pg-footer-grid > *,
+.pg-phasedetail > * {
+  min-width: 0;
+}
+
+/* The section grids are authored as inline styles (they live next to the
+   component that owns them), so the breakpoints need `!important` to win the
+   cascade against an inline declaration. */
+@media (max-width: 900px) {
+  .pg-hero,
+  .pg-how-grid,
+  .pg-install-grid,
+  .pg-play-grid,
+  .pg-cmp-grid,
+  .pg-faq-grid,
+  .pg-proof-grid,
+  .pg-problem-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .pg-footer-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .pg-navlinks,
+  .pg-nav-cta {
+    display: none !important;
+  }
+  .pg-navtoggle {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 560px) {
+  .pg-footer-grid,
+  .pg-phasedetail {
+    grid-template-columns: 1fr !important;
+  }
+}

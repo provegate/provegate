@@ -32,4 +32,47 @@ describe('motion respects prefers-reduced-motion', () => {
     expect(globals).toMatch(/:focus-visible/);
     expect(globals).toContain('--pg-ring');
   });
+
+  it('the typing caret stops animating under reduced motion', () => {
+    expect(globals).toContain('.pg-caret');
+    const reduceBlocks = globals.split('prefers-reduced-motion: reduce').slice(1).join('\n');
+    expect(reduceBlocks).toMatch(/\.pg-caret\s*\{\s*animation:\s*none/);
+  });
+});
+
+// The interactive sections added with the prototype parity pass are keyboard-
+// and screen-reader-wired in the components themselves (role=tablist/tab +
+// aria-selected, aria-expanded/aria-controls, aria-pressed). Here we assert the
+// LAYOUT half: every multi-column grid has a single-column breakpoint, so no
+// section can force the body to scroll sideways on a phone.
+describe('responsive layout', () => {
+  const GRIDS = [
+    'pg-hero',
+    'pg-how-grid',
+    'pg-install-grid',
+    'pg-play-grid',
+    'pg-cmp-grid',
+    'pg-faq-grid',
+    'pg-proof-grid',
+    'pg-problem-grid',
+    'pg-footer-grid',
+    'pg-phasedetail',
+  ];
+
+  it('every multi-column grid collapses at a breakpoint', () => {
+    const responsive = globals.slice(globals.indexOf('@media (max-width: 900px)'));
+    for (const cls of GRIDS) {
+      expect(responsive, cls).toContain(`.${cls}`);
+    }
+  });
+
+  it('the primary nav becomes a drawer below 900px', () => {
+    const responsive = globals.slice(globals.indexOf('@media (max-width: 900px)'));
+    expect(responsive).toContain('.pg-navlinks');
+    expect(responsive).toContain('.pg-navtoggle');
+  });
+
+  it('a visually-hidden helper exists for controls named only by chrome', () => {
+    expect(globals).toContain('.pg-visually-hidden');
+  });
 });

@@ -1,34 +1,35 @@
 # Tasks: Governance Truth-Up
 
-> **SUPERSEDED as of 2026-07-25 — do not execute this plan.** It was generated against
-> the FR set that shipped the value-score gate as `scripts/verify/verify-value-score.mjs`.
-> The owner moved that gate into the package, so every sub-task under FR-2, FR-3, FR-6,
-> and FR-8 names a file that will not be written. PRD-021 is back at Cycle Phase 2; this
-> file is regenerated after the independent re-score clears the revised PRD. Nothing here
-> is checked off, so no work is lost.
-
 > **PRD**: [prd-021-governance-truth-up.md](../../_prds/wip/prd-021-governance-truth-up.md)
 > **Readiness**: [readiness-021-governance-truth-up.md](../../_readiness/wip/readiness-021-governance-truth-up.md)
 > **Status**: Not Started
-> **Readiness Score**: 8.43/10
-> **Model Tier (Execution)**: high
-> **Created**: 2026-07-25
-> **Updated**: 2026-07-25
+> **Readiness Score**: 8.09/10 (PASS, iteration 15, independent)
+> **Model Tier (Execution)**: high — Phase 4 and Phase 6 both. The config surface, the
+> lint seam, and the loader exception are cross-module.
+> **Created**: 2026-07-27
+> **Updated**: 2026-07-27
+
+> **Regenerated 2026-07-27.** The previous plan (82 tasks) scored the FR set that shipped
+> the value-score gate as `scripts/verify/verify-value-score.mjs`; the owner moved it into
+> the package, and five further readiness iterations changed FR-1, FR-2, FR-6, FR-10 and
+> FR-12. Nothing was checked off in the old plan, so no work is lost.
 
 ---
 
 ## Task Outcome Rules
 
-- `[x]` means the task was completed as written.
+- `[x]` means the task was completed as written. A task that could not be completed as
+  written stays unchecked and its reason goes in **Deferrals & Decisions**.
 - Leave operator-owned, environment-dependent, or blocked tasks unchecked.
-- Record implementation decisions in **Deferrals & Decisions**.
-- Record human/runtime/staging work in **Operator Handoff**.
-- Phase 4 agents hold a valid PRD-021 lock lease before editing implementation files or
-  this ledger.
+- Phase 4 agents hold a valid PRD-021 lease before editing implementation files or this
+  ledger.
 - Autonomous Close is **operator-gated**: the merge gate refuses until an owner-signed
   acceptance entry exists (this PRD changes the published config surface).
 - No sub-task may introduce `any`, a lint bypass, a swallowed failure, a runtime
   dependency, a network call, or a push code path.
+- **Read the PRD's Changelog before starting a parent task.** Five readiness iterations
+  changed rules inside FRs that other sections used to describe differently; the top five
+  rows say what moved.
 
 ---
 
@@ -45,6 +46,16 @@ Records to open and confirm still accurate before the dependent task starts (tas
 - `gate-wire-or-delete` — both new checks need a registered, executing surface.
 - `verify-check-phase-placement` — these are Phase 1/2 triage invariants; they belong on
   the pre-merge hygiene surface, not late in Phase 4.
+- `notes-column-runs-commands` — **reproduced live during this PRD's readiness round**: a
+  backticked word in a §11 Notes cell was parsed as a verification command and refused as
+  unsafe. No backticks in the Notes column until PRD-023 FR-7(a) scopes the parser.
+- `assert-absent-needs-an-independent-cause` — this PRD is dense with reject fixtures. For
+  each, the absence must have a cause independent of the scenario, proved by mutation.
+- `strictness-added-during-extraction-is-a-behavior-change` — FR-2 moves a decision out of
+  the standalone script into `lintPrd`; where it diverges from the snapshot the PRD says
+  so, and everything else must behave as the source does.
+- `evidence-pattern-satisfied-by-the-template` — FR-2 generates a required-line pattern
+  and this repo ships a PRD template. Assert the template does not satisfy it.
 
 ---
 
@@ -53,333 +64,369 @@ Records to open and confirm still accurate before the dependent task starts (tas
 ### Config surface (published — this is what makes the PRD a release)
 
 - `packages/provegate/src/core/config/types.ts` — the `valueScoring` block.
-- `packages/provegate/src/core/config/defaults.ts` — today's weights, `enforceFrom: 1`.
-- `packages/provegate/src/core/config/validate.ts` — shape + resolved-semantic rules.
-- `workflow.config.json` — new at the repo root; the cutoff and nothing else.
+- `packages/provegate/src/core/config/defaults.ts` — the five axes and their weights;
+  `enforceFrom` **absent**, not `1`.
+- `packages/provegate/src/core/config/validate.ts` — shape (`validateConfig`, sees the raw
+  partial) and resolved semantics (`validateResolvedConfig`, sees the merged object).
+- `packages/provegate/src/core/config/load.ts::resolveConfig` — **the loader exception**.
+  `deepMerge` (195-205) recurses into plain objects, so `weights` would merge while `axes`
+  replaces. Claimed by this PRD because FR-1's rule lives here, not in validation.
+- `workflow.config.json` — owned by PRD-018; this PRD adds one key.
 - `.changeset/` — the minor release entry carrying the compatibility instruction.
 
-### Standalone checks (stdlib only, no package import)
+### The gate
 
-- `scripts/verify/verify-value-score.mjs` — new; recompute + cutoff + `--print-weights`.
-- `scripts/verify/verify-doc-claims.mjs` — new; the future-claim grammar.
-- `scripts/verify/doc-claims-allowlist.json` — new; shrink-only, `reviewBy` expiry.
-- `scripts/verify/verify-workflow.mjs`, `package.json`, `.github/workflows/` — wiring.
+- `packages/provegate/src/core/gates/value-score.ts` (new) — the decision.
+- `packages/provegate/src/core/gates/prd-ready.ts::lintPrd` — the call site. Already
+  four-arity with `root?: string`; the id is the **optional fifth** parameter.
+- `packages/provegate/src/core/gates/index.ts` — the export.
+- `packages/provegate/src/cli.ts::runCheck` — the `--value-score` sweep branch, and the
+  one caller that passes the id.
 
-### Conflict Surface parser (FR-13)
+### The doc-claims checker
 
-- `packages/provegate/src/core/state/markdown.ts` — root-file claims plus the new
-  `parseConflictSurface` diagnostics.
-- `packages/provegate/src/core/locks/conflicts.ts` — structural overlap over globs that
-  materialize to no tracked file; this is the half that actually enforces.
-- `packages/provegate/src/core/state/query.ts` — the `gate queue` advisory.
+- `scripts/verify/verify-doc-claims.mjs` (new), `scripts/verify/doc-claims-allowlist.json`
+  (new), `scripts/verify/verify-workflow.mjs` (bundle membership),
+  `.github/workflows/ci.yml` (two different jobs — see FR-8).
 
-### Governance documents (live + shipped pack copies, hash-paired)
+### The documents being corrected
 
-- `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
-- `packages/provegate/practices/brain/PROTOCOL.md`,
-  `practices/templates/AGENT_BOOTSTRAP.template.md`,
-  `practices/templates/STATUS.template.md`
-- `scripts/verify/pack-drift-ledger.json`
-- `docs/research/provegate-bootstrap/{README.md,oss-extraction-roadmap-2026-07-22.md,whitepaper-gated-autonomy-2026-07-22.md}`
+- `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md` and their three practices
+  counterparts; `packages/provegate/prompts/PLACEHOLDERS.md`;
+  `docs/research/provegate-bootstrap/` (banner, roadmap, whitepaper);
+  `scripts/verify/pack-drift-ledger.json`.
 
-### Tests
+### The conflict-surface parser (FR-13)
 
-- `packages/provegate/test/config-value-scoring.test.ts` — new; schema, cutoff, worktree
-  transition.
-- `packages/provegate/test/value-score-script.test.ts` — new; spawned-script behavior.
-- `packages/provegate/test/doc-claims-script.test.ts` — new; grammar and allowlist.
-- `packages/provegate/test/content-canon.test.ts` — new; research-pack banner.
-- `packages/provegate/test/fixtures/value-score/**` — new.
-
-### Notes
-
-- The verify scripts **cannot** import the built package: they run in adopter repos with
-  no `provegate` installed. The weight table therefore exists twice, and the only thing
-  keeping the copies honest is the spawned `--print-weights` comparison in task 3.4.
-- Live and `practices/` copies are hash-paired in the ledger. Editing one side without
-  the other is a gate failure by design; see task 7.2 for the reconcile procedure.
+- `packages/provegate/src/core/state/markdown.ts` — `declaredGlobs`,
+  `parseConflictSurface`, and the exported `isRootRelativeFilename` PRD-023 consumes.
+- `packages/provegate/src/core/locks/conflicts.ts` (enforcing), `state/query.ts` (advisory).
 
 ---
 
 ## Tasks
 
 - [ ] 0.0 Pre-flight and ownership
-  - [ ] 0.1 Run `gate open PRD-021 --worktree` from the base checkout; confirm the lease
-        covers the PRD Conflict Surface and record branch/worktree in the Progress Log.
-  - [ ] 0.2 Confirm the dependency: `_state/prds.json` records PRD-018 as Ship Verified
-        and the root `workflow.config.json` exists. If either is false, STOP — FR-4 adds a
-        key to PRD-018's file and must never create it.
-  - [ ] 0.3 W8 — confirm `_state/locks` holds no active lease other than this one before
-        `workflow.config.json` is edited; record the result. The file is snapshotted by
-        content hash, so any lease predating the edit must merge the base branch before
-        its next `gate` command.
-  - [ ] 0.4 Open the five Memory Context records; confirm the paths and commands each one
-        names still exist and note any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.5 Re-measure the corpus facts the plan rests on and record them: the number of
-        PRD files under `_prds/wip` and `_prds/completed`, and how many carry a `Value:`
-        header. Expected at Phase-3 time: 21 and 6. A different count re-opens the cutoff
-        question before any code is written.
-  - [ ] 0.6 Capture the green baseline for `pnpm verify:workflow`,
-        `node scripts/verify/verify-pack-drift.mjs`, and the package suite; a pre-existing
-        red is ledgered, never normalized silently.
+  - [ ] 0.1 Hold a PRD-021 lease before editing anything. If claiming `--worktree`, the
+        PRD file must be committed **on `main`** — a claim from a checkout parked on
+        another branch is refused with "missing or uncommitted on 'main'", which is the
+        refusal, not a bug. Record branch/worktree in the Progress Log.
+  - [ ] 0.2 **Hard stop** — confirm PRD-018 and PRD-019 read `Ship Verified` in
+        `_state/prds.json`. FR-4 merges a key into a `workflow.config.json` PRD-018
+        creates; if that file is absent, the dependency was violated — **stop, do not
+        create it**, or the two PRDs each land a different first version of a control
+        artifact.
+  - [ ] 0.3 Run `gate queue` and record the live overlap. Do not trust this plan's or the
+        PRD's enumeration — both have gone stale three times. PRD-023 is the live
+        counterpart and a concurrent session may be revising it.
+  - [ ] 0.4 Open the nine Memory Context records; confirm the paths and commands each one
+        names still exist; note any stale finding in **Deferrals & Decisions**.
+  - [ ] 0.5 Re-measure the four facts the FRs depend on, because each was wrong in an
+        earlier revision and each is one command: `deepMerge` recurses into plain objects
+        (`load.ts:195-205`) and runs before `validateResolvedConfig` (`load.ts:243-244`);
+        `lintPrd` is four-arity with `root?: string` fourth (`prd-ready.ts:108-113`);
+        `content-placeholders.test.ts:59` fails on orphan declarations; the source
+        snapshot's header regex carries `/i` (`verify-prd-ready.mjs:292`).
+  - [ ] 0.6 Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and
+        `node packages/provegate/dist/cli.js check --wiring`; a pre-existing red is
+        ledgered, never normalized silently.
 
-- [ ] 1.0 FR-1 — `valueScoring` config surface (W2, W3)
-  - [ ] 1.1 Add the `valueScoring` block (`enforceFrom`, `weights.{MF,UI,TL,AR,RM}`) to
-        `packages/provegate/src/core/config/types.ts`.
-  - [ ] 1.2 Add defaults to `packages/provegate/src/core/config/defaults.ts`: today's
-        weights (.25/.25/.20/.15/.15) and `enforceFrom: 1` — a fresh adopter has no legacy
-        corpus, so the safe default is enforce-everywhere.
-  - [ ] 1.3 Shape-validate in `validate.ts::validateConfig`: reject unknown axes and
-        non-numbers, with the existing path-tagged issue shape.
-  - [ ] 1.4 W3 — semantically validate in `validate.ts::validateResolvedConfig`: all five
-        axes present, each finite and `> 0`, the sum exactly 1 compared in **integer
-        hundredths**, and `enforceFrom` a non-negative integer.
-  - [ ] 1.5 W3 — implement the two-decimal rule **lexically, not arithmetically**:
-        `String(weight)` must match `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/` (JS emits the
-        shortest round-tripping form), and only then scale with `Math.round(weight * 100)`.
-        `Number.isInteger(0.29 * 100)` is false — using it would reject a legal weight.
-  - [ ] 1.6 Cover it in `packages/provegate/test/config-value-scoring.test.ts`: accept
-        0.29 and 0.58; reject 0.155, 1e-7, a negative weight, a missing axis, an unknown
-        axis, and a set summing to 0.99. Each reject names its issue path.
+- [ ] 1.0 FR-1 — the `valueScoring` config surface
+  - [ ] 1.1 Add the type: `{ enforceFrom?: number, axes: string[], weights: Record<string, number> }`.
+        `enforceFrom` is optional and **absent ≠ 0**; the shipped default omits it.
+  - [ ] 1.2 `DEFAULT_CONFIG` carries `axes: ["MF","UI","TL","AR","RM"]` and the five
+        weights (.25/.25/.20/.15/.15), and **no `enforceFrom`**.
+  - [ ] 1.3 Charset: each identifier matches `/^[A-Za-z][A-Za-z0-9_]{0,15}$/`, validated
+        **before** any pattern is constructed. Reject fixtures: `A/B`, `.*`, `has space`,
+        the empty string.
+  - [ ] 1.4 Uniqueness: identifiers must be unique **case-insensitively**, because the
+        generated pattern is case-insensitive (the snapshot's `/i`, ported deliberately).
+        Reject `["MF","MF"]` and `["MF","mf"]` with a duplicate-identifier message
+        **distinct from** the charset message; the two must not collapse.
+  - [ ] 1.5 Count bound: `axes.length` ≥ 2 and ≤ 10.
+  - [ ] 1.6 Weight rules in `validateResolvedConfig`: the key set exactly equals the
+        **resolved** axis set, each weight finite and `> 0`, at most two decimals by the
+        **lexical** test (`String(weight)` matches `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`),
+        and the set sums to exactly 1 in integer hundredths. Accept 0.29 and 0.58; reject
+        0.155 and 1e-7. Scale with `Math.round(weight * 100)` only after the lexical check.
+  - [ ] 1.7 **The loader exception, in `resolveConfig` and nowhere else.** When the parsed
+        config supplies `valueScoring.axes`, the whole `valueScoring` object replaces the
+        default **before** `deepMerge`, with no default fill-in of any key. `deepMerge`
+        itself is not modified — every other config key wants recursive merge.
+  - [ ] 1.8 **`axes` absent → ordinary recursive merge, deliberately.** A weights-only
+        config is a legal partial retune of the default axes. Do not reject it; the sum
+        rule is what catches an incoherent partial.
+  - [ ] 1.9 Prove 1.7 with a **resolution** test through `loadConfig`, not a validation
+        fixture: a three-axis config file resolves to exactly three weight keys. A
+        hand-built resolved object would pass while the real loader failed — the defect
+        this rule exists to fix.
+  - [ ] 1.10 Prove 1.8 in both directions: a weights-only config retuning two of five and
+        still summing to 1 **resolves and passes**; one retuning one of five to sum 1.05
+        **fails on the sum**, naming the sum rather than the axis set.
+  - [ ] 1.11 Fixtures for the adopter cases: `valueScoring` absent entirely; `weights` set
+        with no `enforceFrom`; a three-axis config with matching weights; weights naming an
+        axis `axes` omits; `axes` naming an identifier `weights` omits. In the first two, a
+        header-less PRD passes.
 
-- [ ] 2.0 FR-2 / FR-3 — The recompute check
-  - [ ] 2.1 Write `scripts/verify/verify-value-score.mjs` against the shipped verify
-        shape: stdlib only, `targetRoot()` argument, shared reporter from `lib.mjs`.
-  - [ ] 2.2 Parse the `Value: T (MF/UI/TL/AR/RM: a/b/c/d/e)` header and recompute in
-        integer hundredths (`Σ weightHundredths × dim`); require exact equality with the
-        declared total formatted to two decimals. No float compare, no tolerance band.
-  - [ ] 2.3 Implement the cutoff: a PRD whose numeric id is `< enforceFrom` may omit the
-        header and is reported as a skip **with its reason**; a header that is present and
-        wrong fails at any id; a malformed header fails at any id.
-  - [ ] 2.4 Resolve weights from `workflow.config.json` when present, validating them by
-        the same rules as 1.4–1.5 and failing loudly on a violation; otherwise use the
-        documented fallback table.
-  - [ ] 2.5 Add `--print-weights` (JSON on stdout, exit 0) so the fallback can be proven
-        by behavior rather than by reading the source.
+- [ ] 2.0 FR-2 — the recompute as a package gate
+  - [ ] 2.1 Create `core/gates/value-score.ts` and export it from `core/gates/index.ts`.
+  - [ ] 2.2 Build the header pattern **from `config.valueScoring.axes`**, never a literal:
+        axis segment = validated identifiers joined by `/`; dimension segment =
+        `axes.length` groups of `[1-5]` joined by `/`. Accept an optional leading `>`,
+        `Value` with optional surrounding `**`, a colon inside or outside the bold run,
+        the total, any non-`(` filler, then the parenthesised pair. Do **not** anchor on
+        the closing paren.
+  - [ ] 2.3 Dimensions are `[1-5]`, not "a single digit". Reject fixtures must include a
+        `0` and a `6`, each failing as **malformed** rather than as an arithmetic mismatch
+        — the two messages read differently and must not be collapsed.
+  - [ ] 2.4 Search **only the metadata block** (before the first `---`); zero matches is
+        "no header", one is the declaration, **two or more is malformed**. Negative
+        fixture: two `Value` lines with different totals in the block.
+  - [ ] 2.5 Parse the declared total lexically into integer hundredths: one or two decimal
+        places only. Three decimals, exponent notation, and a bare integer are malformed.
+  - [ ] 2.6 Recompute as `Σ weightHundredths × dim` and require **exact** equality. Record
+        the divergence from the snapshot's `0.005` tolerance in **Deferrals & Decisions**:
+        the tolerance exists there because its weights are unvalidated constants.
+  - [ ] 2.7 A header whose axis list disagrees with the configured axes — right count,
+        wrong names, or right names in the wrong order — fails as **malformed**.
+  - [ ] 2.8 Call it from `lintPrd`. The id is the **optional fifth** parameter:
+        `lintPrd(config, manifest, content, root?: string, prdNumber?: number | null)`.
+        A required parameter cannot follow the optional `root`.
+  - [ ] 2.9 Guard on **absence**, not on `null`. Existing callers omit the argument and
+        supply `undefined`; a `=== null` test enforces presence on all 44 call sites the
+        moment this repo sets `enforceFrom`, and the first casualty is
+        `content-templates.test.ts:99`, which lints the shipped header-less template and
+        asserts zero issues.
+  - [ ] 2.10 Update the one caller that has an id — `cli.ts::runCheck`, which already
+        resolved the record. Leave the other 43 untouched; that is what the optional
+        parameter buys.
+  - [ ] 2.11 Enforcement modes: `enforceFrom` absent → presence-triggered; set → a PRD
+        with id `< enforceFrom` may omit the header, one at or after it may not. In every
+        mode a present-and-wrong header fails at any id, and a malformed header fails at
+        any id.
+  - [ ] 2.12 `evidence-pattern-satisfied-by-the-template` — assert the shipped
+        `templates/prd-template.md` does **not** satisfy the generated pattern. It carries
+        no `Value:` line today, which is why presence-triggering is the default; pin the
+        fact rather than assuming it, because FR-10 edits templates in the same change.
 
-- [ ] 3.0 FR-6 — Prove the script by behavior (W4)
-  - [ ] 3.1 Build the fixture roots under
-        `packages/provegate/test/fixtures/value-score/`: no-config, custom-valid-config,
-        invalid-config, wrong-total PRD, pre-cutoff PRD without a header, at-cutoff PRD
-        without a header.
-  - [ ] 3.2 Create `packages/provegate/test/value-score-script.test.ts` that **spawns the
-        real script** against each fixture root — never re-implements its logic.
-  - [ ] 3.3 Assert the failing cases exit non-zero with a message naming the cause: wrong
-        total reports declared and recomputed; at-cutoff missing header fails; invalid
-        config (sum ≠ 1, three-decimal weight, missing axis) names the issue.
-  - [ ] 3.4 W4 — assert parity: in the no-config fixture, `--print-weights` deep-equals
-        `DEFAULT_CONFIG.valueScoring.weights`. This is the only thing preventing the two
-        weight tables from drifting; if someone edits either side, this assertion fails.
-  - [ ] 3.5 Assert the passing cases: custom valid config yields the custom weights and a
-        total computed from them, and the pre-cutoff missing-header fixture exits 0.
+- [ ] 3.0 FR-3 — the corpus sweep
+  - [ ] 3.1 Add `gate check --value-score` beside the `--wiring` branch in `runCheck`.
+  - [ ] 3.2 Iterate `_state/prds.json` records (each carries `number` and
+        `artifacts.prd`), apply FR-2's decision to each, print one line per failure with
+        the declared and recomputed totals, and report pre-cutoff skips with their reason.
+  - [ ] 3.3 Weights come from the loaded config and nowhere else — no fallback table, no
+        `--print-weights`, no parity test.
+  - [ ] 3.4 Add the flag to `unknownOption`'s allowlist for `check`, or the command
+        refuses its own flag.
 
-- [ ] 4.0 FR-4 / FR-5 — Repo cutoff and the control-artifact edit (W8)
-  - [ ] 4.1 Add `{"valueScoring": {"enforceFrom": 17}}` to the **existing** root
-        `workflow.config.json` that PRD-018 created — merge one key, do not recreate or
-        reformat the file. If it is absent, the PRD-018 dependency was violated: stop and
-        record it in **Blockers**, never create it here.
-  - [ ] 4.2 In `packages/provegate/test/config-value-scoring.test.ts`, assert the resolved
-        config differs from `DEFAULT_CONFIG` only in the cutoff **and** PRD-018's memory
-        block; enumerate both rather than asserting a bare deep-equal, which PRD-018's
-        landing would break.
-  - [ ] 4.3 W8 — add the edit-transition fixture: `workflow.config.json` is snapshotted by
-        content hash, so a worktree leased before the key was added is refused on reuse
-        and succeeds after merging the base. The **introduction** case (a lease predating
-        the file itself) belongs to PRD-018 — do not duplicate it here.
-  - [ ] 4.4 Run `node scripts/verify/verify-value-score.mjs` against the live repo and
-        confirm the 15 pre-cutoff PRDs are skipped with reasons and the five at-or-after
-        the cutoff recompute correctly.
+- [ ] 4.0 FR-4 / FR-5 — this repo's cutoff and the control-artifact edit
+  - [ ] 4.1 Merge `{"valueScoring": {"enforceFrom": 17}}` into the existing root
+        `workflow.config.json`. Do not recreate or rewrite the file.
+  - [ ] 4.2 Assert the resolved config deep-equals the defaults except the cutoff.
+  - [ ] 4.3 FR-5 fixture: editing `workflow.config.json` advances the base, so a
+        pre-existing worktree lease is refused on reuse until it merges — refused before,
+        accepted after. The **introduction** case belongs to PRD-018; prove only the edit.
+  - [ ] 4.4 Phase 4 preflight: re-check `_state/locks` immediately before committing the
+        config edit, because the measurement goes stale within hours. Any live lease
+        merges base before its next `gate` command.
 
-- [ ] 5.0 FR-7 — The doc-claims grammar (W6)
-  - [ ] 5.1 Write `scripts/verify/verify-doc-claims.mjs` with the declared file set:
-        `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`, and the three practices
-        counterparts. Nothing else is scanned — that bound is what keeps PRDs and `_brain`
-        records out of range.
-  - [ ] 5.2 Implement the match rule: a line fails when it carries **both** a script token
-        (`verify:<name>` or `verify-<name>.mjs`) wired as a `verify:*` key in root
-        `package.json` **and** a declared future marker (`wave 2`, `wave-2`, `lands in`,
-        `will land`, `future work`, `stub now`, `specify later`, `not yet`).
-  - [ ] 5.3 Implement the exclusions: fenced code blocks and `STATUS.md`'s Recent activity
-        section are historical record, not claims.
-  - [ ] 5.4 Implement `scripts/verify/doc-claims-allowlist.json` as `{file, claim, reason,
-        reviewBy}` entries, shrink-only: an entry matching no line, or one past its
-        `reviewBy`, fails the check.
-  - [ ] 5.5 Cover it in `packages/provegate/test/doc-claims-script.test.ts` by spawning
-        the script: positive (a wired script described as future → fail), negative (a
-        genuinely unshipped script named as future → pass), fenced-code and
-        Recent-activity exclusions hold, and both allowlist failure modes (stale entry,
-        expired `reviewBy`) turn it red.
+- [ ] 5.0 FR-6 — prove the decision at the unit and the sweep at the command
+  - [ ] 5.1 Unit matrix over `value-score.ts` and `lintPrd`: custom valid weights → a
+        total computed from them; a wrong total → the failure names declared **and**
+        recomputed; a malformed header → fails at any id; a pre-cutoff header-less PRD →
+        passes; an at-cutoff header-less PRD → fails.
+  - [ ] 5.2 **Absent id, both spellings** — `undefined` (what every existing caller emits)
+        and explicit `null` — with no header → **passes**. With a present wrong header →
+        **fails**: the arithmetic never depends on the id.
+  - [ ] 5.3 Custom-axis cases: a three-axis config scoring a matching header passes; the
+        same header under the default five-axis config fails as malformed.
+  - [ ] 5.4 Built-CLI fixture for the sweep, as `cli-state.test.ts` does — a seeded repo
+        with one correct PRD, one wrong total, one pre-cutoff header-less PRD. Assert the
+        exit code, the failing PRD named in stdout, and the pre-cutoff one **absent** from
+        the failures.
+  - [ ] 5.5 Mutation-check every negative in 5.1-5.4 (`assert-absent-needs-an-independent-cause`):
+        revert the rule, confirm exactly its own case fails. A negative that survives its
+        own mutation is a defect in the test.
 
-- [ ] 6.0 FR-8 — Wiring (`gate-wire-or-delete`)
-  - [ ] 6.1 Add `verify:value-score` and `verify:doc-claims` to root `package.json`
-        scripts.
-  - [ ] 6.2 Add both to the `verify:workflow` bundle in
-        `scripts/verify/verify-workflow.mjs`.
-  - [ ] 6.3 Add both to the CI hygiene job under `.github/workflows/`.
-  - [ ] 6.4 Run `pnpm verify:gates-wired` and confirm each registered check sits on an
-        executing surface; an unwired check must fail this audit, so verify by mutation
-        (temporarily unregister one, see it go red, restore).
+- [ ] 6.0 FR-7 — the doc-claims grammar
+  - [ ] 6.1 `scripts/verify/verify-doc-claims.mjs`: a line fails when it carries **both** a
+        script token (`verify:<name>` or `verify-<name>.mjs`) that is wired as a `verify:*`
+        key in root `package.json`, **and** a future marker (`wave 2`, `wave-2`,
+        `lands in`, `will land`, `future work`, `stub now`, `specify later`, `not yet`).
+  - [ ] 6.2 Scanned set: `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md` and the
+        three practices counterparts. Exclude fenced blocks and `STATUS.md`'s Recent
+        activity section as historical record.
+  - [ ] 6.3 `doc-claims-allowlist.json` holds `{file, claim, reason, reviewBy}` and is
+        **shrink-only**: an entry matching no line, or past its `reviewBy`, fails.
+  - [ ] 6.4 Tests with positive, negative, and stale-allowlist fixtures.
 
-- [ ] 7.0 FR-9 / FR-10 — Correct the governance documents and the pack pairs
-  - [ ] 7.1 Rewrite the four stale claims to name the shipped script and the surface that
-        runs it: `AGENT_BOOTSTRAP.md` durable-artifacts (~128) and value-score (~144),
-        `STATUS.md` deferral cap (~25), `_brain/PROTOCOL.md` optional-tooling (~182, ~204).
-        In the AGENT_BOOTSTRAP triage section, document that the weights and cutoff are
-        configurable and name the defaults.
-  - [ ] 7.2 Port each correction into its genericized pack counterpart
-        (`practices/brain/PROTOCOL.md`, `practices/templates/AGENT_BOOTSTRAP.template.md`,
-        `practices/templates/STATUS.template.md`), then run
-        `node scripts/verify/verify-pack-drift.mjs --reconcile` and **read its per-pair
-        output** — every line it prints is a change being accepted. Paste that output into
-        the Progress Log.
-  - [ ] 7.3 Run `pnpm verify:doc-claims` against the corrected tree and confirm zero
-        findings without adding a single allowlist entry; needing one here would mean the
-        correction is incomplete.
+- [ ] 7.0 FR-8 — wiring, on two different surfaces
+  - [ ] 7.1 `verify:doc-claims`: a `package.json` script, a member of the
+        `verify:workflow` bundle, and a step in the CI **hygiene** job.
+  - [ ] 7.2 `verify:value-score`: `node packages/provegate/dist/cli.js check --value-score`
+        — it needs `dist/`, so it goes in the **build-dependent** CI job after
+        `pnpm build`, and is deliberately **not** a `verify:workflow` member. A bundle
+        member that fails on a clean checkout without `dist/` would report the absence of a
+        build as a governance violation.
+  - [ ] 7.3 Record in **Deferrals & Decisions** that this makes `verify:value-score` the
+        first `gate` invocation on any automated surface of this repository.
+  - [ ] 7.4 `pnpm verify:gates-wired` green — it accepts CI `run:` text as an executing
+        surface, which is how the CI-only check is seen.
 
-- [ ] 8.0 FR-11 — Research pack canon banner
-  - [ ] 8.1 Add the status banner to `docs/research/provegate-bootstrap/README.md`: frozen
-        bootstrap record, extraction complete through PRD-016, live canon is `apps/docs`
-        with the exact canonical link.
-  - [ ] 8.2 Mark the roadmap's shipped phases in
-        `oss-extraction-roadmap-2026-07-22.md` and point
-        `whitepaper-gated-autonomy-2026-07-22.md` at the published v1.0. Do not rewrite
-        their content — only mark status.
-  - [ ] 8.3 Assert it directly in `packages/provegate/test/content-canon.test.ts`: the
-        canonical link, the "complete through PRD-016" statement, and that the roadmap's
-        shipped phases are no longer unmarked.
+- [ ] 8.0 FR-9 / FR-10 — correct the documents and the pack pairs
+  - [ ] 8.1 FR-9: correct the stale claims in `AGENT_BOOTSTRAP.md`, `STATUS.md` and
+        `_brain/PROTOCOL.md`; each sentence names the shipped script and the surface that
+        runs it. The triage section documents that axes, weights and cutoff are
+        configurable, names the defaults, and says the shipped default is
+        presence-triggered while this repo opts in at PRD-017.
+  - [ ] 8.2 FR-9: **pin** the root triage table to `DEFAULT_CONFIG` rather than leaving it
+        prose. One authority, two projections, both mechanically checked.
+  - [ ] 8.3 FR-10: port the corrections to the three practices counterparts and reconcile
+        `pack-drift-ledger.json` in the same change — a one-sided edit fails the bundle.
+  - [ ] 8.4 FR-10: **remove** `{{VALUE_AXES_TABLE}}` from the practices template; do
+        **not** register it. `content-placeholders.test.ts:59` fails on orphan
+        declarations, so registering a token no template contains reds an existing green
+        test. Register-**or**-remove.
+  - [ ] 8.5 FR-10: the template renders the default table inline, **pinned to
+        `DEFAULT_CONFIG` by a test**, above a sentence naming `workflow.config.json`
+        `valueScoring` as the source and telling an adopter who changes it to edit the
+        table.
+  - [ ] 8.6 FR-10: widen the placeholder walk to `practices/templates/` **and hit the
+        specified green state** — measured 2026-07-27, that file carries six tokens and
+        none is declared. Register the four adopter-fill ones
+        (`LINK_TO_VISION_DOC`, `VISION_OR_DECISIONS_DOC`, `ONE_LINE_PRODUCT_FRAMING`,
+        `PROJECT_SPECIFIC_HARD_RULES`); exclude HTML comments from the walk, which
+        disposes of `{{PLACEHOLDER}}` — the word inside the template's own instruction
+        comment, not a token. If the walk surfaces a token this list does not name,
+        **report it and stop**; an unplanned token is a finding, not a reflex registry row.
 
-- [ ] 9.0 Migration & Rollback Plan (infra parent — 20% of the readiness weight)
-  - [ ] 9.1 Corpus migration: confirm no `Value:` header was backfilled into any
-        pre-cutoff PRD. Grep the diff to prove it; the exemption covers absence, never a
-        fabricated number.
-  - [ ] 9.2 Record the rollout order in **Deferrals & Decisions**: the CLI carrying
-        `valueScoring` releases first, adopters upgrade, only then may they add the key.
-        The reverse order hard-fails because unknown keys are config errors.
-  - [ ] 9.3 Record the downgrade procedure: remove the `valueScoring` key before
-        installing an older CLI; nothing else depends on it.
-  - [ ] 9.4 Record the rollback of this change itself: delete both scripts, their
-        `package.json` entries, their bundle membership, and the root config file. The
-        config addition is additive and inert when unused, so no data or artifact
-        migration is involved.
-  - [ ] 9.5 Re-check `_state/locks` immediately before the merge (the 0.2 measurement can
-        go stale during Phase 4) and confirm no lease predates the new control artifact.
+- [ ] 9.0 FR-11 — the research-pack canon banner
+  - [ ] 9.1 Banner on `docs/research/provegate-bootstrap/README.md`: frozen bootstrap
+        record, extraction complete through PRD-016, live canon is `apps/docs`.
+  - [ ] 9.2 Mark the roadmap's shipped phases; point the draft whitepaper at published v1.0.
+  - [ ] 9.3 `content-canon.test.ts` asserts the banner directly — the exact canonical link,
+        the "complete through PRD-016" statement, and that the shipped phases are marked.
 
-- [ ] 10.0 FR-12 — Release entry (W9)
-  - [ ] 10.1 Write the `.changeset/` entry declaring a **minor** bump for `provegate`,
-        whose note states the one-way compatibility rule: an older CLI rejects
-        `valueScoring` as an unknown key, so upgrade the CLI before adding it and remove
-        the key before downgrading.
-  - [ ] 10.2 W9 — verify the entry semantically rather than by two independent
-        quote-sensitive greps: assert in a test that some file in `.changeset/` declares
-        `provegate` at `minor` **and** that the same file carries the compatibility
-        sentence. Front-matter quoting is a formatting choice, not a contract; if the §11
-        greps disagree with this assertion, the greps are what is wrong.
-  - [ ] 10.3 Confirm `pnpm changeset status` is **not** used as evidence anywhere: it
-        exits 0 on an empty `.changeset/`, so it can never fail.
+- [ ] 10.0 FR-13 — make a repo-root Conflict Surface claim real
+  - [ ] 10.1 (a) Accept root-relative filenames by **literal predicate**: a named file
+        `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` or a dotfile
+        `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$`. Both forbid whitespace, a leading
+        `/`, a `..` segment, and a trailing `.` — which is what excludes `e.g.`, `i.e.`
+        and `etc.` The predicate is the specification.
+  - [ ] 10.2 (a′) Export it as `isRootRelativeFilename(token: string): boolean` from
+        `core/state/markdown.ts`, with its own unit tests. **PRD-023 FR-3 consumes it** —
+        without the export that PRD must duplicate the logic it exists to remove.
+  - [ ] 10.3 (b) Add `parseConflictSurface(content): { globs, rejected: {token, reason}[] }`;
+        `declaredGlobs` keeps its `string[]` signature and delegates, so no caller breaks.
+  - [ ] 10.4 (c) Surface the rejections at both real consumers — `candidateFromPrd`
+        (`gate open`, enforcing) and `readyOverlaps` (`gate queue`, advisory) — each
+        printing token and reason. The enforcing path is where a missed claim is a hazard.
+  - [ ] 10.5 Re-measure the live effect and record it: which PRDs regain which root claims.
+        Today PRD-018 loses `workflow.config.json` and `gates.manifest.json`; this PRD
+        loses `workflow.config.json`, `AGENT_BOOTSTRAP.md` and `STATUS.md`.
 
-- [ ] 10.5 FR-13 — Make a root-file Conflict Surface claim real
-  - [ ] 10.5.1 Reproduce first, in `packages/provegate/test/markdown.test.ts`: today
-        `declaredGlobs` drops `workflow.config.json`, `AGENT_BOOTSTRAP.md`, and
-        `STATUS.md` from this PRD's surface and `workflow.config.json` plus
-        `gates.manifest.json` from PRD-018's. Write the failing assertion before the fix
-        so the regression is proven, not assumed.
-  - [ ] 10.5.2 FR-13(a) — in `packages/provegate/src/core/state/markdown.ts`, accept a
-        backticked claim with no `/` only when it matches one of the PRD's two literal
-        shapes: a named file `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` or a
-        dotfile `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$`. The trailing-dot ban is what
-        keeps `e.g.` out; do not re-derive a looser "contains a dot" rule.
-  - [ ] 10.5.3 FR-13(b) — add `parseConflictSurface(content): { globs, rejected[] }` and
-        make `declaredGlobs` delegate to it without changing its exported signature. Print
-        each rejected token with its reason from `candidateFromPrd` (`gate open`) and
-        `readyOverlaps` (`gate queue`) — the two functions that actually read the surface.
-        `gate check` never reads it, so do not wire it there.
-  - [ ] 10.5.4 Assert the rejection reasons in `packages/provegate/test/markdown.test.ts`:
-        `none`, `{placeholder}`, `e.g.`, and a `..` escape each carry their reason text,
-        not merely their absence from the result. Also assert the accepted shapes:
-        `workflow.config.json`, `STATUS.md`, `AGENT_BOOTSTRAP.md`, `.gitignore`.
-  - [ ] 10.5.5 W11 / FR-13(c) — the parser fix alone does not reach the enforcing path.
-        In `findConflicts` (`packages/provegate/src/core/locks/conflicts.ts`), structural
-        overlap currently runs only when a whole surface materializes to zero tracked
-        files, so PRD-018 and PRD-021 — dozens of tracked files each — would still not
-        collide on the untracked `workflow.config.json`. Compute structural overlap over
-        each surface's **unmaterialized** globs and union it with the file intersection.
-  - [ ] 10.5.6 In `packages/provegate/test/conflicts.test.ts`, drive the enforcing path:
-        build candidates through `candidateFromPrd`, give a rival active lease the same
-        root filename, pass a tracked-file list that does **not** contain it, and assert
-        `candidateConflicts` refuses. Keep this separate from the parser unit test.
-  - [ ] 10.5.7 Re-run `node packages/provegate/dist/cli.js queue` and record the new
-        overlap set in the Progress Log; a pair that appears only after this fix is a
-        collision the board was hiding.
+- [ ] 11.0 FR-12 — the release entry
+  - [ ] 11.1 A changeset declaring **minor** for `provegate`, whose note states the
+        one-way compatibility rule: an older CLI rejects `valueScoring` as an unknown key,
+        so upgrade before adding it and remove the key before downgrading.
+  - [ ] 11.2 The note states the merge rule **in both directions**: supplying `axes`
+        requires the complete matching `weights` and replaces wholesale; supplying
+        `weights` alone is a legal partial retune checked by the sum rule. Half of it is
+        false adopter guidance.
+  - [ ] 11.3 **One semantic assertion over one entry** (W9): read `.changeset/*.md`, parse
+        each entry's YAML front-matter, and assert that **some single entry** both declares
+        `provegate` at `minor` and carries the compatibility instruction. Tolerate
+        `'provegate'`, `"provegate"` and bare. The failure names which half was found.
+        `pnpm changeset status` is **not** evidence — it exits 0 with no changesets at all.
 
-- [ ] 11.0 Phase 5 — Execute verification
-  - [ ] 11.1 Run every PRD §11 command exactly as written from the repository root and
-        fill the matching Verification Ledger rows with evidence; no substitutions, no
-        omissions.
-  - [ ] 11.2 Run the cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
-        `pnpm build`, `pnpm verify:workflow`; record exit codes.
-  - [ ] 11.3 Run `node packages/provegate/dist/cli.js check PRD-021` and
-        `node packages/provegate/dist/cli.js check --wiring`; both must be green with the
-        two new checks registered.
-  - [ ] 11.4 Assert the invariants: `packages/provegate/package.json` still declares zero
-        runtime dependencies, and neither new script contains a network call or a push
-        path.
+- [ ] 12.0 Migration & Rollback (infra parent — 20% of the readiness weight)
+  - [ ] 12.1 State the two migrations separately, because they are different: **on the
+        stock config, none** (presence-triggered, so upgrading cannot fail a passing PRD);
+        **once `axes` is edited, a corpus rewrite** — a header whose axis list disagrees
+        fails, so changing axes reds every scored PRD at once, and removing an axis does
+        the same to every header naming it.
+  - [ ] 12.2 The procedure for the second: sweep with `gate check --value-score`, then land
+        the axis change and the header rewrites **in one commit**.
+  - [ ] 12.3 Rollout order: release the CLI carrying `valueScoring` → adopters upgrade →
+        only then may they add the key. The reverse hard-fails on the unknown key.
+  - [ ] 12.4 Rollback: delete the doc-claims script and the `--value-score` branch, drop
+        both `package.json` entries and the CI steps, remove the `valueScoring` key, and
+        remove FR-2's `lintPrd` call plus the **optional fifth** `prdNumber` argument —
+        fifth, after the existing optional `root`. `value-score.ts` may stay once the call
+        is gone.
+  - [ ] 12.5 Enumerate who a live `workflow.config.json` edit can refuse, from
+        `_state/locks` at merge time, and list them in **Operator Handoff**.
 
-- [ ] 12.0 Phase 6 — Independent adversarial audit
-  - [ ] 12.1 After Phase 5 is green, obtain an independent review (different model family,
-        never the implementing agent) of the merge diff against the PRD and watch items
-        W1–W9. Point it at the three highest-leverage attacks: can the doc-claims grammar
-        be satisfied by rewording rather than by fixing a claim; does the cutoff let a
-        genuinely wrong header through anywhere; and do the two weight tables actually
-        diverge under the parity test or only appear to agree.
-  - [ ] 12.2 Save the structured verdict to
-        `_docs/reviews/review-021-governance-truth-up.md`; the ledger row may read
-        `passed` only with verdict `pass` and `Critical: 0`.
-  - [ ] 12.3 For each finding, append remediation sub-tasks here, fix under the same
-        lease, re-run the affected Phase 5 gates, and obtain a fresh verdict.
+- [ ] 13.0 Phase 5 — execute verification
+  - [ ] 13.1 `pnpm build` first — three §11 rows drive the built CLI.
+  - [ ] 13.2 Run every §11 row exactly as written and fill the Verification Ledger with
+        evidence. A row marked `passed` with no evidence is a `pending` row that lies.
+  - [ ] 13.3 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
+        `pnpm build`, `pnpm verify:workflow`.
+  - [ ] 13.4 `node packages/provegate/dist/cli.js check PRD-021` and `check --wiring`.
+  - [ ] 13.5 Re-read PRD §12 and confirm none of the DO NOTs was introduced. Give a named
+        line to the four this implementation could plausibly violate: a literal header
+        pattern, a `=== null` id guard, registering a removed token, and a weights-only
+        config rejected.
 
-- [ ] 13.0 Phase 7 — Durable learning and close preparation
-  - [ ] 13.1 Run the `_brain/PROTOCOL.md` §7 capture. The PRD declares
-        `docs-outlive-the-gate-they-promise` as a conditional learning: write it if the
-        close confirms the promise-versus-shipped pattern, otherwise downgrade that
-        Durable Artifacts entry to `none` — decide explicitly, do not leave it implied.
-  - [ ] 13.2 Confirm every declared Durable Artifact is present in the merge diff.
-  - [ ] 13.3 Prepare the owner handoff: the config-surface change and its changeset, the
-        corpus skip report from 4.4, the reconcile output from 7.2, and the independent
-        verdict. Leave the operator row pending.
-  - [ ] 13.4 After owner acceptance only, run `gate land PRD-021`; verify the post-merge
-        gates and worktree cleanup. Never push — the handoff ends with the human push
-        instruction.
+- [ ] 14.0 Phase 6 — independent adversarial audit
+  - [ ] 14.1 Independent review by a different model family; write
+        `_docs/reviews/review-021-governance-truth-up.md`.
+  - [ ] 14.2 **Brief it as a consistency sweep, not only a defect hunt.** Five readiness
+        rounds on this PRD each found one defect, and every one was created by the fix for
+        the round before — a rule corrected in its owning FR left the old rule stated
+        elsewhere. Ask for every rule to be checked across §7, §8, §12, Migration, the
+        Gherkin criteria and §11, not just inside the FR that owns it.
+  - [ ] 14.3 Point it at the two things the tests cannot self-check: that the generated
+        header pattern is genuinely built from config rather than a literal that happens to
+        match, and that each reject fixture fails for the reason it names.
+  - [ ] 14.4 Spec-vs-code audit: every FR target appears in the diff; every file in the
+        diff appears in the Conflict Surface.
+  - [ ] 14.5 `git add` the review artifact — an untracked durable artifact fails the close
+        gate (`durable-artifact-must-commit`).
+
+- [ ] 15.0 Phase 7 — durable learning and close preparation
+  - [ ] 15.1 Run the `_brain` capture protocol. The PRD declares Memory Outputs `none`;
+        append an exact path to **both** Memory Outputs and Durable Artifacts before
+        writing a record. The likely candidate is already visible from readiness: a rule
+        corrected in one section survives in the others, and the reviewer instruction that
+        finds it is "sweep for stale copies", not "find defects".
+  - [ ] 15.2 `pnpm verify:brain` and `pnpm verify:durable-artifacts`.
+  - [ ] 15.3 Update `STATUS.md` and `_state/prds.json`.
+  - [ ] 15.4 Leave the Operator Handoff acceptance row for the owner
+        (`operator-acceptance-no-self-accept`); the merge gate refuses until it exists.
 
 ---
-
 ## Verification Ledger
 
 | Gate               | Command / Check                                                  | Scope | Result  | Evidence | Notes |
-| ------------------ | ------------------------------------------------------------------ | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/config-value-scoring.test.ts`   | pkg   | pending |          | schema, defaults, lexical two-decimal accept/reject |
-| FR-2               | `node scripts/verify/verify-value-score.mjs`                       | repo  | pending |          | live corpus green under the cutoff |
-| FR-3               | `pnpm --filter provegate test test/value-score-script.test.ts`     | pkg   | pending |          | config resolution and print-weights parity |
-| FR-4               | `pnpm --filter provegate test test/config-value-scoring.test.ts`   | pkg   | pending |          | resolved config deep-equals defaults except the cutoff |
-| FR-5               | `pnpm --filter provegate test test/config-value-scoring.test.ts`   | pkg   | pending |          | pre-existing worktree refused before merge, accepted after |
-| FR-6               | `pnpm --filter provegate test test/value-score-script.test.ts`     | pkg   | pending |          | behavior matrix, every failing fixture |
-| FR-7               | `pnpm --filter provegate test test/doc-claims-script.test.ts`      | pkg   | pending |          | positive, negative, stale and expired allowlist |
-| FR-8a              | `pnpm verify:gates-wired`                                          | repo  | pending |          | both checks wired to an executing surface |
-| FR-8b              | `pnpm verify:workflow`                                             | repo  | pending |          | the bundle runs both new members |
-| FR-9               | `pnpm verify:doc-claims`                                           | repo  | pending |          | zero stale wave-2 claims about wired scripts |
-| FR-10              | `pnpm verify:pack-drift`                                           | repo  | pending |          | pack/live pairs reconciled, ledger updated |
-| FR-11              | `pnpm --filter provegate test test/content-canon.test.ts`          | pkg   | pending |          | banner, canonical link, roadmap marks |
-| FR-12a             | `grep -rc "provegate': minor" .changeset`                          | repo  | pending |          | fails when the minor changeset is missing (see W9) |
-| FR-12b             | `grep -rc "upgrade the CLI before" .changeset`                     | repo  | pending |          | the compatibility instruction is in the note |
-| FR-13a             | `pnpm --filter provegate test test/markdown.test.ts`               | pkg   | pending |          | root-file claims parse; rejections name token and reason |
-| FR-13b             | `pnpm --filter provegate test test/conflicts.test.ts`              | pkg   | pending |          | enforcing path: untracked root claim conflicts structurally |
-| FR-13c             | `pnpm --filter provegate test test/state-query.test.ts`            | pkg   | pending |          | the queue advisory prints rejected tokens |
-| types              | `pnpm check-types`                                                 | root  | pending |          | zero errors |
-| lint               | `pnpm lint`                                                        | root  | pending |          | zero warnings |
-| test               | `pnpm test`                                                        | root  | pending |          | full suite |
-| build              | `pnpm build`                                                       | root  | pending |          | clean build |
-| gate-check         | `node packages/provegate/dist/cli.js check PRD-021`                | repo  | pending |          | readiness lint |
-| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`               | repo  | pending |          | wire-or-delete |
-| independent-review | `_docs/reviews/review-021-governance-truth-up.md`                  | repo  | pending |          | verdict pass, Critical: 0 |
+| ------------------ | ---------------------------------------------------------------- | ----- | ------- | -------- | ----- |
+| FR-1               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | schema, defaults, resolution through loadConfig, lexical two-decimal, enforceFrom absent |
+| FR-2               | `pnpm --filter provegate test test/prd-ready.test.ts`             | pkg   | pending |          | wrong total fails; an absent id, in either spelling, still enforces the arithmetic |
+| FR-3               | `pnpm --filter provegate test test/value-score.test.ts`           | pkg   | pending |          | built-CLI sweep names the failing PRD and skips the pre-cutoff one |
+| FR-4               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | resolved config deep-equals defaults except the cutoff |
+| FR-5               | `pnpm --filter provegate test test/config-value-scoring.test.ts`  | pkg   | pending |          | pre-existing worktree refused before merge, accepted after |
+| FR-6               | `pnpm --filter provegate test test/value-score.test.ts`           | pkg   | pending |          | the arithmetic and cutoff matrix, every negative mutation-checked |
+| FR-7               | `pnpm --filter provegate test test/doc-claims-script.test.ts`     | pkg   | pending |          | positive, negative, stale-allowlist |
+| FR-8               | `pnpm verify:gates-wired`                                         | repo  | pending |          | both wired; the CI-only one seen via step text |
+| FR-8               | `pnpm verify:workflow`                                            | repo  | pending |          | bundle runs doc-claims; value-score deliberately absent |
+| FR-8               | `pnpm verify:value-score`                                         | repo  | pending |          | the built CLI sweeps the live corpus green |
+| FR-9               | `pnpm verify:doc-claims`                                          | repo  | pending |          | zero stale wave-2 claims about wired scripts |
+| FR-9               | `pnpm --filter provegate test test/content-canon.test.ts`         | pkg   | pending |          | the triage table deep-equals the configured axes and weights |
+| FR-10              | `pnpm --filter provegate test test/content-placeholders.test.ts`  | pkg   | pending |          | the walk covers practices/templates; every token there registered |
+| FR-10              | `pnpm verify:pack-drift`                                          | repo  | pending |          | pack/live pairs reconciled, ledger updated |
+| FR-11              | `pnpm --filter provegate test test/content-canon.test.ts`         | pkg   | pending |          | banner, canonical link, roadmap phase marks |
+| FR-12              | `pnpm --filter provegate test test/changeset-entry.test.ts`       | repo  | pending |          | one entry declares minor AND carries the sentence; two half-entries fail |
+| FR-13              | `pnpm --filter provegate test test/markdown.test.ts`              | pkg   | pending |          | root-file claims parse; each rejection names token and reason |
+| FR-13              | `pnpm --filter provegate test test/conflicts.test.ts`             | pkg   | pending |          | enforcing path: an untracked root claim conflicts structurally |
+| FR-13              | `pnpm --filter provegate test test/state-query.test.ts`           | pkg   | pending |          | the queue advisory prints rejected tokens |
+| types              | `pnpm check-types`                                                | root  | pending |          | zero errors |
+| lint               | `pnpm lint`                                                       | root  | pending |          | zero warnings |
+| test               | `pnpm test`                                                       | root  | pending |          | full suite |
+| build              | `pnpm build`                                                      | root  | pending |          | clean; must precede the built-CLI rows |
+| gate-check         | `node packages/provegate/dist/cli.js check PRD-021`               | repo  | pending |          | readiness lint |
+| gate-wiring        | `node packages/provegate/dist/cli.js check --wiring`              | repo  | pending |          | wire-or-delete |
+| independent-review | `_docs/reviews/review-021-governance-truth-up.md`                 | repo  | pending |          | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -387,31 +434,26 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Readiness Watch Coverage
 
+Every watch item the readiness rounds left binding, and the tasks that discharge it.
+
 | Watch | Binding tasks |
 | ----- | ------------- |
-| W1 — prospective cutoff, no backfill | 0.5, 2.3, 4.1, 4.4, 9.1 |
-| W2 — `valueScoring` as a real schema | 1.1–1.6 |
-| W3 — float-safe decimal validation | 1.4, 1.5, 1.6 |
-| W4 — prove both weight copies by behavior | 2.5, 3.2, 3.4 |
-| W5 — compatibility, changeset, rollout | 9.2–9.4, 10.1 |
-| W6 — doc-claims grammar, not intention | 5.1–5.5 |
-| W7 — outcome evidence, not token greps | 3.2–3.5, 5.5, 8.3, 10.2 |
-| W8 — root-config control-artifact transition | 0.3, 4.3, 9.5 |
-| W10 — observable rejected-claim diagnostics | 10.5.3, 10.5.4 |
-| W11 — enforcing path for an untracked root file | 10.5.5, 10.5.6 |
-| W9 — semantic changeset assertion | 10.2, 10.3 |
+| W9 — one semantic changeset assertion, not two greps | 11.3 |
+| Iteration 11 — the `lintPrd` parameter position | 0.5, 2.8, 2.10, 12.4 |
+| Iteration 11 — `load.ts` targeted and owned | 0.5, 1.7, 1.9 |
+| Iteration 11 — the placeholder walk's green state | 8.4, 8.6 |
+| Iteration 12 — a compilable optional fifth parameter | 2.8, 5.2 |
+| Iteration 12 — weights without axes | 1.8, 1.10, 11.2 |
+| Iteration 13 — the rule stated in both directions everywhere | 11.2, 13.5, 14.2 |
+| Iteration 14 — absence guarded, not `=== null` | 2.9, 5.2 |
+| Iteration 15 — propagation sweep as a review instruction | 14.2 |
 
 ---
 
 ## Deferrals & Decisions
 
-- Phase 3 decision — `infra` skeleton: Migration & Rollback is its own parent (task 9.0)
-  because deployment ordering carries 20% of this class's readiness weight, and this PRD
-  publishes a config-surface change that an older CLI rejects.
-- Phase 3 decision — W9 is implemented as task 10.2's semantic assertion; the PRD's two
-  §11 greps stay as supplementary rows (FR-12a/FR-12b) because §11 is the runner's
-  contract, but the test is the authority if they disagree.
-- (none deferred yet)
+- **The plan this replaces.** The 82-task plan of 2026-07-25 scored the FR set that shipped
+  the gate as `scripts/verify/verify-value-score.mjs`. Nothing in it was checked off.
 
 ---
 
@@ -419,30 +461,26 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date       | Task    | Notes |
 | ---------- | ------- | ----- |
-| 2026-07-25 | Phase 3 | Plan generated from PRD-021 (Approved), readiness iteration 3 PASS 8.43, and watch items W1–W9, after owner Go. No implementation started. |
+| 2026-07-27 | Phase 3 | Plan regenerated from PRD-021 at readiness 8.09 PASS (iteration 15, independent). 16 parents, 86 sub-tasks. The nine Readiness Watch rows come from iterations 11-15, whose findings were all propagation defects rather than design errors — task 14.2 turns that into a review instruction rather than leaving the next round to rediscover it. No implementation started. |
 
 ---
 
 ## Blockers / Open Questions
 
-- **PRD-018 must be Ship Verified before Phase 4** (task 0.2). It creates the root
-  `workflow.config.json` that FR-4 adds a key to. This is a wave-ordering decision the
-  owner made on 2026-07-25, not a technical discovery.
-- Not blocked, but **not parallelizable with the memory program**: `gate queue` reports
-  that `scripts/verify/pack-drift-ledger.json` is claimed by PRD-017, PRD-018, and
-  PRD-019 as well. The ledger is modify-in-place, not append-only, so it is not
-  union-mergeable — this PRD runs alone with respect to those three, in whatever order
-  the owner picks.
+- **None blocking Phase 4.** Task 0.2 is a hard stop rather than a blocker: PRD-018 and
+  PRD-019 are both Ship Verified as of 2026-07-27, and `workflow.config.json` exists.
+- **PRD-023 overlaps this PRD in eight paths and a concurrent session is revising it.**
+  It is at ITERATE 6.85, so it cannot claim; task 0.3 re-measures rather than trusting
+  this sentence.
 
 ---
 
 ## Operator Handoff
 
-> Human/runtime/staging checks the agent cannot complete. Keep the corresponding task
-> checkbox unchecked until resolved or explicitly accepted.
-> `Category` ∈ {`runtime`, `staging`, `deploy`, `secret`, `manual-qa`, `legal`, `external`}.
+> Rows an owner must sign. The merge gate refuses an operator-gated close until an
+> acceptance entry exists; the agent never signs its own.
 
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
-| 13.3 | manual-qa | owner | Accept the published config-surface change: the `valueScoring` key, the minor bump, and the upgrade-before-config instruction adopters will read in the changelog | pending | A release decision the gates cannot make; the merge gate refuses until this acceptance is recorded |
-| 13.3 | manual-qa | owner | Confirm the research-pack banner wording — that `apps/docs` is named the live canon and the bootstrap pack is marked frozen rather than deleted | pending | Canon ownership is an owner call |
+| 12.5 | manual-qa | owner | Accept that editing the root `workflow.config.json` advances the control-artifact base, so any lease taken before it is refused until that worktree merges | pending | The agent lists the affected leases at merge time; deciding to land a change that stops in-flight work is an owner call |
+| 15.4 | manual-qa | owner | Sign the close acceptance — this PRD changes the **published config surface**, so Autonomous Close is operator-gated | pending | The merge gate refuses until the acceptance row exists |

@@ -42,10 +42,30 @@ describe('copy discipline (do-not-say list)', () => {
   });
 });
 
-// The CLI-surface checks (no gate.toml/ledger; real ten commands) run on the
-// RENDERED output in landing.test.tsx — the commands are built as `gate ${name}`
-// at render, and the source comments legitimately mention the fictional tokens
-// to say they are excluded.
+// The CLI-surface checks (no gate.toml/ledger; the real command list) run on
+// the RENDERED output in landing.test.tsx — the commands are built as
+// `gate ${name}` at render, and the source comments legitimately mention the
+// fictional tokens to say they are excluded.
+
+describe('no distribution channel or flag the tool does not have', () => {
+  const text = all();
+
+  it('ships no fictional installer (the package is published to npm only)', () => {
+    expect(text).not.toContain('brew install');
+    expect(text).not.toContain('install.sh');
+    expect(text).not.toMatch(/curl\s+-fsSL/);
+  });
+
+  it('claims no `--ci` flag — `gate run` has none', () => {
+    expect(text).not.toContain('--ci');
+  });
+
+  it('only names flags `gate run` actually accepts', () => {
+    for (const flag of text.matchAll(/gate run (--[a-z-]+)/g)) {
+      expect(['--dry-run', '--from-phase'], flag[1]).toContain(flag[1]);
+    }
+  });
+});
 
 describe('wordmark casing', () => {
   const text = all();
