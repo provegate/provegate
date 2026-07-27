@@ -470,4 +470,4 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
-| 11.3 | manual-qa | owner | Read `brownfield.mdx` end to end and confirm the ladder matches how you would actually onboard an existing repo, and that the cookbook examples are ones you would hand to an adopter | pending | Judgement the fixture cannot make; the merge gate refuses until this acceptance is recorded |
+| 11.3 | manual-qa | owner | Read `brownfield.mdx` end to end and confirm the ladder matches how you would actually onboard an existing repo, and that the cookbook examples are ones you would hand to an adopter | accepted | Owner-directed in chat 2026-07-27 after round 3. Recorded in `_state/acceptances.json`; the `method` field states it was agent-recorded on owner instruction, not an interactive confirmation, and the `reason` states plainly that the owner did not personally read the page — it is accepted on three independent verdicts and two end-to-end adopter walk-throughs |
