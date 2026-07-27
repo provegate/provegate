@@ -9,9 +9,11 @@
 > **Slug**: `readiness-lint-parsers`
 > **Cycle Phase**: 1 (PRD Generation)
 > **PRD Class**: infra
-> **Class Rationale**: Three defects in the readiness lint's own document readers. No
-> application behavior, no user-facing surface, no new flag or config key: the CLI's
-> observable interface is unchanged and only its verdicts move. Not `test-hardening`
+> **Class Rationale**: Three defects in the readiness lint's own document readers. No new
+> flag, config key, or CLI command, and the exported programmatic signatures are preserved
+> (FR-1). Two things do move besides verdicts, stated rather than glossed: the **commands
+> executed in Phase 5**, since `buildGateChain` runs the parser's output directly, and the
+> **set of documents that pass**, since all three lints get stricter. Not `test-hardening`
 > because production parser code changes, not only tests.
 > **Autonomous Close**: operator-gated
 > **Value**: 3.75 (MF/UI/TL/AR/RM: 5/4/3/2/4)
@@ -24,13 +26,16 @@
 ## 1. Introduction / Overview
 
 Split from PRD-023 on owner direction, 2026-07-27, after six independent readiness rounds
-scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold — four of
-those rounds independent, two self-scored, and the four independent ones are the band that
-matters. The
-diagnosis recorded there was size: three unrelated engineering problems held together by a
-thesis rather than a shared surface, in a document where two live defects hid through five
-adversarial reviews. This PRD is the first of the three pieces and the one with no
-dependency on the others.
+scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold. **Four of
+those rounds were independent and two were self-scored; the four independent ones are the
+band that matters, and every count in this document refers to those four.** The diagnosis
+recorded there was size: three unrelated engineering problems held together by a thesis
+rather than a shared surface, in a document where two live defects hid through five
+adversarial reviews.
+
+This PRD is the first of the three pieces and the only one with no dependency on the other
+two. **It is not dependency-free.** FR-4's corpus pass cannot go green until PRD-021's §9
+is remediated by its author — see FR-4, where that is a stated Phase-4 prerequisite.
 
 **Three defects, one shape: each lint reads the wrong span of the document and reports a
 confident answer about the span it did not read.** All three were found by inspection
@@ -140,13 +145,28 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    constraint that makes the fix sound is one every conforming artifact already carries.
    **The malformed-row report needs a channel, and today there is none.**
    `parseVerificationCommands` returns `SafetyCheckedCommand[]` (`safety.ts:31-44`), and the
-   executor consumes that array directly (`chain.ts:491-495`), so "report it" has nowhere to
-   go. Widen the return to `{ commands, issues }`. `lintPrd` surfaces `issues` as readiness
+   executor consumes that array directly (`chain.ts:491`), so "report it" has nowhere to go.
+
+   **Do not widen that function's return type.** It is exported from the package's
+   programmatic API (`gates/index.ts:16`) and two existing tests consume it as an array
+   (`safety.test.ts:62, 73, 94, 112`; `content-templates.test.ts:104`), so changing its
+   shape is a breaking change to a published surface — which this PRD is not otherwise
+   making and does not want to make. Add an **internal** `parseVerificationRows` returning
+   `{ commands, issues }`; `parseVerificationCommands` stays exactly as it is and returns
+   `rows.commands`. The exported function therefore keeps dropping malformed rows silently,
+   which is the status quo for a programmatic caller and is stated here rather than
+   discovered.
+
+   **Both gate paths take the internal function.** `lintPrd` surfaces `issues` as readiness
    failures, so a malformed row is caught at Phase 2. `buildGateChain` **refuses** when
    `issues` is non-empty rather than running the commands it did parse: a table with one
    unreadable row is a table whose gate coverage is unknown, and running the readable
    remainder would report success over an unknown gap —
    `unparseable-command-must-fail-loudly`.
+
+   **This FR therefore edits three source files and two existing tests, and all five are
+   declared below.** An earlier revision required changes in `chain.ts` and `prd-ready.ts`
+   while naming neither, which its own DO NOT list forbids.
 
    **There are two readers of this table, not one, and scoping only the executor's leaves
    the hole open.** `lintPrd` independently decides whether a row carries a runnable command
@@ -169,6 +189,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    obsolete the moment the parser is scoped. Edit the record — do not delete it — so the
    trap and its resolution stay discoverable together.
    - **Targets:** `packages/provegate/src/core/gates/safety.ts::parseVerificationCommands`,
+     `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
+     `packages/provegate/src/core/run/chain.ts::buildGateChain`,
+     `packages/provegate/test/safety.test.ts`,
+     `packages/provegate/test/content-templates.test.ts`,
      `_brain/learnings/notes-column-runs-commands.md`,
      `packages/provegate/test/lint-parsers.test.ts` (new)
 2. **FR-2 — The Open Questions exemption needs a deferral target, not a substring.**
@@ -198,10 +222,24 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    hide in** — nothing syntactically distinguishes an explanation from an unresolved
    question, so exactly one paragraph-form question would survive. Inside the section, a
    line must be one of: blank; an HTML comment; a bullet start matching `^\s*-\s+\S`; or an
-   **indented continuation** of the preceding bullet, matching `^\s+\S` — which this PRD's
-   own `(none)` bullet requires, since it wraps. Anything else fails, and there is **no**
-   leading-prose allowance. A continuation line is part of its bullet, not a separate
-   entry.
+   **indented continuation** of the preceding bullet, matching `^\s+\S`. Anything else
+   fails, and there is **no** leading-prose allowance. A continuation line is part of its
+   bullet, not a separate entry.
+
+   **An exempt bullet must be a single line, and that asymmetry is the point.** Continuations
+   are what let the hiding place move one level down: FR-2 exempts a bullet by how it
+   **opens**, so `- (none)` followed by an indented unresolved question satisfies both rules
+   at once and hides exactly what this FR removes. Nothing syntactic separates a rationale
+   from a question, so per `narrow-the-grammar-not-the-parser` the grammar refuses the
+   construction rather than trying to read it: **a bullet claiming an exemption — `(none)`
+   or the FR-2 deferral form — may not carry continuation lines.** A genuine unresolved
+   question may be as long as it needs; the thing being exempted must fit on one line, where
+   a reader sees all of it. Deny fixtures: `(none)` with a continuation, and a deferred
+   bullet with a continuation.
+
+   **This PRD's own §9 is rewritten to comply**, from a wrapped bullet to a single line. A
+   PRD proposing the rule must not be written in the shape it forbids — the same reason its
+   §9 is a bullet list at all.
 
    **The destination for resolved history is named here, because the obvious one is a
    trap.** Authors moving resolved decisions out of §9 will reach for a heading like
@@ -258,7 +296,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 5. Non-Goals (Out of Scope)
 
-- **Any other PRD's §9.** FR-4 reports; it never edits. PRD-021 is the known case.
+- **Any other PRD's §9.** FR-4 reports; it never edits. PRD-021 is the case that will fail,
+  and it is a **Phase-4 prerequisite** rather than a curiosity: this PRD cannot reach a
+  green corpus until its author remediates it, and allowlisting the failure is forbidden.
 - **A `gate check --prds` corpus sweep flag.** PRD-026 adds sweep flags for the review and
   durable-artifact sections; a readiness-lint sweep is a plausible follow-on and is not
   needed to prove these three fixes.
@@ -346,7 +386,11 @@ pack file changes.
 ### In Scope
 
 - [ ] `packages/provegate/src/core/gates/safety.ts::parseVerificationCommands` — column scoping
-- [ ] `packages/provegate/src/core/gates/prd-ready.ts::lintPrd` — the two §9 fixes
+- [ ] `packages/provegate/src/core/gates/prd-ready.ts::lintPrd` — the two §9 fixes, plus
+      consuming the internal row parser (FR-1)
+- [ ] `packages/provegate/src/core/run/chain.ts::buildGateChain` — refuse on parser issues
+- [ ] `packages/provegate/test/safety.test.ts`, `test/content-templates.test.ts` — existing
+      consumers of the preserved export, asserted unchanged
 - [ ] `packages/provegate/test/lint-parsers.test.ts` (new) — fixtures + the wip corpus pass
 - [ ] `_brain/learnings/notes-column-runs-commands.md` — retire the interim guidance
 
@@ -354,11 +398,12 @@ pack file changes.
 
 ## 9. Open Questions
 
-- (none) — the three defects are measured and their fixes are stated; nothing here awaits
-  an owner decision.
+- (none) — the three defects are measured, their fixes are stated, and nothing here awaits an owner decision.
 
-<!-- BULLET LIST, deliberately: this PRD's FR-3 makes a paragraph-form section a lint
-failure, and a PRD proposing that rule must not be written in the shape it forbids. -->
+<!-- BULLET LIST and a SINGLE LINE, deliberately. FR-3 makes a paragraph-form section a
+lint failure and forbids continuation lines under an exempt bullet, so this bullet is one
+long line rather than a wrapped one. A PRD proposing a rule must not be written in the
+shape it forbids. -->
 
 ---
 
@@ -400,6 +445,14 @@ failure, and a PRD proposing that rule must not be written in the shape it forbi
   repository root while the test task declares no additional inputs, so a change under the
   wip directory would replay a stale green. Either the directory becomes a declared input or
   the sweep gets its own uncached command; `turbo.json` is a target either way.
+- applied: `strictness-added-during-extraction-is-a-behavior-change` — FR-1 is exactly this
+  record's shape and the risk is real, not ceremonial: it extracts a shared cell reader and
+  then adds a **fail-closed guard in `buildGateChain`** that the original never had, which
+  is a decision the caller already owned. The strictness is deliberate here and is the
+  requirement. The record's test binds it anyway: **no existing test may need editing to
+  accommodate the refusal.** If one does, the guard reached a case this PRD did not intend —
+  revert it and narrow, rather than updating the test to match. The preserved export
+  signature (FR-1) is the same discipline applied to the API.
 - applied: `known-red-ledger-must-expire` — FR-4 forbids allowlisting an expected corpus
   failure. A sweep with a known-red exemption is this record's bypass arriving in a test
   rather than a ledger, and PRD-021's §9 is the case that would tempt it.
@@ -427,7 +480,10 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 
 - `packages/provegate/src/core/gates/safety.ts`
 - `packages/provegate/src/core/gates/prd-ready.ts`
+- `packages/provegate/src/core/run/chain.ts`
 - `packages/provegate/test/lint-parsers.test.ts`
+- `packages/provegate/test/safety.test.ts`
+- `packages/provegate/test/content-templates.test.ts`
 - `_brain/learnings/notes-column-runs-commands.md`
 - `_brain/learnings/lint-must-name-the-span-it-judges.md`
 - `turbo.json`
@@ -523,6 +579,15 @@ rationalize.
   stale green over a corpus the task never re-read is the failure this PRD is about, in a
   build tool instead of a parser.
 - DO NOT allowlist a known-failing PRD to make the corpus green. Report it and stop.
+- DO NOT change the return type of `parseVerificationCommands`. It is exported and two
+  existing tests consume it as an array; widening it is a breaking change to a published
+  surface this PRD is not otherwise touching. Add an internal parser and keep the export.
+- DO NOT let an exempt bullet carry continuation lines. That is where the hiding place
+  moves once FR-3 lands: `(none)` plus an indented question satisfies FR-2's opens-with
+  exemption and FR-3's continuation rule at the same time.
+- DO NOT edit `chain.ts`, `prd-ready.ts`, or the two existing test files without them being
+  in the Conflict Surface. They are, now; an earlier revision required the edits and named
+  none of them.
 
 ---
 
@@ -530,5 +595,6 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-27 | Claude Opus 5, via owner | **Iteration-2 remediation (Codex, three [P1]s plus three [P2]s), all six closed.** Two of the three [P1]s were defects the iteration-1 remediation introduced. **(J) the public API break is withdrawn.** `parseVerificationCommands` is exported at `gates/index.ts:16` and consumed as an array by `safety.test.ts` and `content-templates.test.ts`, so widening its return was a breaking change to a published surface this PRD is not otherwise touching. An **internal** `parseVerificationRows` returns `{commands, issues}`; the export keeps its signature and returns `rows.commands`, and the residual — a programmatic caller still silently drops malformed rows — is stated rather than discovered. No changeset needed, because no surface moves. **(K) the hiding place moved one level down and is now closed.** FR-2 exempts a bullet by how it opens and FR-3 permits indented continuations, so `- (none)` followed by an indented unresolved question satisfied both. Since nothing syntactic separates a rationale from a question, the grammar refuses the construction: **an exempt bullet may not carry continuations**, while a genuine open question may be as long as it needs. This PRD's own §9 is rewritten to a single line to comply. **(L) FR-1 now declares the surface it needs.** It requires edits to `chain.ts` and `prd-ready.ts` and touches two existing test files; all five are in Targets, Implementation Scope and the Conflict Surface, where an earlier revision named none of them and its own DO NOT list forbade the edits. P2s: the PRD-021 prerequisite is propagated to the introduction and Non-Goals rather than living only in FR-4; the class rationale no longer claims only verdicts move, and names the two things that do — Phase-5 executed commands and the set of passing documents; and the round count is stated once, as four independent rounds, where the previous fix had produced a fresh contradiction two lines from the original |
 | 2026-07-27 | Claude Opus 5, via owner | **Iteration-1 remediation (Codex, six [P1]s).** **(A) FR-1 now scopes both readers.** `lintPrd` carries its own whole-row backtick scan independent of `parseVerificationCommands` (`prd-ready.ts:127-142`), so scoping one left a row whose Command cell is prose passing readiness on a Notes-cell token while the executor received nothing — a fourth instance of this PRD's own defect class, inside it. Both readers now take cells from one shared extractor, with a deny fixture. **(B) the malformed-row report gains a channel**: `parseVerificationCommands` returns `SafetyCheckedCommand[]` and the executor consumes it directly, so "report it" had nowhere to go. The return widens to `{commands, issues}`, `lintPrd` surfaces them, and `buildGateChain` refuses rather than running the readable remainder over an unknown gap. **(C) FR-2's exemption is a closed form**, opening with `Deferred to <id>` or `Deferred: <link>` — the same opens-with discipline `durable.ts` uses — because "contains the word and contains a link" is still satisfied by an open question that merely cites something. **(D) FR-3 enumerates the accepted line forms** and drops the leading-explanatory-line allowance, which was itself a slot a paragraph question could occupy; indented continuations are named, which this PRD's own wrapped `(none)` bullet requires. **(E) the corpus fixture takes all four arguments.** Measured by the reviewer: a three-argument `lintPrd` fails with an unrelated memory error in this repository, so the fixture could not have failed for its stated reason — `fixture-must-reach-production-shape` moves from reviewed to applied. **(F) the corpus test is un-cached or declares its inputs**, with `turbo.json` claimed: it reads the wip directory at the repository root while the test task declares no additional inputs, which is `turbo-cache-masks-out-of-input-reads` exactly, now a declared Memory Input. **(G) PRD-021 is a stated Phase-4 prerequisite**, not a known case, and allowlisting its expected failure is forbidden. P2s: the metric no longer claims *every* outside-column backtick reaches the gate, since inert file paths are already excluded; the rollback states that FR-1 changes executed commands in both directions; and the round count distinguishes the four independent rounds from the six total |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Split from PRD-023 (owner decision, 2026-07-27), carrying its FR-7 a/b/c plus the corpus-command defect iteration 6 found in it.** PRD-023 sat between 6.65 and 7.19 across four independent rounds without converging; the recorded diagnosis was size, and the evidence was two live defects hiding through five adversarial reviews. This is the piece with no dependency on the other two. Nothing is newly invented here: FR-1 is PRD-023 FR-7(a) with its malformed-row case named, FR-2 is FR-7(b), FR-3 is FR-7(c) with the heading trap moved into the failure message, and FR-4 replaces the `pnpm verify:workflow` corpus row that PRD-023 iteration 6 proved never calls `lintPrd`. Created with `gate new` |
