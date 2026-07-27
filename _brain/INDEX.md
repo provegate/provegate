@@ -12,6 +12,9 @@
 - [new package postmerge install](learnings/new-package-postmerge-install.md) — a throwaway baseline checkout skips install → false missing-module errors
 - [durable artifact must commit](learnings/durable-artifact-must-commit.md) — review/ADR artifacts left untracked fail the close gate
 - [verify check phase placement](learnings/verify-check-phase-placement.md) — an invariant check registered in the wrong phase explodes late, not at the gate
+- [shipped content needs a delivery gate](learnings/shipped-content-needs-a-delivery-gate.md) — packaging is not delivering; no artifact-checking gate can detect content that ships and never installs
+- [derive the requirement from the consumer](learnings/derive-the-requirement-from-the-consumer.md) — a required-input set taken from the catalogue demands answers that cannot change the output
+- [scope out the layer the rounds keep hitting](learnings/scope-out-the-layer-the-rounds-keep-hitting.md) — defects clustering in one layer are a scope error reported as design errors
 - [score band prescribes the action](learnings/score-band-prescribes-the-action.md) — read the band's required action; a flat trajectory in one band means the wrong action is being applied
 - [score must equal weighted sum](learnings/score-must-equal-weighted-sum.md) — machine-check declared score == Σ(dims×weights) or authors round up to pass
 - [guard destructive by target host](learnings/guard-destructive-by-target-host.md) — gate destructive data ops by target host, not NODE_ENV; even in dry-run
@@ -51,4 +54,5 @@
 
 ## ADRs
 
+- [ADR-0002 agent protocol delivery](adr/ADR-0002-agent-protocol-delivery.md) — protocols reach agents as a one-way rendered store; pointer-only adapters; enumerated tokens, not a template language
 - [ADR-0001 closed-loop agent memory](adr/ADR-0001-closed-loop-agent-memory.md) — declared PRD inputs, watch-triggered review, base-ref weakening proof, Phase 7 capture

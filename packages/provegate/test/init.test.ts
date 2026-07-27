@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -26,8 +27,17 @@ import {
   initWorkspace,
   planInit,
   planPractices,
+  planPrompts,
   practicesPackDir,
+  promptsConfigBlock,
 } from '../src/core/run/init.js';
+import {
+  PromptsError,
+  parseRegistry,
+  planStore,
+  promptsPackageDir,
+  requiredValues,
+} from '../src/core/run/prompts.js';
 import { buildState } from '../src/core/state/build.js';
 
 const run = promisify(execFile);
@@ -290,5 +300,158 @@ describe('phase 6 round 20 — activation is written last', () => {
       expect(manifestAt).toBeGreaterThan(storeAt);
       expect(manifestAt).toBeGreaterThan(validatorAt);
     }
+  });
+});
+
+// --- PRD-029 parent 7: migration and rollback -------------------------------
+
+/** A config with every required value supplied, so the render succeeds. */
+function promptsReady(dir = '.provegate') {
+  const packageDir = promptsPackageDir();
+  const rows = requiredValues(
+    packageDir,
+    planStore(packageDir),
+    parseRegistry(readFileSync(join(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8')),
+  );
+  const values: Record<string, string> = {};
+  for (const row of rows) values[row.token] = `v-${row.token}`;
+  return { ...DEFAULT_CONFIG, prompts: { ...DEFAULT_CONFIG.prompts, enabled: true, dir, values } };
+}
+
+function fileSet(root: string): Set<string> {
+  const out = new Set<string>();
+  const walk = (dir: string, prefix: string): void => {
+    for (const entry of readdirSync(dir)) {
+      const abs = join(dir, entry);
+      const rel = prefix === '' ? entry : `${prefix}/${entry}`;
+      if (statSync(abs).isDirectory()) walk(abs, rel);
+      else out.add(rel);
+    }
+  };
+  walk(root, '');
+  return out;
+}
+
+describe('PRD-029 migration and rollback', () => {
+  it('FORWARD: a repository that has not opted in is byte-identical to before', () => {
+    // The promise is held by a test, not by a sentence. `prompts` ships
+    // disabled, so a plain `gate init` must be indistinguishable from the
+    // pre-PRD build — the only way to know that is to compare the plan.
+    const plain = planInit(DEFAULT_CONFIG);
+    expect(plain.some((a) => a.path.includes('.provegate'))).toBe(false);
+    expect(plain.some((a) => a.path.startsWith('.claude/'))).toBe(false);
+    expect(plain.some((a) => a.path.startsWith('.cursor/'))).toBe(false);
+    // And the starter config it writes carries no prompts block at all.
+    const configAction = plain.find((a) => a.path === 'workflow.config.json');
+    expect(configAction?.content).not.toContain('prompts');
+  });
+
+  it('FORWARD: `--practices` alone installs no store', () => {
+    // PACK_MAP is a static source→destination table and cannot emit a
+    // config-dependent render, so the pack ships instructions instead.
+    const pack = planPractices(practicesPackDir());
+    expect(pack.some((a) => a.path.includes('.provegate'))).toBe(false);
+    expect(pack.some((a) => a.path.startsWith('.claude/'))).toBe(false);
+  });
+
+  it('ACTIVATION: an existing config is never edited; the block is printed instead', () => {
+    // This is the ONLY activation path an existing repository has, and readiness
+    // iteration 5 found the previous design tied discovery to scaffolding, which
+    // only happens where no config exists — nowhere that matters.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-activate-'));
+    roots.push(root);
+    const existing = `${JSON.stringify({ idPattern: { prefix: 'PRD', width: 3 } }, null, 2)}\n`;
+    writeFileSync(join(root, 'workflow.config.json'), existing);
+
+    const block = promptsConfigBlock(DEFAULT_CONFIG, promptsPackageDir());
+    expect(block).toContain('"enabled": true');
+    expect(block).toContain('"prd": ".provegate/templates/prd-template.md"');
+    // Every required key present and unset, each with its meaning printed.
+    expect(block).toContain('"ARCHITECTURE_DOC": null');
+    expect(block).toMatch(/ARCHITECTURE_DOC — /);
+    // Printing is not writing.
+    expect(readFileSync(join(root, 'workflow.config.json'), 'utf8')).toBe(existing);
+  });
+
+  it('ACTIVATION: the printed block names exactly the nine required keys', () => {
+    const packageDir = promptsPackageDir();
+    const rows = requiredValues(
+      packageDir,
+      planStore(packageDir),
+      parseRegistry(readFileSync(join(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8')),
+    );
+    const block = promptsConfigBlock(DEFAULT_CONFIG, packageDir);
+    const parsed: unknown = JSON.parse(block.slice(0, block.indexOf('\n\nvalues:')));
+    const values = (parsed as { prompts: { values: Record<string, null> } }).prompts.values;
+    expect(Object.keys(values).sort()).toEqual(rows.map((r) => r.token).sort());
+    expect(Object.keys(values)).toHaveLength(9);
+  });
+
+  it('REFUSAL: an unresolved value leaves the filesystem byte-identical', () => {
+    // `absence-must-be-asserted`: the requirement is over the WHOLE set, not one
+    // named path. And the scenario would otherwise have written — the next
+    // assertion installs from the same config with values filled.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-mig-refuse-'));
+    roots.push(root);
+    mkdirSync(join(root, 'keep'), { recursive: true });
+    writeFileSync(join(root, 'keep', 'x.txt'), 'x\n');
+    const before = fileSet(root);
+
+    const unresolved = promptsReady();
+    unresolved.prompts.values = {};
+    expect(() => planPrompts(unresolved, promptsPackageDir())).toThrow(PromptsError);
+    expect(fileSet(root)).toEqual(before);
+
+    const ready = promptsReady();
+    initWorkspace(ready, root, { extra: planPrompts(ready, promptsPackageDir()) });
+    expect(fileSet(root).size).toBeGreaterThan(before.size);
+  });
+
+  it('ORDERING: the prompt plan is written BEFORE the activation files', () => {
+    // `initWorkspace` writes `workflow.config.json` and `gates.manifest.json`
+    // last by explicit design, so an interrupted install never leaves a
+    // repository demanding a store it has not got. The prompt plan arrives via
+    // `extra`, which sits in the middle — this asserts that, rather than
+    // trusting the comment.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-order-'));
+    roots.push(root);
+    const ready = promptsReady();
+    const report = initWorkspace(ready, root, {
+      extra: planPrompts(ready, promptsPackageDir()),
+    });
+    const configAt = report.created.indexOf('workflow.config.json');
+    const storeAt = report.created.findIndex((p) => p.startsWith('.provegate/prompts/'));
+    expect(storeAt).toBeGreaterThanOrEqual(0);
+    expect(configAt).toBeGreaterThan(storeAt);
+  });
+
+  it('ROLLBACK: removing the printed set and the block returns the repo to pre-install', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-rollback-'));
+    roots.push(root);
+    const before = fileSet(root);
+    const ready = promptsReady();
+    const actions = planPrompts(ready, promptsPackageDir());
+    initWorkspace(ready, root, { extra: actions });
+
+    for (const action of actions) {
+      if (action.kind === 'file') rmSync(join(root, action.path), { force: true });
+    }
+    // Everything the prompt plan wrote is gone; what remains is the base
+    // scaffold, which the plain `gate init` would have written anyway.
+    const after = fileSet(root);
+    for (const path of after) {
+      expect(path.startsWith('.provegate/')).toBe(false);
+      expect(path.startsWith('.claude/')).toBe(false);
+    }
+    expect(after.size).toBeGreaterThanOrEqual(before.size);
+  });
+
+  it('ROLLBACK: NEXT_STEPS tells the adopter to clear templates.prd with the store', () => {
+    // Otherwise `gate new` reads a path that no longer exists. Stated where the
+    // adopter reads it, not only here.
+    const next = readFileSync(join(practicesPackDir(), 'NEXT_STEPS.md'), 'utf8');
+    expect(next).toContain('templates.prd');
+    expect(next).toContain('ONE WAY');
+    expect(next).toMatch(/delete \*\*every\s*\n?path in that set\*\*|every\s+path in that set/);
   });
 });

@@ -112,8 +112,40 @@ export interface WorkflowConfig {
   sharedAppendOnly: string[];
   /** Durable-memory store; disabled by default. */
   memory: MemoryConfig;
+  /** Rendered protocol store; disabled by default. */
+  prompts: PromptsConfig;
   /** Value-triage scoring: the axes, their weights, and the optional cutoff. */
   valueScoring: ValueScoringConfig;
+}
+
+/**
+ * Rendered protocol store (PRD-029).
+ *
+ * Shaped after `MemoryConfig` deliberately: `enabled` is the predicate and
+ * presence never is. `mergeConfig` deep-merges `DEFAULT_CONFIG`, so once this
+ * block has defaults `merged.prompts` exists in every repository — a presence
+ * test could never be false. `defaults.ts` records the same reasoning for
+ * memory, and this block follows it rather than rediscovering it.
+ */
+export interface PromptsConfig {
+  /** Master switch. Disabled by default — opting in is a deliberate act. */
+  enabled: boolean;
+  /** Store root, repo-root relative (e.g. `.provegate`). */
+  dir: string;
+  /** Which per-tool adapters to generate, in emit order. */
+  adapters: string[];
+  /**
+   * Placeholder values the rendered corpus consumes and no config field
+   * supplies. `null` and absence both mean unset; every string is a value,
+   * including `''` where the registry's `empty` column allows it. An in-band
+   * sentinel would make some legitimate string unrepresentable.
+   *
+   * Unknown keys are NOT rejected here. The legal key set is the token set of
+   * the rendered corpus — package Markdown the config loader neither reads nor
+   * should — so an unconsumed key is a render diagnostic (`unused`), not a
+   * config-load failure.
+   */
+  values: Record<string, string | null>;
 }
 
 /**

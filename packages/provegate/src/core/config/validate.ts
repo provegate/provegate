@@ -15,6 +15,7 @@ type Spec =
   | { kind: 'boolean' }
   | { kind: 'stringArray' }
   | { kind: 'stringRecord' }
+  | { kind: 'stringOrNullRecord' }
   | { kind: 'numberRecord' }
   | { kind: 'maybeEmptyString' }
   | { kind: 'object'; children: Record<string, Spec> };
@@ -23,6 +24,9 @@ const str: Spec = { kind: 'string' };
 const num: Spec = { kind: 'number' };
 const strArr: Spec = { kind: 'stringArray' };
 const strRec: Spec = { kind: 'stringRecord' };
+/** Values may be `null` (unset) or any string, including `''`. NOT `stringRecord`,
+ * which rejects both — the two values PRD-029 FR-4 declares legal. */
+const strOrNullRec: Spec = { kind: 'stringOrNullRecord' };
 const numRec: Spec = { kind: 'numberRecord' };
 const obj = (children: Record<string, Spec>): Spec => ({ kind: 'object', children });
 const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
@@ -78,6 +82,12 @@ const CONFIG_SPEC = obj({
   verifyScriptPattern: str,
   templates: obj({ prd: strOrEmpty }),
   valueScoring: obj({ axes: strArr, weights: numRec, enforceFrom: cutoff }),
+  prompts: obj({
+    enabled: bool,
+    dir: str,
+    adapters: strArr,
+    values: strOrNullRec,
+  }),
   memory: obj({
     enabled: bool,
     root: str,
@@ -87,6 +97,10 @@ const CONFIG_SPEC = obj({
     retroAfterCompleted: countOrZero,
   }),
 });
+
+/** The adapters this package can generate. A closed set by design: an adapter
+ * is code, not configuration, so an unrecognised name is always a typo. */
+export const KNOWN_ADAPTERS: readonly string[] = ['claude-code', 'cursor', 'codex'];
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -154,6 +168,18 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
         issues.push({ path, message: 'must be an object mapping strings to non-empty strings' });
       }
       return;
+    case 'stringOrNullRecord':
+      // Shape only, and deliberately permissive. `null` means unset and `''` is
+      // legal for the tokens the registry marks so; per-token legality is a
+      // RENDER decision because it needs the registry, which this layer must not
+      // read. Unknown keys are likewise not checked here — see PromptsConfig.
+      if (
+        !isPlainObject(value) ||
+        Object.values(value).some((v) => v !== null && typeof v !== 'string')
+      ) {
+        issues.push({ path, message: 'must be an object mapping strings to a string or null' });
+      }
+      return;
     case 'object': {
       if (!isPlainObject(value)) {
         issues.push({ path, message: 'must be an object' });
@@ -192,6 +218,7 @@ export function validateConfig(value: unknown): ConfigIssue[] {
  * let a typo like `ready: ["Approvd"]` silently break queue semantics.
  */
 export function validateResolvedConfig(config: {
+  prompts?: { enabled?: boolean; dir?: string; adapters?: string[] };
   dirs: {
     states: string[];
     stateRoles: Record<string, string>;
@@ -280,11 +307,32 @@ export function validateResolvedConfig(config: {
     ...Object.entries(config.dirs.stateRoles).map(
       ([role, v]): [string, string] => [`dirs.stateRoles.${role}`, v],
     ),
+    // PRD-029. The comment above is the reason this line exists: containment is
+    // a property of a configured path, and `prompts.dir` did not join the list
+    // when it was added. Without it `~/store` was accepted, a literal `./~`
+    // directory was created, and the printed one-way reinstall set — whose
+    // instruction is "delete EVERY path above" — expanded to the adopter's HOME.
+    ['prompts.dir', config.prompts?.dir],
   ];
   for (const [path, value] of configuredPaths) {
     if (value === undefined) continue;
     const reason = unsafeRelPath(value);
     if (reason !== null) issues.push({ path, message: reason });
+  }
+
+  // FR-1 specifies `adapters` as an ordered subset of a closed set. `stringArray`
+  // enforces the shape and nothing enforced the membership, so a typo — `claude`
+  // for `claude-code` — silently produced a store with no agent bound to it and
+  // an exit code of 0. An empty list stays legal; an unrecognised member does not.
+  const adapters = config.prompts?.adapters;
+  if (adapters !== undefined) {
+    for (const [i, name] of adapters.entries()) {
+      if (KNOWN_ADAPTERS.includes(name)) continue;
+      issues.push({
+        path: `prompts.adapters[${i}]`,
+        message: `unknown adapter '${name}' — known adapters are ${KNOWN_ADAPTERS.join(', ')}`,
+      });
+    }
   }
 
   if (config.valueScoring !== undefined) {

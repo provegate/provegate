@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T17:00:28.472Z",
+  "generatedAt": "2026-07-27T19:50:50.236Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1050,13 +1050,13 @@
         "prd": "_prds/wip/prd-029-method-delivery-agent-binding.md",
         "readiness": "_readiness/wip/readiness-029-method-delivery-agent-binding.md",
         "tasks": "_tasks/wip/tasks-029-method-delivery-agent-binding.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-029-method-delivery-agent-binding.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.35,
@@ -1065,9 +1065,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 82,
+        "status": "Code Complete",
+        "checkedCount": 82,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 2
       },
       "summary": {

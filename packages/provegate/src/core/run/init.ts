@@ -9,6 +9,15 @@ import {
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
+import {
+  generatedPaths,
+  packageVersion,
+  parseRegistry,
+  planStore,
+  renderPrompts,
+  requiredValues,
+  type RenderConfig,
+} from './prompts.js';
 import { CONFIG_FILENAME } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
 
@@ -176,10 +185,20 @@ const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
   { src: 'verify/audit-allowlist.json', dest: 'scripts/verify/audit-allowlist.json' },
 ];
 
-/** The practices plan: pack content → repo files. Additive-only like the base
- * plan; agent-entrypoint files (CLAUDE.md, AGENTS.md, cursor rules) are
- * deliberately ABSENT — shims stay in the pack and are pasted by the adopter
- * (NEXT_STEPS.md), so an existing entrypoint is never touched or shadowed. */
+/**
+ * The practices plan: pack content → repo files. Additive-only like the base
+ * plan; agent-entrypoint files (CLAUDE.md, AGENTS.md, `.cursor/rules/brain.mdc`)
+ * are deliberately ABSENT — shims stay in the pack and are pasted by the adopter
+ * (NEXT_STEPS.md), so an existing entrypoint is never touched or shadowed.
+ *
+ * NARROWED by PRD-029, and the distinction matters because this comment reads as
+ * a blanket rule: what is absent is an **adopter's own entrypoint**. A file at a
+ * provegate-namespaced path the adopter does not own — `.claude/commands/prd-*.md`,
+ * `.cursor/rules/prd-workflow.mdc` — is a GENERATED ADAPTER, not an entrypoint,
+ * and `gate init --prompts` writes those. It shadows nothing, because nothing
+ * else claims those paths, and it still never touches the three named above.
+ * See `_brain/adr/ADR-0002-agent-protocol-delivery.md`.
+ */
 export function planPractices(packDir: string): InitAction[] {
   const actions: InitAction[] = [
     { path: '_brain/adr', kind: 'dir' },
@@ -254,10 +273,16 @@ export function initWorkspace(
   {
     dryRun = false,
     extra = [],
-    // Defaults to "this run installs the pack", because `extra` IS the practices
-    // plan and nothing else populates it. Derived from what is being written
-    // now, never from what already exists on disk — an adopter's stray `_brain`
-    // directory must not turn a plain `gate init` into a memory-enabled one.
+    // Defaults to "this run installs the pack". Derived from what is being
+    // written now, never from what already exists on disk — an adopter's stray
+    // `_brain` directory must not turn a plain `gate init` into a memory-enabled
+    // one.
+    //
+    // NO LONGER SUFFICIENT ON ITS OWN. `extra` was the practices plan and
+    // nothing else; PRD-029 also routes the prompt plan through it, so a caller
+    // passing prompt actions without setting this flag would silently get a
+    // memory-enabled starter config and a Phase-7 manifest. The CLI passes it
+    // explicitly for that reason; any new caller must too.
     practices = extra.length > 0,
   }: { dryRun?: boolean; extra?: InitAction[]; practices?: boolean } = {},
 ): InitReport {
@@ -322,4 +347,60 @@ export function initWorkspace(
     }
   }
   return report;
+}
+
+/**
+ * The `--prompts` plan (PRD-029 FR-5).
+ *
+ * Ordinary `InitAction`s, so the store goes through `initWorkspace` under the
+ * installer's EXISTING contract: `wx` writes, an existing path reported as
+ * skipped, nothing overwritten. There is deliberately **no preflight and no
+ * mismatch refusal** — this plan behaves like the base and practices plans,
+ * which is what keeps `gate init`'s additive-only promise intact for every
+ * caller rather than carving out an exception that would then have to be
+ * scoped away from them.
+ *
+ * Throws `PromptsError` before producing a single action when a required value
+ * is unresolved, so a refused run writes nothing at all: no store file, no
+ * adapter, and no starter config.
+ */
+export function planPrompts(config: WorkflowConfig, packageDir: string): InitAction[] {
+  const version = packageVersion(packageDir);
+  const result = renderPrompts(packageDir, config as unknown as RenderConfig);
+  const generated = generatedPaths(config as unknown as RenderConfig, result, version);
+  const actions: InitAction[] = [];
+  const dirs = new Set<string>();
+  for (const path of generated.keys()) {
+    const parent = dirname(path);
+    if (parent !== '.' && !dirs.has(parent)) {
+      dirs.add(parent);
+      actions.push({ path: parent, kind: 'dir' });
+    }
+  }
+  for (const [path, content] of generated) actions.push({ path, kind: 'file', content });
+  return actions;
+}
+
+/** The `prompts` block to write or to print, with every required key present
+ * and unset as `null`. Printing it is the ONLY activation path an adopter with
+ * an existing `workflow.config.json` has, because that file is never edited. */
+export function promptsConfigBlock(config: WorkflowConfig, packageDir: string): string {
+  const planned = planStore(packageDir);
+  const registry = parseRegistry(
+    readFileSync(resolve(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8'),
+  );
+  const required = requiredValues(packageDir, planned, registry);
+  const values: Record<string, null> = {};
+  for (const row of required) values[row.token] = null;
+  const block = {
+    prompts: {
+      enabled: true,
+      dir: config.prompts.dir,
+      adapters: config.prompts.adapters,
+      values,
+    },
+    templates: { prd: `${config.prompts.dir}/templates/prd-template.md` },
+  };
+  const meanings = required.map((r) => `  ${r.token} — ${r.meaning}`).join('\n');
+  return `${JSON.stringify(block, null, 2)}\n\nvalues:\n${meanings}\n`;
 }

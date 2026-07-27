@@ -43,7 +43,12 @@ import {
   createPrd,
   initWorkspace,
   planPractices,
+  planPrompts,
   practicesPackDir,
+  promptsConfigBlock,
+  promptsPackageDir,
+  PromptsError,
+  type InitAction,
   mergePreconditions,
   mergeToLocalBase,
   claimMutexPath,
@@ -143,13 +148,14 @@ function collectLocks(root: string, config: WorkflowConfig): QueueLockInfo[] {
 }
 
 function runInit(args: string[]): number {
-  const unknown = unknownOption(args, ['--dry-run', '--practices']);
+  const unknown = unknownOption(args, ['--dry-run', '--practices', '--prompts']);
   if (unknown !== null) {
     console.error(`[init] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
   }
   const dryRun = args.includes('--dry-run');
   const practices = args.includes('--practices');
+  const prompts = args.includes('--prompts');
   // Init must work before any config exists: root at the nearest .git walking
   // up from cwd, else cwd itself.
   let root = process.cwd();
@@ -166,20 +172,88 @@ function runInit(args: string[]): number {
   const config = (() => {
     try {
       return loadConfig(root).config;
-    } catch {
+    } catch (error) {
       // No config yet — that's the point. Scaffold from defaults.
+      //
+      // But ONLY for a missing file. This catch used to swallow every config
+      // error, and PRD-029 made that actively misleading: an invalid
+      // `prompts.dir` produced the correct `ConfigIssue`, the catch discarded
+      // it, `--prompts` then read `enabled` off the fallback default, and the
+      // adopter was told "prompts is not enabled" about a config that enables
+      // it. They would edit the wrong thing.
+      // The distinction is IN THE DATA: a discovery failure ("no config or .git
+      // found") carries no issues, a validation failure carries one per problem.
+      // Narrowing on `instanceof ConfigError` alone broke `gate init` in a bare
+      // directory, which is the command's whole purpose — the second overshoot
+      // in this remediation, and the same shape as the first.
+      if (error instanceof ConfigError && error.issues.length > 0) {
+        console.error(`[init] ${error.message}`);
+        return null;
+      }
       return DEFAULT_CONFIG;
     }
   })();
+  if (config === null) return 1;
 
-  const extra = practices ? planPractices(practicesPackDir()) : [];
-  const report = initWorkspace(config, root, { dryRun, extra });
+  // The protocol store. Planned BEFORE anything is written so an unresolved
+  // value refuses the whole run — no store file, no adapter, no starter config.
+  // `--practices` alone installs no store: PACK_MAP is a static table and
+  // cannot emit a config-dependent render.
+  let promptActions: InitAction[] = [];
+  if (prompts) {
+    const packageDir = promptsPackageDir();
+    const enabled = config.prompts.enabled;
+    if (!enabled) {
+      console.log('[init] prompts is not enabled in this repository.');
+      console.log('       Add the block below to workflow.config.json, then re-run:');
+      console.log('');
+      console.log(promptsConfigBlock(config, packageDir));
+      console.log(
+        '[init] an existing config is never edited — this block is the activation path.',
+      );
+      return 1;
+    }
+    try {
+      promptActions = planPrompts(config, packageDir);
+    } catch (error) {
+      if (!(error instanceof PromptsError)) throw error;
+      console.error(`[init] ${error.message}`);
+      console.error('');
+      console.error('[init] nothing was written. Supply the values below and re-run:');
+      console.error('');
+      console.error(promptsConfigBlock(config, packageDir));
+      return 1;
+    }
+  }
+
+  const extra = [...(practices ? planPractices(practicesPackDir()) : []), ...promptActions];
+  const report = initWorkspace(config, root, { dryRun, extra, practices });
   console.log(`[init] ${dryRun ? 'DRY-RUN ' : ''}root: ${root}`);
   for (const path of report.created) console.log(`  + ${path}`);
   for (const path of report.skipped) console.log(`  = ${path} (exists, skipped)`);
   console.log(
     `[init] ${report.created.length} created, ${report.skipped.length} skipped — nothing is ever overwritten`,
   );
+  if (prompts) {
+    // EVERY run prints the complete generated set, written and skipped alike.
+    // That set IS the reinstall unit, and two of its three adapter destinations
+    // live OUTSIDE the store directory: a "delete the store directory"
+    // instruction leaves them at the previous package version with stale
+    // banners while the adopter believes they reinstalled.
+    console.log('');
+    console.log('[init] generated set — this is the reinstall unit:');
+    for (const action of promptActions) {
+      if (action.kind === 'file') console.log(`    ${action.path}`);
+    }
+    console.log('');
+    console.log(
+      '[init] this store installs ONE WAY. To reinstall after a package upgrade,',
+    );
+    console.log(
+      '       delete EVERY path above — not just the store directory — and run this again.',
+    );
+    console.log('       There is no upgrade path, no reconciliation and no sync in this version.');
+  }
   if (practices) {
     // The pack creates files only. Hook wiring, package.json scripts, and shim
     // pastes are deliberate manual steps — print them, never perform them.

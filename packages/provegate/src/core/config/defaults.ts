@@ -107,6 +107,18 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
     verifyCommand: '',
     retroAfterCompleted: 0,
   },
+  // Prompts ship DISABLED, for the same reason memory does and by the same
+  // mechanism: `enabled` is the predicate, presence never is. `mergeConfig`
+  // deep-merges these defaults, so `merged.prompts` is present in every
+  // repository whether or not anyone opted in — a presence test would be true
+  // everywhere and could never gate anything. The paths below are the
+  // conventional layout an opt-in repository gets, not an implicit activation.
+  prompts: {
+    enabled: false,
+    dir: '.provegate',
+    adapters: ['claude-code', 'cursor', 'codex'],
+    values: {},
+  },
   // The five axes this repository's triage rubric uses, and their weights.
   // `enforceFrom` is deliberately ABSENT rather than 1: the shipped PRD
   // template emits no `Value:` line and no shipped prompt asks for one, so a
