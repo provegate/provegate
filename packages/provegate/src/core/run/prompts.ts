@@ -158,7 +158,7 @@ export class PromptsError extends Error {
   }
 }
 
-interface PlannedFile {
+export interface PlannedFile {
   source: SourceFile;
   rule: Rule;
   /** Store-relative destination, e.g. `prompts/phase-1-prd-generator.md`. */
@@ -240,6 +240,20 @@ export function assertNoCollision(planned: PlannedFile[]): void {
  * the escape ordered first; a second pass would reintroduce the order bug.
  */
 const TOKEN_CANDIDATE = /\{\{([A-Z][^\n{}]*?)\}\}/g;
+/**
+ * `{{A{B}}` — a candidate whose identifier contains a brace. It matches neither
+ * candidate class, so without this it was emitted untouched and diagnosed as
+ * nothing. §12 says a candidate whose identifier leaves the charset is
+ * malformed; a brace is outside the charset.
+ *
+ * `[^\n}]*` before the `{` is load-bearing and was learned the expensive way:
+ * with `[^\n]*?` there, this pattern spanned two ADJACENT VALID TOKENS —
+ * `{{CMD_CHECK_TYPES}} + {{CMD_TEST}}` matched as one malformed candidate — and
+ * refused four files of the shipped corpus. A guard added for an adversarial
+ * input broke routine ones, which is exactly what
+ * `strictness-added-during-extraction-is-a-behavior-change` warns about.
+ */
+const BRACED_CANDIDATE = /\{\{[A-Z][^\n}]*\{[^\n]*?\}\}/g;
 /** A candidate is a TOKEN when its identifier matches this, on one line. */
 const TOKEN_NAME = /^[A-Z][A-Z0-9_]*$/;
 /** An unterminated candidate: `{{` plus `!`s or an uppercase letter, with no
@@ -274,6 +288,15 @@ export function scanTokens(text: string, file: string): { found: Occurrence[]; b
       file,
       line: lineOf(m.index),
       message: `\`${m[0].slice(0, 24)}\` opens a token that does not close on the same line`,
+    });
+  }
+
+  for (const m of text.matchAll(BRACED_CANDIDATE)) {
+    bad.push({
+      kind: 'malformed',
+      file,
+      line: lineOf(m.index),
+      message: `\`${m[0].slice(0, 24)}\` is not a token: an identifier is \`[A-Z][A-Z0-9_]*\``,
     });
   }
 
@@ -599,7 +622,23 @@ export function renderPrompts(packageDir: string, config: RenderConfig): RenderR
   // diagnostic and not a config-load one — the legal key set is the corpus,
   // which is package Markdown the config loader must not read.
   const consumed = new Set(corpusTokens(packageDir, planned));
+  const configBacked = new Set(
+    registry.filter((r) => r.configField !== null).map((r) => r.token),
+  );
   for (const key of Object.keys(supplied)) {
+    // A config-backed token IS consumed by the corpus, so occurrence alone
+    // cannot see this case — and it is the one class of dead key the registry
+    // actively invites an adopter to set.
+    if (configBacked.has(key)) {
+      const row = byToken.get(key);
+      diagnostics.push({
+        kind: 'unused',
+        file: 'workflow.config.json',
+        line: null,
+        message: `prompts.values.${key} is ignored — this token resolves from \`${row?.configField ?? ''}\``,
+      });
+      continue;
+    }
     if (consumed.has(key)) continue;
     diagnostics.push({
       kind: 'unused',

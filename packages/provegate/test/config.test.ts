@@ -171,3 +171,36 @@ describe('prompts config surface (PRD-029 FR-1)', () => {
     expect(() => resolveConfig(root)).not.toThrow();
   });
 });
+
+describe('Phase 6 findings — prompts config (PRD-029)', () => {
+  it('C1: refuses an adapter name outside the known set, by name', () => {
+    // FR-1 specifies an ordered SUBSET of a closed set. `stringArray` enforced
+    // the shape and nothing enforced the membership, so `claude` for
+    // `claude-code` produced a store with no agent bound to it and exit 0.
+    const root = tempRepo({ prompts: { enabled: true, adapters: ['bogus', 'claude'] } });
+    expect(() => resolveConfig(root)).toThrow(/unknown adapter 'bogus'/);
+    expect(() => resolveConfig(root)).toThrow(/claude-code, cursor, codex/);
+  });
+
+  it('C1: an empty adapters list stays legal', () => {
+    const root = tempRepo({ prompts: { enabled: true, adapters: [] } });
+    expect(() => resolveConfig(root)).not.toThrow();
+  });
+
+  it('M1: prompts.dir gets the same lexical rules every configured path has', () => {
+    // Containment is a property of a configured path, not of the feature that
+    // owns it — the comment above `configuredPaths` already said so, and
+    // `prompts.dir` had not joined the list. `~/store` was accepted, a literal
+    // `./~` was created, and the printed one-way reinstall set — whose
+    // instruction is "delete EVERY path above" — expanded to the adopter's HOME.
+    for (const [dir, pattern] of [
+      ['~/store', /home-relative/],
+      ['../victim', /`\.\.` segment/],
+      ['C:\\evil', /repo-relative/],
+      ['/tmp/anywhere', /repo-relative/],
+    ] as const) {
+      const root = tempRepo({ prompts: { enabled: true, dir } });
+      expect(() => resolveConfig(root), `dir=${dir}`).toThrow(pattern);
+    }
+  });
+});

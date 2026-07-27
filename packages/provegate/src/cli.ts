@@ -172,11 +172,28 @@ function runInit(args: string[]): number {
   const config = (() => {
     try {
       return loadConfig(root).config;
-    } catch {
+    } catch (error) {
       // No config yet — that's the point. Scaffold from defaults.
+      //
+      // But ONLY for a missing file. This catch used to swallow every config
+      // error, and PRD-029 made that actively misleading: an invalid
+      // `prompts.dir` produced the correct `ConfigIssue`, the catch discarded
+      // it, `--prompts` then read `enabled` off the fallback default, and the
+      // adopter was told "prompts is not enabled" about a config that enables
+      // it. They would edit the wrong thing.
+      // The distinction is IN THE DATA: a discovery failure ("no config or .git
+      // found") carries no issues, a validation failure carries one per problem.
+      // Narrowing on `instanceof ConfigError` alone broke `gate init` in a bare
+      // directory, which is the command's whole purpose — the second overshoot
+      // in this remediation, and the same shape as the first.
+      if (error instanceof ConfigError && error.issues.length > 0) {
+        console.error(`[init] ${error.message}`);
+        return null;
+      }
       return DEFAULT_CONFIG;
     }
   })();
+  if (config === null) return 1;
 
   // The protocol store. Planned BEFORE anything is written so an unresolved
   // value refuses the whole run — no store file, no adapter, no starter config.

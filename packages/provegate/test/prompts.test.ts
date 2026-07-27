@@ -11,6 +11,7 @@ import {
   planStore,
   promptsPackageDir,
   artifactGlobs,
+  assertNoCollision,
   generatedPaths,
   packageVersion,
   renderAdapters,
@@ -474,5 +475,65 @@ describe('adapter grammar (PRD-029 FR-6)', () => {
   it('never writes AGENTS.md — the Codex adapter is a snippet inside the store', () => {
     expect([...adapters.keys()].some((p) => p === 'AGENTS.md')).toBe(false);
     expect(adapters.has('.provegate/AGENTS.md.provegate.snippet')).toBe(true);
+  });
+});
+
+// --- Phase 6 remediation: findings C1, M1, M3, m1, m2 -----------------------
+
+describe('Phase 6 findings (PRD-029)', () => {
+  it('M3: the collision guard is exercised DIRECTLY, not through the filesystem', () => {
+    // The original test wrote `a-template.md` and `A-Template.md` into a temp
+    // package. On a case-insensitive volume — which is where this was written —
+    // the two collapse into one file, no collision occurs, and the only real
+    // assertion sat in a `catch` that never ran. An exported guard had zero
+    // effective coverage on the machine that produced it.
+    const at = (rel: string, storeRel: string) => ({
+      source: { rel, abs: `/x/${rel}`, isSymlink: false },
+      rule: DISPOSITIONS[5]!,
+      storeRel,
+    });
+
+    expect(() =>
+      assertNoCollision([
+        at('templates/a-template.md', 'templates/a-template.md'),
+        at('templates/A-Template.md', 'templates/A-Template.md'),
+      ]),
+    ).toThrow(/one destination/);
+
+    // And the NFC half, which no filesystem here can produce either.
+    expect(() =>
+      assertNoCollision([
+        at('templates/caf\u00e9-template.md', 'templates/caf\u00e9-template.md'),
+        at('templates/cafe\u0301-template.md', 'templates/cafe\u0301-template.md'),
+      ]),
+    ).toThrow(/one destination/);
+
+    expect(() =>
+      assertNoCollision([
+        at('templates/a-template.md', 'templates/a-template.md'),
+        at('templates/b-template.md', 'templates/b-template.md'),
+      ]),
+    ).not.toThrow();
+  });
+
+  it('m2: a candidate whose identifier contains a brace is malformed, not ignored', () => {
+    // `{{A{B}}` matched neither candidate class, so it was emitted untouched and
+    // diagnosed as nothing — §12 says an identifier outside the charset is
+    // malformed, and a brace is outside it.
+    const { found, bad } = scanTokens('x {{A{B}} y\n', 'f.md');
+    expect(found).toEqual([]);
+    expect(bad).toHaveLength(1);
+    expect(bad[0]!.kind).toBe('malformed');
+  });
+
+  it('m1: a config-backed key placed in values is reported, not silently ignored', () => {
+    // A config-backed token IS consumed by the corpus, so occurrence alone could
+    // never see this — and it is the one dead key the registry invites an
+    // adopter to set.
+    const config = filledConfig();
+    config.prompts.values = { ...config.prompts.values, MEMORY_ROOT: '_brain' };
+    expect(() => renderPrompts(promptsPackageDir(), config)).toThrow(
+      /MEMORY_ROOT is ignored — this token resolves from/,
+    );
   });
 });

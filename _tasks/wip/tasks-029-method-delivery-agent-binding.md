@@ -243,17 +243,17 @@ a record is evidence only while it is true.
   - [x] 8.11 Record every result in the **Verification Ledger** with evidence. A listed-but-not-run
         command is never `passed`.
 
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review of the full diff — a different model family or a
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review of the full diff — a different model family or a
         fresh session, **never the implementing session**. Tier: high.
-  - [ ] 9.2 Spec-vs-code audit: every FR's stated behaviour against what was built, and every
+  - [x] 9.2 Spec-vs-code audit: every FR's stated behaviour against what was built, and every
         §12 DO NOT confirmed not violated.
   - [ ] 9.3 **Restatement sweep** — for every rule the implementation changed, re-read §2, §3,
         §6, §11, §12 and the Memory Inputs against the FR that owns it. Eight readiness rounds
         produced eight instances of a rule corrected where owned and stale where restated, four
         of them inside the fixes. Do this as a separate step **after** the fixes, and do not
         write that it was done in the same edit that does it.
-  - [ ] 9.4 Save `_docs/reviews/review-029-method-delivery-agent-binding.md` and set the
+  - [x] 9.4 Save `_docs/reviews/review-029-method-delivery-agent-binding.md` and set the
         `independent-review` ledger row.
 
 - [ ] 10.0 Phase 7 — Learning
@@ -286,9 +286,9 @@ it must be `passed` and name the review artifact path.
 | FR-7               | `pnpm --filter provegate test test/pack.test.ts`                 | pkg   | passed  | 9 passed | shipped-file allowlist matches the tarball        |
 | types              | `pnpm check-types`                                                | repo  | passed  | 5/5 tasks | zero errors                                       |
 | lint               | `pnpm lint`                                                       | repo  | passed  | 4/4 tasks | zero warnings                                     |
-| test               | `pnpm test`                                                       | repo  | passed  | 1087 passed | added tests pass; existing unchanged              |
+| test               | `pnpm test`                                                       | repo  | passed  | 1093 passed | added tests pass; existing unchanged              |
 | build              | `pnpm build`                                                      | repo  | passed  | 4/4 tasks | clean build                                       |
-| independent-review | `_docs/reviews/review-029-method-delivery-agent-binding.md`      | repo  | pending |          | verdict pass, critical = 0                        |
+| independent-review | `_docs/reviews/review-029-method-delivery-agent-binding.md`      | repo  | passed  | round 2  | verdict pass, critical = 0 (round 1: fail, 1 critical) |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -301,6 +301,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 9.x/m4 — the Codex snippet stays without a banner. FR-6 specifies exactly a heading and a table, and adding one would put the code outside the spec that was scored 8.35. The reviewer's point is fair — it is the one artifact a human pastes into a file they own — and it is a spec change for a later item, not a Phase 4 edit.
 - 7.6 — automated staleness detection is deferred to PRD-030 by scope, per this PRD's Non-Goals. After a package upgrade the store does not change and nothing detects it; every generated file names the producing version, and reading that banner is the disclosed mechanism. Recorded here because a reviewer will read the absence as a gap rather than a boundary.
 - 7.1 — "byte-identical for a non-adopter" is held by comparing the PLAN, not by a sentence: `planInit` emits no `.provegate/`, `.claude/` or `.cursor/` action, and the starter config it writes carries no `prompts` block. Adding the block to `DEFAULT_CONFIG` changes nothing for such a repository because `enabled` gates every consumer.
 - 6.1 — `PACK_MAP` gains NO entry. The pack is a static source→destination table and the store is a config-dependent render, so the only pack change is instructional: `NEXT_STEPS.md` §5 tells the adopter to run `gate init --prompts` separately and states the one-way boundary. `verify:pack-drift` stays at 49 pairs, which is the evidence that nothing rendered entered the pack.
@@ -323,6 +324,8 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 9.0 | Phase 6 round 1: **fail, 1 critical**. C1 — an unvalidated adapter name produced a store with no agent bound to it and exit 0. M1 — `prompts.dir` never joined the lexical path rules, so `~/store` was accepted and the printed reinstall set, whose instruction is "delete EVERY path above", expanded to the adopter's HOME. M2 — the containment diagnostic was swallowed and reported as "prompts is not enabled". M3 — the collision guard had no effective test on a case-insensitive volume. All fixed; round 2 **pass, critical 0**. |
+| 2026-07-27 | 9.0 | **Two overshoots inside the remediation itself, both caught by the suite.** The m2 regex spanned two adjacent valid tokens and refused four shipped files; the M2 fix broke `gate init` in a bare directory. Both are `strictness-added-during-extraction-is-a-behavior-change`, committed by the session that had just been shown that record — which is the same positional failure `a-record-declared-is-not-a-record-applied` describes. |
 | 2026-07-27 | 10.x | Three declared learnings written and indexed; `verify:brain` and `verify:workflow` green. `scope-out-the-layer-the-rounds-keep-hitting` also resolves the forward link `score-band-prescribes-the-action` has been carrying since it was written. |
 | 2026-07-27 | 8.0 | Phase 5 green. Every §11 row executed and recorded with evidence — nine FR rows and the four floor commands, no ad-hoc additions and no omissions. Baseline 1026 → **1087**, 61 new tests, every pre-existing one unmodified. |
 | 2026-07-27 | 7.0 | 1079 → **1087**. Eight migration tests. The ordering one asserts `report.created` puts the store before `workflow.config.json`, rather than trusting `initWorkspace`'s comment that activation is written last. |

@@ -98,6 +98,10 @@ const CONFIG_SPEC = obj({
   }),
 });
 
+/** The adapters this package can generate. A closed set by design: an adapter
+ * is code, not configuration, so an unrecognised name is always a typo. */
+export const KNOWN_ADAPTERS: readonly string[] = ['claude-code', 'cursor', 'codex'];
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -214,6 +218,7 @@ export function validateConfig(value: unknown): ConfigIssue[] {
  * let a typo like `ready: ["Approvd"]` silently break queue semantics.
  */
 export function validateResolvedConfig(config: {
+  prompts?: { enabled?: boolean; dir?: string; adapters?: string[] };
   dirs: {
     states: string[];
     stateRoles: Record<string, string>;
@@ -302,11 +307,32 @@ export function validateResolvedConfig(config: {
     ...Object.entries(config.dirs.stateRoles).map(
       ([role, v]): [string, string] => [`dirs.stateRoles.${role}`, v],
     ),
+    // PRD-029. The comment above is the reason this line exists: containment is
+    // a property of a configured path, and `prompts.dir` did not join the list
+    // when it was added. Without it `~/store` was accepted, a literal `./~`
+    // directory was created, and the printed one-way reinstall set — whose
+    // instruction is "delete EVERY path above" — expanded to the adopter's HOME.
+    ['prompts.dir', config.prompts?.dir],
   ];
   for (const [path, value] of configuredPaths) {
     if (value === undefined) continue;
     const reason = unsafeRelPath(value);
     if (reason !== null) issues.push({ path, message: reason });
+  }
+
+  // FR-1 specifies `adapters` as an ordered subset of a closed set. `stringArray`
+  // enforces the shape and nothing enforced the membership, so a typo — `claude`
+  // for `claude-code` — silently produced a store with no agent bound to it and
+  // an exit code of 0. An empty list stays legal; an unrecognised member does not.
+  const adapters = config.prompts?.adapters;
+  if (adapters !== undefined) {
+    for (const [i, name] of adapters.entries()) {
+      if (KNOWN_ADAPTERS.includes(name)) continue;
+      issues.push({
+        path: `prompts.adapters[${i}]`,
+        message: `unknown adapter '${name}' — known adapters are ${KNOWN_ADAPTERS.join(', ')}`,
+      });
+    }
   }
 
   if (config.valueScoring !== undefined) {

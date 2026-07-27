@@ -41,6 +41,7 @@ export {
   PromptsError,
   artifactGlobs,
   assertFragmentTerminal,
+  assertNoCollision,
   bannerFor,
   corpusTokens,
   generatedPaths,

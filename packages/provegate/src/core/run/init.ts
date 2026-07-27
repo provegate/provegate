@@ -273,10 +273,16 @@ export function initWorkspace(
   {
     dryRun = false,
     extra = [],
-    // Defaults to "this run installs the pack", because `extra` IS the practices
-    // plan and nothing else populates it. Derived from what is being written
-    // now, never from what already exists on disk — an adopter's stray `_brain`
-    // directory must not turn a plain `gate init` into a memory-enabled one.
+    // Defaults to "this run installs the pack". Derived from what is being
+    // written now, never from what already exists on disk — an adopter's stray
+    // `_brain` directory must not turn a plain `gate init` into a memory-enabled
+    // one.
+    //
+    // NO LONGER SUFFICIENT ON ITS OWN. `extra` was the practices plan and
+    // nothing else; PRD-029 also routes the prompt plan through it, so a caller
+    // passing prompt actions without setting this flag would silently get a
+    // memory-enabled starter config and a Phase-7 manifest. The CLI passes it
+    // explicitly for that reason; any new caller must too.
     practices = extra.length > 0,
   }: { dryRun?: boolean; extra?: InitAction[]; practices?: boolean } = {},
 ): InitReport {
