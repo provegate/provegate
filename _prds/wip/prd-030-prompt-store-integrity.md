@@ -46,13 +46,20 @@ trust a recorded hash, it **recomputes the render and compares**. The ledger exi
 distinguish two divergences that look identical on disk: bytes that changed because the
 package changed, and bytes that changed because a human changed them on purpose.
 
-**PRD-029 writes that ledger**, by owner decision at its readiness iteration 2. It records
-the package version and the hash of every path it generated — a manifest of *generated
-paths*, not of a directory, so the adapters that live outside `prompts.dir` are in it. This
-PRD therefore has something to adopt on day one and specifies no bootstrap for a ledgerless
-store: a store produced before this PRD exists does not exist, because PRD-029 is a hard
-prerequisite and never wrote one without a ledger. What this PRD adds to the file is the
-`exceptions` array and everything that interprets a divergence.
+**PRD-029 writes that receipt**, by owner decision, and by a second decision taken at its
+iteration 3 the receipt **claims nothing**: it states that a set of paths held render output
+of a known version, and no command derives a right to write from a path appearing in it.
+Its writer is a role rather than a PRD — whoever executes a plan writes the whole file — so
+`gate sync --prompts` here is the same kind of writer as `gate init --prompts` there, with
+the same schema and one full-file write. There are no per-field owners, and the earlier
+design's contradiction (one document calling fields read-only while its own sync path
+rewrote them) does not arise.
+
+**The exceptions this PRD adds therefore live in their own file**,
+`<prompts.dir>/prompts-exceptions.json`, owned entirely here. One file, one writer, twice.
+Putting them inside the receipt would reintroduce exactly the shape iteration 3 rejected: a
+plan executor would have to preserve state it does not own, and its planned bytes would then
+differ from the file on disk forever.
 
 An intentional edit is legitimate and is recorded as an exception. An exception carries an
 owner, a reason, and a review date, and it **expires** — an allowlist that cannot go stale
@@ -97,8 +104,10 @@ so that a method upgrade does not leave my agents on the old protocol without te
 **Acceptance Criteria:**
 
 - [ ] `gate doctor --prompts` re-renders in memory and reports every path as one of
-      `match`, `diverged`, `excepted`, `missing`, `orphan`.
-- [ ] Exit is non-zero on any `diverged`, `missing`, `orphan`, or invalid exception.
+      `match`, `diverged`, `excepted`, `missing`, `orphan` or `retired`.
+- [ ] Exit is non-zero on any `diverged`, `missing`, `orphan`, or invalid exception. `retired` is
+      informational: the receipt claims nothing, so a path the plan stopped producing carries no
+      obligation and no command deletes it.
 - [ ] A repository whose config declares `prompts` and whose store directory is absent
       exits non-zero with that named reason.
 
@@ -112,8 +121,8 @@ so that my change is neither silently reverted nor silently forgotten.
 
 **Acceptance Criteria:**
 
-- [ ] The edit is accepted only as a ledger exception naming the exact path, an owner from
-      `config.owners`, a reason, and a `reviewBy` date.
+- [ ] The edit is accepted only as an entry in `prompts-exceptions.json` naming the exact
+      path, an owner from `config.owners`, a reason, and a `reviewBy` date.
 - [ ] `gate sync --prompts` re-renders unmodified files and refuses to touch a file
       carrying an exception unless explicitly told to.
 - [ ] An exception whose `reviewBy` has passed, that names a path the render no longer
@@ -126,15 +135,18 @@ so that my change is neither silently reverted nor silently forgotten.
 Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
-1. **FR-1**: The ledger schema gains `exceptions`; `packageVersion` and `generated` are
-   PRD-029's and are read, never rewritten by the checks here. `readLedger` validates the
-   whole file against the schema and refuses an unreadable or schema-invalid one **by name**,
-   rather than treating it as an empty ledger — an unreadable ledger is a store nobody can
-   reason about, not a store with no exceptions. Ownership is split so the two PRDs cannot
-   disagree about a field: PRD-029 records what it wrote, this PRD records what a human
-   decided about it.
-   - **Targets:** `packages/provegate/schemas/prompts-lock.schema.json`,
-     `packages/provegate/src/core/run/prompts.ts::readLedger`,
+1. **FR-1**: Exceptions live in `<prompts.dir>/prompts-exceptions.json`, a separate
+   schema-validated file this PRD owns end to end. The receipt PRD-029 writes is **read-only
+   here** — not by a prose rule about fields, but because it is a different file and this PRD
+   never writes it except through FR-5's plan execution, which rewrites the whole thing the
+   same way `init` does. An unreadable or schema-invalid exceptions file is refused **by
+   name** rather than read as "no exceptions": a store whose exception state cannot be parsed
+   is one nobody can reason about, and defaulting to empty would silently convert every
+   accepted divergence back into a failure — or, worse, be repaired by a subsequent write
+   that drops entries nobody reviewed. An **absent** file is legitimately empty, and the two
+   cases are distinguished.
+   - **Targets:** `packages/provegate/schemas/prompts-exceptions.schema.json`,
+     `packages/provegate/src/core/run/prompts.ts::readExceptions`,
      `packages/provegate/src/core/run/prompts.ts::writeExceptions`
 
 2. **FR-2**: An `exceptions` entry accepts a divergence. It names the exact path (not a
@@ -145,22 +157,27 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    whose owner is not in the allowlist. An agent never authors an exception on its own
    initiative — like an operator acceptance, it is the owner's recorded decision.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::validateExceptions`,
-     `packages/provegate/schemas/prompts-lock.schema.json`
+     `packages/provegate/schemas/prompts-exceptions.schema.json`
 
 3. **FR-3**: `promptsDoctor` re-renders in memory and classifies every path: `match`,
    `diverged`, `excepted`, `missing` (generated but absent on disk), `orphan`. It
    **recomputes rather than trusting the ledger**; the ledger only distinguishes an
    upgrade-caused difference from a human-caused one.
 
-   The domain it covers is **the ledger's `generated` list**, not a directory walk, which is
-   what makes the adapters countable: `.claude/commands/*` and `.cursor/rules/prd-workflow.mdc`
-   live outside `prompts.dir` and would be invisible to any tree-scoped check. `orphan` has
-   two forms and both are reported: a **ledger orphan** (listed in `generated`, produced by
-   no current rule) and a **tree orphan** (present under `prompts.dir`, in neither the
-   ledger nor the plan). The tree scan stays scoped to `prompts.dir` because scanning
-   `.claude/` or `.cursor/` for strays would report the adopter's own files; outside the
-   store directory the ledger is the only authority, and that asymmetry is stated rather than
-   left implicit.
+   The domain it covers is **the current plan's path set, unioned with the on-disk receipt's**
+   — not a directory walk, which is what makes the adapters countable: `.claude/commands/*`
+   and `.cursor/rules/prd-workflow.mdc` live outside `prompts.dir` and would be invisible to
+   any tree-scoped check. A sixth classification, `retired`, covers a path the receipt lists
+   and the current plan no longer produces — an adapter dropped from `prompts.adapters`, for
+   instance. **`retired` is informational and does not fail**: the receipt claims nothing, so
+   a path it once listed carries no obligation, and no command deletes it. Reporting it once,
+   at the moment the plan stops producing it, is the whole of the transition handling that
+   the earlier ownership design needed five rules for. A **tree orphan** — present under
+   `prompts.dir`, in neither the plan nor the receipt — is reported and fails, because inside
+   the store directory an unexplained file means the store is not what the plan says it is.
+   The tree scan stays scoped to `prompts.dir`; scanning `.claude/` or `.cursor/` for strays
+   would report the adopter's own files, and outside the store directory the receipt is the
+   only thing this tool knows about.
 
    A configured repository whose store directory is absent exits non-zero with that reason —
    a check that reads a file set must fail on absence rather than reporting nothing to check.
@@ -173,12 +190,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    refused rather than ignored.
    - **Targets:** `packages/provegate/src/cli.ts::runDoctor`
 
-5. **FR-5**: `gate sync --prompts` is the upgrade path. It re-renders and **overwrites only
-   files whose on-disk bytes match their ledger hash** — that is, only files it wrote and
-   nobody has touched. A file carrying an exception is left alone and reported; a file that
-   diverged with no exception is left alone and reported as requiring a decision. It rewrites
-   the ledger on success. `--dry-run` prints the plan. This is why the upgrade path is a new
-   verb rather than a flag on `init`: `gate init` is additive-only by explicit design and
+5. **FR-5**: `gate sync --prompts` is the upgrade path, and it is a **plan executor** in
+   PRD-029 FR-8's sense: it builds the plan, writes, and rewrites the whole receipt. It
+   **overwrites only files whose on-disk bytes match their receipt hash** — files that still
+   hold known render output and that nobody has changed. That is a decision about *content*,
+   not a right derived from the receipt listing the path: a file whose bytes match is one
+   whose current content the tool can reproduce, so replacing it loses nothing. A file
+   carrying an exception is left alone and reported; a file that diverged with no exception is
+   left alone and reported as requiring a decision; a `retired` path is left alone and named,
+   for the human to delete. `--dry-run` prints the plan. The upgrade path is a new verb rather
+   than a flag on `init` because `gate init` is additive-only by explicit design, and
    overwriting through it would break a promise the installer makes everywhere else.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::syncStore`,
      `packages/provegate/src/cli.ts::runSync`
@@ -227,7 +248,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 - **Given** a store rendered from the installed package, **When** `gate doctor --prompts`
   runs unchanged, **Then** every path reports `match` and exit is zero.
-- **Given** a rendered file edited by hand with no ledger exception, **When** the check
+- **Given** a rendered file edited by hand with no recorded exception, **When** the check
   runs, **Then** it exits non-zero naming that path as `diverged`.
 - **Given** the same edit with a valid exception, **When** the check runs, **Then** the path
   reports `excepted` and exit is zero.
@@ -239,6 +260,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   **Then** it fails, because a resolved exception left standing is a bypass.
 - **Given** a configured repository whose store directory is absent, **When** the check
   runs, **Then** it exits non-zero; it does not report "nothing to check".
+- **Given** an adapter removed from `prompts.adapters`, **When** the check runs, **Then** its
+  previous path reports `retired`, exit stays zero for that path alone, and nothing is deleted.
 - **Given** an upgraded package and a store with one hand-edited file, **When**
   `gate sync --prompts` runs, **Then** every untouched file is re-rendered, the edited file
   is left alone and reported, and the ledger reflects what was written.
@@ -256,13 +279,18 @@ should contain — the package plus the config is. The check renders in memory a
 That is why a corrupted or hand-edited ledger cannot manufacture a green result: it can only
 mislabel a divergence as excepted, which FR-2's owner-allowlist and expiry rules then catch.
 
-**The ledger's real job is attribution, and its second job is scope.** Two divergences are
-byte-identical on disk: the package changed, or a human changed it. Only the ledger's
-recorded hash separates them, and that separation is what makes an upgrade path possible
-without overwriting someone's work. Because PRD-029 writes it as a manifest of *generated
-paths* rather than of a directory, it is also the only thing that can tell this check which
-files outside `prompts.dir` it owns — the adapters. A tree-scoped check would silently not
-cover them, which is the gap readiness iteration 2 found in the previous draft.
+**The receipt's job is attribution, and its second job is scope — neither is ownership.**
+Two divergences are byte-identical on disk: the package changed, or a human changed it. Only
+the recorded hash separates them, and that separation is what makes an upgrade path possible
+without overwriting someone's work. Because PRD-029 writes it as a record of a *plan* rather
+than of a directory, it is also the only thing that can tell this check which files outside
+`prompts.dir` are in scope — the adapters. A tree-scoped check would silently not cover them,
+which is the gap readiness iteration 2 found.
+
+**Every decision here is about content, never about a claim.** `sync` overwrites a file
+because its bytes match a render it can reproduce, not because a manifest names it. That
+distinction is what makes `retired` a report instead of a lifecycle: a path the plan stopped
+producing is simply a path this tool no longer says anything about.
 
 **Sync is a separate verb on purpose.** `gate init` promises additive-only, `wx`,
 nothing-ever-overwritten, and that promise is load-bearing in several other places. Adding a
@@ -289,7 +317,7 @@ paragraph.
 ### In Scope
 
 - [ ] `packages/provegate/src/core/run/prompts.ts` — ledger, exceptions, doctor, sync
-- [ ] `packages/provegate/schemas/prompts-lock.schema.json` — the ledger contract
+- [ ] `packages/provegate/schemas/prompts-exceptions.schema.json` — the exceptions contract
 - [ ] `packages/provegate/src/cli.ts` — `doctor --prompts`, `sync --prompts`
 - [ ] `scripts/verify/` and `practices/verify/` — the check and its packed twin
 - [ ] `.github/workflows/ci.yml` — the hygiene step
@@ -393,7 +421,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 
 - `packages/provegate/src/core/run/prompts.ts`
 - `packages/provegate/src/cli.ts`
-- `packages/provegate/schemas/prompts-lock.schema.json`
+- `packages/provegate/schemas/prompts-exceptions.schema.json`
 - `packages/provegate/practices/verify/verify-prompts.mjs`
 - `packages/provegate/practices/verify/verify-workflow.mjs`
 - `packages/provegate/practices/NEXT_STEPS.md`
@@ -490,5 +518,6 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                             |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Iteration 3 remediation (W18, W19).** Owner decision: the receipt claims nothing. Exceptions move out of it into `prompts-exceptions.json`, owned end to end here — inside the receipt they would force a plan executor to preserve state it does not own, which is the shape iteration 3 rejected. FR-5 is restated as a plan executor writing the whole receipt, so the read-never-rewritten contradiction disappears. FR-3's domain becomes the current plan unioned with the on-disk receipt, and `retired` replaces the ownership lifecycle: a path the plan stopped producing is reported once and never deleted, because nothing was claimed. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W15).** Owner decision: PRD-029 writes the ledger as a manifest of generated paths, so FR-1 now *extends* it with `exceptions` rather than creating it, and no bootstrap for a ledgerless store is needed or specified. FR-3's domain becomes the ledger's `generated` list rather than a directory walk, which is what makes the adapters outside `prompts.dir` countable; `orphan` splits into ledger-orphan and tree-orphan, and the tree scan's confinement to `prompts.dir` is stated rather than implied. An unreadable or schema-invalid ledger now fails by name instead of reading as a store with no exceptions. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1). Carries the reconciliation check and its wiring, plus W8's upgrade, exception-survival and removal gaps, which the parent document never specified. `gate sync --prompts` is new: the upgrade path could not be a flag on `init` without breaking its additive-only promise. |

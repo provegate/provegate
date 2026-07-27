@@ -40,8 +40,8 @@ decides whether the session is in autonomous-execution mode? Nothing does. The a
 assesses itself, and an agent that has just been asked to produce a task plan has every
 reason to conclude it is autonomous. The gate is real and its exception is self-issued.
 
-**The `AGENT_BOOTSTRAP` entrypoint states nine reasons to stop and no reason to proceed.**
-Its stop-and-ask list is the only phase guidance an agent always loads, and two of its
+**The `AGENT_BOOTSTRAP` entrypoint states ten reasons to stop and no reason to proceed.**
+Its stop-and-ask list is the only phase guidance an agent always loads, and two of its ten
 entries — "out-of-scope files" and "unspecified design question" — are open-ended enough to
 cover most of Phase 4. The counterweight, that Phases 4–7 run autonomously and a failed gate
 is the only legitimate stop, lives in `METHOD.md` and `orchestration-runner.md`, which are
@@ -206,7 +206,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **A machine-checkable "Go" gate.** Recording the human's approval as state and refusing a
   task file without it is state-and-gate work and belongs in its own item. This PRD removes
   the self-issued exception; it does not add enforcement.
-- **Changing the stop-and-ask checkpoint list.** The nine entries stay as they are. The
+- **Changing the stop-and-ask checkpoint list.** The ten entries stay as they are. The
   asymmetry is fixed by adding the proceed rule, not by removing stops.
 - **Any code path.** No TypeScript file is targeted. If an FR here appears to need one, the
   design is wrong: `{{AUTONOMY_MODE}}` was deliberately made a `prompts.values` entry rather
@@ -310,7 +310,7 @@ than trusting this paragraph.
 - `docs/research/provegate-bootstrap/source-snapshot/addenda/agent-memory-closed-loop-2026-07-25.md` — Addendum A1, the shape FR-1 follows
 - `docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md:80` — the unconditional exception, and the parenthetical FR-3 restores
 - `packages/provegate/prompts/phase-3-task-generator.md:92-94` — the self-granted exception
-- `AGENT_BOOTSTRAP.md` — nine stop rules, no proceed rule
+- `AGENT_BOOTSTRAP.md` — ten stop rules, no proceed rule
 - `_readiness/wip/readiness-029-method-delivery-agent-binding.md` — W6, the finding that produced this item
 - PRD-029 — hard prerequisite; PRD-030 — parallel sibling
 
@@ -472,7 +472,7 @@ rationalize.
   `prompts.values`, and that choice is what keeps this PRD parallel to PRD-030.
 - DO NOT edit `AGENT_BOOTSTRAP.md` without editing the shipped template in the same change,
   or the reverse. They are one rule in two files and the test will say so.
-- DO NOT remove or reword any of the nine stop-and-ask checkpoints. The asymmetry is fixed
+- DO NOT remove or reword any of the ten stop-and-ask checkpoints. The asymmetry is fixed
   by adding the proceed rule, not by subtracting stops.
 - DO NOT abridge the snapshot's text when rendering the autonomous mode. FR-3 exists because
   an abridgement already happened once and nobody was looking for it.
