@@ -9,6 +9,7 @@
 > **Critical:** 0
 > **High:** 0
 > **Medium:** 0
+> **Quorum:** 1/1 pass (single independent reviewer, two rounds — round 1 fail w/ 1 critical, round 2 pass 0/0/0)
 > **Rounds:** 2 — round 1 returned `fail` with Critical 1; every finding below was remediated and re-verified against the built CLI
 
 ## Findings
