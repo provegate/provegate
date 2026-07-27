@@ -373,6 +373,33 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   PRD-023 is scoped to fix. Recorded in the monorepo README so an adopter meets it with an
   explanation instead of a mystery.
 
+- **Phase 6 round 2 — the confirming round returned DO NOT CLOSE on the remediation
+  itself, and all three of its findings were real.** Round 1's behavioural corrections were
+  confirmed (rungs, fail-closed routes dir, the anchored cap, the `lintPrd` assertions), but
+  the rewrite introduced three problems of its own — which is exactly what a confirming
+  round is for.
+
+  1. **The overwrite warning sat after the instruction it must prevent.** Both cookbook
+     READMEs opened with "copy this file" and warned about deleting the Phase 7 gate a
+     hundred lines later. A sequential reader meets the warning after the damage. Both
+     READMEs now open with a **Before you copy** section, and a test asserts the warning's
+     position is *above* the copy instruction — mutation-checked by moving it back down.
+  2. **"Runnable as copied" became an unconditional claim** while the four floor commands
+     are still the adopter's own scripts. Corrected to what is actually true and is the
+     property worth protecting: the file **declares no script you would have to write
+     first**. An npm project without a `lint` script still fails at Phase 4, and should.
+  3. **The hard-cap guidance contradicted itself** — three elements called load-bearing,
+     then the runner prefix called "the one thing to keep", which invites deleting the
+     anchor that had just fixed the prose defect. Rewritten so the anchor is named as the
+     one that survives adaptation.
+
+  **Test coverage taken too.** The runner-prefix assertion listed four of the eight the
+  pattern advertises; it now reads the alternation **out of the pattern**, requires every
+  advertised runner to be one `commands.allowedPrefixes` would actually execute, and pins
+  the six that must not silently disappear. Two mutations prove it: dropping five prefixes
+  fails, and adding `make|deno` — runners the shipped allowlist does not accept — also
+  fails, which is what keeps the READMEs' "add it in both places" instruction true.
+
 - **7.6 — the docs assertions read outside this package's turbo cache key.**
   `test/content-adoption.test.ts` reads `apps/docs/content/docs/*`, which
   `provegate#test` does not hash (`verify:turbo-inputs` PASS confirms the task declares no
@@ -396,6 +423,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | ---------- | ------- | ----- |
 | 2026-07-27 | 0.0 | Pre-flight cleared: PRD-019 Ship Verified, lease held, baseline green. 0.3 reconciled the PRD's Memory Inputs with the plan's Memory Context (same divergence PRD-022 found) and disposed the new `assert-absent-needs-an-independent-cause` record, which `gate check` had refused the claim over. |
 | 2026-07-27 | 1.0-8.0 | Both cookbook entries + READMEs, the real-parser fixture, `brownfield.mdx`, the practices-first docs edits, cross-links, the docs fixture, and the pack allowlist. Five mutation checks, each failing exactly its own test. |
+| 2026-07-27 | 10.3 | Confirming round on the remediation: **DO NOT CLOSE** again, three findings, all real — the overwrite warning placed after the copy instruction, an unconditional "runnable as copied" claim, and a self-contradiction in the cap guidance. All three fixed; two new mutation-checked pins added. |
 | 2026-07-27 | 10.0 | Independent round (Codex) returned **DO NOT CLOSE** with five blocking items. Every factual claim verified against source first — all held. All five taken, plus seven test defects. Re-proved end to end in a second scratch adopter repo built from the corrected instructions. 946 tests green. |
 | 2026-07-27 | 9.4 | The adopter walk-through found a real defect in the published hard cap: the canonical `requireLine` is satisfied by the shipped PRD template's own placeholder, so the cap never fires on a `gate new` PRD. Pattern corrected in both files, re-measured end to end, pinned by a regression that reads the template. Recorded as a declared deviation from task 2.1. |
 | 2026-07-25 | Phase 3 | Plan generated from PRD-020 (Approved), readiness iteration 3 PASS 8.5, and watch items W1–W8, after owner Go. No implementation started. Phase 4 entry is blocked on PRD-019 Ship Verified (task 0.2). |

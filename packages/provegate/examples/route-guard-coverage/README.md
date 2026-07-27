@@ -54,4 +54,6 @@ next sprint"* satisfies the cap from the middle of a paragraph.
 
 The prefix list is finite and it is **yours to extend**. Mirror your own
 `commands.allowedPrefixes` in `workflow.config.json`: a repo whose tests run under `make`
-or `deno` must add those alternatives, or the cap refuses a legitimate line.
+or `deno` must add those alternatives **in both places** — the config allowlist so the runner will
+execute the command, and this pattern so the cap will accept the line naming it. The two
+lists moving together is what keeps "runnable" meaning the same thing in both.

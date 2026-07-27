@@ -5,6 +5,17 @@ single-package entry plus the two keys that make a gate *yours*: a class default
 your script when the diff touches a sensitive path, and a hard cap that refuses a PRD which
 does not say what it protects.
 
+## Before you copy — read the manifest you already have
+
+`gate init --practices` writes a `gates.manifest.json` containing
+`phases: { "7": [...] }`, the Phase 7 memory validator. **Overwriting that file with this
+one deletes that gate, silently.** Merge these keys into yours instead of replacing the
+file.
+
+The four floor commands below are scripts your workspace already has, renamed. Everything
+else this manifest declares, you install first — that is Step 1, and it is why the copy
+instruction comes last.
+
 ## Step 1 — install the domain gate first
 
 This manifest invokes a script **your repo owns**. Nothing in the package provides it, and
@@ -46,9 +57,7 @@ first infra item.
 
 Both scripts wired, or the `infra` rule removed: only then copy `gates.manifest.json`.
 
-**And read the manifest you already have first.** `gate init --practices` writes one
-containing `phases: { "7": [...] }`, the Phase 7 memory validator, and replacing the file
-deletes that gate silently. Merge keys rather than overwriting.
+**Merge keys rather than overwriting** — see the note above this section.
 
 ## `phases["4"]`
 
@@ -123,10 +132,14 @@ moment.
 
    The prefix list is finite and it is yours to extend: mirror your own
    `commands.allowedPrefixes` from `workflow.config.json`. A repo whose tests run under
-   `make` or `deno` must add those alternatives, or this cap refuses a legitimate line.
+   `make` or `deno` must add those alternatives **in both places** — the config allowlist so the runner will
+   execute the command, and this pattern so the cap will accept the line naming it.
 
-   That prefix is not decoration, and it is the one thing to keep if you adapt this cap.
-   The shipped PRD template carries a placeholder under its own hard-caps reminder —
+   All three survive adaptation, and the anchor most of all — it is the one that stops a
+   sentence *about* evidence from counting as evidence.
+
+   The prefix earns its place against a specific document. The shipped PRD template carries
+   a placeholder under its own hard-caps reminder —
    `` - Deny test: `path/to/x.test.ts` — [required when Targets touch protected surfaces] ``
    — and a looser pattern of `` Deny test: `[^`]+` `` **matches that placeholder**. Copy the
    looser form and you get a cap that passes on every PRD `gate new` produces, firing only

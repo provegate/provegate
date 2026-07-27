@@ -147,11 +147,28 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
     // The `m` flag is production's (`prd-ready.ts` compiles it that way); a
     // test that omits it is testing a different pattern.
     const pattern = () => new RegExp(cap.requireLine, 'm');
+
+    // The advertised prefixes are READ OUT OF the pattern, not listed here: a
+    // hand-written list covers whatever it covered the day it was written, and
+    // an independent review found this one testing four of eight.
+    const advertised = /\(\?:([^)]+)\)/.exec(cap.requireLine)?.[1]?.split('|') ?? [];
+    expect(advertised.length, 'no runner alternation found in requireLine').toBeGreaterThan(3);
+    // Every advertised runner is one the runner would actually accept, and the
+    // set covers the package managers and JS runtimes in the shipped allowlist.
+    // The README tells adopters to mirror `commands.allowedPrefixes`; this is
+    // what keeps that instruction true of the value it is written next to.
+    const allowed = DEFAULT_CONFIG.commands.allowedPrefixes.map((p) => p.trim());
+    for (const runner of advertised) expect(allowed, runner).toContain(runner);
+    for (const must of ['pnpm', 'npm', 'npx', 'yarn', 'bun', 'node']) {
+      expect(advertised, `${must} dropped from the cap's runner list`).toContain(must);
+    }
+    for (const runner of advertised) {
+      expect(pattern().test(`Deny test: \`${runner} run x.test.ts\``), runner).toBe(true);
+    }
+    // …and the indentation forms the READMEs show.
     for (const line of [
-      'Deny test: `pnpm vitest run src/routes/admin.guard.test.ts`',
       '- Deny test: `npm run test -- src/routes/admin.guard.test.ts`',
       '   Deny test: `node --test src/routes/admin.guard.test.ts`',
-      'Deny test: `npx vitest run x.test.ts`',
     ]) {
       expect(pattern().test(line), line).toBe(true);
     }
@@ -205,8 +222,18 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
         const section = readme.slice(start, next === -1 ? undefined : next);
         expect(section, `${name}: ${key} section names no failure`).toMatch(/\*\*Catches/);
       }
-      // …and the warning that copying over an existing manifest deletes a gate.
-      expect(readme, `${name}: no overwrite warning`).toMatch(/Merge the keys|Merge keys|merge keys/);
+      // …and the warning that copying over an existing manifest deletes a gate,
+      // ABOVE the instruction to copy. A warning after the action it prevents
+      // is a warning the sequential reader meets too late — which is exactly
+      // where an independent review found both of these.
+      const warn = readme.search(/^## Before you copy/m);
+      expect(warn, `${name}: no pre-copy overwrite warning`).toBeGreaterThan(-1);
+      const copy = readme.search(/copy `gates\.manifest\.json`/i);
+      expect(copy, `${name}: no copy instruction`).toBeGreaterThan(-1);
+      expect(warn, `${name}: the overwrite warning follows the copy instruction`).toBeLessThan(
+        copy,
+      );
+      expect(readme.slice(warn, copy)).toMatch(/deletes that gate|merge these keys/i);
     }
   });
 });

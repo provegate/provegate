@@ -1,7 +1,26 @@
 # Cookbook: single-package repo
 
-A manifest for one package at the repository root, using npm scripts. Copy
-`gates.manifest.json` next to your `package.json` and change the script names to yours.
+A manifest for one package at the repository root, using npm scripts.
+
+## Before you copy — read the manifest you already have
+
+`gate init --practices` writes a `gates.manifest.json` containing
+`phases: { "7": [...] }`, the Phase 7 memory validator. **Overwriting that file with this
+one deletes that gate, silently.** Merge these keys into yours instead of replacing the
+file.
+
+The asymmetry that decides what a copy costs you: an **absent** `phases["4"]` inherits the
+built-in floor, while an **empty array** erases it. Plain `gate init` writes
+`{ "phases": { "4": [] }, "postMerge": [] }` — both erased, which is what this file is for.
+The `--practices` one omits `phases["4"]` entirely, so it still has the floor.
+
+Then copy `gates.manifest.json` next to your `package.json` and change the script names to
+yours.
+
+**What "change the script names" covers:** the four floor commands are scripts **you
+already have** — this file adds nothing you must write from scratch, which is the property
+the `classDefaults` section below protects. It is not self-contained: an npm project
+without a `lint` script fails at Phase 4 on `npm run lint`, and it should.
 
 Every key below is annotated with **the failure it catches**. A key you cannot name a
 failure for is a key you do not need.
@@ -33,10 +52,11 @@ for an npm-based single package, they do.
 {}
 ```
 
-**Catches:** nothing as shipped, and that is deliberate — **this file is meant to be
-runnable the moment you copy it**. A class default names a script, and a manifest shipping
-a rule for a script you have not written fails at Phase 4 with an error about a missing
-script, on the first hotfix, at the worst possible moment.
+**Catches:** nothing as shipped, and that is deliberate — **this file declares no script
+you would have to write first**. A class default names a script, and a manifest shipping a
+rule for one you have not written fails at Phase 4 with an error about a missing script, on
+the first hotfix, at the worst possible moment. The four floor commands are a different
+case: they are scripts an npm project already has, renamed.
 
 Add one when you have the script. The shape:
 
@@ -104,18 +124,6 @@ about the script, not about the manifest.
 | Command | Where it comes from |
 | ------- | ------------------- |
 | `npm run check-types`, `npm run lint`, `npm run build`, `npm run test` | **yours.** The four you already run in CI. If your script names differ, rename them here before the first `gate run` — these are the only commands the shipped file declares, and it declares nothing you have to write from scratch |
-
-## Copying over an existing manifest
-
-**Read your current `gates.manifest.json` before you replace it.** `gate init --practices`
-writes one containing `phases: { "7": [...] }` — the Phase 7 memory validator — and
-overwriting the file with this one silently deletes that gate. Merge the keys instead of
-replacing the file, or paste this file's keys into yours.
-
-Note the asymmetry, because it decides what a copy costs you: an **absent** `phases["4"]`
-inherits the built-in floor, while an **empty array** erases it. The manifest plain
-`gate init` writes is `{ "phases": { "4": [] }, "postMerge": [] }` — both erased. The one
-`--practices` writes omits `phases["4"]` entirely, so it still has the floor.
 
 ## Verify it before you trust it
 

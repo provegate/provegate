@@ -13,7 +13,7 @@ Two complete `gates.manifest.json` files, each with a README annotating every ke
 failure that key catches:
 
 - [`manifests/single-package/`](manifests/single-package/README.md) — one package at the
-  root, npm scripts, runnable as copied
+  root, npm scripts; declares no script you must write first
 - [`manifests/monorepo/`](manifests/monorepo/README.md) — a workspace plus one domain
   gate: a path-scoped class default that runs `route-guard-coverage`, and a hard cap that
   makes the PRD name its deny test
