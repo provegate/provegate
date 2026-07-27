@@ -20,6 +20,7 @@ import {
   Wordmark,
   band,
   card,
+  fluid,
   lede,
   mono,
   section,
@@ -77,7 +78,7 @@ export function Hero(): React.JSX.Element {
         </div>
         <h1
           style={{
-            fontSize: 'var(--pg-text-4xl)',
+            fontSize: fluid.display,
             fontWeight: 700,
             lineHeight: 'var(--pg-leading-tight)',
             letterSpacing: 'var(--pg-tracking-tight)',
@@ -170,7 +171,7 @@ export function Problem(): React.JSX.Element {
               <div
                 style={{
                   ...mono,
-                  fontSize: 'var(--pg-text-3xl)',
+                  fontSize: fluid.stat,
                   fontWeight: 600,
                   letterSpacing: 'var(--pg-tracking-tight)',
                   lineHeight: 'var(--pg-leading-tight)',
@@ -209,7 +210,7 @@ export function CoreRule(): React.JSX.Element {
           <Eyebrow>// the core rule</Eyebrow>
           <p
             style={{
-              fontSize: 'var(--pg-text-2xl)',
+              fontSize: fluid.statement,
               fontWeight: 600,
               lineHeight: 'var(--pg-leading-snug)',
               letterSpacing: 'var(--pg-tracking-tight)',
@@ -444,7 +445,7 @@ export function Refusal(): React.JSX.Element {
               gap: 12,
               margin: '18px 0 10px',
               color: 'var(--pg-term-human)',
-              fontSize: 'var(--pg-text-2xl)',
+              fontSize: fluid.statement,
               fontWeight: 500,
             }}
           >
@@ -637,7 +638,7 @@ export function Positioning(): React.JSX.Element {
           <Eyebrow>// where it sits</Eyebrow>
           <p
             style={{
-              fontSize: 'var(--pg-text-xl)',
+              fontSize: 'clamp(var(--pg-text-lg), 2.2vw, var(--pg-text-xl))',
               fontWeight: 600,
               lineHeight: 'var(--pg-leading-snug)',
               color: 'var(--pg-text)',
@@ -811,7 +812,7 @@ export function Install(): React.JSX.Element {
       >
         <h2
           style={{
-            fontSize: 'var(--pg-text-2xl)',
+            fontSize: fluid.heading,
             fontWeight: 600,
             letterSpacing: 'var(--pg-tracking-tight)',
             margin: 0,

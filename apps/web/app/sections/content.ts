@@ -1,9 +1,11 @@
 /**
  * The single source of landing copy + data. Every fact here traces to the
  * design brief §2/§4 or the whitepaper — NO fabricated version, badge, download
- * count, testimonial, or fictional CLI surface. The CLI output strings are the
- * REAL tool's output (no `gate.toml`, no `gate ledger`, no four-command
- * fiction). Terminal blocks render this verbatim as selectable text.
+ * count, testimonial, or fictional CLI surface. Command names, config filenames
+ * and flags are the SHIPPED ones; the landing prototype's invented four-command
+ * surface and its TOML config were rejected by owner decision (PRD-013 §1), and
+ * `landing.test.tsx` asserts they never render. Terminal blocks show real tool
+ * output as selectable text.
  */
 import type { Phase } from '@provegate/design/react';
 

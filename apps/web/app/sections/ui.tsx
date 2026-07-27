@@ -53,6 +53,23 @@ export const eyebrowStyle: React.CSSProperties = {
   margin: '0 0 14px',
 };
 
+/**
+ * Fluid display sizes. The token scale is a fixed ladder (4xl is 64px), which
+ * is right on a desktop and far too large on a phone — an unclamped hero fills
+ * the whole first screen. Each clamp runs BETWEEN two steps of the same ladder,
+ * so both endpoints stay on-scale and no size is invented here.
+ */
+export const fluid = {
+  /** Hero h1: 2xl → 4xl. */
+  display: 'clamp(var(--pg-text-2xl), 5.4vw, var(--pg-text-4xl))',
+  /** Section h2: xl → 2xl. */
+  heading: 'clamp(var(--pg-text-xl), 3.4vw, var(--pg-text-2xl))',
+  /** Band statements (core rule, refusal, positioning): lg → 2xl. */
+  statement: 'clamp(var(--pg-text-lg), 2.7vw, var(--pg-text-2xl))',
+  /** Proof figures: 2xl → 3xl. */
+  stat: 'clamp(var(--pg-text-2xl), 4vw, var(--pg-text-3xl))',
+};
+
 export const lede: React.CSSProperties = {
   fontSize: 'var(--pg-text-md)',
   color: 'var(--pg-text-muted)',
@@ -91,7 +108,7 @@ export function SectionHead({
       <Eyebrow>{eyebrow}</Eyebrow>
       <h2
         style={{
-          fontSize: 'var(--pg-text-2xl)',
+          fontSize: fluid.heading,
           fontWeight: 600,
           letterSpacing: 'var(--pg-tracking-tight)',
           lineHeight: 'var(--pg-leading-tight)',

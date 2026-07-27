@@ -107,6 +107,25 @@ a:hover {
   display: none;
 }
 
+/* A grid item's automatic minimum size is its MIN-CONTENT width, so a wide
+   monospace block (the handoff card, a terminal, a code block) inflates its own
+   `1fr` track instead of scrolling inside it — at 375px that pushed the hero
+   track to 576px. `min-width: 0` restores `minmax(0, 1fr)`, and each terminal
+   surface then scrolls in its own container, which is the rule the body's
+   `overflow-x: hidden` assumes. */
+.pg-hero > *,
+.pg-how-grid > *,
+.pg-install-grid > *,
+.pg-play-grid > *,
+.pg-cmp-grid > *,
+.pg-faq-grid > *,
+.pg-proof-grid > *,
+.pg-problem-grid > *,
+.pg-footer-grid > *,
+.pg-phasedetail > * {
+  min-width: 0;
+}
+
 /* The section grids are authored as inline styles (they live next to the
    component that owns them), so the breakpoints need `!important` to win the
    cascade against an inline declaration. */
