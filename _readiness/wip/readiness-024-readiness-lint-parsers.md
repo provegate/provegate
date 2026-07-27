@@ -1,19 +1,52 @@
 # Readiness Assessment: PRD-024 — Readiness Lint Parsers
 
+> **Iteration 4 (Codex, independent) — 6.95/10, DOWN 0.45.** The round that falsified the
+> working hypothesis. Iteration 3 added **no new material** — every edit closed a finding —
+> and the score still fell. What predicts the score is not whether material is new but
+> **whether the consequences of a fix were measured**: the end-anchored exemption closed K's
+> third level and silently invalidated an existing test fixture, four live wip PRDs, and its
+> own "no existing fixture changed meaning" claim. K also moved a **fourth** time, into the
+> HTML comment the fix itself introduced as the home for rationale.
+>
+> <details><summary>Iteration 3 (7.40 ITERATE)</summary>
+>
+> **Iteration 3 (Codex, independent) — 7.40/10, ITERATE.** Up 0.57, the second-largest
+> single-round gain in this wave. J closed, L closed at the reported level, and the
+> exempt-bullet continuation vector closed — but **K moved a third time**, into the same
+> line as the exemption marker, and two structural holes surfaced that no prior round had
+> reached: a duplicate or missing §9 section, and a row-cell threshold that would have
+> broken three existing fixtures.
+>
+> <details><summary>Iteration 2 (6.83 ITERATE)</summary>
+>
+> **Iteration 2 (Codex, independent) — 6.83/10, ITERATE.** Up 0.08. E and F closed
+> outright; six findings are partially closed and one is open. The remediation introduced
+> two of its own: an **unacknowledged public API break** (`parseVerificationCommands` is
+> exported and consumed as an array by two existing tests), and the paragraph hiding place
+> **moved one level down** into the indented continuation of an exempt bullet.
+>
+> <details><summary>Iteration 1 (6.75 ITERATE)</summary>
+>
 > **Iteration 1 (Codex, independent) — 6.75/10, ITERATE.** The three assigned PRD-023
 > defects transferred accurately and the split exposed new seams, all of them
 > specification gaps rather than internal contradictions. The sharpest is a fourth
 > instance of this PRD's own defect class: `lintPrd` has a **second, independent**
 > whole-row backtick scan that FR-1 does not scope.
 
+> </details>
+> </details>
+> </details>
+> </details>
+> </details>
+
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-024-readiness-lint-parsers.md`   |
-| Score                  | 6.75/10                                        |
-| Verdict                | ITERATE — six [P1] items; every assigned defect carried over correctly, but three of the four fixes are not yet falsifiable as written |
-| Iteration              | 1                                              |
+| Score                  | 7.80/10                                        |
+| Verdict                | ITERATE — two [P1] items, both narrow. 0.20 from the PASS threshold, the closest anything in this wave has come. Iterations 1–4 scored the combined document and are not comparable |
+| Iteration              | 5                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD** |
@@ -153,6 +186,10 @@ method-content caps each checked explicitly.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 5   | 2026-07-27 | 7.80  | ITERATE | **First round against the narrowed PRD; not comparable to 1–4, which scored the combined document.** 7.80 is the highest score reached anywhere in this wave and 0.20 from PASS, which is the clearest evidence yet that the §9 half was the drag. Two [P1]s. **(AD)** the missing-section outcome contradicts itself: FR-1 makes zero verification sections a parser issue and `buildGateChain` refuses on any issue, while the acceptance criteria simultaneously require a missing section to keep today's required-empty Phase-5 path (`chain.ts:787-790`, bound by `chain.test.ts:173-183`). Those are different refusal mechanisms; one must give. **(AE)** the config-driven corpus and the static cache input can drift: FR-2 resolves the wip directory from config so a rename is followed, but turbo `inputs` is a static glob list (`schema.json:585-590`), so after a rename the test reads the new directory while caching still watches the old one. Name the exact glob and the rename invariant, or choose a broader input. P2s: the corpus count is stale at six — PRD-028 appeared between writing and scoring, making it seven — though all seven are green; the narrowing history overstates, since iterations 1 and 2 **did** raise §11 [P1]s and the accurate claim is that they were resolved after round two, not that they never existed; and the two-column fixture census names three files where `single-package.test.ts:100-119` is a fourth, though the aggregate count of fifteen rows is right. **Measurement verdicts: the three-token claim CONFIRMED exactly; the corpus claim WRONG on the count and confirmed on the substance — 73 rows, zero malformed, one canonical section each, no prerequisite.** |
+| 4   | 2026-07-27 | 6.95  | ITERATE | **Fourth independent round, and the one that falsified the working hypothesis.** Iteration 3 introduced no new requirements — every edit closed a reported finding — and the score still fell 0.45. The predictor is not novelty but **measurement of consequences**. Seven [P1]s. **(K, fourth level)** rationale was moved into an HTML comment and FR-3's grammar permits comments, so `- (none)` followed by `<!-- Who owns the authorization decision? -->` hides a question — and the PRD's own §9 now does exactly that. The fix created the hiding place it moved into. **(X)** requiring "exactly one section" counts matches of `.*Open Questions.*`, which is case-insensitive and substring-based (`markdown.ts:74`), so a document whose only heading is `## Resolved Open Questions` has exactly one match and passes — the precise trap the PRD warns about elsewhere. **(Y)** the cardinality fix covers §9 only; §11 and the FR block have the same first-match-only behavior (`safety.ts:45`, `prd-ready.ts:28,127`), so a malformed row in a second `## 11.` section stays invisible, contradicting the verification claim that the chain refuses when *any* row is malformed. **(Z)** the two-vs-three cell contradiction survives in the **Gherkin criterion**, which still says three where FR-1 and §11 say two; extra-cell behavior beyond four is also undefined. **(AA)** the exact exemption rejects `- (none — resolved)`, which `prd-ready.test.ts:23` uses and `:38-40` expects to pass — so "no existing readiness fixture changed meaning" is false, and that file is in neither Targets, Scope, nor Conflict Surface, as is `chain.test.ts`, which the PRD names as required proof. **(AB)** PRD-021 is not the only corpus blocker: PRD-023, PRD-025 and PRD-026 all carry `(none)` plus trailing prose, and PRD-027 uses a checkbox form — so remediating PRD-021 alone cannot green the corpus while allowlisting is forbidden. **(AC)** FR-4 still leaves the Turbo strategy as an either/or with materially different blast radii and names no command or manifest for the second. P2s: the deferral grammar does not define case, whitespace, or link syntax; the round count still says six in the introduction and four in the changelog. Confirmed: the two-cell threshold **is** the correct compatibility floor, measured across 15 literal fixture rows in five files — ten 2-cell, four 3-cell, one 4-cell; the export-preserving split is right; and the dynamic corpus definition genuinely removed the stale-count defect. |
+| 3   | 2026-07-27 | 7.40  | ITERATE | **Third independent round; +0.57, the second-largest single-round gain in this wave.** J **CLOSED** — the exported signature is preserved and the internal split is implementable without touching `gates/index.ts`. L **CLOSED at the reported level**, with the missing regression surfaces raised as a new adjacent finding. H **CLOSED**. K **PARTIALLY CLOSED**, G **PARTIALLY CLOSED**, I **OPEN**. Three new [P1]s. **(K, third level)** refusing continuations was not enough: the exemption is keyed to how a bullet *opens*, so `- (none) — why is auth still undecided?` and `- Deferred to PRD-123 — but who owns authorization?` both pass while carrying the question, and the PRD's own §9 demonstrated that trailing prose is permitted. The same argument that rejected continuations rejects trailing prose. **(V)** a question can hide in a **second** Open Questions section, and a document with **none** reports zero: `sectionMatching` returns the first match and `''` when absent (`markdown.ts:90`), and nothing requires exactly one. **(W)** "malformed row" was underdefined — the PRD said "does not split into cells" in one place and "at least three cells" in two others, and three existing fixtures declare two-column `\| FR \| Command \|` tables (`safety.test.ts:89`, `prd-ready.test.ts:25`, `chain.test.ts:48`). A three-cell minimum would have made all three malformed, changed `lintPrd`'s verdict and tripped the new chain guard, breaking the PRD's own binding rule that no existing test may need editing. No direct test of the chain refusal was required either. P2s: the Non-Goals blast radius still claimed two files against a scope of eight; the rollback omitted the `buildGateChain` guard; Technical Considerations still called the PRD unordered; the round count still contradicted itself two lines apart; and the wip corpus count went stale again when PRD-027 appeared mid-round. Confirmed: the parser split needs no export change, the stated residual is honest, the iteration-2 continuation vector is genuinely closed, the existing no-§11 behavior is bound by `chain.test.ts:173`, and PRD-021's §9 is still paragraph-form so the prerequisite is real. |
+| 2   | 2026-07-27 | 6.83  | ITERATE | **Second independent round, on the iteration-1 remediation.** E (the `lintPrd` root argument) and F (turbo inputs) **CLOSED**; A, B, C, D, G, H **PARTIALLY CLOSED**; I **OPEN**. Two new [P1]s, both introduced by the remediation. **(J)** `parseVerificationCommands` is exported from the package's programmatic API (`gates/index.ts:16`) and consumed as an array by `safety.test.ts:62` and `content-templates.test.ts:104`, so widening it to `{commands, issues}` is a **public API break** — while the PRD still claims no published-surface migration and ships no changeset. Keep an array-returning wrapper and add an internal detailed parser, or specify the migration. **(K)** the hiding place moved one level down: FR-2 exempts a bullet by how it **opens** and FR-3 permits arbitrary indented **continuations**, so `- (none)` followed by an indented unresolved question satisfies both and hides exactly what the FR removes. Exempt forms must be single-line, or continuations beneath an exempt bullet must be refused; two deny fixtures. **(L)** FR-1 cannot be implemented inside its declared surface: it requires edits to `chain.ts` and `prd-ready.ts`, neither of which is in its Targets, Implementation Scope, or Conflict Surface, and the affected existing tests are absent too. P2s: the PRD-021 prerequisite was added in FR-4 but the introduction still calls this PRD dependency-free and Non-Goals still calls it a "known case"; the header still says only verdicts move while the corrected rollback says Phase-5 commands change; and the round count now contradicts itself **within two lines** — the fix for I created a new instance of I. |
 | 1   | 2026-07-27 | 6.75  | ITERATE | **First independent round on the split-out PRD.** Six [P1]s, all specification gaps rather than contradictions. The headline is finding A: `lintPrd` carries a **second** whole-row backtick scan independent of `parseVerificationCommands`, so scoping one parser leaves the other — a fourth instance of this PRD's own defect class, inside the PRD written to remove it. Also: the malformed-row requirement has no channel to report through; FR-2's "link or work-item id" is still substring-satisfiable; FR-3's leading-explanatory-line allowance re-creates the paragraph exemption and the grammar does not cover wrapped bullets, which this PRD's own `(none)` bullet is; the corpus fixture omits `lintPrd`'s fourth argument, measured to fail with an unrelated memory error; and the corpus test reads `_prds/wip` outside Turbo's declared inputs, which is the indexed `turbo-cache-masks-out-of-input-reads` record the PRD did not declare. Confirmed: all three assigned defects carried over accurately, the `verify:workflow` diagnosis is correct, config-driven wip enumeration is implementable, and the no-pipe template contract is real. |
 
 ---

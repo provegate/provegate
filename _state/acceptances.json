@@ -154,6 +154,17 @@
       "reason": "owner directed the close in chat after round 3. The judgement 11.3 asks for was NOT made by the owner reading the page; it is accepted on the recorded evidence instead, and the evidence is unusually direct for a content PRD: three independent adversarial rounds by a different model family raised eleven findings, six of which were claims exceeding their mechanism - a cookbook that was not runnable as copied, a hard cap satisfied by the shipped PRD template's own placeholder, an impossible install sequence, an empty-manifest claim that was false twice over, a wiring explanation that described a filesystem scan the audit does not do, and an overwrite warning placed after the action it prevents. All eleven remediated, zero outstanding. The adopter path was walked twice end to end in scratch repos built by gate init, not asserted: the copied domain gate ran, failed on an unguarded route, passed once guarded, and the hard cap refused a fresh gate new PRD and cleared on a real deny-test line. 946 tests, full floor green, no file under packages/provegate/src touched",
       "date": "2026-07-27",
       "method": "agent-directed by owner in chat; not an interactive owner confirmation"
+    },
+    {
+      "prd": "PRD-021",
+      "items": [
+        "12.5 accept that editing the root workflow.config.json advances the control-artifact base, so any lease taken before it is refused until that worktree merges",
+        "15.4 close acceptance — this PRD changes the published config surface, so Autonomous Close is operator-gated"
+      ],
+      "owner": "owner",
+      "reason": "owner directed the close in chat. 12.5 was discharged by measurement rather than judgement about hypothetical leases: _state/locks held exactly one lease at close time, PRD-021's own, so no in-flight work is stopped - and the refusal path is not hypothetical here, it is the live instance FR-5 fixtures. Two independent review rounds (Codex, a different model family) both returned DO NOT CLOSE with twelve findings; two more came from the implementer's own checks. All fourteen remediated, zero outstanding. Nine of the fourteen were one defect - a rule corrected where it was owned and left standing elsewhere - which is what the review brief was written to hunt and what the _brain record now names. The value-score gate is proven at the unit, through lintPrd, and through the built CLI over a seeded corpus; the live repo sweeps green at 11 scored, 0 without a header, 15 skipped with reasons. 1024 tests across 49 files, full floor green, verify:workflow and verify:review-artifact PASS",
+      "date": "2026-07-27",
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T11:18:37.663Z",
+  "generatedAt": "2026-07-27T11:20:49.116Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.75,
+        "score": 7.8,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -911,7 +911,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.28,
+        "score": 7,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -948,7 +948,81 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.85,
+        "score": 6.54,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-027",
+      "number": 27,
+      "slug": "landing-adoption-polish",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
+        "readiness": "_readiness/wip/readiness-027-landing-adoption-polish.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 7.03,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-028",
+      "number": 28,
+      "slug": "open-questions-grammar",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-028-open-questions-grammar.md",
+        "readiness": "_readiness/wip/readiness-028-open-questions-grammar.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 6.18,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
