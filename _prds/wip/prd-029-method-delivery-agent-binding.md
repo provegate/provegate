@@ -62,14 +62,19 @@ template this way.
 > `AGENT_BOOTSTRAP` proceed rule are **PRD-031**; this repository consuming its own store is
 > **PRD-032**.
 >
-> Three owner decisions shape this revision. **Conditional content is an enumerated token**
+> Four owner decisions shape this revision. **Conditional content is an enumerated token**
 > whose fragments ship in the package, so PRD-031 stays code-free and parallel to PRD-030.
-> **This PRD writes a receipt.** And — taken at iteration 3, replacing an earlier design this
-> document carried — **the receipt makes no ownership claim.** Iteration 3's blocking finding
-> was that one file was being asked to be a receipt, an ownership manifest, a reconciliation
-> scope and a migration state at once, split between two writers by prose. It is now one
-> thing: a statement of which paths hold render output of a known version. Nothing acquires,
-> retires, relocates or relinquishes a path, because nothing claims one.
+> **This PRD writes a receipt**, and **the receipt makes no ownership claim.**
+>
+> The fourth was taken at iteration 4 and it is the one that makes the third true. Iteration 3
+> declared that the receipt claims nothing; iteration 4 showed the claim had merely changed
+> vocabulary, because `gate sync --prompts` overwrote a file when its bytes matched the
+> receipt hash **and its path was in the receipt** — so membership granted a capability that
+> content alone did not. **No command overwrites an existing file.** `sync` reports a diff and
+> writes nothing; the apply path is the human deleting the file and re-running
+> `gate init --prompts`, which is additive-only and fills an absent path. The deletion is the
+> act of consent, and it is the human's. The authority question is now answered by
+> construction rather than by a sentence promising restraint.
 
 ---
 
@@ -87,8 +92,8 @@ template this way.
       cannot change a byte of the output.
 - [ ] The render is planned in full before anything is written, and an incomplete store is a
       named state rather than an undetected one.
-- [ ] What was rendered is recorded as a **receipt and nothing more**, so PRD-030 can
-      reconcile it without either side claiming a path.
+- [ ] No command overwrites an existing file, so the receipt cannot confer a capability and
+      PRD-030 can reconcile without either side claiming a path.
 
 ### Success Metrics
 
@@ -98,7 +103,7 @@ template this way.
 | Package files with no disposition                             | n/a     | 0      | the plan fails naming any unmatched file                            |
 | Values an adopter must supply that cannot affect the output   | n/a     | 0      | required set derived from the rendered corpus, asserted by test      |
 | Legitimate documents or values the render refuses             | n/a     | 0      | the token candidate rule and the `null` unset marker, both by test   |
-| Paths the tool claims but did not render                      | n/a     | 0      | the receipt states content, not ownership; asserted by its schema     |
+| Existing files any command overwrites                         | n/a     | 0      | `init` refuses a differing destination; `sync` writes nothing         |
 
 ---
 
@@ -229,19 +234,26 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/src/core/run/prompts.ts::GENERATED_BANNER`
 
 4. **FR-4**: Token handling has a grammar, and substitution is **one pass over the source**.
-   - A **token candidate** is `{{` followed immediately by an uppercase ASCII letter. Text
-     like `{{lowercase}}`, `{{ spaced }}` or `{{1}}` is not a candidate and passes through
-     untouched — a rule that classified every `{{` as a token would refuse ordinary
+   - There are **two candidate classes**, and the escape class is matched first: an **escape
+     candidate** is `{{` followed immediately by one or more `!`, and a **token candidate** is
+     `{{` followed immediately by an uppercase ASCII letter. Matching escapes first is stated
+     because it is load-bearing: under a token-only rule `{{!NAME}}` is not a candidate at all
+     and the escape below would be unreachable.
+   - Text like `{{lowercase}}`, `{{ spaced }}` or `{{1}}` is in neither class and passes
+     through untouched — a rule that treated every `{{` as a token would refuse ordinary
      documents that happen to contain brace pairs.
-   - A candidate is a **token** when it matches `{{` + `[A-Z][A-Z0-9_]*` + `}}` **on one
+   - A token candidate is a **token** when it matches `{{` + `[A-Z][A-Z0-9_]*` + `}}` **on one
      line**. A candidate that does not close on the same line, or whose identifier leaves the
-     charset, is **malformed** and fails by name.
-   - **Escape:** `{{!NAME}}` renders as the literal `{{NAME}}`. The escape is recursive —
-     `{{!!NAME}}` renders as `{{!NAME}}` — so any literal a document needs can be written.
-     No shipped file uses it today (`grep` finds zero `{{!` in the package); it exists so a
-     future protocol can document a token without the render consuming it, and the
-     `PLACEHOLDERS.md` exemption in FR-2 is what covers the one document that discusses
-     tokens now.
+     charset — `{{Name}}`, `{{FOO-BAR}}` — is **malformed** and fails by name.
+   - A well-formed token absent from the registry is **undeclared** and fails. In a method
+     corpus an unregistered `{{JSON}}` is far more likely an author's typo than deliberate
+     Mustache, so the policy is to refuse and let the author say which they meant. **The cost
+     is stated rather than hidden:** a protocol that wants to quote template syntax literally
+     must escape it, and the escape exists for exactly that.
+   - **Escape:** `{{!NAME}}` renders as the literal `{{NAME}}`, and the escape is recursive —
+     `{{!!NAME}}` renders as `{{!NAME}}` — so any literal a document needs can be written. No
+     shipped file uses it today (`grep` finds zero `{{!` in the package); it exists so a future
+     protocol can document a token without the render consuming it.
    - Every source occurrence is collected **before** any replacement, and each is replaced
      exactly once with its value treated as **opaque**: a configured value containing `{{X}}`
      is emitted as-is and never re-scanned, so replacement order cannot matter.
@@ -270,9 +282,19 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    **Unset is `null`, not a sentinel string.** `gate init --prompts` scaffolds each required
    key with JSON `null`, and the command prints each key's meaning. A `null` and an absent key
-   are both unset; every string, including one that looks like a marker, is a value. An
-   in-band sentinel would make some legitimate string unrepresentable, which is a data-model
-   collision rather than a policy, and this is the cheapest way not to have one.
+   are both unset; every string is a value. An in-band sentinel would make some legitimate
+   string unrepresentable, which is a data-model collision rather than a policy.
+
+   **The empty string is a value, and whether it is a legal one is per token.** The registry
+   gains an `empty` column: a token marked `allowed` accepts `""` — `{{DOMAIN_CHECKS}}` and
+   `{{ENV_NOTES}}` are prose blocks a project may legitimately have nothing to say in —
+   and every other token refuses it, because an empty `{{ARCHITECTURE_DOC}}` renders a
+   protocol instructing an agent to read nothing. A global rule in either direction is wrong:
+   refusing `""` everywhere overshoots, accepting it everywhere fails open.
+
+   **An unknown key in `values` is refused** by the raw-pass validation of FR-1, naming the
+   key. It is either a typo or a stale entry left behind when a token was removed from the
+   corpus, and both are worth saying out loud rather than ignoring.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::requiredValues`,
      `packages/provegate/src/core/run/prompts.ts::CONFIG_BACKED`,
      `packages/provegate/src/core/config/types.ts::PromptsConfig`,
@@ -285,10 +307,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    configured value outside the declared set fails by name, listing them. A declared value
    with no fragment file fails at build time.
 
-   **Fragments are terminal, and that is enforced rather than assumed**: a fragment containing
-   a token candidate fails at build time. Without that rule a fragment's token survives into
-   the output unresolved, because FR-4 substitutes in one pass and rescanning would break the
-   opacity guarantee that makes replacement order irrelevant.
+   **Fragments are terminal, and that is enforced on surfaces that actually run.** A fragment
+   containing a token candidate fails (a) `assertFragmentTerminal` at render time, so no
+   adopter can ever receive an unresolved fragment token, and (b) a package test over the
+   shipped `_fragments/` tree, so the defect is caught before publication. It is **not**
+   claimed as a build-time check: the package's `build` script is a single `tsup` invocation
+   with no content validation, and an adopter does not build package content at install — a
+   requirement wired to a boundary that does not exist is the `gate-wire-or-delete` failure,
+   and this FR names its executing surfaces instead. Without the rule, a fragment's token
+   survives into the output unresolved, because FR-4 substitutes in one pass and rescanning
+   would break the opacity guarantee that makes replacement order irrelevant.
 
    **The ceiling is stated rather than discovered.** Two enumerated tokens select fragments
    independently; **legal-value interactions between tokens are out of scope and are refused
@@ -348,18 +376,21 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    a plan, not of a directory. It is written from the executed plan, never from a walk of the
    filesystem, and it **excludes itself**: a file cannot contain its own hash.
 
-   **It is a receipt and it claims nothing.** It states that these paths held this render
-   output at this version. It does not assert that the tool owns them, created them, or may
-   overwrite them, and **no command may derive a right to write from its presence** — a
-   destination that already matched the plan is recorded because its content is render output,
-   not because the tool wrote it. Every consumer's decision is therefore about *content*, and
-   the questions a manifest-of-ownership would have to answer — how a path is acquired, when
-   it is retired, what a rename means, what happens when the config is removed — do not arise,
-   because nothing is acquired.
+   **It has exactly one writer: `gate init --prompts`.** Not a role, not a shared contract —
+   one command. PRD-030 reads it and never writes it, which is what makes the earlier
+   contradiction impossible: a reporter cannot record a hash for content it declined to place.
 
-   Its writer is a **role, not a PRD**: whoever executes a plan writes the whole file. That is
-   `gate init --prompts` here and `gate sync --prompts` in PRD-030, one full-file write each,
-   the same schema. There are no per-field owners.
+   **It is a receipt and it grants nothing.** It states that these paths held this render
+   output at this version. Because no command overwrites an existing file — FR-7's preflight
+   refuses one, and PRD-030's `sync` only reports — **there is no capability for its
+   membership to confer.** That is the difference between this revision and the previous one,
+   which asserted the same restraint while `sync` overwrote a path precisely because the
+   receipt listed it. A user's own file that happens to match the render is recorded and is
+   still never rewritten, because nothing rewrites anything.
+
+   The questions an ownership manifest must answer — how a path is acquired, when it is
+   retired, what a rename means, what happens when the config is removed — do not arise, and
+   now they do not arise for a structural reason rather than a declared one.
    - **Targets:** `packages/provegate/schemas/prompts-lock.schema.json`,
      `packages/provegate/src/core/run/prompts.ts::writeReceipt`
 
@@ -472,8 +503,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Given** a completed store, **When** the receipt is read, **Then** it lists every path the
   plan produced including adapters outside `prompts.dir`, records the package version, and
   does not list itself.
-- **Given** the receipt, **When** any command reads it, **Then** no write permission is
-  derived from a path appearing in it.
+- **Given** a user-authored file at a planned adapter path whose bytes match the render,
+  **When** the package is upgraded and `gate sync --prompts` runs, **Then** the file is
+  reported and **not** rewritten — no command in this chain overwrites an existing file.
+- **Given** a token candidate `{{!NAME}}`, **When** it is classified, **Then** the escape
+  class matches before the token class and the escape is reachable.
+- **Given** a required token whose registry `empty` column is not `allowed` and whose value
+  is `""`, **When** the render runs, **Then** it fails naming the token.
+- **Given** an unknown key in `prompts.values`, **When** the config loads, **Then** the raw
+  pass refuses it by name.
 - **Given** the rendered `.cursor/rules/prd-workflow.mdc`, **When** its first line is read,
   **Then** it is `---`, the frontmatter keys are exactly the three named in FR-9 in order, and
   the banner follows the closing `---`.
@@ -497,15 +535,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Architecture
 
-**The receipt claims nothing, and that is the whole of iteration 3's remediation.** The
-previous design had one file being a render receipt, a manifest of owned paths, PRD-030's
-reconciliation scope and the migration state, with its fields split between two writers by
-prose — a split that contradicted itself the first time `sync` had to rewrite what PRD-030
-called read-only. Dropping the ownership claim collapses all of it. Every consumer's question
-becomes a question about **content**: does this path hold render output of the version I
-expect? Acquisition, retirement, rename and relinquish were consequences of claiming, and
-they disappear with the claim. What remains is one sentence an implementer can hold: the
-receipt says what the plan produced, and whoever executes a plan writes the whole file.
+**Nothing overwrites, and that is what makes the receipt harmless.** Iteration 3's
+remediation declared that the receipt claims nothing and left `sync` overwriting files whose
+paths it listed; iteration 4 showed that membership was therefore still a capability, and that
+renaming it "content" changed nothing an adopter would experience. The fix is not a better
+sentence. **No command in this chain overwrites an existing file**: `init` refuses a
+destination whose bytes differ, and `sync` reports. Replacing a file is `rm` followed by
+`init`, and the `rm` is the human's. With no write authority anywhere, the receipt cannot
+confer one, and its four would-be jobs collapse to the single job it can honestly do — saying
+what a plan produced, for a reader who wants to tell an upgrade from an edit.
+
+The receipt has one writer, `gate init --prompts`, and one reader, PRD-030. Acquisition,
+retirement, rename and relinquish are not answered here because they are not asked: a path
+this tool no longer produces is a path it says nothing about, and the human who wants it gone
+deletes it.
 
 **Totality comes from the refusal, not from the rules.** No finite rule list covers a
 directory anyone may add a file to. What makes the domain total is that an unmatched file
@@ -787,9 +830,14 @@ rationalize.
   list plus the unmatched-file refusal; the corpus figures in FR-2 are a labelled measurement
   and a pinning test holds them. A count presented as the rule is what disagreed with itself
   three times.
-- DO NOT let the receipt claim, imply, or be read as ownership. It states that a path held
-  render output at a version. No command may derive a right to write from it.
-- DO NOT add per-field owners to the receipt. Whoever executes a plan writes the whole file.
+- DO NOT overwrite an existing file, anywhere in this chain. `init` refuses a destination
+  whose bytes differ; `sync` reports. Replacing a file is the human deleting it and re-running
+  `init`, and the deletion is the consent.
+- DO NOT let the receipt claim, imply, or be read as ownership, and DO NOT add a second
+  writer. One command writes it: `gate init --prompts`.
+- DO NOT derive any capability from a path appearing in the receipt. The previous revision
+  promised this in prose while `sync` overwrote paths because they were listed; the promise is
+  now kept by there being no write to authorize.
 - DO NOT build the receipt by walking the directory, and DO NOT include the receipt in itself.
 - DO NOT follow a symlink and DO NOT silently skip one. Refuse by name, with the remedy.
 - DO NOT render `PLACEHOLDERS.md`, and DO NOT exempt anything from the token check with a
@@ -833,6 +881,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: no command overwrites an existing file.** Iteration 4 showed the previous round's "the receipt claims nothing" was vocabulary rather than mechanism — `sync` overwrote a file when its bytes matched the receipt hash **and its path was listed**, so membership was still a capability. `sync` is now report-only (PRD-030); replacing a file is the human deleting it and re-running `init`. The receipt gets **one writer**, `init`, so a reporter can no longer record hashes for content it declined to place. Four self-contradictions from the previous round are fixed: the **escape becomes its own candidate class matched first**, because under the token-only rule `{{!NAME}}` was not a candidate and the escape was unreachable; fragment terminality names **render time and a package test** instead of a `build` script that is one `tsup` invocation; the undeclared-token policy is stated with its cost; and the empty string becomes a **per-token registry column** rather than a global rule in either direction, with unknown `values` keys refused in the raw pass. |
 | 2026-07-27 | owner  | **Iteration 3 remediation (W18–W24), on a third owner decision: the receipt claims nothing.** Iteration 3's blocking finding was structural — one file being a receipt, an ownership manifest, a reconciliation scope and a migration state, split between two writers by prose that its own `sync` path contradicted. Dropping the ownership claim collapses W18 and W19 together: there are no per-field owners (whoever executes a plan writes the whole file), and acquisition, retirement, rename and relinquish do not arise because nothing is acquired. FR-7 gains `configured-incomplete`, stops claiming a transaction it cannot implement, and **scopes mismatch refusal to the prompt plan** so ordinary `gate init` keeps skip-if-present. FR-6 makes fragment terminality build-time enforced and **states the ceiling**: interacting enumerations are refused, not approximated. FR-4 adds a candidate rule so `{{lowercase}}` is prose, makes the escape recursive, and drops a false claim that the shipped corpus needs it. FR-5 replaces the sentinel string with `null`. FR-1 reuses `memoryPathsContained`'s prefix-realpath so a fresh repository is not refused. FR-9's adapter grammar is normative. Counts swept: ten stop-and-ask checkpoints, nine required values, and the DO NOT reworded to forbid specifying by count rather than contradicting FR-2's labelled measurement. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W9–W17).** Eight FRs to ten: the receipt, and enumerated tokens. Render domain total by refusal, symlink refusal, path-preserving destinations, normalized collision detection. Token grammar with one-line tokens and opaque one-pass substitution. Required set derived from the rendered corpus. Four activation states with preflight. Positive adapter grammar. Banner after frontmatter. `_brain/INDEX.md` claimed. |
 | 2026-07-27 | owner  | **W1 split taken.** Thirteen FRs become eight; integrity to PRD-030, method policy to PRD-031, dogfood to PRD-032. Six internal contradictions closed at their root. `prompts/adapters/*` reclassified as shipped tool-shaped protocols, `PLACEHOLDERS.md` copied verbatim.                                                                                                                                                                                                                                                                                                                     |

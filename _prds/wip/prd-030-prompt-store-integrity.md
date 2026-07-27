@@ -46,25 +46,27 @@ trust a recorded hash, it **recomputes the render and compares**. The ledger exi
 distinguish two divergences that look identical on disk: bytes that changed because the
 package changed, and bytes that changed because a human changed them on purpose.
 
-**PRD-029 writes that receipt**, by owner decision, and by a second decision taken at its
-iteration 3 the receipt **claims nothing**: it states that a set of paths held render output
-of a known version, and no command derives a right to write from a path appearing in it.
-Its writer is a role rather than a PRD — whoever executes a plan writes the whole file — so
-`gate sync --prompts` here is the same kind of writer as `gate init --prompts` there, with
-the same schema and one full-file write. There are no per-field owners, and the earlier
-design's contradiction (one document calling fields read-only while its own sync path
-rewrote them) does not arise.
+**PRD-029 writes that receipt and is its only writer.** By an owner decision taken at
+readiness iteration 4, **nothing in this chain overwrites an existing file.** `gate init
+--prompts` refuses a destination whose bytes differ from its plan; this PRD's `gate sync
+--prompts` **reports and writes nothing at all.** Replacing a file is the human deleting it
+and re-running `init`, which is additive-only and fills an absent path — the deletion is the
+act of consent, and it is theirs.
 
-**The exceptions this PRD adds therefore live in their own file**,
-`<prompts.dir>/prompts-exceptions.json`, owned entirely here. One file, one writer, twice.
-Putting them inside the receipt would reintroduce exactly the shape iteration 3 rejected: a
-plan executor would have to preserve state it does not own, and its planned bytes would then
-differ from the file on disk forever.
+That decision is what makes this PRD honest. Its previous shape had `sync` overwrite a file
+whose bytes matched the receipt hash **and whose path the receipt listed**, which meant
+membership granted a capability while the documents claimed the receipt granted nothing.
+Iteration 4 produced the counterexample: a user's own `.claude/commands/prd-3.md`, written by
+hand to match version 1 because they wanted it pinned, recorded by a no-op `init` and then
+overwritten by a version-2 `sync`. With no write path, there is no capability for membership
+to confer, and no argument to make about whether reproducible bytes imply consent.
 
-An intentional edit is legitimate and is recorded as an exception. An exception carries an
-owner, a reason, and a review date, and it **expires** — an allowlist that cannot go stale
-is a permanent bypass with a comment attached, which this repository has already learned
-once.
+**Exceptions live in their own file**, `<prompts.dir>/prompts-exceptions.json`, owned entirely
+here — and their job is now much smaller than it was. They authorize nothing. An exception
+suppresses a `diverged` finding so a repository with a deliberate local edit can keep a green
+check, and that is all it does. It still carries an owner, a reason and a review date, and it
+still **expires**, because a suppression that cannot go stale is a permanent bypass with a
+comment attached.
 
 ---
 
@@ -74,9 +76,10 @@ once.
 
 - [ ] Divergence between a store and the package that rendered it is a named failure, not a
       silent condition.
-- [ ] An intentional local edit is possible, recorded, attributable, and expiring.
-- [ ] A package upgrade has a delivery path that does not require overwriting anything the
-      adopter changed.
+- [ ] An intentional local edit is possible, recorded, attributable, and expiring — as a
+      suppression of a finding, never as an authorization to write.
+- [ ] A package upgrade is **visible** without any command overwriting anything: the adopter
+      sees exactly what would change and decides file by file.
 - [ ] The check is wired to an executing surface in this repository and in the pack, so it
       cannot be registered and unrun.
 
@@ -123,8 +126,8 @@ so that my change is neither silently reverted nor silently forgotten.
 
 - [ ] The edit is accepted only as an entry in `prompts-exceptions.json` naming the exact
       path, an owner from `config.owners`, a reason, and a `reviewBy` date.
-- [ ] `gate sync --prompts` re-renders unmodified files and refuses to touch a file
-      carrying an exception unless explicitly told to.
+- [ ] `gate sync --prompts` shows what an upgrade would change and **writes nothing**, so the
+      edit survives by construction rather than by being spared.
 - [ ] An exception whose `reviewBy` has passed, that names a path the render no longer
       produces, or whose file now matches the render again, each fails.
 
@@ -149,7 +152,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/src/core/run/prompts.ts::readExceptions`,
      `packages/provegate/src/core/run/prompts.ts::writeExceptions`
 
-2. **FR-2**: An `exceptions` entry accepts a divergence. It names the exact path (not a
+2. **FR-2**: An `exceptions` entry **suppresses a `diverged` finding and authorizes nothing.** It names the exact path (not a
    glob), an `owner` present in `config.owners`, a `reason`, and a `reviewBy` date. Four
    shapes **fail**, each with its own message: an entry whose `reviewBy` has passed; one
    naming a path the render no longer produces; one whose file now matches the render again,
@@ -179,6 +182,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    would report the adopter's own files, and outside the store directory the receipt is the
    only thing this tool knows about.
 
+   `retired` **persists** rather than being reported once: nothing in this PRD writes the
+   receipt, so a retired entry stays there until the human runs `gate init --prompts` again.
+   That is the whole difference from the previous design, in which the report and the erasure
+   were the same write.
+
+   **The two control files are excluded from the tree-orphan rule by name.** Both
+   `provegate.lock.json` and `prompts-exceptions.json` live under `prompts.dir` and are
+   produced by no render rule, so without an explicit exclusion each is an orphan under this
+   PRD's own definition. Stated here rather than left to an implementer to notice.
+
    A configured repository whose store directory is absent exits non-zero with that reason —
    a check that reads a file set must fail on absence rather than reporting nothing to check.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::promptsDoctor`,
@@ -190,25 +203,33 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    refused rather than ignored.
    - **Targets:** `packages/provegate/src/cli.ts::runDoctor`
 
-5. **FR-5**: `gate sync --prompts` is the upgrade path, and it is a **plan executor** in
-   PRD-029 FR-8's sense: it builds the plan, writes, and rewrites the whole receipt. It
-   **overwrites only files whose on-disk bytes match their receipt hash** — files that still
-   hold known render output and that nobody has changed. That is a decision about *content*,
-   not a right derived from the receipt listing the path: a file whose bytes match is one
-   whose current content the tool can reproduce, so replacing it loses nothing. A file
-   carrying an exception is left alone and reported; a file that diverged with no exception is
-   left alone and reported as requiring a decision; a `retired` path is left alone and named,
-   for the human to delete. `--dry-run` prints the plan. The upgrade path is a new verb rather
-   than a flag on `init` because `gate init` is additive-only by explicit design, and
-   overwriting through it would break a promise the installer makes everywhere else.
-   - **Targets:** `packages/provegate/src/core/run/prompts.ts::syncStore`,
+5. **FR-5**: `gate sync --prompts` is the upgrade **view**. It builds the plan for the
+   installed package version, compares it against what is on disk, and **writes nothing —
+   not one byte, not the receipt.** For each path it prints the classification and, for a
+   `diverged` or upgrade-changed path, a unified diff of on-disk against planned content.
+   Exit is non-zero when anything would change, so it composes with CI.
+
+   **The apply path is the human's and it needs no new authority:** delete the files whose
+   proposed content you want, then run `gate init --prompts`, which is additive-only and
+   fills an absent path. Deletion is the consent. This is why the earlier "overwrite what
+   matches the receipt hash" rule is gone — iteration 4 showed it granted a capability from
+   receipt membership while the documents promised the receipt granted nothing, and the
+   counterexample was an adopter's own hand-written file that happened to match.
+
+   `sync` is a separate verb from `doctor` because they answer different questions —
+   *is my store consistent?* against *what would upgrading change?* — and neither writes.
+   - **Targets:** `packages/provegate/src/core/run/prompts.ts::syncReport`,
+     `packages/provegate/src/core/run/prompts.ts::unifiedDiff`,
      `packages/provegate/src/cli.ts::runSync`
 
-6. **FR-6**: Removing the store is defined. When `prompts` is deleted from the config,
-   `gate doctor --prompts` reports the orphaned directory rather than crashing, and
-   `NEXT_STEPS.md` states that `templates.prd` must be cleared in the same edit or `gate new`
-   will read a path that no longer exists. No command deletes the directory; removal is the
-   human's, like every other destructive step.
+6. **FR-6**: Removing the store is defined, and its limit is stated rather than implied.
+   While `prompts` is still in the config, `gate doctor --prompts` reports the tree it finds.
+   **Once `prompts` is removed there is no locator**, so no command can report the old
+   directory — that is a consequence of holding no durable state outside the config, it is
+   accepted rather than worked around, and `NEXT_STEPS.md` tells the adopter to delete the
+   directory and clear `templates.prd` in the same edit, or `gate new` will read a path that no
+   longer exists. No command deletes anything; removal is the human's, like every other
+   destructive step.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::promptsDoctor`,
      `packages/provegate/practices/NEXT_STEPS.md`
 
@@ -287,15 +308,23 @@ than of a directory, it is also the only thing that can tell this check which fi
 `prompts.dir` are in scope — the adapters. A tree-scoped check would silently not cover them,
 which is the gap readiness iteration 2 found.
 
-**Every decision here is about content, never about a claim.** `sync` overwrites a file
-because its bytes match a render it can reproduce, not because a manifest names it. That
-distinction is what makes `retired` a report instead of a lifecycle: a path the plan stopped
-producing is simply a path this tool no longer says anything about.
+**Nothing here writes, and that is the design rather than a caveat.** The previous shape drew
+a distinction between deciding on content and deciding on a claim, and iteration 4 showed the
+distinction did not survive contact: `sync` overwrote a path because the receipt listed it
+*and* its bytes matched, so membership was the capability and equality was the trigger. There
+is no honest version of that argument, because reproducing the *new* bytes says nothing about
+whether the human wanted the old ones. Removing the write removes the question. `retired` is
+a report rather than a lifecycle for the same reason: a path the plan stopped producing is a
+path this tool no longer says anything about, and it stays in the receipt until an `init`
+rewrites it.
 
-**Sync is a separate verb on purpose.** `gate init` promises additive-only, `wx`,
-nothing-ever-overwritten, and that promise is load-bearing in several other places. Adding a
-`--force` to it would trade a documented invariant for a convenience. `gate sync --prompts`
-overwrites only what it can prove it wrote.
+**Sync is a separate verb on purpose, and it is a reporter.** `gate init` promises
+additive-only, `wx`, nothing-ever-overwritten, and that promise is load-bearing elsewhere; a
+`--force` would trade a documented invariant for a convenience. `sync` does not need one — it
+answers *what would upgrading change?* and leaves the answer on the terminal. The composition
+is `rm` then `init`: the installer's additive-only contract is exactly what makes deletion a
+sufficient apply mechanism, and it puts the irreversible step in the hands of the person who
+can judge it.
 
 **Prerequisite.** PRD-029 must be Ship Verified before this starts. It claims
 `core/run/prompts.ts` and `cli.ts`; this PRD extends both, so they are sequential rather
@@ -455,9 +484,9 @@ single line — and never a pipe character inside a backticked command in this t
 | ---- | ------------------------------------------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------- |
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the ledger validates against its schema and records one entry per emitted path                                   |
 | FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | expired, orphaned, self-resolved and unauthorized-owner exceptions each fail, every fixture mutating one green baseline |
-| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the five per-path states; absent store exits non-zero with its own reason; a forged ledger cannot manufacture green |
+| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the six per-path states including a persisting retired; both control files excluded from the orphan rule; absent store exits non-zero |
 | FR-4 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | the json shape matches the memory report's contract and unknown options are refused                              |
-| FR-5 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | untouched files re-rendered, excepted and diverged files left byte-identical and reported, ledger rewritten       |
+| FR-5 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | every file byte-identical after the run including the receipt; the diff names each changed path; exit non-zero      |
 | FR-6 | `pnpm --filter provegate test test/prompts-integrity.test.ts` | pkg   | a config with prompts removed reports the orphaned directory instead of crashing                                 |
 | FR-7 | `pnpm verify:workflow`                                        | repo  | the new member runs inside the bundle rather than beside it                                                      |
 | FR-7 | `node packages/provegate/dist/cli.js check --wiring`          | repo  | registered and executing in both directions, here and in the packed bundle                                       |
@@ -487,16 +516,20 @@ rationalize.
 
 - DO NOT introduce `any`; use `unknown` + narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
-- DO NOT trust the ledger's recorded hash as the definition of correct content. Recompute
-  the render; the ledger only attributes a difference, it never authorizes one.
+- DO NOT write a single byte from `sync`, including the receipt. It reports; `init` writes.
+- DO NOT reintroduce an overwrite path under any name — `--force`, `--apply`, `--accept`. The
+  apply mechanism is the human deleting a file and re-running `init`, and the deletion is the
+  consent that no flag can supply.
+- DO NOT derive a capability from receipt membership. That is the defect iteration 4 found
+  behind the previous revision's promise not to.
+- DO NOT trust the receipt's recorded hash as the definition of correct content. Recompute
+  the render; the receipt only attributes a difference, it never authorizes one.
 - DO NOT let an exception live without an expiry, and DO NOT let a resolved one keep
   passing. Both turn the list into a permanent bypass.
 - DO NOT let an agent author an exception. It is the owner's recorded decision, like an
   operator acceptance.
-- DO NOT add `--force` to `gate init`. Its additive-only promise is relied on elsewhere;
-  overwriting belongs to a verb that can prove it wrote the bytes it replaces.
-- DO NOT overwrite a file that diverged without an exception, even during sync. Report it
-  and let the human decide.
+- DO NOT add `--force` to `gate init`. Its additive-only promise is what makes deletion a
+  sufficient apply mechanism.
 - DO NOT delete the store, the ledger, or any adopter file. Removal is reported, never
   performed.
 - DO NOT make an absent store, an unreadable ledger, or an unparseable exception pass
@@ -518,6 +551,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                             |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: `sync` never overwrites, it only reports.** Iteration 4's counterexample was an adopter's own hand-written `.claude/commands/prd-3.md`, byte-identical to version 1, recorded by a no-op `init` and then overwritten by a version-2 `sync` — so receipt membership granted a capability while both documents promised it granted nothing. `sync` is now a **reporter**: it prints classifications and unified diffs, writes not one byte including the receipt, and exits non-zero when anything would change. The apply path is the human deleting a file and re-running `init`, whose additive-only contract makes deletion sufficient and makes the irreversible step theirs. Consequences: the receipt has **one writer** (`init`), so a reporter can no longer record hashes for content it declined to place; `retired` **persists** instead of being erased by the write that reports it; exceptions **suppress a finding and authorize nothing**; both control files are excluded from the tree-orphan rule by name; and FR-6 states the config-removal limit — with no `prompts` block there is no locator, which is accepted rather than worked around. §11 corrected from five per-path states to six. |
 | 2026-07-27 | owner  | **Iteration 3 remediation (W18, W19).** Owner decision: the receipt claims nothing. Exceptions move out of it into `prompts-exceptions.json`, owned end to end here — inside the receipt they would force a plan executor to preserve state it does not own, which is the shape iteration 3 rejected. FR-5 is restated as a plan executor writing the whole receipt, so the read-never-rewritten contradiction disappears. FR-3's domain becomes the current plan unioned with the on-disk receipt, and `retired` replaces the ownership lifecycle: a path the plan stopped producing is reported once and never deleted, because nothing was claimed. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W15).** Owner decision: PRD-029 writes the ledger as a manifest of generated paths, so FR-1 now *extends* it with `exceptions` rather than creating it, and no bootstrap for a ledgerless store is needed or specified. FR-3's domain becomes the ledger's `generated` list rather than a directory walk, which is what makes the adapters outside `prompts.dir` countable; `orphan` splits into ledger-orphan and tree-orphan, and the tree scan's confinement to `prompts.dir` is stated rather than implied. An unreadable or schema-invalid ledger now fails by name instead of reading as a store with no exceptions. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1). Carries the reconciliation check and its wiring, plus W8's upgrade, exception-survival and removal gaps, which the parent document never specified. `gate sync --prompts` is new: the upgrade path could not be a flag on `init` without breaking its additive-only promise. |

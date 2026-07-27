@@ -302,7 +302,7 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   item consumes them and adds no exception of its own. Recorded because the first exception
   this repository writes will be written here, and it will need an owner and a date.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — FR-1's proof that every value was
-  answered is the render refusing on a sentinel, not a human reading the config. Recorded
+  answered is the render refusing on an unset `null`, not a human reading the config. Recorded
   because "the config has the right number of keys" is exactly the satisfied-by-the-template shape.
 - not-applicable: `push-is-human-by-omission` — no code path here reaches a remote, and the
   record's rule is preserved by adding nothing.
