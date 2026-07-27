@@ -15,6 +15,7 @@ const SELF_DIR = dirname(fileURLToPath(import.meta.url));
 const CHECKS = [
   'verify-brain.mjs',
   'verify-review-artifact.mjs',
+  'verify-doc-claims.mjs',
   'verify-durable-artifacts.mjs',
   'verify-deferred.mjs',
   'verify-test-task-coverage.mjs',

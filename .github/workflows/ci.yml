@@ -37,6 +37,14 @@ jobs:
       - name: build
         run: pnpm build
 
+      # The ONLY gate that runs the built CLI, so it lives here rather than in
+      # the hygiene job — that job installs but never builds, and a check whose
+      # first act is to require `dist/` would report the absence of a build as a
+      # governance violation. This is also the first `gate` invocation on any
+      # automated surface of this repository.
+      - name: verify-value-score
+        run: pnpm verify:value-score
+
   workflow-hygiene:
     runs-on: ubuntu-latest
     steps:
@@ -58,6 +66,9 @@ jobs:
       # Explicit per-check steps so `gate check --wiring` sees each gate in an
       # executing CI surface (the bundle above runs them too — the seconds of
       # duplication buy an honest wire-or-delete audit).
+      - name: verify-doc-claims
+        run: pnpm verify:doc-claims
+
       - name: verify-brain
         run: pnpm verify:brain
 

@@ -3,6 +3,10 @@
 **The 7-Phase Gated PRD Workflow — a method and toolchain for letting coding agents work autonomously
 without trusting a single word they say about their own work.**
 
+> **Superseded draft.** This is v0.1, kept as a provenance record. The published
+> whitepaper is v1.0 at <https://provegate.dev/docs> — read that one. Where the two
+> differ, v1.0 is the method.
+
 Draft v0.1 — 2026-07-22 — prepared for open-source release. Internal provenance: Emofy Platform
 (production SaaS monorepo, ~390 PRDs shipped through this workflow).
 

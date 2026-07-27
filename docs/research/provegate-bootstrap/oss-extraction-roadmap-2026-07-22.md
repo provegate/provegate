@@ -16,6 +16,13 @@
 
 ## 1. Fazlar
 
+> **Durum, 2026-07-27:** Faz A-E **tamamlandı** ve PRD-001..016 ile hayata geçti; aşağıdaki
+> işaretlenmemiş kutular o çıkarım sırasında güncellenmedi ve **tarihsel plan olarak
+> okunmalıdır, kalan iş listesi olarak değil.** Neyin gerçekten kaldığını `STATUS.md` ve
+> `gate queue` söyler — bu dosya değil. Kutu kutu güncellemek yerine bu tek cümle
+> konuldu: bir planı canlı bir izleyiciye dönüştürmek, iki tane izleyici yaratır ve
+> ikisi de yanlış olur.
+
 ### Faz A — Tez + isim + iskelet (hazırlık)
 
 - [ ] Whitepaper'ı gözden geçir → v1.0 (bu repo'daki draft v0.1).

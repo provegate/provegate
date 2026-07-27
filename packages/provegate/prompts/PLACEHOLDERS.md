@@ -1,6 +1,7 @@
 # Placeholder Registry
 
-Every placeholder token used in `prompts/` and `templates/` is declared here. Tokens are
+Every placeholder token used in `prompts/`, `templates/` and `practices/templates/` is
+declared here. Tokens are
 UPPER_SNAKE. Substitute them for your project when adopting a prompt or template —
 manually, or via your agent during Phase 1. Where a token mirrors a `workflow.config.json`
 field, the mapping is noted.
@@ -16,6 +17,10 @@ field, the mapping is noted.
 | `{{CMD_TEST_SCOPED}}`    | Test command scoped to affected packages                           | `pnpm test --filter <pkg>`      | —                     |
 | `{{CMD_BUILD}}`          | Build command                                                      | `pnpm build`                    | `commands.build`      |
 | `{{DOMAIN_CHECKS}}`      | Your project-specific review/readiness checklist block             | RBAC + tenancy checklist        | —                     |
+| `{{LINK_TO_VISION_DOC}}` | Link to the document holding your product vision                   | `docs/vision.md`                | —                     |
+| `{{VISION_OR_DECISIONS_DOC}}` | Vision or decision-log document an agent should read first    | `docs/decisions/`               | —                     |
+| `{{ONE_LINE_PRODUCT_FRAMING}}` | One sentence saying what the product is                       | `A gated workflow for agents`   | —                     |
+| `{{PROJECT_SPECIFIC_HARD_RULES}}` | Your non-negotiable rules block in the agent bootstrap     | never touch prod data           | —                     |
 | `{{TECH_STANDARDS}}`     | Your stack's coding-standards block (frameworks, patterns, layers) | backend/frontend/database rules | —                     |
 | `{{ARCHITECTURE_DOC}}`   | Path to your architecture/memory document                          | `docs/ARCHITECTURE.md`          | —                     |
 | `{{BEST_PRACTICES_DOC}}` | Path to your coding-standards document                             | `docs/BEST_PRACTICES.md`        | —                     |

@@ -1,5 +1,19 @@
 # provegate-bootstrap — Yeni Repo Devir Paketi
 
+> **DONMUŞ KAYIT — bu klasör tarihsel bir bootstrap kaydıdır, canlı doküman değildir.**
+>
+> Çıkarım **PRD-016'ya kadar tamamlandı**; bu klasördeki hiçbir plan, faz listesi veya
+> taslak, bugünkü davranışın kaynağı değildir. Canlı kanon `apps/docs/` altındadır ve
+> <https://provegate.dev/docs> adresinde yayınlanır — bir çelişki olduğunda **yayınlanan
+> doküman kazanır**.
+>
+> Buradaki değer provenance'tır: kararların hangi sırayla ve hangi gerekçeyle alındığı.
+> Bir kural arıyorsan yayınlanan dokümana bak; bir kuralın **neden** öyle olduğunu
+> arıyorsan buraya bak.
+>
+> _Frozen record. Extraction complete through PRD-016; the live canon is `apps/docs/`,
+> published at <https://provegate.dev/docs>, and the published document wins on conflict._
+
 Bu klasör, **ProveGate** open-source projesinin ayrı repository'de sıfırdan kurulumu için
 kopyalamaya hazır devir paketidir (2026-07-22, Emofy Platform oturumlarından üretildi).
 

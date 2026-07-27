@@ -244,64 +244,64 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Mutation-check every negative in 5.1-5.4 (`assert-absent-needs-an-independent-cause`): revert the rule, confirm exactly its own case fails. A negative that survives its own mutation is a defect in the test.
 
 
-- [ ] 6.0 FR-7 — the doc-claims grammar
-  - [ ] 6.1 `scripts/verify/verify-doc-claims.mjs`: a line fails when it carries **both** a
-        script token (`verify:<name>` or `verify-<name>.mjs`) that is wired as a `verify:*`
-        key in root `package.json`, **and** a future marker (`wave 2`, `wave-2`,
-        `lands in`, `will land`, `future work`, `stub now`, `specify later`, `not yet`).
-  - [ ] 6.2 Scanned set: `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md` and the
-        three practices counterparts. Exclude fenced blocks and `STATUS.md`'s Recent
-        activity section as historical record.
-  - [ ] 6.3 `doc-claims-allowlist.json` holds `{file, claim, reason, reviewBy}` and is
-        **shrink-only**: an entry matching no line, or past its `reviewBy`, fails.
-  - [ ] 6.4 Tests with positive, negative, and stale-allowlist fixtures.
+- [x] 6.0 FR-7 — the doc-claims grammar
+  - [x] 6.1 `verify-doc-claims.mjs` requires BOTH halves: a script token normalised to `verify:<name>` that is actually a wired `verify:*` key in root `package.json`, and a marker from the closed list. Mutation: dropping the wiring lookup fails exactly the not-wired case.
+        Original: `scripts/verify/verify-doc-claims.mjs`: a line fails when it carries **both** a script token (`verify:<name>` or `verify-<name>.mjs`) that is wired as a `verify:*` key in root `package.json`, **and** a future marker (`wave 2`, `wave-2`, `lands in`, `will land`, `future work`, `stub now`, `specify later`, `not yet`).
 
-- [ ] 7.0 FR-8 — wiring, on two different surfaces
-  - [ ] 7.1 `verify:doc-claims`: a `package.json` script, a member of the
-        `verify:workflow` bundle, and a step in the CI **hygiene** job.
-  - [ ] 7.2 `verify:value-score`: `node packages/provegate/dist/cli.js check --value-score`
-        — it needs `dist/`, so it goes in the **build-dependent** CI job after
-        `pnpm build`, and is deliberately **not** a `verify:workflow` member. A bundle
-        member that fails on a clean checkout without `dist/` would report the absence of a
-        build as a governance violation.
-  - [ ] 7.3 Record in **Deferrals & Decisions** that this makes `verify:value-score` the
-        first `gate` invocation on any automated surface of this repository.
-  - [ ] 7.4 `pnpm verify:gates-wired` green — it accepts CI `run:` text as an executing
-        surface, which is how the CI-only check is seen.
+  - [x] 6.2 Six documents scanned; fenced blocks and STATUS.md's Recent activity excluded. Mutation: scanning inside fences fails exactly the fence test. **A listed file that is missing FAILS rather than being skipped** — the scanned set is the checker's own coverage claim.
+        Original: Scanned set: `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md` and the three practices counterparts. Exclude fenced blocks and `STATUS.md`'s Recent activity section as historical record.
 
-- [ ] 8.0 FR-9 / FR-10 — correct the documents and the pack pairs
-  - [ ] 8.1 FR-9: correct the stale claims in `AGENT_BOOTSTRAP.md`, `STATUS.md` and
-        `_brain/PROTOCOL.md`; each sentence names the shipped script and the surface that
-        runs it. The triage section documents that axes, weights and cutoff are
-        configurable, names the defaults, and says the shipped default is
-        presence-triggered while this repo opts in at PRD-017.
-  - [ ] 8.2 FR-9: **pin** the root triage table to `DEFAULT_CONFIG` rather than leaving it
-        prose. One authority, two projections, both mechanically checked.
-  - [ ] 8.3 FR-10: port the corrections to the three practices counterparts and reconcile
-        `pack-drift-ledger.json` in the same change — a one-sided edit fails the bundle.
-  - [ ] 8.4 FR-10: **remove** `{{VALUE_AXES_TABLE}}` from the practices template; do
-        **not** register it. `content-placeholders.test.ts:59` fails on orphan
-        declarations, so registering a token no template contains reds an existing green
-        test. Register-**or**-remove.
-  - [ ] 8.5 FR-10: the template renders the default table inline, **pinned to
-        `DEFAULT_CONFIG` by a test**, above a sentence naming `workflow.config.json`
-        `valueScoring` as the source and telling an adopter who changes it to edit the
-        table.
-  - [ ] 8.6 FR-10: widen the placeholder walk to `practices/templates/` **and hit the
-        specified green state** — measured 2026-07-27, that file carries six tokens and
-        none is declared. Register the four adopter-fill ones
-        (`LINK_TO_VISION_DOC`, `VISION_OR_DECISIONS_DOC`, `ONE_LINE_PRODUCT_FRAMING`,
-        `PROJECT_SPECIFIC_HARD_RULES`); exclude HTML comments from the walk, which
-        disposes of `{{PLACEHOLDER}}` — the word inside the template's own instruction
-        comment, not a token. If the walk surfaces a token this list does not name,
-        **report it and stop**; an unplanned token is a finding, not a reflex registry row.
+  - [x] 6.3 Shrink-only in both directions: an entry past its `reviewBy` fails even while it still matches, and an entry matching no line fails. Both mutation-checked. Entries also need a reason and a well-formed date.
+        Original: `doc-claims-allowlist.json` holds `{file, claim, reason, reviewBy}` and is **shrink-only**: an entry matching no line, or past its `reviewBy`, fails.
 
-- [ ] 9.0 FR-11 — the research-pack canon banner
-  - [ ] 9.1 Banner on `docs/research/provegate-bootstrap/README.md`: frozen bootstrap
-        record, extraction complete through PRD-016, live canon is `apps/docs`.
-  - [ ] 9.2 Mark the roadmap's shipped phases; point the draft whitepaper at published v1.0.
-  - [ ] 9.3 `content-canon.test.ts` asserts the banner directly — the exact canonical link,
-        the "complete through PRD-016" statement, and that the shipped phases are marked.
+  - [x] 6.4 11 tests in `doc-claims-script.test.ts`, driving the script in a temp repo — what it audits is a repository, so importing its internals would test a grammar rather than the check. Five mutations, five hits.
+        Original: Tests with positive, negative, and stale-allowlist fixtures.
+
+
+- [x] 7.0 FR-8 — wiring, on two different surfaces
+  - [x] 7.1 `verify:doc-claims` added to `package.json`, to `verify-workflow.mjs`'s CHECKS, and as a CI hygiene step.
+        Original: `verify:doc-claims`: a `package.json` script, a member of the `verify:workflow` bundle, and a step in the CI **hygiene** job.
+
+  - [x] 7.2 `verify:value-score` runs `node packages/provegate/dist/cli.js check --value-score` and is a step in the **build** job after `pnpm build`, with the reason in a comment. Deliberately not a `verify:workflow` member — the bundle is the no-build local surface.
+        Original: `verify:value-score`: `node packages/provegate/dist/cli.js check --value-score` — it needs `dist/`, so it goes in the **build-dependent** CI job after `pnpm build`, and is deliberately **not** a `verify:workflow` member. A bundle member that fails on a clean checkout without `dist/` would report the absence of a build as a governance violation.
+
+  - [x] 7.3 Recorded below.
+        Original: Record in **Deferrals & Decisions** that this makes `verify:value-score` the first `gate` invocation on any automated surface of this repository.
+
+  - [x] 7.4 `pnpm verify:gates-wired` PASS — 12 registered, 11 on disk; the CI-only check is seen through the step text.
+        Original: `pnpm verify:gates-wired` green — it accepts CI `run:` text as an executing surface, which is how the CI-only check is seen.
+
+
+- [x] 8.0 FR-9 / FR-10 — correct the documents and the pack pairs
+  - [x] 8.1 **The checker found the two stale claims on its first run**, which is the measured defect this PRD was written for: `AGENT_BOOTSTRAP.md:128` called `verify:durable-artifacts` "wave 2" and `_brain/PROTOCOL.md:226` called `verify:brain` the same. Both corrected to name the wired surface; `verify:doc-claims` then passes.
+        Original: FR-9: correct the stale claims in `AGENT_BOOTSTRAP.md`, `STATUS.md` and `_brain/PROTOCOL.md`; each sentence names the shipped script and the surface that runs it. The triage section documents that axes, weights and cutoff are configurable, names the defaults, and says the shipped default is presence-triggered while this repo opts in at PRD-017.
+
+  - [x] 8.2 Both tables pinned in `content-canon.test.ts` by PARSING the rows into `[axis, weight]` and deep-equalling `DEFAULT_CONFIG.valueScoring` in order — a string match would pass on a table with the right numbers in the wrong rows.
+        Original: FR-9: **pin** the root triage table to `DEFAULT_CONFIG` rather than leaving it prose. One authority, two projections, both mechanically checked.
+
+  - [x] 8.3 Pack counterparts reviewed pair by pair and the ledger reconciled (49 pairs). The pack side of `brain/PROTOCOL.md` keeps "Optional enforcement (ships with the `verify:*` library)" because that is TRUE for an adopter — the pack ships the script and they wire it — while this repo's copy says it is wired here. Intentional divergence, reviewed rather than propagated.
+        Original: FR-10: port the corrections to the three practices counterparts and reconcile `pack-drift-ledger.json` in the same change — a one-sided edit fails the bundle.
+
+  - [x] 8.4 `{{VALUE_AXES_TABLE}}` **removed**, not registered. Registering a token no template contains would red `content-placeholders.test.ts:59`'s orphan check — the fix guaranteeing the failure it fixes.
+        Original: FR-10: **remove** `{{VALUE_AXES_TABLE}}` from the practices template; do **not** register it. `content-placeholders.test.ts:59` fails on orphan declarations, so registering a token no template contains reds an existing green test. Register-**or**-remove.
+
+  - [x] 8.5 The template renders the default table inline, pinned to `DEFAULT_CONFIG` by a test, above a sentence naming `workflow.config.json` `valueScoring` and telling an adopter who changes it to edit the table. It also states that changing axes is a corpus migration and names the sweep.
+        Original: FR-10: the template renders the default table inline, **pinned to `DEFAULT_CONFIG` by a test**, above a sentence naming `workflow.config.json` `valueScoring` as the source and telling an adopter who changes it to edit the table.
+
+  - [x] 8.6 Walk widened to `practices/templates/`, and the specified green state reached exactly: four adopter-fill tokens registered, `{{VALUE_AXES_TABLE}}` gone, and `{{PLACEHOLDER}}` disposed of by **masking HTML comments** — it is the word inside the template's own instruction comment, not a token. No unplanned token surfaced.
+        Original: FR-10: widen the placeholder walk to `practices/templates/` **and hit the specified green state** — measured 2026-07-27, that file carries six tokens and none is declared. Register the four adopter-fill ones (`LINK_TO_VISION_DOC`, `VISION_OR_DECISIONS_DOC`, `ONE_LINE_PRODUCT_FRAMING`, `PROJECT_SPECIFIC_HARD_RULES`); exclude HTML comments from the walk, which disposes of `{{PLACEHOLDER}}` — the word inside the template's own instruction comment, not a token. If the walk surfaces a token this list does not name, **report it and stop**; an unplanned token is a finding, not a reflex registry row.
+
+
+- [x] 9.0 FR-11 — the research-pack canon banner
+  - [x] 9.1 Banner on the research README: frozen record, extraction complete through PRD-016, live canon `apps/docs/`, and the conflict rule stated — the published document wins.
+        Original: Banner on `docs/research/provegate-bootstrap/README.md`: frozen bootstrap record, extraction complete through PRD-016, live canon is `apps/docs`.
+
+  - [x] 9.2 Roadmap carries a dated status note saying its unchecked boxes are historical plan, not remaining work, and pointing at `STATUS.md` and `gate queue` for what is actually left. The whitepaper draft is marked superseded by v1.0.
+        Original: Mark the roadmap's shipped phases; point the draft whitepaper at published v1.0.
+
+  - [x] 9.3 `content-canon.test.ts` asserts all three directly.
+        Original: `content-canon.test.ts` asserts the banner directly — the exact canonical link, the "complete through PRD-016" statement, and that the shipped phases are marked.
+
 
 - [ ] 10.0 FR-13 — make a repo-root Conflict Surface claim real
   - [ ] 10.1 (a) Accept root-relative filenames by **literal predicate**: a named file
@@ -447,6 +447,19 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 ---
 
 ## Deferrals & Decisions
+
+- **7.3 — `verify:value-score` is the first `gate` invocation on any automated surface of
+  this repository.** Until now the CLI appeared in no CI step, no hook and no package
+  script: the repo dogfooded the method's lifecycle but not its gate policy. That is why
+  the check goes in the build job rather than the hygiene job — it needs `dist/`, and a
+  bundle member whose first act is to require a build would report the absence of a build
+  as a governance violation.
+
+- **9.2 decision — the roadmap gets one dated sentence, not sixty ticked boxes.** Its
+  checkboxes were never updated during the extraction, so a reader takes them for remaining
+  work. Ticking them would create a second live tracker to keep correct against `STATUS.md`
+  and `gate queue`, and two trackers disagree eventually. The note says the boxes are
+  historical plan and names where the real answer lives.
 
 - **5.5 finding — a tally assertion that could not fail, found by its own mutation.** The
   sweep separates "scored" from "without a header", and the fixture asserted the separated
