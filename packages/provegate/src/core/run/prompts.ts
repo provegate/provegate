@@ -683,3 +683,130 @@ const storeReadme = (version: string): string =>
     'Automated staleness detection is deliberately not part of this version.',
     '',
   ].join('\n');
+
+// --- adapters (FR-6) --------------------------------------------------------
+
+/** The seven phase protocols, in phase order, discovered from the plan rather
+ * than hardcoded — a corpus that gains a phase gains a command. */
+function phaseProtocols(files: ReadonlyMap<string, string>): { phase: string; store: string }[] {
+  const out: { phase: string; store: string }[] = [];
+  for (const storeRel of files.keys()) {
+    const match = /^prompts\/phase-(\d+)-[a-z0-9-]+\.md$/.exec(storeRel);
+    if (match === null) continue;
+    const phase = match[1];
+    if (phase === undefined) continue;
+    out.push({ phase, store: storeRel });
+  }
+  return out.sort((a, b) => Number(a.phase) - Number(b.phase));
+}
+
+/** The one directive an adapter is allowed to carry. Everything else in a
+ * generated adapter is a path or a heading. */
+const DIRECTIVE = 'Read the protocol below and follow it verbatim; do not summarise it.';
+
+/**
+ * `globs` for the Cursor rule, derived EXACTLY: each `dirs.artifacts` entry in
+ * declared key order, as `<entry.dir>/**\/*.md`, joined with `, ` into a single
+ * unquoted scalar on one line. That is the form the source snapshot's own
+ * `rules/prd-workflow.mdc` uses. The `prefix` field is not used.
+ */
+export function artifactGlobs(config: RenderConfig): string {
+  const dirs = (config as { dirs?: { artifacts?: Record<string, { dir?: string }> } }).dirs;
+  const artifacts = dirs?.artifacts ?? {};
+  return Object.keys(artifacts)
+    .map((key) => artifacts[key]?.dir)
+    .filter((dir): dir is string => typeof dir === 'string' && dir.length > 0)
+    .map((dir) => `${dir}/**/*.md`)
+    .join(', ');
+}
+
+/**
+ * Generated adapters. Each carries a PATH and no protocol prose — the whole
+ * point is one protocol in one place, so a corrected rule cannot survive in a
+ * stale restatement.
+ *
+ * TWO OF THE THREE DESTINATIONS ARE OUTSIDE THE STORE. That is the reinstall
+ * unit's definition and the reason FR-5 prints the full set on every run: a
+ * "delete the store directory" instruction leaves `.claude/commands/*` and
+ * `.cursor/rules/prd-workflow.mdc` at the previous package version, with stale
+ * banners and stale store paths, while the adopter believes they reinstalled.
+ */
+export function renderAdapters(
+  config: RenderConfig,
+  files: ReadonlyMap<string, string>,
+  version: string,
+): Map<string, string> {
+  const dir = config.prompts.dir;
+  const out = new Map<string, string>();
+  const phases = phaseProtocols(files);
+  const banner = GENERATED_BANNER(version);
+  const table = [
+    '| Phase | Protocol |',
+    '| --- | --- |',
+    ...phases.map((p) => `| ${p.phase} | \`${dir}/${p.store}\` |`),
+  ].join('\n');
+
+  for (const adapter of config.prompts.adapters) {
+    if (adapter === 'claude-code') {
+      for (const p of phases) {
+        out.set(
+          `.claude/commands/prd-${p.phase}.md`,
+          `${banner}\n\n# Phase ${p.phase}\n\n${DIRECTIVE}\n\n\`\`\`\n${dir}/${p.store}\n\`\`\`\n`,
+        );
+      }
+      continue;
+    }
+    if (adapter === 'cursor') {
+      // Frontmatter FIRST — every `.cursor/rules/*.mdc` here and in the source
+      // snapshot opens with `---`, and a banner above it may stop the rule
+      // attaching at all.
+      out.set(
+        '.cursor/rules/prd-workflow.mdc',
+        [
+          '---',
+          'description: The gated PRD workflow — phase protocols for this repository',
+          `globs: ${artifactGlobs(config)}`,
+          'alwaysApply: false',
+          '---',
+          '',
+          banner,
+          '',
+          '## Phase protocols',
+          '',
+          table,
+          '',
+        ].join('\n'),
+      );
+      continue;
+    }
+    if (adapter === 'codex') {
+      // A SNIPPET, never a write to AGENTS.md. `planPractices` states that
+      // agent-entrypoint files are deliberately absent so an existing entrypoint
+      // is never touched or shadowed; a provegate-namespaced generated adapter
+      // is a different class, and the adopter pastes this one themselves.
+      out.set(
+        `${dir}/AGENTS.md.provegate.snippet`,
+        `## Phase protocols\n\n${table}\n`,
+      );
+    }
+  }
+  return out;
+}
+
+/** Store-relative render output plus the adapters, as repo-relative paths.
+ * This IS the reinstall unit, and the set `gate init --prompts` prints. */
+export function generatedPaths(
+  config: RenderConfig,
+  result: RenderResult,
+  version: string,
+): Map<string, string> {
+  const dir = config.prompts.dir;
+  const out = new Map<string, string>();
+  for (const [storeRel, body] of result.files) out.set(`${dir}/${storeRel}`, body);
+  for (const [repoRel, body] of renderAdapters(config, result.files, version)) {
+    out.set(repoRel, body);
+  }
+  return out;
+}
+
+export { packageVersion };

@@ -139,13 +139,14 @@ describe('required values (PRD-029 FR-4)', () => {
     // the tokens the check hunts are the ones we ship, and a fixture without
     // them proves nothing about the artefact that has them.
     const config = { ...DEFAULT_CONFIG, prompts: { ...DEFAULT_CONFIG.prompts, values: {} } };
-    let message = '';
-    try {
-      renderPrompts(packageDir, config);
-      throw new Error('expected the render to refuse');
-    } catch (error) {
-      message = (error as Error).message;
-    }
+    const message = ((): string => {
+      try {
+        renderPrompts(packageDir, config);
+        return '';
+      } catch (error) {
+        return (error as Error).message;
+      }
+    })();
     expect(message).toContain('cannot be rendered');
     for (const row of requiredValues(packageDir, planned, rows)) {
       expect(message).toContain(row.token);

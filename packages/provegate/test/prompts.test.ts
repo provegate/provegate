@@ -1,16 +1,47 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { initWorkspace, planPrompts } from '../src/core/run/init.js';
 import {
   DISPOSITIONS,
   PromptsError,
   bannerFor,
   planStore,
   promptsPackageDir,
+  generatedPaths,
+  packageVersion,
+  parseRegistry,
+  renderPrompts,
+  requiredValues,
   scanTokens,
   substituteOnce,
 } from '../src/core/run/prompts.js';
+
+const readFileSyncUtf8 = (p: string): string => readFileSync(p, 'utf8');
+const registryDeps = { parseRegistry, planStore, requiredValues };
+
+/** Every regular file under `root`, repo-relative, sorted. */
+function listAll(root: string): string[] {
+  const out: string[] = [];
+  const visit = (dir: string, prefix: string): void => {
+    for (const entry of readdirSync(dir)) {
+      const abs = join(dir, entry);
+      const rel = prefix === '' ? entry : `${prefix}/${entry}`;
+      if (statSync(abs).isDirectory()) visit(abs, rel);
+      else out.push(rel);
+    }
+  };
+  visit(root, '');
+  return out.sort();
+}
+
+function writeAt(root: string, rel: string, body: string): void {
+  const abs = join(root, rel);
+  mkdirSync(join(abs, '..'), { recursive: true });
+  writeFileSync(abs, body);
+}
 
 const roots: string[] = [];
 
@@ -242,5 +273,132 @@ describe('generated banner (PRD-029 FR-3)', () => {
     const banner = bannerFor('# T\n', '9.9.9');
     expect(banner).toContain('9.9.9');
     expect(banner).toContain('ONE WAY');
+  });
+});
+
+// --- FR-5: the installer contract and the reinstall unit --------------------
+
+
+/** Every required value supplied, so the render succeeds. */
+function filledConfig(dir = '.provegate') {
+  const packageDir = promptsPackageDir();
+  const rows = parseRegistryFromPackage(packageDir);
+  const values: Record<string, string> = {};
+  for (const row of rows) values[row.token] = `v-${row.token}`;
+  return {
+    ...DEFAULT_CONFIG,
+    prompts: { ...DEFAULT_CONFIG.prompts, enabled: true, dir, values },
+  };
+}
+
+function parseRegistryFromPackage(packageDir: string) {
+  // Local import kept inline so this block reads as one unit with its fixtures.
+  const { parseRegistry, planStore: plan, requiredValues } = registryDeps;
+  return requiredValues(
+    packageDir,
+    plan(packageDir),
+    parseRegistry(readFileSyncUtf8(join(packageDir, 'prompts/PLACEHOLDERS.md'))),
+  );
+}
+
+describe('installer contract (PRD-029 FR-5)', () => {
+  it('a refused run writes NOTHING — asserted over the whole destination set', () => {
+    // `absence-must-be-asserted`: the requirement is "no store file exists",
+    // not "one named path is missing". And the scenario must be one in which
+    // something WOULD otherwise have written: the same config with values
+    // filled installs 21 files, which the next test shows.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-refuse-'));
+    roots.push(root);
+    const before = listAll(root);
+    const config = { ...filledConfig(), prompts: { ...filledConfig().prompts, values: {} } };
+    expect(() => planPrompts(config, promptsPackageDir())).toThrow(PromptsError);
+    expect(listAll(root)).toEqual(before);
+  });
+
+  it('installs the store AND the two destinations outside it', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-install-'));
+    roots.push(root);
+    const config = filledConfig();
+    const actions = planPrompts(config, promptsPackageDir());
+    initWorkspace(config, root, { extra: actions });
+    const written = listAll(root);
+    expect(written).toContain('.provegate/prompts/phase-3-task-generator.md');
+    // The reinstall unit is NOT the store directory. These two live outside it.
+    expect(written).toContain('.claude/commands/prd-3.md');
+    expect(written).toContain('.cursor/rules/prd-workflow.mdc');
+  });
+
+  it('a re-run reports every existing path as skipped and overwrites nothing', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-rerun-'));
+    roots.push(root);
+    const config = filledConfig();
+    const actions = planPrompts(config, promptsPackageDir());
+    initWorkspace(config, root, { extra: actions });
+    const second = initWorkspace(config, root, { extra: actions });
+    expect(second.created).toEqual([]);
+    expect(second.skipped.length).toBeGreaterThan(19);
+  });
+
+  it('REINSTALL: deleting only the store directory leaves stale adapters behind', () => {
+    // This is the defect readiness iteration 6 found, kept as a regression: the
+    // reinstall instruction named only `<dir>`, and two of three adapter
+    // destinations live outside it, so an adopter following it believed they
+    // had reinstalled while `.claude/` and `.cursor/` stayed at the old version.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-stale-'));
+    roots.push(root);
+    const config = filledConfig();
+    const v1 = generatedPaths(config, renderPrompts(promptsPackageDir(), config), '1.0.0');
+    for (const [rel, body] of v1) writeAt(root, rel, body);
+
+    rmSync(join(root, '.provegate'), { recursive: true, force: true });
+    const v2 = generatedPaths(config, renderPrompts(promptsPackageDir(), config), '2.0.0');
+    const actions = [...v2].map(([path, content]) => ({ path, kind: 'file' as const, content }));
+    initWorkspace(config, root, { extra: actions });
+
+    const adapter = readFileSyncUtf8(join(root, '.claude/commands/prd-3.md'));
+    expect(adapter).toContain('1.0.0'); // still v1 — the instruction was wrong
+  });
+
+  it('REINSTALL: deleting the PRINTED SET leaves no path carrying the old banner', () => {
+    // The corrected procedure. This is the whole migration story of a one-way
+    // installer, and nothing tested it before.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-reinstall-'));
+    roots.push(root);
+    const config = filledConfig();
+    const v1 = generatedPaths(config, renderPrompts(promptsPackageDir(), config), '1.0.0');
+    for (const [rel, body] of v1) writeAt(root, rel, body);
+
+    for (const rel of v1.keys()) rmSync(join(root, rel), { force: true });
+    const v2 = generatedPaths(config, renderPrompts(promptsPackageDir(), config), '2.0.0');
+    const actions = [...v2].map(([path, content]) => ({ path, kind: 'file' as const, content }));
+    initWorkspace(config, root, { extra: actions });
+
+    for (const rel of v2.keys()) {
+      expect(readFileSyncUtf8(join(root, rel))).not.toContain('provegate 1.0.0');
+    }
+  });
+
+  it('the printed set equals the plan destinations exactly', () => {
+    const config = filledConfig();
+    const packageDir = promptsPackageDir();
+    const version = packageVersion(packageDir);
+    const expected = new Set(
+      generatedPaths(config, renderPrompts(packageDir, config), version).keys(),
+    );
+    const printed = new Set(
+      planPrompts(config, packageDir)
+        .filter((a) => a.kind === 'file')
+        .map((a) => a.path),
+    );
+    expect(printed).toEqual(expected);
+  });
+
+  it('honours a non-default prompts.dir for the store and the snippet', () => {
+    const config = filledConfig('.protocols');
+    const paths = [...generatedPaths(config, renderPrompts(promptsPackageDir(), config), '1.0.0')];
+    expect(paths.some(([p]) => p.startsWith('.protocols/prompts/'))).toBe(true);
+    expect(paths.some(([p]) => p === '.protocols/AGENTS.md.provegate.snippet')).toBe(true);
+    // The two tool-owned destinations are fixed by the tool, not by the store dir.
+    expect(paths.some(([p]) => p === '.cursor/rules/prd-workflow.mdc')).toBe(true);
   });
 });

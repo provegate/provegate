@@ -9,6 +9,15 @@ import {
 import { fileURLToPath } from 'node:url';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
+import {
+  generatedPaths,
+  packageVersion,
+  parseRegistry,
+  planStore,
+  renderPrompts,
+  requiredValues,
+  type RenderConfig,
+} from './prompts.js';
 import { CONFIG_FILENAME } from '../config/index.js';
 import { MANIFEST_FILENAME } from '../gates/manifest.js';
 
@@ -322,4 +331,60 @@ export function initWorkspace(
     }
   }
   return report;
+}
+
+/**
+ * The `--prompts` plan (PRD-029 FR-5).
+ *
+ * Ordinary `InitAction`s, so the store goes through `initWorkspace` under the
+ * installer's EXISTING contract: `wx` writes, an existing path reported as
+ * skipped, nothing overwritten. There is deliberately **no preflight and no
+ * mismatch refusal** — this plan behaves like the base and practices plans,
+ * which is what keeps `gate init`'s additive-only promise intact for every
+ * caller rather than carving out an exception that would then have to be
+ * scoped away from them.
+ *
+ * Throws `PromptsError` before producing a single action when a required value
+ * is unresolved, so a refused run writes nothing at all: no store file, no
+ * adapter, and no starter config.
+ */
+export function planPrompts(config: WorkflowConfig, packageDir: string): InitAction[] {
+  const version = packageVersion(packageDir);
+  const result = renderPrompts(packageDir, config as unknown as RenderConfig);
+  const generated = generatedPaths(config as unknown as RenderConfig, result, version);
+  const actions: InitAction[] = [];
+  const dirs = new Set<string>();
+  for (const path of generated.keys()) {
+    const parent = dirname(path);
+    if (parent !== '.' && !dirs.has(parent)) {
+      dirs.add(parent);
+      actions.push({ path: parent, kind: 'dir' });
+    }
+  }
+  for (const [path, content] of generated) actions.push({ path, kind: 'file', content });
+  return actions;
+}
+
+/** The `prompts` block to write or to print, with every required key present
+ * and unset as `null`. Printing it is the ONLY activation path an adopter with
+ * an existing `workflow.config.json` has, because that file is never edited. */
+export function promptsConfigBlock(config: WorkflowConfig, packageDir: string): string {
+  const planned = planStore(packageDir);
+  const registry = parseRegistry(
+    readFileSync(resolve(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8'),
+  );
+  const required = requiredValues(packageDir, planned, registry);
+  const values: Record<string, null> = {};
+  for (const row of required) values[row.token] = null;
+  const block = {
+    prompts: {
+      enabled: true,
+      dir: config.prompts.dir,
+      adapters: config.prompts.adapters,
+      values,
+    },
+    templates: { prd: `${config.prompts.dir}/templates/prd-template.md` },
+  };
+  const meanings = required.map((r) => `  ${r.token} — ${r.meaning}`).join('\n');
+  return `${JSON.stringify(block, null, 2)}\n\nvalues:\n${meanings}\n`;
 }
