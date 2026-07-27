@@ -462,6 +462,13 @@ function runQueue(json: boolean): number {
     for (const w of queue.readyOverlaps)
       lines.push(`    ${w.a} <-> ${w.b}: ${w.shared.join(', ')}`);
   }
+  if (queue.surfaceRejections.length > 0) {
+    // A token the author wrote and the lock engine never received. Silence here
+    // is the worst outcome: they believe a path is protected and it is not.
+    lines.push(`  ${paint('stale', '!', tier)} Conflict Surface tokens NOT claimed:`);
+    for (const s of queue.surfaceRejections)
+      for (const r of s.rejected) lines.push(`    ${s.prd}: \`${r.token}\` — ${r.reason}`);
+  }
   push(
     'IN-FLIGHT',
     queue.inFlight,

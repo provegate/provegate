@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { formatId } from './artifacts.js';
 import { canonicalGlob, structuralOverlap } from '../locks/conflicts.js';
-import { declaredGlobs } from './markdown.js';
+import { parseConflictSurface, type RejectedClaim } from './markdown.js';
 import { UNKNOWN_STATUS } from './status.js';
 import type { StateRecord } from './build.js';
 
@@ -146,10 +146,20 @@ export interface QueueOverlapWarning {
   shared: string[];
 }
 
+/** A READY item whose Conflict Surface carries tokens that are not claimable
+ * paths. Reported rather than dropped: the author wrote them believing they
+ * would be protected. */
+export interface SurfaceRejection {
+  prd: string;
+  rejected: RejectedClaim[];
+}
+
 export interface Queue {
   generatedAt: string | null;
   ready: (CompactRecord & { resume: boolean })[];
   readyOverlaps: QueueOverlapWarning[];
+  /** Additive — `--json` consumers that ignore it are unaffected. */
+  surfaceRejections: SurfaceRejection[];
   inFlight: (Omit<QueueLockInfo, 'expiresAt'> & {
     stale: boolean;
     /** Seconds until the lease expires (negative = past TTL); `null` when
@@ -159,6 +169,24 @@ export interface Queue {
   })[];
   blocked: CompactRecord[];
   inReview: CompactRecord[];
+}
+
+/** Tokens a READY item's Conflict Surface declared that are not claimable
+ * paths. The advisory half of FR-13(c): `gate open` reports these on the
+ * enforcing path, and `gate queue` reports them before anyone claims. */
+export function surfaceRejections(root: string, readyRecords: StateRecord[]): SurfaceRejection[] {
+  const out: SurfaceRejection[] = [];
+  for (const record of readyRecords) {
+    try {
+      const { rejected } = parseConflictSurface(
+        readFileSync(resolve(root, record.artifacts.prd), 'utf8'),
+      );
+      if (rejected.length > 0) out.push({ prd: record.prd, rejected });
+    } catch {
+      // Unreadable PRD is already surfaced elsewhere; this pass stays advisory.
+    }
+  }
+  return out;
 }
 
 /** READY candidates whose declared Conflict Surfaces overlap — do not schedule
@@ -171,15 +199,15 @@ export function readyOverlaps(
   const surfaces = readyRecords
     .map((record) => {
       try {
-        return {
-          prd: record.prd,
-          paths: declaredGlobs(readFileSync(resolve(root, record.artifacts.prd), 'utf8')),
-        };
+        const parsed = parseConflictSurface(
+          readFileSync(resolve(root, record.artifacts.prd), 'utf8'),
+        );
+        return { prd: record.prd, paths: parsed.globs, rejected: parsed.rejected };
       } catch {
-        return { prd: record.prd, paths: [] as string[] };
+        return { prd: record.prd, paths: [] as string[], rejected: [] as RejectedClaim[] };
       }
     })
-    .filter((surface) => surface.paths.length > 0);
+    .filter((surface) => surface.paths.length > 0 || surface.rejected.length > 0);
   const warnings: QueueOverlapWarning[] = [];
   for (let i = 0; i < surfaces.length; i += 1) {
     for (let j = i + 1; j < surfaces.length; j += 1) {
@@ -256,6 +284,7 @@ export function buildQueue(
     generatedAt,
     ready,
     readyOverlaps: readyOverlaps(root, readyRecords, config),
+    surfaceRejections: surfaceRejections(root, readyRecords),
     inFlight,
     blocked,
     inReview,

@@ -6,6 +6,8 @@ import {
   findMarkdownTable,
   getMetaValue,
   getTableValue,
+  isRootRelativeFilename,
+  parseConflictSurface,
   sectionAfter,
   stripMarkdown,
   writeTableValue,
@@ -198,5 +200,69 @@ describe('declaredGlobs', () => {
 
   it('returns empty when the section is missing', () => {
     expect(declaredGlobs('# nothing')).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-021 FR-13 — root-relative claims, and rejections that are visible
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('isRootRelativeFilename (FR-13a)', () => {
+  it('accepts the shapes a repo root actually holds', () => {
+    for (const token of [
+      'workflow.config.json',
+      'gates.manifest.json',
+      'STATUS.md',
+      'AGENT_BOOTSTRAP.md',
+      'pnpm-lock.yaml',
+      '.gitignore',
+      '.npmrc',
+      '.env.example',
+    ]) {
+      expect(isRootRelativeFilename(token), token).toBe(true);
+    }
+  });
+
+  it('rejects prose abbreviations, which is the point of the literal shapes', () => {
+    // `e.g.` and `etc.` end with a dot; `README` has no extension. All three
+    // appear in Conflict Surface prose, and the previous predicate — any token
+    // without whitespace — accepted the first two as claimed paths.
+    for (const token of ['e.g.', 'i.e.', 'etc.', 'README', '', '.', '..']) {
+      expect(isRootRelativeFilename(token), token).toBe(false);
+    }
+  });
+});
+
+describe('parseConflictSurface (FR-13b)', () => {
+  const surface = (...lines: string[]): string =>
+    ['## Conflict Surface', '', ...lines.map((l) => `- \`${l}\``), ''].join('\n');
+
+  it('claims real paths and reports every refusal with a reason', () => {
+    const parsed = parseConflictSurface(
+      surface('src/**', 'STATUS.md', '.gitignore', '../outside.ts', '/etc/passwd', 'e.g.'),
+    );
+    expect(parsed.globs).toEqual(['src/**', 'STATUS.md', '.gitignore']);
+    expect(parsed.rejected).toEqual([
+      { token: '../outside.ts', reason: 'contains a `..` segment' },
+      { token: '/etc/passwd', reason: 'absolute — Conflict Surface paths are repo-relative' },
+      { token: 'e.g.', reason: 'ends with a dot — prose, not a path' },
+    ]);
+  });
+
+  it('a template token is skipped SILENTLY — it is not a mistake', () => {
+    // The shipped template carries `{{...}}` placeholders and a `none` line.
+    // Reporting them would train an author to ignore this list, which is the
+    // only way it stops working.
+    const parsed = parseConflictSurface(surface('{{PATH}}', 'none'));
+    expect(parsed.globs).toEqual([]);
+    expect(parsed.rejected).toEqual([]);
+  });
+
+  it('declaredGlobs still returns string[] and agrees with the parse', () => {
+    // The signature is unchanged so no caller breaks; the rejections live in
+    // the richer function for the two consumers that should report them.
+    const doc = surface('src/**', 'e.g.');
+    expect(declaredGlobs(doc)).toEqual(parseConflictSurface(doc).globs);
+    expect(declaredGlobs(doc)).toEqual(['src/**']);
   });
 });

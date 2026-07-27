@@ -303,37 +303,33 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: `content-canon.test.ts` asserts the banner directly — the exact canonical link, the "complete through PRD-016" statement, and that the shipped phases are marked.
 
 
-- [ ] 10.0 FR-13 — make a repo-root Conflict Surface claim real
-  - [ ] 10.1 (a) Accept root-relative filenames by **literal predicate**: a named file
-        `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` or a dotfile
-        `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$`. Both forbid whitespace, a leading
-        `/`, a `..` segment, and a trailing `.` — which is what excludes `e.g.`, `i.e.`
-        and `etc.` The predicate is the specification.
-  - [ ] 10.2 (a′) Export it as `isRootRelativeFilename(token: string): boolean` from
-        `core/state/markdown.ts`, with its own unit tests. **PRD-023 FR-3 consumes it** —
-        without the export that PRD must duplicate the logic it exists to remove.
-  - [ ] 10.3 (b) Add `parseConflictSurface(content): { globs, rejected: {token, reason}[] }`;
-        `declaredGlobs` keeps its `string[]` signature and delegates, so no caller breaks.
-  - [ ] 10.4 (c) Surface the rejections at both real consumers — `candidateFromPrd`
-        (`gate open`, enforcing) and `readyOverlaps` (`gate queue`, advisory) — each
-        printing token and reason. The enforcing path is where a missed claim is a hazard.
-  - [ ] 10.5 Re-measure the live effect and record it: which PRDs regain which root claims.
-        Today PRD-018 loses `workflow.config.json` and `gates.manifest.json`; this PRD
-        loses `workflow.config.json`, `AGENT_BOOTSTRAP.md` and `STATUS.md`.
+- [x] 10.0 FR-13 — make a repo-root Conflict Surface claim real
+  - [x] 10.1 Both literal shapes implemented, plus the path-side rules (`..` segment, leading `/`, whitespace, trailing dot). Mutation-checked in two directions.
+        Original: (a) Accept root-relative filenames by **literal predicate**: a named file `^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.[A-Za-z0-9]+$` or a dotfile `^\.[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$`. Both forbid whitespace, a leading `/`, a `..` segment, and a trailing `.` — which is what excludes `e.g.`, `i.e.` and `etc.` The predicate is the specification.
 
-- [ ] 11.0 FR-12 — the release entry
-  - [ ] 11.1 A changeset declaring **minor** for `provegate`, whose note states the
-        one-way compatibility rule: an older CLI rejects `valueScoring` as an unknown key,
-        so upgrade before adding it and remove the key before downgrading.
-  - [ ] 11.2 The note states the merge rule **in both directions**: supplying `axes`
-        requires the complete matching `weights` and replaces wholesale; supplying
-        `weights` alone is a legal partial retune checked by the sum rule. Half of it is
-        false adopter guidance.
-  - [ ] 11.3 **One semantic assertion over one entry** (W9): read `.changeset/*.md`, parse
-        each entry's YAML front-matter, and assert that **some single entry** both declares
-        `provegate` at `minor` and carries the compatibility instruction. Tolerate
-        `'provegate'`, `"provegate"` and bare. The failure names which half was found.
-        `pnpm changeset status` is **not** evidence — it exits 0 with no changesets at all.
+  - [x] 10.2 `isRootRelativeFilename` exported from `core/state/markdown.ts` and re-exported from the state barrel, with its own unit tests covering the accept list and the prose-abbreviation reject list.
+        Original: (a′) Export it as `isRootRelativeFilename(token: string): boolean` from `core/state/markdown.ts`, with its own unit tests. **PRD-023 FR-3 consumes it** — without the export that PRD must duplicate the logic it exists to remove.
+
+  - [x] 10.3 `parseConflictSurface(content) → { globs, rejected }` added; `declaredGlobs` keeps its `string[]` signature and delegates. A test asserts the two agree, so the delegation cannot rot.
+        Original: (b) Add `parseConflictSurface(content): { globs, rejected: {token, reason}[] }`; `declaredGlobs` keeps its `string[]` signature and delegates, so no caller breaks.
+
+  - [x] 10.4 Both consumers: `candidateFromPrd` carries `rejected` on the candidate (enforcing) and `open.ts` prints them as warnings on **every** outcome including success; `buildQueue` gains `surfaceRejections` and `gate queue` prints them under a `!` marker (advisory). Mutation: dropping the rejections fails three tests across both paths.
+        Original: (c) Surface the rejections at both real consumers — `candidateFromPrd` (`gate open`, enforcing) and `readyOverlaps` (`gate queue`, advisory) — each printing token and reason. The enforcing path is where a missed claim is a hazard.
+
+  - [x] 10.5 **Re-measured, and the FR's premise had gone stale.** FR-13 describes root claims being silently discarded; `declaredGlobs` was already fixed for that in PRD-018's round 24/25, and today PRD-018 and PRD-021 both keep their root claims. The live defect is the OPPOSITE and the FR's remedy still fixes it — see the finding below.
+        Original: Re-measure the live effect and record it: which PRDs regain which root claims. Today PRD-018 loses `workflow.config.json` and `gates.manifest.json`; this PRD loses `workflow.config.json`, `AGENT_BOOTSTRAP.md` and `STATUS.md`.
+
+
+- [x] 11.0 FR-12 — the release entry
+  - [x] 11.1 `.changeset/lucky-pugs-argue.md`, minor, with the one-way rule and the upgrade/downgrade order.
+        Original: A changeset declaring **minor** for `provegate`, whose note states the one-way compatibility rule: an older CLI rejects `valueScoring` as an unknown key, so upgrade before adding it and remove the key before downgrading.
+
+  - [x] 11.2 Both directions stated, and asserted separately: `axes` requires the complete matching `weights` and replaces wholesale; `weights` alone is a legal partial retune checked by the sum rule.
+        Original: The note states the merge rule **in both directions**: supplying `axes` requires the complete matching `weights` and replaces wholesale; supplying `weights` alone is a legal partial retune checked by the sum rule. Half of it is false adopter guidance.
+
+  - [x] 11.3 One semantic assertion over ONE entry, parsing front-matter and tolerating all three quote styles. **W9 closed with evidence**: the mutation splits the two halves across two entries — a `provegate` minor entry and an unrelated one carrying the compatibility sentence — and the test fails, naming which half was found in which file. Two independent greps would have passed.
+        Original: **One semantic assertion over one entry** (W9): read `.changeset/*.md`, parse each entry's YAML front-matter, and assert that **some single entry** both declares `provegate` at `minor` and carries the compatibility instruction. Tolerate `'provegate'`, `"provegate"` and bare. The failure names which half was found. `pnpm changeset status` is **not** evidence — it exits 0 with no changesets at all.
+
 
 - [ ] 12.0 Migration & Rollback (infra parent — 20% of the readiness weight)
   - [ ] 12.1 State the two migrations separately, because they are different: **on the
@@ -447,6 +443,29 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 ---
 
 ## Deferrals & Decisions
+
+- **10.5 finding — FR-13's stated defect was already fixed; its remedy was still needed, for
+  the opposite reason.** The FR says `declaredGlobs` "drops every claimed path that does not
+  contain `/`", and names PRD-018 and PRD-021 as losing their root-level claims. Measured
+  at Phase 4: both keep them. The fix landed during PRD-018's rounds 24-25, after this FR
+  was written, and the comment explaining it is in the function.
+
+  The live defect is the inverse. The predicate that replaced the `/` requirement is "any
+  backticked token without whitespace", which accepted `../outside.ts`, `/etc/passwd`,
+  `e.g.` and `etc.` as claimed paths — measured before the change. So the surface erred in
+  **both** directions across its history: first too strict, then too loose, and the second
+  state is the more dangerous one because a prose abbreviation in a lease's `ownedPaths`
+  looks like a claim.
+
+  FR-13's literal predicate is exactly the right remedy for the state that actually exists,
+  so it ships as specified. What changes is the justification: the tests assert what the
+  predicate refuses, not that root claims are recovered — they already were.
+
+- **FR-13 shape extension — `gate queue --json` gains `surfaceRejections`.** An existing
+  test pins the exact key set of the published JSON shape, and it failed. That is the pin
+  working: extending a published contract must be a deliberate edit in that list rather
+  than a silent addition. Declared additive (a consumer reading known keys is unaffected)
+  and the test now carries the reason.
 
 - **7.3 — `verify:value-score` is the first `gate` invocation on any automated surface of
   this repository.** Until now the CLI appeared in no CI step, no hook and no package

@@ -245,6 +245,14 @@ function claimPrdLocked(
     };
   }
   const globs = candidate.ownedPaths ?? [];
+  // Tokens the author wrote that are NOT claimable paths. Reported on every
+  // outcome, success included: a claim that quietly protects four of five
+  // declared paths is more dangerous than one that fails, because the author
+  // reads "claimed" and stops looking. Warnings, not a refusal — the surface
+  // that parsed is real and the work should proceed.
+  const surfaceNotes = (candidate.rejected ?? []).map(
+    (r) => `Conflict Surface token not claimed: \`${r.token}\` — ${r.reason}`,
+  );
 
   // Preconditions BEFORE any mutation: slug + containment + destination
   // resolution happen while every victim still sits untouched on disk — an
@@ -900,7 +908,7 @@ function claimPrdLocked(
       staleBlockers: [],
       stolen,
       ...(provisioned ? { worktree: provisioned } : {}),
-      issues: warnings,
+      issues: [...surfaceNotes, ...warnings],
     };
   } catch (err) {
     // Exception path: stranded-rollback messages must not vanish with the

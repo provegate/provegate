@@ -64,6 +64,11 @@ describe('gate queue (live CLI in fixture repo)', () => {
       'inReview',
       'ready',
       'readyOverlaps',
+      // PRD-021 FR-13(c). Additive: a `--json` consumer reading known keys is
+      // unaffected. This list is an exact pin precisely so that extending the
+      // published shape is a deliberate edit here rather than a silent one —
+      // which is the check working, not the check being in the way.
+      'surfaceRejections',
     ]);
     expect(queue.ready[0].prd).toBe('PRD-001');
   });

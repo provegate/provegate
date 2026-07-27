@@ -172,6 +172,34 @@ describe('candidateFromPrd', () => {
     expect(candidate?.sourceContent).toContain('packages/x/**');
   });
 
+  it('carries the REJECTED tokens on the enforcing path (FR-13c)', () => {
+    // `candidateFromPrd` is what builds a lease. A token the author wrote and
+    // the lease never received is a file they believe is protected and the
+    // lock engine has never heard of — so it travels with the candidate rather
+    // than being discarded where nobody can print it.
+    const root = repoWithPrd(
+      'prd-004-widget.md',
+      '## Conflict Surface\n\n- `packages/x/**`\n- `../escape.ts`\n- `etc.`\n',
+    );
+    const candidate = candidateFromPrd(cfg, 'prd-004', root);
+    expect(candidate?.ownedPaths).toEqual(['packages/x/**']);
+    expect(candidate?.rejected).toEqual([
+      { token: '../escape.ts', reason: 'contains a `..` segment' },
+      { token: 'etc.', reason: 'ends with a dot — prose, not a path' },
+    ]);
+  });
+
+  it('a root-level filename is a real claim, not a dropped token (FR-13a)', () => {
+    const root = repoWithPrd(
+      'prd-005-control.md',
+      '## Conflict Surface\n\n- `workflow.config.json`\n- `.gitignore`\n',
+    );
+    expect(candidateFromPrd(cfg, 'prd-005', root)?.ownedPaths).toEqual([
+      'workflow.config.json',
+      '.gitignore',
+    ]);
+  });
+
   it('returns null when no surface is declared', () => {
     const root = repoWithPrd('prd-005-widget.md', '## Conflict Surface\n\n- none\n');
     expect(candidateFromPrd(cfg, 'PRD-005', root)).toBeNull();

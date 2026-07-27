@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { mainRepoRoot } from '../state/io.js';
-import { declaredGlobs, escapeRegExp } from '../state/markdown.js';
+import { escapeRegExp, parseConflictSurface, type RejectedClaim } from '../state/markdown.js';
 import { globToRegExp, globsMayIntersect } from './glob.js';
 
 /**
@@ -26,6 +26,10 @@ export interface SurfacedLock {
    * `## Conflict Surface` produced `ownedPaths`. */
   sourcePath?: string;
   sourceContent?: string;
+  /** Tokens in that section that are NOT claimable paths, with a reason each.
+   * Reported by the claim rather than discarded: an author who wrote a path the
+   * lease never received believes a file is protected that is not. */
+  rejected?: RejectedClaim[];
 }
 
 export interface PathConflict {
@@ -204,7 +208,7 @@ export function candidateFromPrd(
   // prove "the checkout carries exactly what this lease describes" have to
   // hash this buffer, not a later re-read of the path (codex prd-007 r21).
   const source = readFileSync(found[0]!, 'utf8');
-  const globs = declaredGlobs(source);
+  const { globs, rejected } = parseConflictSurface(source);
   if (globs.length === 0) return null;
   // Stamp as an execution-phase entry — validated non-empty at config load.
   const executionPhase = config.executionPhases[0];
@@ -215,6 +219,10 @@ export function candidateFromPrd(
     prd: normalized,
     phase: executionPhase,
     ownedPaths: globs,
+    // Carried, not swallowed. This is the ENFORCING path: a token the author
+    // wrote and the lease never received is a file they believe is protected
+    // and the lock engine has never heard of. The caller prints them.
+    rejected,
     sourcePath: found[0]!,
     sourceContent: source,
   };

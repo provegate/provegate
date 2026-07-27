@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, deepMerge } from '../src/core/config/index.js';
 import { UNKNOWN_STATUS } from '../src/core/state/status.js';
 import type { StateRecord } from '../src/core/state/build.js';
@@ -148,6 +151,11 @@ describe('getReadyRecords', () => {
 });
 
 describe('buildQueue', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
   it('produces ready/inFlight/blocked/inReview with stale flags', () => {
     const records = [
       // tasks artifact present — a task-less item is (correctly) also "blocked"
@@ -189,6 +197,37 @@ describe('buildQueue', () => {
         expiresInSeconds: -3600, // expired 1h ago
       },
     ]);
+  });
+
+  it('reports Conflict Surface tokens that were NOT claimed (FR-13c)', () => {
+    // The advisory half. `gate queue` runs before anyone claims, so this is
+    // where an author learns their declared path is not protected — while it
+    // still costs them one edit rather than a merge conflict.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-queue-fr13-'));
+    roots.push(root);
+    mkdirSync(join(root, '_prds/wip'), { recursive: true });
+    writeFileSync(
+      join(root, '_prds/wip/prd-x.md'),
+      '## Conflict Surface\n\n- `src/**`\n- `../escape.ts`\n',
+    );
+    const queue = buildQueue(cfg, root, [record({ number: 1, status: 'Approved' })], []);
+    expect(queue.surfaceRejections).toEqual([
+      { prd: 'PRD-001', rejected: [{ token: '../escape.ts', reason: 'contains a `..` segment' }] },
+    ]);
+  });
+
+  it('a clean surface produces no rejection noise', () => {
+    // The other direction, because a list that always has something in it is a
+    // list people stop reading.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-queue-clean-'));
+    roots.push(root);
+    mkdirSync(join(root, '_prds/wip'), { recursive: true });
+    writeFileSync(
+      join(root, '_prds/wip/prd-x.md'),
+      '## Conflict Surface\n\n- `src/**`\n- `workflow.config.json`\n',
+    );
+    const queue = buildQueue(cfg, root, [record({ number: 1, status: 'Approved' })], []);
+    expect(queue.surfaceRejections).toEqual([]);
   });
 
   it('carries expiresInSeconds additively; unparseable expiry → null, not stale', () => {
