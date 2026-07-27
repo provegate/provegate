@@ -15,6 +15,11 @@ export interface ManifestIssue {
 }
 
 interface PlanLine {
+  /** Stable position in the plan. The TEXT is not unique — the chain repeats
+   * `── Phase 7 Learning` for the manifest's own phase-7 block after the
+   * built-in gate, and a manifest may legitimately declare the same command
+   * twice — so the id, not the text, is the React key. */
+  id: number;
   text: string;
   kind: 'header' | 'cmd' | 'builtin' | 'tail';
 }
@@ -90,13 +95,16 @@ export function planFor(source: string): PlanResult {
 
   const lines: PlanLine[] = [];
   let gateCount = 0;
-  const header = (text: string): void => void lines.push({ text: `── Phase ${text}`, kind: 'header' });
+  const push = (text: string, kind: PlanLine['kind']): void => {
+    lines.push({ id: lines.length, text, kind });
+  };
+  const header = (text: string): void => push(`── Phase ${text}`, 'header');
   const cmd = (text: string): void => {
-    lines.push({ text: `     • ${text}`, kind: 'cmd' });
+    push(`     • ${text}`, 'cmd');
     gateCount += 1;
   };
   const builtin = (text: string): void => {
-    lines.push({ text: `     • gate: ${text}`, kind: 'builtin' });
+    push(`     • gate: ${text}`, 'builtin');
     gateCount += 1;
   };
 
@@ -125,7 +133,7 @@ export function planFor(source: string): PlanResult {
     for (const c of phase7) cmd(c);
   }
 
-  for (const text of C.PLAN_TAIL) lines.push({ text, kind: 'tail' });
+  for (const text of C.PLAN_TAIL) push(text, 'tail');
   return { issues: [], lines, gateCount };
 }
 
@@ -211,8 +219,8 @@ export function Playground(): React.JSX.Element {
         {plan.issues.length > 0 ? (
           <div aria-live="polite">
             <div style={{ color: 'var(--pg-term-red)' }}>[run] gates.manifest.json is invalid — nothing planned</div>
-            {plan.issues.map((issue) => (
-              <div key={`${issue.path}:${issue.message}`} style={{ color: 'var(--pg-term-red)' }}>
+            {plan.issues.map((issue, i) => (
+              <div key={`${i}:${issue.path}`} style={{ color: 'var(--pg-term-red)' }}>
                 {`  - ${issue.path}: ${issue.message}`}
               </div>
             ))}
@@ -220,7 +228,7 @@ export function Playground(): React.JSX.Element {
         ) : (
           <div aria-live="polite">
             {plan.lines.map((l) => (
-              <div key={l.text} style={{ color: LINE_COLOR[l.kind], whiteSpace: 'pre-wrap' }}>
+              <div key={l.id} style={{ color: LINE_COLOR[l.kind], whiteSpace: 'pre-wrap' }}>
                 {`  ${l.text}`}
               </div>
             ))}

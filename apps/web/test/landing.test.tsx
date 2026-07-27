@@ -202,6 +202,19 @@ describe('the playground plans, it never runs (FR-3)', () => {
     expect(text).toContain(C.BUILTIN_GATES['7']);
   });
 
+  it('gives every plan line a unique key even when the TEXT repeats', () => {
+    // The chain repeats `── Phase 7 Learning` (built-in gate, then the
+    // manifest's own phase-7 block) and a manifest may declare the same command
+    // twice — both produce duplicate line text, which is legal output but an
+    // illegal React key. The id must stay unique regardless.
+    const plan = planFor('{"phases":{"4":["pnpm test","pnpm test"],"6":["pnpm audit"],"7":["pnpm verify:brain"]}}');
+    const texts = plan.lines.map((l) => l.text);
+    const ids = plan.lines.map((l) => l.id);
+    expect(new Set(texts).size).toBeLessThan(texts.length); // text really does repeat
+    expect(new Set(ids).size).toBe(ids.length); // ids do not
+    expect(texts.filter((t) => t === '── Phase 7 Learning')).toHaveLength(2);
+  });
+
   it('never plans a push, and says so', () => {
     const plan = planFor(C.MANIFEST_SEED);
     const text = plan.lines.map((l) => l.text).join('\n');
