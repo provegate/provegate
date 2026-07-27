@@ -267,23 +267,32 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      (`workflow.config.json` surface)". It is correctly not a declaration.
    - No wip PRD is affected, which was true then and is still true.
 
-   **This re-opens Q2 rather than answering it (see §9 Q4).** The owner's 2026-07-25
-   decision was to import PRD-021 FR-13's `isRootRelativeFilename` instead of the `/`
+   **This re-opened Q2, and Q4 closed it (§9).** The owner's 2026-07-25 decision was to
+   import PRD-021 FR-13's `isRootRelativeFilename` instead of the `/`
    rule. The `/` rule is already gone, and the predicate class it was replaced by —
    extension test, capital test, allowlist — is exactly what `durable.ts`'s comments
    record as having been tried and reverted. Importing a named-file predicate now risks
    **re-introducing** the `LICENSE`/`justfile`/`BUILD` regressions this code already paid
-   for. Phase 4 must not resolve this silently in either direction.
+   for.
 
-   **That reuse is a contract, and PRD-021 now carries it.** The independent readiness
-   round found that PRD-021 specified the predicate's *behavior* but named only
-   `declaredGlobs` and `parseConflictSurface` as targets, so nothing obliged it to expose
-   a callable one — leaving this PRD's Phase 4 to either duplicate the logic (the exact
-   defect this PRD exists to remove) or edit `markdown.ts` out of scope. PRD-021 FR-13(a′)
-   now exports `isRootRelativeFilename(token: string): boolean` from
-   `packages/provegate/src/core/state/markdown.ts` with its own tests. This FR imports it.
-   If that export is absent when Phase 4 starts, the PRD-021 prerequisite was not actually
-   met — stop, exactly as FR-1 treats a missing ADR.
+   **Owner decision of 2026-07-27 (§9 Q4): drop the reuse.** `durable.ts` keeps the shape
+   test it converged on, and this FR narrows to the two divergences that actually survive:
+   adopt the script's `*` exclusion, keep the package's `matchAll` span collection. The
+   `/` rule is not replaced because it no longer exists.
+
+   **This retires a dependency rather than adding one.** The previous revision made
+   PRD-021 FR-13(a′)'s `isRootRelativeFilename` export a Phase-4 stop condition for this
+   FR. That contract is void: this FR imports nothing from `markdown.ts`, and a missing or
+   renamed export there is no longer a reason to stop. PRD-021 remains a prerequisite for
+   the reasons listed in §7 Dependencies — the shared `runCheck`, `verify-workflow.mjs`,
+   `ci.yml`, and the config files — but no longer for a predicate.
+
+   **The thesis it was serving is preserved, not abandoned.** "One predicate for two
+   sections" was the right instinct when both sections carried the same defect. The durable
+   side has since been fixed a different way, so forcing a shared predicate now would
+   relocate a decision `durable.ts` already owns — which is what
+   `strictness-added-during-extraction-is-a-behavior-change` says not to do while
+   extracting. Two sections, two rules, one of them already correct.
 
    **The fourteen tokens stay as the fixture; their grouping changes.** They are still
    the right corpus to pin, because each exercises a different reason for not being a
@@ -790,12 +799,14 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **PRD-018 Ship Verified** — it creates `gates.manifest.json`, which FR-5 edits, and it
   claims `_brain/**`, which FR-7(a) touches.
 - **PRD-019 Ship Verified** — `packages/provegate/src/cli.ts`.
-- **PRD-021 Ship Verified** — the largest coupling, and now a hard contract rather than a
-  sequencing preference. It adds the `--value-score` branch to the same `runCheck`, edits
-  `scripts/verify/verify-workflow.mjs`, and its FR-13 changes `declaredGlobs`, which
-  FR-3's parser reconciliation must be written against rather than around. **It must also
-  have exported `isRootRelativeFilename` from `core/state/markdown.ts`** (its FR-13(a′)) —
-  FR-3 imports that symbol, so its absence means the prerequisite was not met. It does
+- **PRD-021 Ship Verified** — still the largest coupling, but a **file** coupling now, not
+  a symbol contract. It adds the `--value-score` branch to the same `runCheck`, edits
+  `scripts/verify/verify-workflow.mjs` and `.github/workflows/ci.yml`, and touches the
+  three config files FR-4 also edits — eight overlapping paths in total, listed under
+  Conflict Surface. Its FR-13 changes `declaredGlobs`, which FR-3 must be written against
+  rather than around. **The `isRootRelativeFilename` import contract is retired** by the
+  Q4 decision of 2026-07-27: FR-3 no longer imports from `core/state/markdown.ts`, so a
+  missing or renamed export there is no longer a Phase-4 stop for this PRD. It does
   **not** claim `scripts/verify/gates-wired-exceptions.json`; an earlier draft said it did,
   and `gate queue` reports no such overlap.
 - **PRD-022 Ship Verified** — `packages/provegate/src/cli.ts` again.
@@ -897,25 +908,30 @@ FR-8 gave the change an adopter-facing half.
 
 ## 9. Open Questions
 
-**One open — Q4, below.** Q1–Q3 were resolved by the owner on 2026-07-25; Q4 is new on
-2026-07-27, opened by a re-measurement rather than by a preference.
+(none) — Q1–Q3 resolved by the owner on 2026-07-25, Q4 on 2026-07-27.
 
-- **Q4 — is the `isRootRelativeFilename` reuse (Q2's answer) still the right call now that
-  the problem it solved is gone?** Q2 was decided against a `durable.ts` that dropped every
-  slash-less token. That rule no longer exists: `artifactPaths` was rewritten in rounds
-  21–25 (landed with PRD-018 and PRD-022, after this PRD was drafted) and now applies a
-  **shape** test plus em-dash scoping, which the corpus re-measurement of 2026-07-27 shows
-  accepts `RELEASING.md` correctly and reads zero prose tokens. The code comments at
-  `durable.ts:69-85` record that an extension test dropped `LICENSE`, a leading-capital
-  test dropped `justfile`, and a named allowlist dropped `BUILD` and `WORKSPACE` — the same
-  predicate class Q2 committed to importing. **Owner call, two ways to go:** (a) keep the
-  reuse, and PRD-021's predicate must be proved to accept all four of those names before
-  FR-3 imports it, or the import is a regression; (b) drop the reuse, keep the shape test
-  the package already converged on, and narrow FR-3 to the two surviving divergences
-  (`*` exclusion, `matchAll` scope). Recommendation: **(b)** — one shared predicate was
-  a good thesis when both sections had the same defect, and the durable side has since
-  been fixed a different way; forcing the reuse now re-litigates a decision this code
-  already paid for twice. This PRD does not resolve it either way.
+**Q4 resolved — drop the `isRootRelativeFilename` reuse; keep the shape test
+`durable.ts` already converged on.** Q4 was opened on 2026-07-27 by a re-measurement, not
+a preference: Q2 had been decided against a `durable.ts` that dropped every slash-less
+token, and that rule no longer exists. `artifactPaths` was rewritten in rounds 21–25
+(landed with PRD-018 and PRD-022, after this PRD was drafted) and now applies a shape test
+plus em-dash scoping — which the corpus re-measurement shows accepts `RELEASING.md`
+correctly and reads zero prose tokens. The comments at `durable.ts:69-85` record that an
+extension test dropped `LICENSE`, a leading-capital test dropped `justfile`, and a named
+allowlist dropped `BUILD` and `WORKSPACE`: the same predicate class Q2 committed to
+importing. Owner decision: **(b)** — one shared predicate was the right thesis while both
+sections carried the same defect, and the durable side has since been fixed a different
+way, so forcing the reuse would re-litigate a decision this code already paid for twice.
+FR-3 narrows to the two surviving divergences (`*` exclusion, `matchAll` scope) and
+retires the PRD-021 FR-13(a′) import contract; PRD-021 stays a prerequisite for its other
+five overlaps, not for a predicate.
+
+**Note on how this section is written.** Q1–Q4 are bold paragraphs, which FR-7(c) has
+just measured as invisible to the readiness lint: a §9 in this shape reports zero
+unresolved items whatever it contains. It stays in this shape until FR-7(c) lands and
+requires a bullet list, because changing it now would red the gate on a document whose
+questions are in fact all answered. This PRD is one of the corpus cases FR-7(c) must pass
+before it ships.
 
 **Q1 resolved — `verify:workflow` survives**, as the local no-build bundle. Folding it
 into the manifest would put a build on the local pre-push path, and the remaining set is
@@ -1234,13 +1250,15 @@ rationalize.
 - DO NOT restore the three scripts in a rollback while leaving their `script-classes.json`
   entries classed `method`. That combination is red by FR-6's own rule — flip them to
   `method-pending` with an owner and a date instead.
-- DO NOT resolve Q4 inside Phase 4. If `isRootRelativeFilename` exists and Q4 is still
-  open, importing it is a decision, not an implementation detail — stop and ask, exactly as
-  FR-1 treats a missing ADR.
+- DO NOT re-introduce a named-file predicate into `durable.ts` under any name. Q4 settled
+  this on 2026-07-27: the shape test stands. An extension test drops `LICENSE`, a
+  leading-capital test drops `justfile`, and an allowlist drops `BUILD` and `WORKSPACE` —
+  all three were tried and reverted, and `durable.ts:69-85` says so in place.
 - DO NOT ship this without a changeset. Two public CLI flags, new config keys, and three
   files removed from a published pack are a user-facing surface change.
-- DO NOT duplicate PRD-021's filename predicate. It is exported as
-  `isRootRelativeFilename`; if that export is missing, the prerequisite was not met — stop.
+- DO NOT import PRD-021's filename predicate, and DO NOT copy it either. Q4 dropped the
+  reuse; FR-3's scope is the `*` exclusion and the `matchAll` span rule, and nothing else.
+  Reaching into `core/state/markdown.ts` from this PRD is now out of scope, not a shortcut.
 
 ---
 
@@ -1252,5 +1270,6 @@ rationalize.
 | 2026-07-25 | Cursor, on owner direction | All three open questions resolved, and the resolutions changed the shape of the PRD rather than just filling blanks. **Q2** is answered by measurement, not preference: PRD-021 FR-13's predicate classifies all eleven slash-less Durable Artifacts tokens in the corpus correctly and affects no wip PRD, so FR-3 reuses that predicate instead of inventing a second one. **Q1** keeps `verify:workflow`, and FR-5 now says *why* the end state is not yet reachable — two of the six remaining checks are method rules. **Q3** puts both pending entries on 2026-10-01, and there are two: the owner also decided PRD-017 ships as designed, so `verify-brain` becomes an accepted duplicate recorded with a date rather than a defect. **FR-1 inverts**: ADR-0002 lands ahead of the wave as a precondition, because a decision shipping with the last PRD binds none of them — so this PRD owns the mechanical ledger-vs-ADR link instead of the document. **FR-7 is new**: the two lint false-negatives found while drafting, both a whole-line match where a scoped one is meant |
 | 2026-07-25 | Claude Opus 5, via owner | Sequencing note only — no FR, Target, Conflict Surface entry, dependency, or verification command changed. The wave-order line now records that the chain is a valid serialization rather than a required one: `gate queue` measures PRD-020 as overlapping PRD-019 alone, so PRD-020 may run concurrently with PRD-021, PRD-022, or this PRD. This PRD's own position is unchanged — it overlaps four of the five others and still runs last. Readiness iteration 1 (ITERATE 7.95) is recorded in `_readiness/wip/readiness-023-gate-self-hosting.md`; W1–W8 there are unaddressed by this edit |
 | 2026-07-25 | Claude Opus 5, via owner | **Readiness iteration 1 remediation (W1–W8).** The blocking item was W1 and it was the same defect class the PRD exists to prevent: FR-4 ported the missing audit *direction* but not the missing *surface set*. `auditWiring` counts manifest commands and CI `run:` text; the `verify-gates-wired.mjs` it deletes also counts `.githooks/*`, the `verify-workflow.mjs` bundle body, and every other `package.json` script body — three surface kinds that would have left with the deletion against a Goal promising no lost guarantee. Measured impact today is zero, which is why it would have passed Phase 6 unseen. **FR-4 is now three parts** (direction, surfaces, exceptions store) with the comparison table inline, and keeps the package's narrower `run:`-only CI reading as a deliberate strengthening rather than reconciling it away. **FR-4(c) settles the exceptions store** (W2): `manifest.wiringExceptions` survives because it carries the justification shrink-only depends on and is already what the surviving implementation reads; `gates-wired-exceptions.json` is empty and is deleted with the script. That also corrected a false claim — `gate queue` shows PRD-021 does **not** claim that file, and the overlap paragraph named three of the five files the queue actually reports for the PRD-021 pair (W8). **The FR-3 corpus measurement is re-run and regrouped** (W3): 14 slash-less Durable Artifacts tokens, not 11 — 2 real claims, 8 prose tokens, 4 backticked `none`s that never reach the predicate — and `lucide-react` is dropped, since it lives in PRD-014's Non-Goals rather than any Durable Artifacts section. The conclusions were always right; the evidence had to match them in a PRD that answers an open question by measurement. **FR-5 drops the "first `gate` invocation" claim** (W4), which PRD-021 FR-8 takes first by this PRD's own ordering, and restates the real contribution as the manifest-driven surface. **FR-3 gets its own `--durable-artifacts` flag** instead of riding FR-2's review-record flag (W5), **states what the declaration lint accepts for mixed sections** using this PRD's own two-paths-plus-`none` shape (W6), and **names the third parser divergence** — `matchAll` versus `exec`, all spans versus the first (W7). Value unchanged at 4.25; iteration 1 did not move it. **Written by the same session that scored iteration 1 — the next round must be independent of it** |
+| 2026-07-27 | Claude Opus 5, on owner direction | **Q4 resolved: drop the predicate reuse (option b).** FR-3 keeps the shape test `durable.ts` converged on and narrows to the two divergences that survive the 2026-07-27 re-measurement — the script's `*` exclusion, adopted, and the package's `matchAll` span collection, kept. The `/` rule is not replaced because it no longer exists. **This retires a dependency rather than adding one:** the PRD-021 FR-13(a′) `isRootRelativeFilename` import contract is void, so a missing or renamed export in `core/state/markdown.ts` is no longer a Phase-4 stop for this PRD; PRD-021 remains a prerequisite for its other overlaps, which `gate queue` measures at eight files today, not for a symbol. §7 Dependencies, both DO NOT entries, and §9 updated accordingly, and §9 records why it stays in paragraph form until FR-7(c) lands — changing it now would red the gate on a document whose questions are all answered. `gate check PRD-023` is clean |
 | 2026-07-27 | Claude Opus 5, via owner | **Iteration-4 remediation (Codex, three [P1]s) plus one finding of its own.** **(H)** FR-8's "so adopters move with us" was false for every existing install: `init.ts:16-18` declares the installer ADDITIVE-ONLY and writes with `wx` (`init.ts:309`), and `NEXT_STEPS.md:3` promises adopters the same. The title, the goal, and the success metric are corrected to separate fresh from existing installs; the four-step manual migration is written out — including the `gates-wired-exceptions.json` → `wiringExceptions` re-recording, the one step that loses data if skipped — and moved into the **changeset** (FR-9), because an upgrade never re-reads a pack file already written into a repo. What can be mechanical is: an `init.test.ts` upgrade fixture seeded from the old pack shape, asserting the plan names none of the four removed paths **and** the four seeded files survive byte-identical. Breaking the additive-only invariant to force the migration is now an explicit Non-Goal, as is detecting an adopter's stale copies, which is named as a follow-on. **(I)** FR-4 gains **(b′), the matching predicate**: the survivor's `wiredIn` (`wiring.ts:236`) is a set built by `packageScriptOf`, which returns null unless the first token is a package manager (`wiring.ts:130-133`), so appending hook and bundle text registers *nothing*. Hooks invoke by path, the bundle's `CHECKS` by bare basename (`practices/verify/verify-workflow.mjs:15-22`) — so the rule is basename-shaped, not path-shaped, and requiring a directory prefix would fix the hook case and miss the bundle case. Third occurrence of the port-the-set-not-the-predicate shape in one PRD, and it now has its own DO NOT. **(J)** §7 Rollback is rewritten as the complete reverse operation: root half, five-part pack half naming the `track: "pack"` ledger entry and `--reconcile`, the repo half, and the one artifact that is **not** inert — `script-classes.json`, which is red by FR-6's own rule if the scripts return while classed `method`. Adopter-visible rollback behavior is stated: a no-op both ways, which is what makes the manual migration safe to publish. **Found while remediating, not by the review: FR-3's premise had gone stale.** `artifactPaths` was rewritten in rounds 21–25 (landed with PRD-018 and PRD-022 after this PRD was drafted) — the `/` rule is gone, replaced by a shape test plus em-dash scoping. Re-measured on 2026-07-27 with the built package over all 23 PRDs: **one** accepted slash-less token (`RELEASING.md`), zero prose tokens read, and `workflow.config.json` was never a dropped claim but prose after the em dash. Two of FR-3's three named divergences no longer exist. That re-opens Q2 as **Q4** — an owner call, since importing PRD-021's predicate now risks re-introducing the `LICENSE`/`justfile`/`BUILD` regressions `durable.ts:69-85` records as already paid for; recommendation stated, decision not taken. P2s closed: the `lucide-react` correction was itself wrong (it *is* in PRD-014's Durable Artifacts section, on a continuation line the bullet-start reader never scans), and the PRD-021 overlap is **eight** files, re-measured with `gate queue` today — third stale count in this wave. **FR-7 gains (c)**, found while writing Q4: the Open Questions lint reads bullet lines only (`prd-ready.ts:150-153`), so a §9 written as bold paragraphs — this PRD's, PRD-021's, PRD-022's — reports zero unresolved items no matter what it contains. Q4 is deliberately written as a bullet, so `gate check` now reports one open item against this PRD, which is the gate working rather than a regression. **Written by the session that produced this remediation — iteration 5 must be independent of it** |
 | 2026-07-25 | Claude Opus 5, on owner direction | **Independent-round remediation (Codex iteration 3, four [P1]s). Owner decision: expand scope to the practices pack.** The blocking finding reframed the PRD: the three "duplicate" scripts are implemented **three** times, not twice. `packages/provegate/practices/verify/` ships all three, `core/run/init.ts`'s `PACK_MAP` installs them into every adopter repo, the packed `verify-workflow.mjs` bundle runs `verify-gates-wired.mjs`, and `verify-pack-drift.mjs` — which parses `PACK_MAP` as its single source of pairing — fails when a mapped destination disappears. So the root-only deletion would have redded `pnpm verify:pack-drift`, which §11's own floor requires green, while leaving adopters on the weaker rule as this repo moved to the stronger one. The packed `gates-wired-exceptions.json` also carries eight entries where the root copy is `[]`, so FR-4(c)'s "the file is empty" was true of the wrong copy. **New FR-8** deletes the packed twins and rewires the pack: `PACK_MAP` entries, the packed bundle's `CHECKS`, the drift ledger, the pack manifest and its test, and `NEXT_STEPS.md` — the last is a required target, not a courtesy, because an adopter who upgrades must be told which `gate check` flag replaced each removed script. Deletion is chosen over thin CLI wrappers, with the residual (an adopter running the packed bundle without `gate` on PATH) stated rather than denied. **New FR-9** ships it as a minor release and the class rationale is corrected — two public CLI flags, new config keys, and three files removed from a published pack are user-facing. **FR-4 names its config keys**: `wiring.scriptsDir`, `wiring.hooksDir`, `wiring.bundlePath`, with defaults, repo-relative validation that rejects absolute and `..`-escaping paths, and `defaults.ts`/`validate.ts`/`config-wiring.test.ts` added as targets — the previous revision said "both paths become config" and named only `types.ts`. **FR-3 binds the predicate contract**: PRD-021 FR-13(a′) now exports `isRootRelativeFilename`, so "one predicate for two sections" is real rather than aspirational, and its absence at Phase 4 is a stop. **FR-1 gives the ADR a parseable shape** — a `## Classification` table of `| Script | Class |` rows — because a ledger-vs-ADR comparison against prose is a check of whatever the parser tolerates. Two stale sentences corrected: §9 Q2 still said eleven tokens, and §7 Dependencies still claimed PRD-021 edits `gates-wired-exceptions.json`. The Conflict Surface gains the pack, config, and changeset paths; every new overlap is against a PRD already declared as a prerequisite, so the wave ordering is unchanged |
