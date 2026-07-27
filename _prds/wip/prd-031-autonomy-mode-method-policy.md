@@ -194,8 +194,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    the render** — never "at build time", since the package's `build` is one `tsup` invocation —
    when a declared enumerated value has no fragment file; this FR must leave both green.
    Because PRD-029 derives the required-value set from the **rendered corpus**, adding this
-   token makes it required for every adopter from the moment this PRD lands — that is
-   intended, and PRD-032 must derive its own value set rather than hardcoding a count.
+   token makes it required for every adopter **the next time they run `gate init --prompts`** —
+   not from the moment this PRD lands, which was true only while an upgrade path existed and is
+   false under the one-way install. The conclusion is unchanged: PRD-032 must derive its own
+   value set rather than hardcoding a count, because the set it needs depends on the package
+   version installed when it runs.
    - **Targets:** `packages/provegate/prompts/PLACEHOLDERS.md`
 
 ---
@@ -398,6 +401,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/prompts/PLACEHOLDERS.md`
 - `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`
 - `packages/provegate/test/content-prompts.test.ts`
+- `_brain/INDEX.md`
 - `AGENT_BOOTSTRAP.md`
 - `docs/research/provegate-bootstrap/source-snapshot/addenda/**`
 - `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`
@@ -486,6 +490,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                 |
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **Two carried items closed.** The claim that adding `{{AUTONOMY_MODE}}` makes it required "from the moment this PRD lands" was true only while an upgrade path existed; under the one-way install nothing re-renders an existing store, so it becomes required at the adopter's next `gate init --prompts`. And `_brain/INDEX.md` is a Durable Artifact here and in PRD-030, declared by neither — the conflict gate could not see a collision the two would have while claiming parallelism. Carried since readiness iteration 5. |
 | 2026-07-27 | owner  | **Swept against PRD-029's cut.** The enumerated-token mechanism moved from PRD-029 FR-6 to FR-4 when that document was renumbered, so three references here pointed at the adapters FR. And the "fails at build time" claim survived readiness iteration 5's sweep because it is split across a line break, which `grep` misses; PRD-029 FR-4 now states the opposite explicitly and this FR matches it. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** PRD-029's iteration 2 falsified the `prompts.values` design: scalar substitution cannot select a text block, and putting the block text in an adopter's config moves method prose out of the package. Owner decision: an **enumerated token** whose fragments ship at `prompts/_fragments/`, with the config carrying only the key. FR-2 now targets the two fragments; the target list still contains no TypeScript file, so this item stays parallel to PRD-030. FR-6 records the consequence for PRD-032: adding a token to the rendered corpus changes every adopter's required set, so PRD-032 must derive its values rather than hardcode a count. |
 | 2026-07-27 | owner  | Split out of PRD-029 at readiness iteration 1 (W1, W6). The parent's stated precondition — read the snapshot — was insufficient: the snapshot states the exception unconditionally, so FR-1 makes the owner-approved addendum a precondition FR rather than an assumption. `{{AUTONOMY_MODE}}` moved from a config key to a `prompts.values` entry, which removes every code target and makes this item parallel to PRD-030. FR-3 is new: the shipped copy already drops the snapshot's parenthetical. |

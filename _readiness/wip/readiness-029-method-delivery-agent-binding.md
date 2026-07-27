@@ -1,5 +1,43 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 7 (confirmation round, independent session + Codex) — 7.48/10, ITERATE. Six of
+> eight items closed, and the substantive change is that **no design decision remains in
+> PRD-029**.** Iteration 6 left one open — what authority defines the legal `prompts.values`
+> key set — and the answer taken (move the unknown-key check out of the raw pass into the
+> render, because the legal set is package Markdown the loader must not read, and a TypeScript
+> constant would break the promise keeping PRD-031 parallel to PRD-030) was judged correct.
+> Codex scored **7.95** independently; both ITERATE, both in the 6–7.9 band, converging on the
+> same two open items without being told what the other had found.
+>
+> **Both remaining [P1]s were the same class, and it is this chain's signature defect:** a rule
+> corrected where it is owned and left standing where it is restated. The unknown-key check was
+> moved in FR-1 and FR-3 and still sent an implementer to the config layer from §6 and from the
+> §11 FR-1 row — which would have put the test in the wrong file. "Writes nothing" was right in
+> User Story 1, FR-5 and one §6 criterion, and stale in a second §6 criterion **twelve lines
+> away** and in a Memory Input rationale. The reviewer named the aggravating fact precisely:
+> **this one was not the line-break class — `grep "store file"` finds both in one command, so
+> the sweep was simply not run** — which made the previous Changelog's claim that the rule was
+> "stated identically in all three places" false about the document containing it.
+>
+> The [P2]s were carried or cross-document: PRD-030's non-binding banner was scoped to §4 while
+> the removed design is restated in §2, §6, §7 and §11 — the pattern applied to the fix for the
+> pattern; PRD-031 still claimed a token becomes required "from the moment this PRD lands",
+> true only while an upgrade path existed; and `_brain/INDEX.md`, raised at iteration 5 and
+> carried three rounds, is a Durable Artifact of PRD-030 and PRD-031 and declared by neither,
+> so the path-conflict gate cannot see a collision two parallel agents would have.
+>
+> **First round in seven in which every code citation the document makes checked out.** Item 6
+> was verified to the byte: the stated `globs` algorithm reproduces
+> `source-snapshot/rules/prd-workflow.mdc:3` exactly, order and `, ` join included. The
+> reviewer **rejected one Codex finding** — that a dated Changelog row contradicts a newer one
+> — on this repository's own settled position, `verify-doc-claims.mjs` deliberately excluding
+> historical log sections because *"rewriting history to satisfy a linter is the wrong
+> direction"*; it noted Codex had taken that position a round earlier and reversed without new
+> evidence. It also declined to follow Codex's Migration & Rollback score from 6.0 to 9.0 on
+> one fix, holding its own stated ceiling rather than adjusting it to reach a nicer total.
+>
+> <details><summary>Iteration 6 (6.03 ITERATE)</summary>
+>
 > **Iteration 6 (Codex via the independent session, own brief) — 6.03/10, ITERATE. The first
 > round in six to leave the 4–5.9 band, which changes the prescribed action from "return to
 > Phase 1" to "iterate on identified gaps, re-score".** The scope cut worked. The reviewer said
@@ -40,6 +78,8 @@
 > Codex [P1] with executor evidence, corrected two of its line cites, and disagreed with its
 > Migration score with a stated reason; the two scores were 6.03 and 5.45, straddling a band
 > boundary, which it flagged rather than buried.
+>
+> </details>
 >
 > <details><summary>Iteration 5 (4.53 ITERATE)</summary>
 >
@@ -201,9 +241,9 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 6.03/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — **but the first score in the 6–7.9 band, whose prescribed action is iterate-and-re-score rather than return-to-Phase-1.** The scope cut worked and the class of remaining defect changed from design to specification. One blocker is the seam the cut left: two adapter destinations sit outside the store directory while the reinstall instruction names only that directory, so the defining procedure of a one-way install does not reinstall. One genuine design item remains — what authority defines the legal `prompts.values` key set |
-| Iteration              | 6                                                                                                                                                                                                                                                                                                        |
+| Score                  | 7.48/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — 7.48, and **no design decision remains in PRD-029**. Six of eight items closed. Both open [P1]s were a rule corrected where owned and stale where restated: the unknown-key check still pointed at the config layer from §6 and §11, and "writes nothing" was stale in a second §6 criterion twelve lines from the correct one. Four sentences in PRD-029, three fixes outside it — all mechanical, none requiring a decision |
+| Iteration              | 7                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x), commissioned by a separate Claude session that wrote its own brief — independent in model family AND in framing; neither authored the PRD**                                                                                                                                                                                                  |
@@ -329,7 +369,28 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 6** (the current score). Earlier rows are kept below it.
+**Iteration 7** (the current score). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Movement from 6.03                                                                                          |
+| --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 7.0/10      | +0.5 — destinations, globs and the reinstall unit exact; two contradictions land in §6 and §11, what an implementer reads |
+| 2         | Completeness             | 20%    | 7.5/10      | +2.0 — both iteration-6 blockers answered with real decisions; nothing missing now, two things misstated       |
+| 3         | Technical Depth          | 20%    | 8.0/10      | +2.0 — the values seam identifies the layering constraint and rejects the alternative with a named consequence  |
+| 4         | Multi-Tenancy & Security | 10%    | 8.0/10      | unchanged                                                                                                     |
+| 5         | Scope & Testability      | 15%    | 7.5/10      | +0.5 — a §11 row that would have caught iteration 6's [P1]; one row of eight still specified the wrong layer   |
+| 6         | Migration & Rollback     | 20%    | 7.0/10      | +2.5 — the manual procedure is correct, complete, printed at runtime and machine-checked                       |
+| **Total** | **Weighted**             |        | **7.48/10** | **6.03 → 7.48**                                                                                              |
+
+Arithmetic re-derived here: `7.0×.15 + 7.5×.20 + 8.0×.20 + 8.0×.10 + 7.5×.15 + 7.0×.20 = 7.475`.
+Codex scored 7.95. The reviewer declined to follow it on Migration & Rollback (9.0 against its
+own 7.0) on the ground that it had called 6.0 the honest ceiling for this class one round
+earlier and moved to 9.0 on a single fix.
+
+Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four.
+
+<details><summary>Iteration 6 scorecard (6.03)</summary>
+
+**Iteration 6.**
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                                              |
 | --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -346,6 +407,8 @@ Codex independently scored 5.45; the gap is Migration & Rollback alone (3.0 agai
 straddles a band boundary, which the reviewer flagged rather than buried.
 
 Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four PRDs.
+
+</details>
 
 <details><summary>Iteration 5 scorecard (4.53)</summary>
 
@@ -641,13 +704,42 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 6   | 2026-07-27 | 6.03  | ITERATE | **First round in six to leave the 4–5.9 band, so the prescribed action changes from "return to Phase 1" to "iterate and re-score".** The scope cut worked and the reviewer said so without softening: the lifecycle is genuinely gone, the activation fix is correct **and correctly justified** against `defaults.ts:95-101`, discovery-without-a-write closes what broke PRD-032's derivation, the build-time claims are fully swept from this document, the Conflict Surface is complete for the first time, and **no §11 note inverts its FR** — all seven read against their bodies. **The blocker was at the seam the cut left, not in what it removed**: FR-6 puts two of three adapter destinations **outside** `<dir>`, while the reinstall instruction — stated in five places — named only the store directory, so following it after an upgrade leaves `.claude/commands/*` and `.cursor/rules/prd-workflow.mdc` at the old version with stale banners while the adopter believes they reinstalled. Verified against `initWorkspace`, which writes with `wx` and never deletes (`init.ts:248-283`). **It is the one procedure the whole scope decision rests on and nothing tested it.** One genuine design item: `prompts.values` asked the raw pass for a shape it cannot express — `stringRecord` rejects any value that is not a string **or is empty** (`validate.ts:149-155`), exactly the `null` and `""` FR-4 declares legal — and for an authority it lacks, since the legal key set is package Markdown; a TypeScript constant would have made PRD-031 unable to add its token without a code edit its own Non-Goals forbid. The rest are specification: `validateResolvedConfig` takes no root so containment cannot live there and `load.ts` had dropped from Targets; the `globs` derivation was named but never given; "writing nothing" and "no store file" disagreed across three places, leaving a refused run's residue undefined and, under `wx`, permanent. Cross-document: PRD-031's three enumerated-token references still said FR-6 after the renumber and its "fails at build time" claim **survived a grep sweep because it is split across a line break**; PRD-032 carried an FR-5/FR-4 pair two lines apart in one sentence — the sixth instance of `a-rule-corrected-survives-where-it-is-restated`, created by the fix for the fifth. The reviewer **rejected one Codex "what holds"** — that PRD-030 and PRD-031 have disjoint surfaces — because both write `_brain/INDEX.md` and neither declares it, so the conflict gate cannot see the collision; that remains open. It also downgraded one Codex [P1] with executor evidence, corrected two line cites, and refuted a hypothesis of its own about `starterConfig` leaking defaults |
 
+| 7   | 2026-07-27 | 7.48  | ITERATE | **Confirmation round. Six of eight items closed, and the substantive change is that no design decision remains in PRD-029.** The `prompts.values` authority question from iteration 6 was answered and judged correct: the unknown-key check moves out of the raw pass into the render, because the legal key set is package Markdown the loader must not read, and a TypeScript constant would break the promise keeping PRD-031 parallel to PRD-030. **Both remaining [P1]s were this chain's signature defect** — a rule corrected where owned and stale where restated. The moved check still sent an implementer to the config layer from §6 and from the §11 FR-1 row, which would have put the test in the wrong file; "writes nothing" was right in three places and stale in a fourth **twelve lines from the correct one** plus a Memory Input rationale. The reviewer named the aggravating fact exactly: **this was not the line-break class — `grep "store file"` finds both in one command, so the sweep was not run** — which made the prior Changelog's "stated identically in all three places" false about its own document. [P2]s carried or cross-document: PRD-030's non-binding banner was scoped to §4 while the removed design is restated in §2, §6, §7 and §11, **the pattern applied to the fix for the pattern**; PRD-031 claimed a token becomes required "from the moment this PRD lands", true only while an upgrade path existed; and `_brain/INDEX.md`, carried three rounds, is a Durable Artifact of PRD-030 and PRD-031 and declared by neither. **First round in seven where every code citation checked out**, including a byte-exact verification that the stated `globs` algorithm reproduces `source-snapshot/rules/prd-workflow.mdc:3`. One Codex finding **rejected** — a dated Changelog row is history, per this repository's own `verify-doc-claims.mjs` exclusion and its comment that *"rewriting history to satisfy a linter is the wrong direction"*; Codex had held that position a round earlier and reversed without new evidence |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 6.03/10, iteration 6. The first score in the 6–7.9 band, and the band action is
+**ITERATE — 7.48/10, iteration 7. Six of eight items closed, and there is no design decision
+left in PRD-029.**
+
+That is the change worth recording. Iteration 6 left exactly one open question — what authority
+defines the legal `prompts.values` key set — and the answer taken was judged correct: the check
+moves into the render because the legal set is package Markdown the config loader must not
+read, and the alternative would have made PRD-031 unable to add its token without a code edit
+its own Non-Goals forbid. Everything remaining is a sentence.
+
+**Both open [P1]s were the same defect this chain has produced in every round: a rule corrected
+where it is owned and left standing where it is restated.** The unknown-key check was moved in
+FR-1 and FR-3 and still pointed at the config layer from §6 and the §11 FR-1 row. "Writes
+nothing" was correct in three places and stale in a fourth twelve lines away. The reviewer's
+sharpest observation is not the finding but its cause: **this was not the line-break case that
+defeats a grep — one grep finds both — so the sweep was not run**, and the Changelog then
+asserted a sweep that had not happened.
+
+The same pattern appeared in the fix for the pattern: PRD-030's non-binding banner was scoped
+to §4 while the removed design is restated in §2, §6, §7 and §11. It is now at the top of the
+document and covers everything except FR-1.
+
+**Method notes worth keeping.** This is the first round in seven where every code citation the
+document makes checked out. The reviewer rejected a Codex finding on this repository's own
+settled position about historical log entries, and declined to follow Codex's Migration score
+from 6.0 to 9.0 on a single fix — holding a stated ceiling rather than adjusting it to reach a
+nicer total is what makes the other numbers usable. And `_brain/INDEX.md` survived three rounds
+only because a human-side reader kept re-raising it after the model reviewer's own "what holds"
+list had cleared it. The first score in the 6–7.9 band, and the band action is
 now the one this item has been receiving all along.**
 
 Six rounds sat in 4–5.9, whose prescribed action is *return to Phase 1*; the owner took that

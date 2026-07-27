@@ -30,6 +30,24 @@ Any PRD that produces operator-owned task rows MUST be operator-gated. -->
 
 ## 1. Introduction / Overview
 
+> ## EVERYTHING BELOW EXCEPT FR-1 IS A SKETCH, NOT A SPECIFICATION
+>
+> **The whole of this document apart from FR-1 is non-binding**, including §2 Goals, §3 User
+> Stories, §4 FR-2–FR-7, §5 Non-Goals, §6 Acceptance Criteria, §7, §8, §11's rows for FR-2
+> onward, §12 and the Memory Inputs. It was written against the design PRD-029 carried before
+> its scope cut — one in which PRD-029 wrote a receipt and `sync` had an overwrite path.
+> Neither is true now: **the receipt has no owner anywhere in the chain and originates here**,
+> and every transition this document assumes is one FR-1 must first define.
+>
+> The banner sits at the top rather than above §4 because readiness iteration 7 found the §4
+> version was itself the pattern it exists to stop: a rule stated where it is owned and absent
+> everywhere the same content is restated. The stale design is restated in §2's metric row,
+> §6, §7 and §11 — all outside the old banner's scope, all reading as binding.
+>
+> **Do not implement, score, or remediate any of it as written.** FR-1's state model replaces
+> it wholesale.
+
+
 PRD-029 writes a protocol store into a consuming repository. Nothing keeps it honest.
 
 Three ways it goes wrong and none is currently detectable. A maintainer edits a rendered
@@ -160,15 +178,6 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    model each fixed a named counterexample and produced a new one, so producing it is the work
    rather than a preamble to it.
    - **Targets:** `_docs/design/prompt-store-state-model.md`
-
-> **FR-2 through FR-7 below are a SKETCH, not a specification, and are not binding.** They
-> were written against the design PRD-029 carried before its scope cut — one in which PRD-029
-> wrote a receipt and `sync` had an overwrite path. Neither is true now: **the receipt has no
-> owner anywhere in the chain and originates here**, and every transition these FRs assume is
-> one FR-1 must first define. They are retained so a reader can see the shape being aimed at,
-> and **FR-1's state model replaces them wholesale** — readiness iteration 6 counted nine live
-> restatements of the removed design in this document, and rewriting them before the model
-> exists is what produced them. Do not implement, score, or remediate them as written.
 
 2. **FR-2**: An `exceptions` entry **suppresses a `diverged` finding and authorizes nothing.** It names the exact path (not a
    glob), an `owner` present in `config.owners`, a `reason`, and a `reviewBy` date. Four
@@ -477,6 +486,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `scripts/verify/verify-prompts.mjs`
 - `.github/workflows/ci.yml`
 - `_docs/design/prompt-store-state-model.md`
+- `_brain/INDEX.md`
 - `_brain/learnings/recompute-beats-recorded-state.md`
 
 ---
@@ -571,6 +581,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                             |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-27 | owner  | **The sketch banner moves to the top of the document, and `_brain/INDEX.md` is claimed.** Readiness iteration 7 found the §4-scoped banner was itself an instance of the pattern it exists to stop — the stale design is restated in §2's metric row, §6, §7 and §11, all outside its scope and all reading as binding. And `_brain/INDEX.md` is a Durable Artifact of this PRD and of PRD-031, declared by neither, so the path-conflict gate could not see a collision two parallel agents would have; carried unremediated since iteration 5. |
 | 2026-07-27 | owner  | **FR-2 through FR-7 marked as a non-binding sketch.** Readiness iteration 6 found nine live restatements of the removed design still in them, and that the receipt now has no owner in the chain. Rewriting them before FR-1's state model exists is exactly what produced the restatements; they are retained for shape and replaced wholesale by the model. |
 | 2026-07-27 | owner  | **PRD-029 cut to a one-way install, so this PRD owns the whole lifecycle and inherits no half-built version of it.** FR-1 becomes a **precondition**: one owner-approved document giving the complete state transitions for a generated store and the actor for each, covering the seven cases that were undefined or defined into a dead end in the design readiness iteration 5 rejected. That is the Phase 1 artifact iteration 5 demanded, located in the item that needs it. Nothing here is specified until it lands. |
 | 2026-07-27 | owner  | **Iteration 4 remediation, on a fourth owner decision: `sync` never overwrites, it only reports.** Iteration 4's counterexample was an adopter's own hand-written `.claude/commands/prd-3.md`, byte-identical to version 1, recorded by a no-op `init` and then overwritten by a version-2 `sync` — so receipt membership granted a capability while both documents promised it granted nothing. `sync` is now a **reporter**: it prints classifications and unified diffs, writes not one byte including the receipt, and exits non-zero when anything would change. The apply path is the human deleting a file and re-running `init`, whose additive-only contract makes deletion sufficient and makes the irreversible step theirs. Consequences: the receipt has **one writer** (`init`), so a reporter can no longer record hashes for content it declined to place; `retired` **persists** instead of being erased by the write that reports it; exceptions **suppress a finding and authorize nothing**; both control files are excluded from the tree-orphan rule by name; and FR-6 states the config-removal limit — with no `prompts` block there is no locator, which is accepted rather than worked around. §11 corrected from five per-path states to six. |
