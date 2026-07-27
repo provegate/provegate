@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T08:55:10.883Z",
+  "generatedAt": "2026-07-27T08:58:35.486Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -747,7 +747,7 @@
       "number": 21,
       "slug": "governance-truth-up",
       "status": "Approved",
-      "cyclePhase": "2 (Readiness)",
+      "cyclePhase": "3 (Task plan)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
@@ -763,8 +763,8 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.7,
-        "verdict": "ITERATE",
+        "score": 8.09,
+        "verdict": "PASS",
         "modelTierExecution": null,
         "modelTierAudit": "high"
       },

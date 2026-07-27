@@ -7,7 +7,7 @@
 > **Author**: Cursor, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `governance-truth-up`
-> **Cycle Phase**: 2 (Readiness)
+> **Cycle Phase**: 3 (Task plan)
 >
 > <!-- Returned from Phase 3 by the owner scope change of 2026-07-25: the iteration-5
 > PASS (8.43) and the generated 82-task plan both scored the pre-relocation FR set and
@@ -470,7 +470,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    cutoff is configured**, because presence is defined by id and there is no id. The
    arithmetic still runs, so a wrong header never escapes; only "you must have one" does.
    That is the correct trade and it is load-bearing rather than theoretical:
-   `packages/provegate/test/content-templates.test.ts:80` lints the **shipped PRD
+   `packages/provegate/test/content-templates.test.ts:99` lints the **shipped PRD
    template** through `lintPrd` and asserts `issues` is empty, and that template has no
    `Value:` header. It passes today because the caller supplies no id, and it must keep
    passing — which is also the cleanest mechanical proof of why FR-1 refuses an

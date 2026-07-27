@@ -20,7 +20,7 @@
 > `{{VALUE_AXES_TABLE}}` placeholder that declares the axes — unregistered, untested, and
 > unsubstituted. FR-13 now exports `isRootRelativeFilename` because PRD-023 consumes it.
 >
-> **Current state: iteration 9, 7.10/10, ITERATE — scored independently by Codex
+> **Current state: iteration 15, 8.09/10, PASS — scored independently by Codex
 > (gpt-5.x, different model family), and the ITERATE is on substance.** Iteration 8's
 > self-scored 8.15 does not stand. The independent round found four [P1] items the
 > self-scored round missed, including a **false premise** the self-scorer asserted in the
@@ -47,8 +47,8 @@
 | Field | Value |
 | ----- | ----- |
 | PRD | `_prds/wip/prd-021-governance-truth-up.md` |
-| Score | 6.70/10 (infra weights) |
-| Verdict | ITERATE — four **new** [P1] items opened by the remediation (§13); two prior findings only partially closed. The 7.10 at iteration 9 is superseded |
+| Score | **8.09/10** (infra weights) |
+| Verdict | **PASS** — iteration 15, independent. Five consecutive independent rounds (11-15) took it 6.70 → 7.77 → 7.95 → 7.98 → 7.99 → 8.09, every one of them calling the design sound and finding only document-consistency defects. Iterations 10 and below are superseded |
 | Iteration | 10 |
 | Model Tier (Execution) | do not assign — score < 8 |
 | Model Tier (Audit) | high (on a PASS) |
@@ -648,6 +648,50 @@ of them would exist under the alternative the owner rejected. That is not an arg
 reverse the decision — it is the bill for it, now itemized.
 
 ---
+
+### 14. Iterations 11-15 — the propagation loop, and what closed it
+
+Iteration 10's four [P1]s and three [P2]s were answered on 2026-07-27, and the five rounds
+that followed share one shape worth recording, because it is not the shape the earlier
+rounds had.
+
+**Nothing architectural reopened.** The configurable-axis decision, which cost this item
+1.45 points across iterations 8-10, was not revisited once. Every finding from iteration 11
+onward was a **propagation defect**: a rule corrected in one section left a stale statement
+of the old rule somewhere else, and the round found the survivor.
+
+| Round | Score | What it found |
+| ----- | ----- | ------------- |
+| 11 | 7.77 | Three routine blockers. The sharpest: FR-2 said the id "gains a fourth argument", but `lintPrd` is already four-arity with `root` in that slot (`prd-ready.ts:108-113`, `cli.ts:655`) — the change would have displaced `root` and silently broken the memory contract's store loading. Also: `load.ts` was targeted by FR-1's revision but never added to the Conflict Surface, and widening the placeholder walk had no specified green state |
+| 12 | 7.95 | Two contract inconsistencies at the previous seam. The fifth parameter was not compilable as written (a required parameter cannot follow `root?: string`), and weights-without-axes was unspecified — so a weights-only config merged recursively and passed with default-filled keys while the prose said both keys were mandatory |
+| 13 | 7.98 | One blocker, same class: making weights-only legal in FR-1 left FR-12's changeset note and a DO NOT rule still saying the two keys are supplied together. Routine implementation would either violate FR-1 or publish false adopter guidance |
+| 14 | 7.99 | One survivor, on the item introduced the round before: three sites said existing callers "pass `null`" when they omit the argument and supply `undefined`. An implementation guarding `=== null` would enforce presence on all 44 call sites the moment this repo sets `enforceFrom`, first casualty `content-templates.test.ts:99` |
+| 15 | **8.09 PASS** | The correction verified against source, all five requested propagation paths clean. One non-blocking locator drift, fixed |
+
+**The measurement worth keeping.** Five rounds, five findings, and every one of them was
+created by the fix for the round before it. None was a design error and none was found by
+reading the design — they were found by reading *the rest of the document* against the
+section that had just changed. That is why iteration 14's brief replaced "hunt for defects"
+with "sweep every rule for stale copies", and why the score moved 0.10 rather than 0.01 on
+the round that did it.
+
+Two things the loop cost, recorded so the next item can price them: an author who fixes a
+rule in the FR that owns it will not, unprompted, search §7, §8, §12, Migration, the
+Gherkin criteria and §11 for the same rule stated the old way. And a reviewer told to find
+defects will find one; a reviewer told to check consistency across named sections finds the
+class.
+
+**Live reproduction of a `_brain` record, during iteration 14's remediation.** Adding a
+backticked word to the §11 **Notes** column made `gate check PRD-021` refuse it as an
+unsafe verification command — `notes-column-runs-commands`, reproduced by a session that
+had read the record, while editing the very PRD that cites it. The interim workaround is
+the record's own: no backticks in the Notes cell until PRD-023's FR-7(a) scopes the parser
+to the Command column.
+
+**Model tier, now that the score is in the PASS band:** high for both Phase 4 and Phase 6.
+The config surface, the lint seam, and the loader exception are cross-module, and the
+propagation history says the Phase 6 round should be a consistency sweep, not only a defect
+hunt.
 
 ## Scorecard
 
