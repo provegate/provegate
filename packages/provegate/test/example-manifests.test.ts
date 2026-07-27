@@ -159,9 +159,9 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
     // what keeps that instruction true of the value it is written next to.
     const allowed = DEFAULT_CONFIG.commands.allowedPrefixes.map((p) => p.trim());
     for (const runner of advertised) expect(allowed, runner).toContain(runner);
-    for (const must of ['pnpm', 'npm', 'npx', 'yarn', 'bun', 'node']) {
-      expect(advertised, `${must} dropped from the cap's runner list`).toContain(must);
-    }
+    // The EXACT set, not a subset: a partial pin let `tsx` and `vitest`
+    // disappear silently, which an independent round caught.
+    expect(advertised).toEqual(['pnpm', 'npm', 'npx', 'yarn', 'bun', 'node', 'tsx', 'vitest']);
     for (const runner of advertised) {
       expect(pattern().test(`Deny test: \`${runner} run x.test.ts\``), runner).toBe(true);
     }

@@ -27,17 +27,27 @@ const docs = (name: string): string => read(`apps/docs/content/docs/${name}`);
 describe('quickstart presents the practices install honestly (FR-5, FR-7)', () => {
   const page = () => docs('quickstart.mdx');
 
-  it('recommends `gate init --practices`', () => {
-    expect(page()).toContain('gate init --practices');
+  it('recommends `gate init --practices` as the install COMMAND, not as a mention', () => {
+    // Substring presence passes on a page that only names the flag in prose
+    // while still telling the reader to run plain `gate init`. The claim is
+    // about the install block, so read the install block.
+    const text = page();
+    const fences = [...text.matchAll(/```sh\n([\s\S]*?)```/g)].map((m) => m[1]!);
+    const install = fences.find((f) => f.includes('gate init'));
+    expect(install, 'no shell fence runs gate init').toBeDefined();
+    expect(install).toContain('gate init --practices');
   });
 
-  it('and states that wiring stays manual, naming what prints it', () => {
-    // The token alone is not the claim. An adopter who runs the recommended
-    // command and expects a wired repo has been misled by a page that stopped
-    // at the invocation.
+  it('states exactly what the pack wires and what it leaves manual', () => {
+    // An earlier version said the pack "does not wire itself", which an
+    // independent round showed is false: `--practices` writes the Phase 7
+    // validator into the manifest. Blanket claims in either direction are the
+    // defect; the page must name the one thing it does wire.
     const text = page();
-    expect(text.toLowerCase()).toMatch(/manual|does \*\*not\*\* do|wire itself/);
+    expect(text).toMatch(/Phase 7[\s\S]{0,200}only\s+thing it wires/);
+    expect(text.toLowerCase()).toMatch(/manual step/);
     expect(text).toContain('NEXT_STEPS.md');
+    expect(text.toLowerCase()).not.toContain('does **not** do: wire itself');
   });
 });
 
@@ -83,11 +93,17 @@ describe('brownfield.mdx is a ladder with named failure modes (FR-4, FR-7)', () 
   it('every rung says what stays unprotected if you stop there', () => {
     // The rung list without the stop-here consequences is a tutorial. With
     // them it is a decision aid, which is the whole point of the page.
+    // PAIRED, not counted: four rungs and four stop-here paragraphs can both
+    // be true while one rung carries two and another carries none.
     const text = page();
-    const rungs = text.match(/^## Rung \d+/gm) ?? [];
-    expect(rungs.length).toBe(4);
-    const stops = text.match(/\*\*Stop here and (this stays unprotected|nothing stays)/g) ?? [];
-    expect(stops.length).toBe(rungs.length);
+    const sections = text.split(/^## (?=Rung \d)/m).slice(1);
+    expect(sections.length, 'expected four rungs').toBe(4);
+    for (const section of sections) {
+      const title = section.split('\n')[0]!;
+      expect(section, `${title}: no stop-here paragraph`).toMatch(
+        /\*\*Stop here and this stays unprotected/,
+      );
+    }
   });
 
   it('describes the two fresh-install manifests as the CODE writes them', () => {
@@ -132,14 +148,19 @@ describe('brownfield.mdx is a ladder with named failure modes (FR-4, FR-7)', () 
 });
 
 describe('the cookbook cross-links resolve (FR-6, FR-7)', () => {
-  it('examples/README.md points at both cookbook entries and they exist', () => {
+  it('examples/README.md LINKS both cookbook entries and the targets resolve', () => {
+    // Parse the Markdown link targets and resolve those, rather than finding a
+    // path string and separately checking a path the test itself built — which
+    // is two true facts that do not imply the link works.
     const text = readFileSync(join(pkgRoot, 'examples/README.md'), 'utf8');
-    for (const entry of ['manifests/single-package/', 'manifests/monorepo/']) {
-      expect(text, entry).toContain(entry);
-      // Resolve it, do not just find the string: a link to a directory that
-      // was renamed reads exactly the same as one that works.
-      expect(existsSync(join(pkgRoot, 'examples', entry, 'gates.manifest.json')), entry).toBe(true);
-      expect(existsSync(join(pkgRoot, 'examples', entry, 'README.md')), entry).toBe(true);
+    const targets = [...text.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1]!);
+    for (const entry of ['manifests/single-package/README.md', 'manifests/monorepo/README.md']) {
+      expect(targets, `${entry} is not a Markdown link target`).toContain(entry);
+      expect(existsSync(join(pkgRoot, 'examples', entry)), entry).toBe(true);
+      // …and the entry it points at ships the manifest it describes.
+      expect(existsSync(join(pkgRoot, 'examples', entry.replace('README.md', 'gates.manifest.json')))).toBe(
+        true,
+      );
     }
   });
 

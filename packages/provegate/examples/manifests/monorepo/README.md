@@ -178,9 +178,11 @@ paying for a real risk rather than a hypothetical one.
 {}
 ```
 
-**Catches:** an orphaned check. Once `scripts/verify-route-guards.mjs` exists,
-`gate check --wiring` requires that something invokes it — the `classDefaults` entry above
-is what satisfies that. Delete the manifest rule and keep the script, and the audit fails;
+**Catches:** an orphaned check. The trigger is the **package script**, not the file:
+`gate check --wiring` enumerates `package.json` scripts matching `verify:*` and requires
+each to be invoked by a manifest command or a CI step. So it is adding
+`"verify:route-guards"` in Step 1 that puts this check under the audit — the file alone is
+invisible to it — and the `classDefaults` entry above is what satisfies the requirement. Delete the manifest rule and keep the script, and the audit fails;
 that is the point, and it is why this key stays empty here.
 
 **If you also installed the practices pack**, expect one disagreement, measured in a

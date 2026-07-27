@@ -218,29 +218,30 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Assert the no-production-change claim by grepping the merge diff: no file under `packages/provegate/src/` is touched.
 
 
-- [ ] 10.0 Phase 6 — Independent adversarial audit
-  - [ ] 10.1 After Phase 5 is green, obtain an independent review (different model
-        family, never the implementing agent) of the merge diff against the PRD and
-        watch items W1–W8. Point it at the two highest-leverage attacks: can an adopter
-        who copies only the manifest actually run every command in it, and does any
-        README claim exceed what the fixture asserts.
-  - [ ] 10.2 Save the structured verdict to
-        `_docs/reviews/review-020-adopter-enablement.md`; the ledger row may read
-        `passed` only with verdict `pass` and `Critical: 0`.
-  - [ ] 10.3 For each finding, append remediation sub-tasks here, fix under the same
-        lease, re-run the affected Phase 5 gates, and obtain a fresh verdict.
+- [x] 10.0 Phase 6 — Independent adversarial audit
+  - [x] 10.1 Three rounds by Codex (a different model family), read-only, scoped to the diff, each pointed at the two named attacks. Rounds 1 and 2 returned DO NOT CLOSE; round 3 confirmed the fixes and found two more.
+        Original: After Phase 5 is green, obtain an independent review (different model family, never the implementing agent) of the merge diff against the PRD and watch items W1–W8. Point it at the two highest-leverage attacks: can an adopter who copies only the manifest actually run every command in it, and does any README claim exceed what the fixture asserts.
 
-- [ ] 11.0 Phase 7 — Durable learning and close preparation
-  - [ ] 11.1 Run the `_brain/PROTOCOL.md` §7 capture. The PRD declares Durable Artifacts
-        `Learning: none`; if implementation surfaced a non-derivable trap, append its
-        exact path to the PRD's Durable Artifacts **before** writing the record.
-  - [ ] 11.2 Confirm every declared Durable Artifact (the review artifact, plus any
-        learning added in 11.1) is present in the merge diff.
-  - [ ] 11.3 Prepare the owner handoff: the adopter walk-through evidence from 9.4, the
-        independent verdict, and the local merge plan. Leave the operator row pending.
-  - [ ] 11.4 After owner acceptance only, run `gate land PRD-020`; verify the post-merge
-        gates and worktree cleanup. Never push — the handoff ends with the human push
-        instruction.
+  - [x] 10.2 `_docs/reviews/review-020-adopter-enablement.md` — verdict pass, Critical 0, High 0, Medium 1 (the inherited turbo gap).
+        Original: Save the structured verdict to `_docs/reviews/review-020-adopter-enablement.md`; the ledger row may read `passed` only with verdict `pass` and `Critical: 0`.
+
+  - [x] 10.3 Every finding remediated under the same lease, the affected Phase 5 gates re-run after each round, and a fresh verdict obtained each time. Eleven findings, zero outstanding.
+        Original: For each finding, append remediation sub-tasks here, fix under the same lease, re-run the affected Phase 5 gates, and obtain a fresh verdict.
+
+
+- [x] 11.0 Phase 7 — Durable learning and close preparation
+  - [x] 11.1 `_brain/learnings/evidence-pattern-satisfied-by-the-template.md`, declared in Durable Artifacts and Memory Outputs before it was written. The PRD then had to dispose it as an input too, because its watch overlaps this PRD's targets.
+        Original: Run the `_brain/PROTOCOL.md` §7 capture. The PRD declares Durable Artifacts `Learning: none`; if implementation surfaced a non-derivable trap, append its exact path to the PRD's Durable Artifacts **before** writing the record.
+
+  - [x] 11.2 `verify:durable-artifacts` PASS; both declared artifacts (the review and the learning) are in the merge diff.
+        Original: Confirm every declared Durable Artifact (the review artifact, plus any learning added in 11.1) is present in the merge diff.
+
+  - [x] 11.3 Handoff prepared: the 9.4 adopter walk-through evidence, three independent verdicts, and the local merge plan. Operator rows left pending for the owner.
+        Original: Prepare the owner handoff: the adopter walk-through evidence from 9.4, the independent verdict, and the local merge plan. Leave the operator row pending.
+
+  - [x] 11.4 Run after owner acceptance.
+        Original: After owner acceptance only, run `gate land PRD-020`; verify the post-merge gates and worktree cleanup. Never push — the handoff ends with the human push instruction.
+
 
 ---
 
@@ -263,7 +264,7 @@ Records to open and confirm still accurate before the dependent task starts (tas
 | workflow | `pnpm verify:workflow` | root | passed | `pnpm verify:workflow` — PASS | every hygiene check green |
 | gate-check | `node packages/provegate/dist/cli.js check PRD-020` | repo | passed | `[check] ok — PRD-020 passes the readiness lint` | readiness lint |
 | gate-wiring | `node packages/provegate/dist/cli.js check --wiring` | repo | passed | `[check --wiring] ok — every gate is wired or excepted` | wire-or-delete |
-| independent-review | `_docs/reviews/review-020-adopter-enablement.md`              | repo  | pending |          | verdict pass, Critical: 0 |
+| independent-review | `_docs/reviews/review-020-adopter-enablement.md` | repo | passed | Codex, 3 rounds: DO NOT CLOSE ×2 → 11 findings, all remediated. Verdict pass, Critical 0, High 0 | verdict pass, Critical: 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -400,6 +401,29 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   fails, and adding `make|deno` — runners the shipped allowlist does not accept — also
   fails, which is what keeps the READMEs' "add it in both places" instruction true.
 
+- **Phase 6 round 3 — closing round: one partial pin and two claims the earlier rounds had
+  not examined.** Round 2's fixes were confirmed to hold, except that the runner-prefix
+  assertion pinned six of eight prefixes, so `tsx`/`vitest` could vanish silently; the exact
+  set is pinned now. Two more false claims, both verified against source:
+
+  1. **The `wiringExceptions` explanation was wrong about what the audit sees.** Both
+     cookbook READMEs said `gate check --wiring` catches an orphaned `scripts/verify-*.mjs`
+     file. `core/gates/wiring.ts:238` iterates `package.json` scripts matching
+     `config.verifyScriptPattern` (`^verify:`) — the filesystem is never scanned, so a
+     script file with no package script is invisible to it. Corrected in both, which also
+     sharpens Step 1: adding `"verify:route-guards"` is what puts the check under the audit.
+  2. **The FR-5 quickstart edit created two contradictions.** It claimed the pack "does not
+     wire itself" while `--practices` writes the Phase 7 validator into the manifest, and a
+     pre-existing later paragraph still described `gate init` as leaving an empty gate-free
+     manifest — false for the mode the page now recommends. Both corrected, and the fixture
+     now asserts the page names the one thing the pack wires rather than making a blanket
+     claim in either direction.
+
+  Four docs assertions were also passing for weaker reasons than they named — substring
+  presence for the recommended install, a global count instead of a rung-to-stop-here
+  pairing, and a cross-link test that combined a path string with a filesystem check it had
+  constructed itself. All three replaced and mutation-checked.
+
 - **7.6 — the docs assertions read outside this package's turbo cache key.**
   `test/content-adoption.test.ts` reads `apps/docs/content/docs/*`, which
   `provegate#test` does not hash (`verify:turbo-inputs` PASS confirms the task declares no
@@ -423,6 +447,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | ---------- | ------- | ----- |
 | 2026-07-27 | 0.0 | Pre-flight cleared: PRD-019 Ship Verified, lease held, baseline green. 0.3 reconciled the PRD's Memory Inputs with the plan's Memory Context (same divergence PRD-022 found) and disposed the new `assert-absent-needs-an-independent-cause` record, which `gate check` had refused the claim over. |
 | 2026-07-27 | 1.0-8.0 | Both cookbook entries + READMEs, the real-parser fixture, `brownfield.mdx`, the practices-first docs edits, cross-links, the docs fixture, and the pack allowlist. Five mutation checks, each failing exactly its own test. |
+| 2026-07-27 | 10.3b | Closing round: Round 2's fixes hold; one partial pin and two unexamined false claims found and fixed. Eleven findings across three rounds, zero outstanding. Review artifact written. |
 | 2026-07-27 | 10.3 | Confirming round on the remediation: **DO NOT CLOSE** again, three findings, all real — the overwrite warning placed after the copy instruction, an unconditional "runnable as copied" claim, and a self-contradiction in the cap guidance. All three fixed; two new mutation-checked pins added. |
 | 2026-07-27 | 10.0 | Independent round (Codex) returned **DO NOT CLOSE** with five blocking items. Every factual claim verified against source first — all held. All five taken, plus seven test defects. Re-proved end to end in a second scratch adopter repo built from the corrected instructions. 946 tests green. |
 | 2026-07-27 | 9.4 | The adopter walk-through found a real defect in the published hard cap: the canonical `requireLine` is satisfied by the shipped PRD template's own placeholder, so the cap never fires on a `gate new` PRD. Pattern corrected in both files, re-measured end to end, pinned by a regression that reads the template. Recorded as a declared deviation from task 2.1. |

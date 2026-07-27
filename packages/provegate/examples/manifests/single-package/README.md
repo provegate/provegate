@@ -108,10 +108,16 @@ already proved on the branch; what it re-proves is the *combination*.
 {}
 ```
 
-**Catches:** a check that exists but nothing runs — a `scripts/verify-*.mjs` in the tree
-that no manifest command, package script, or CI step invokes. `gate check --wiring` fails
-on it. An entry here is a written justification for one such orphan, and the audit is
-shrink-only: you can remove an exception, never widen the set silently.
+**Catches:** a check that exists but nothing runs. Be precise about what "exists" means
+here, because it decides whether the audit can see your check at all: `gate check --wiring`
+enumerates your **`package.json` scripts** matching `verify:*` (the pattern is
+`config.verifyScriptPattern`) and requires each one to be invoked by a manifest command or
+a CI step. It does **not** scan the filesystem — a `scripts/verify-thing.mjs` with no
+`verify:thing` script is invisible to it, so adding the script is what puts a check under
+the audit.
+
+An entry here is a written justification for one such orphan, and the audit is shrink-only:
+you can remove an exception, never widen the set silently.
 
 Empty is the goal state. A repo with nothing to except is a repo where every check runs.
 
