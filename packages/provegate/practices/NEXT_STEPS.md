@@ -50,13 +50,48 @@ into your entrypoints — the pack never edits them:
 - `AGENTS.md.snippet` → your `AGENTS.md`
 - `cursor-brain.mdc.snippet` → `.cursor/rules/brain.mdc`
 
-## 5. Fill the templates
+## 5. Install the phase protocols
+
+`gate init --practices` does **not** install them: the pack is a static file table and the
+protocols are rendered against your `workflow.config.json`. Run this separately:
+
+```
+gate init --prompts
+```
+
+The first run prints the `prompts` config block with every value it needs, each `null` and
+each with its meaning, and writes nothing — **an existing `workflow.config.json` is never
+edited**, so pasting that block is the activation. Fill the values, re-run, and the command
+writes the store plus one adapter per configured tool.
+
+Where things land:
+
+- `<prompts.dir>/prompts/` and `<prompts.dir>/templates/` — the store (default `.provegate`)
+- `.claude/commands/prd-<phase>.md` — **outside the store**
+- `.cursor/rules/prd-workflow.mdc` — **outside the store**
+- `<prompts.dir>/AGENTS.md.provegate.snippet` — paste into your `AGENTS.md` yourself
+
+### This store installs ONE WAY
+
+There is no upgrade path, no reconciliation and no `sync` in this version. After a package
+upgrade the store does not change and nothing detects that it is stale — every generated file
+names the package version that produced it, and reading that banner is how you find out.
+
+To reinstall: run `gate init --prompts`, read the **generated set** it prints, delete **every
+path in that set**, and run it again. Not just the store directory — two of the destinations
+above live outside it, and deleting only the directory leaves them at the previous version
+while everything looks reinstalled.
+
+Nothing here ever deletes a file. Removal is yours, including clearing `templates.prd` if you
+remove the store, or `gate new` will read a path that no longer exists.
+
+## 6. Fill the templates
 
 - `AGENT_BOOTSTRAP.md` — replace every `{{PLACEHOLDER}}` with your project's facts.
 - `STATUS.md` — fill the Current state table.
 - `_docs/review-artifact.template.md` — copy per gated change into `_docs/reviews/`.
 
-## 6. Sanity check
+## 7. Sanity check
 
 ```sh
 node scripts/verify/verify-workflow.mjs

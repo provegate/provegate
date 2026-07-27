@@ -187,30 +187,30 @@ a record is evidence only while it is true.
         destinations, and **following the reinstall instruction across a version bump leaves no
         path carrying the old banner**. Drive it through the real CLI argument path.
 
-- [ ] 5.0 Adapters (FR-6)
+- [x] 5.0 Adapters (FR-6)
   - [x] 5.1 `renderAdapters` emitting the three named destinations exactly as the PRD states.
   - [x] 5.2 `ADAPTER_GRAMMAR`: the Claude command skeleton, the `.mdc` frontmatter keys in
         order, the two-column table in phase order.
   - [x] 5.3 `globs` derivation: each `config.dirs.artifacts` entry in declared key order →
         `<entry.dir>/**/*.md`, joined with `, ` as a single unquoted scalar. `prefix` unused.
   - [x] 5.4 Codex adapter as a snippet inside `<dir>`; never a write to `AGENTS.md`.
-  - [ ] 5.5 Narrow the `planPractices` comment in `init.ts` to distinguish an adopter's
+  - [x] 5.5 Narrow the `planPractices` comment in `init.ts` to distinguish an adopter's
         entrypoint from a provegate-namespaced generated adapter.
-  - [ ] 5.6 `packages/provegate/test/prompts.test.ts`: each adapter conforms to its destination
+  - [x] 5.6 `packages/provegate/test/prompts.test.ts`: each adapter conforms to its destination
         and skeleton; the rendered `.mdc` opens with `---` and its `globs` line matches the
         pinned string; a fixture that **already has** `AGENTS.md` leaves it byte-identical.
-  - [ ] 5.7 Write `_brain/adr/ADR-0002-agent-protocol-delivery.md` — one-way delivery,
+  - [x] 5.7 Write `_brain/adr/ADR-0002-agent-protocol-delivery.md` — one-way delivery,
         enumerated tokens over a template language, grammar-checked adapters, the narrowed
         entrypoint invariant. `## Context` followed immediately by prose.
 
-- [ ] 6.0 Pack (FR-7)
-  - [ ] 6.1 `PACK_MAP` additions — static files only; no rendered output enters the pack.
-  - [ ] 6.2 `packages/provegate/practices/NEXT_STEPS.md`: name `gate init --prompts`, say the
+- [x] 6.0 Pack (FR-7)
+  - [x] 6.1 `PACK_MAP` additions — static files only; no rendered output enters the pack.
+  - [x] 6.2 `packages/provegate/practices/NEXT_STEPS.md`: name `gate init --prompts`, say the
         values are printed by it, say where the store and the two out-of-store destinations
         land, and **state the one-way boundary in the adopter's own words**.
-  - [ ] 6.3 Update `packages/provegate/practices/shims/AGENTS.md.snippet`.
-  - [ ] 6.4 Reconcile `packages/provegate/test/pack-manifest.json` and the pack-drift ledger.
-  - [ ] 6.5 `packages/provegate/test/pack.test.ts` and `test/practices-pack.test.ts` green with
+  - [x] 6.3 Update `packages/provegate/practices/shims/AGENTS.md.snippet`.
+  - [x] 6.4 Reconcile `packages/provegate/test/pack-manifest.json` and the pack-drift ledger.
+  - [x] 6.5 `packages/provegate/test/pack.test.ts` and `test/practices-pack.test.ts` green with
         the additions.
 
 - [ ] 7.0 Migration & Rollback Plan
@@ -301,6 +301,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 6.1 — `PACK_MAP` gains NO entry. The pack is a static source→destination table and the store is a config-dependent render, so the only pack change is instructional: `NEXT_STEPS.md` §5 tells the adopter to run `gate init --prompts` separately and states the one-way boundary. `verify:pack-drift` stays at 49 pairs, which is the evidence that nothing rendered entered the pack.
 - 5.1–5.4 — landed WITH parent 4 rather than after it. FR-5 requires every run to print the complete generated set, and that set includes the two adapter destinations outside the store, so `renderAdapters` is a dependency of `planPrompts` rather than a successor to it. The task order read the other way; the dependency did not.
 - 4.5 — the reinstall pair is deliberate: one test asserts that deleting only the store directory LEAVES v1 adapters in place (the defect readiness iteration 6 found, kept as a regression guard), and the next asserts the corrected procedure leaves no path carrying the old banner. The first would pass on a broken implementation, which is why it is paired rather than alone.
 - 3.2 — `CONFIG_BACKED` is not a constant: the seven mappings are read from `PLACEHOLDERS.md`'s `workflow.config field` column, so the registry stays the single authority for token metadata and a second reader cannot disagree with it (`two-parsers-wrong-together`). A test asserts every declared path resolves against `DEFAULT_CONFIG`.
@@ -320,6 +321,8 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 6.0 | 1073 → **1079**. `verify:pack-drift` green at 49 pairs — no `PACK_MAP` entry was needed: the store is rendered, not packed, so the pack gains instructions rather than files. |
+| 2026-07-27 | 5.6 | The adapter prose test failed on its first run against the generated BANNER, which appears in every rendered file by design. Fixed by stripping the banner from both sides — the failure is what made the filter honest rather than permissive. |
 | 2026-07-27 | 4.0 | 1066 → **1073**. End-to-end verified on a scratch repo: opt-in prints the block with nine `null` keys and refuses; filled config renders the store plus 7 Claude commands, 1 Cursor rule, 1 Codex snippet. `.mdc` line 1 is `---`, and the `globs` line reproduces `source-snapshot/rules/prd-workflow.mdc:3` byte for byte. The only file left carrying `{{` is `PLACEHOLDERS.md` — verbatim by disposition, exactly as specified. |
 | 2026-07-27 | 3.0 | 1026 → **1066**. FR-4's central claim is now machine-verified: **9 required values**, not the registry's 20 and not the 13 an earlier draft asserted. The four practices-only tokens are declared and never demanded. |
 | 2026-07-27 | 2.0 | prompts.ts core landed. 21 tests in `prompts.test.ts`. The corpus measurement is now machine-pinned: 12 rendered protocols, 7 rendered templates, 1 verbatim — the figures the PRD states as a measurement rather than a specification. |

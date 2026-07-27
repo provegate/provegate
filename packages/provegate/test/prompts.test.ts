@@ -10,8 +10,10 @@ import {
   bannerFor,
   planStore,
   promptsPackageDir,
+  artifactGlobs,
   generatedPaths,
   packageVersion,
+  renderAdapters,
   parseRegistry,
   renderPrompts,
   requiredValues,
@@ -20,6 +22,7 @@ import {
 } from '../src/core/run/prompts.js';
 
 const readFileSyncUtf8 = (p: string): string => readFileSync(p, 'utf8');
+const DIRECTIVE_TEXT = 'Read the protocol below and follow it verbatim; do not summarise it.';
 const registryDeps = { parseRegistry, planStore, requiredValues };
 
 /** Every regular file under `root`, repo-relative, sorted. */
@@ -400,5 +403,76 @@ describe('installer contract (PRD-029 FR-5)', () => {
     expect(paths.some(([p]) => p === '.protocols/AGENTS.md.provegate.snippet')).toBe(true);
     // The two tool-owned destinations are fixed by the tool, not by the store dir.
     expect(paths.some(([p]) => p === '.cursor/rules/prd-workflow.mdc')).toBe(true);
+  });
+});
+
+// --- FR-6: the adapter grammar ----------------------------------------------
+
+describe('adapter grammar (PRD-029 FR-6)', () => {
+  const config = filledConfig();
+  const files = renderPrompts(promptsPackageDir(), config).files;
+  const adapters = renderAdapters(config, files, '1.0.0');
+
+  it('emits exactly the three named destinations', () => {
+    const paths = [...adapters.keys()].sort();
+    expect(paths.filter((p) => p.startsWith('.claude/commands/prd-'))).toHaveLength(7);
+    expect(paths).toContain('.cursor/rules/prd-workflow.mdc');
+    expect(paths).toContain('.provegate/AGENTS.md.provegate.snippet');
+  });
+
+  it('keeps `.mdc` frontmatter on line 1, with exactly three keys in order', () => {
+    const mdc = adapters.get('.cursor/rules/prd-workflow.mdc') ?? '';
+    const lines = mdc.split('\n');
+    expect(lines[0]).toBe('---');
+    expect(lines[1]?.startsWith('description:')).toBe(true);
+    expect(lines[2]?.startsWith('globs:')).toBe(true);
+    expect(lines[3]?.startsWith('alwaysApply:')).toBe(true);
+    expect(lines[4]).toBe('---');
+    // The banner follows the frontmatter, never precedes it.
+    expect(mdc.indexOf('GENERATED')).toBeGreaterThan(mdc.indexOf('\n---\n', 4));
+  });
+
+  it('derives globs exactly as the source snapshot spells them', () => {
+    expect(artifactGlobs(config)).toBe(
+      '_prds/**/*.md, _readiness/**/*.md, _tasks/**/*.md, _docs/**/*.md',
+    );
+  });
+
+  it('carries a PATH and no protocol prose', () => {
+    // One protocol in one place. An adapter that restated a rule would be the
+    // defect this whole delivery mechanism exists to avoid.
+    //
+    // The generated banner is stripped from BOTH sides first: it appears in
+    // every rendered file by design, so comparing it against protocols would
+    // report the one thing that is supposed to be shared. That is a property of
+    // the check, not an exemption for the adapter — the first version of this
+    // test failed on it, which is how the filter got written.
+    const stripBanner = (text: string): string =>
+      text.replace(/<!-- GENERATED[\s\S]*?-->\n?/g, '');
+    const protocolBodies = [...files.values()].map(stripBanner);
+    for (const [path, body] of adapters) {
+      for (const line of stripBanner(body).split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed.length < 40) continue; // headings, paths, table rows, blanks
+        if (trimmed.startsWith('|')) continue;
+        if (trimmed.startsWith('description:') || trimmed.startsWith('globs:')) continue;
+        if (trimmed === DIRECTIVE_TEXT) continue;
+        expect(
+          protocolBodies.some((p) => p.includes(trimmed)),
+          `${path} carries prose that also appears in a protocol: ${trimmed.slice(0, 60)}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('emits only the configured adapters', () => {
+    const only = { ...config, prompts: { ...config.prompts, adapters: ['cursor'] } };
+    const some = renderAdapters(only, files, '1.0.0');
+    expect([...some.keys()]).toEqual(['.cursor/rules/prd-workflow.mdc']);
+  });
+
+  it('never writes AGENTS.md — the Codex adapter is a snippet inside the store', () => {
+    expect([...adapters.keys()].some((p) => p === 'AGENTS.md')).toBe(false);
+    expect(adapters.has('.provegate/AGENTS.md.provegate.snippet')).toBe(true);
   });
 });

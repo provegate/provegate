@@ -185,10 +185,20 @@ const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
   { src: 'verify/audit-allowlist.json', dest: 'scripts/verify/audit-allowlist.json' },
 ];
 
-/** The practices plan: pack content → repo files. Additive-only like the base
- * plan; agent-entrypoint files (CLAUDE.md, AGENTS.md, cursor rules) are
- * deliberately ABSENT — shims stay in the pack and are pasted by the adopter
- * (NEXT_STEPS.md), so an existing entrypoint is never touched or shadowed. */
+/**
+ * The practices plan: pack content → repo files. Additive-only like the base
+ * plan; agent-entrypoint files (CLAUDE.md, AGENTS.md, `.cursor/rules/brain.mdc`)
+ * are deliberately ABSENT — shims stay in the pack and are pasted by the adopter
+ * (NEXT_STEPS.md), so an existing entrypoint is never touched or shadowed.
+ *
+ * NARROWED by PRD-029, and the distinction matters because this comment reads as
+ * a blanket rule: what is absent is an **adopter's own entrypoint**. A file at a
+ * provegate-namespaced path the adopter does not own — `.claude/commands/prd-*.md`,
+ * `.cursor/rules/prd-workflow.mdc` — is a GENERATED ADAPTER, not an entrypoint,
+ * and `gate init --prompts` writes those. It shadows nothing, because nothing
+ * else claims those paths, and it still never touches the three named above.
+ * See `_brain/adr/ADR-0002-agent-protocol-delivery.md`.
+ */
 export function planPractices(packDir: string): InitAction[] {
   const actions: InitAction[] = [
     { path: '_brain/adr', kind: 'dir' },
