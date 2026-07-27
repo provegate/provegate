@@ -36,6 +36,7 @@
 > </details>
 > </details>
 > </details>
+> </details>
 
 ## Quick Meta
 
@@ -43,7 +44,7 @@
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-024-readiness-lint-parsers.md`   |
 | Score                  | 6.95/10                                        |
-| Verdict                | ITERATE — seven [P1] items. The iteration-3 fixes were correct and unmeasured: the end-anchored exemption breaks an existing fixture and four live PRDs, and K moved a fourth time into the comment the fix created for it |
+| Verdict                | ITERATE — seven [P1] items, six of them in the §9 half now split out to PRD-028. Scope changed after this round; the next round is iteration 5 against a narrowed document and is not comparable to these four |
 | Iteration              | 4                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
