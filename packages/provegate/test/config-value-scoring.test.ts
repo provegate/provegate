@@ -1,8 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ConfigError, DEFAULT_CONFIG, resolveConfig } from '../src/core/config/index.js';
+import { claimPrd, createPrd, initWorkspace } from '../src/core/run/index.js';
 import { validateResolvedConfig } from '../src/core/config/validate.js';
 
 /**
@@ -202,5 +204,70 @@ describe('valueScoring validation (FR-1)', () => {
     expect(issuesOf({ valueScoring: { axisWeights: {} } })).toContain(
       'valueScoring.axisWeights: unknown key',
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FR-5 — the control-artifact edit
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('editing workflow.config.json advances the base for held leases (FR-5)', () => {
+  const git = (cwd: string, args: string[]): string =>
+    execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+
+  /** A repo whose control artifacts are committed, with a claimed worktree. */
+  function claimedRepo() {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-fr5-'));
+    roots.push(root);
+    git(root, ['init', '-b', 'main']);
+    git(root, ['config', 'user.email', 'test@example.invalid']);
+    git(root, ['config', 'user.name', 'Test']);
+    git(root, ['config', 'commit.gpgsign', 'false']);
+    writeFileSync(join(root, 'seed.txt'), 'seed\n');
+    initWorkspace(DEFAULT_CONFIG, root);
+    // The file this PRD edits — present and committed BEFORE the claim, which
+    // is what makes this the edit case rather than the introduction case.
+    writeFileSync(join(root, 'workflow.config.json'), `${JSON.stringify({ owners: ['a'] }, null, 2)}\n`);
+
+    const { id, path } = createPrd(DEFAULT_CONFIG, root, { slug: 'cutoff' });
+    writeFileSync(
+      path,
+      readFileSync(path, 'utf8').replace(
+        /## Conflict Surface\n[\s\S]*?(?=\n## |$)/,
+        '## Conflict Surface\n\n- `src/cutoff/**`\n\n',
+      ),
+    );
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'workflow artifacts']);
+
+    const claim = claimPrd(DEFAULT_CONFIG, root, id, { worktree: true });
+    expect(claim.ok, claim.issues.join('; ')).toBe(true);
+    return { root, id };
+  }
+
+  it('a lease taken before the edit is refused on reuse, and accepted after the merge', () => {
+    // The migration cost this PRD owes an operator, proved rather than
+    // asserted: adding `valueScoring.enforceFrom` to the root config moves the
+    // control-artifact base, so every worktree claimed before it must merge.
+    const { root, id } = claimedRepo();
+
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      `${JSON.stringify({ owners: ['a'], valueScoring: { enforceFrom: 17 } }, null, 2)}\n`,
+    );
+    git(root, ['add', '-A']);
+    git(root, ['commit', '-m', 'chore: set the value-score cutoff']);
+
+    const stale = claimPrd(DEFAULT_CONFIG, root, id, { worktree: true });
+    expect(stale.ok).toBe(false);
+    expect(stale.issues.join('; ')).toContain('workflow.config.json');
+    expect(stale.issues.join('; ')).toMatch(/merge or rebase main into/);
+
+    // The remedy the refusal names, performed. An instruction that does not
+    // work is worse than no instruction.
+    const wt = join(root, `.worktrees/${id.toLowerCase()}-cutoff`);
+    git(wt, ['merge', '--no-edit', 'main']);
+    const after = claimPrd(DEFAULT_CONFIG, root, id, { worktree: true });
+    expect(after.ok, after.issues.join('; ')).toBe(true);
   });
 });

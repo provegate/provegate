@@ -213,34 +213,36 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Add the flag to `unknownOption`'s allowlist for `check`, or the command refuses its own flag.
 
 
-- [ ] 4.0 FR-4 / FR-5 — this repo's cutoff and the control-artifact edit
-  - [ ] 4.1 Merge `{"valueScoring": {"enforceFrom": 17}}` into the existing root
-        `workflow.config.json`. Do not recreate or rewrite the file.
-  - [ ] 4.2 Assert the resolved config deep-equals the defaults except the cutoff.
-  - [ ] 4.3 FR-5 fixture: editing `workflow.config.json` advances the base, so a
-        pre-existing worktree lease is refused on reuse until it merges — refused before,
-        accepted after. The **introduction** case belongs to PRD-018; prove only the edit.
-  - [ ] 4.4 Phase 4 preflight: re-check `_state/locks` immediately before committing the
-        config edit, because the measurement goes stale within hours. Any live lease
-        merges base before its next `gate` command.
+- [x] 4.0 FR-4 / FR-5 — this repo's cutoff and the control-artifact edit
+  - [x] 4.1 One key merged into the existing root `workflow.config.json`; the `memory` block PRD-018 wrote is untouched.
+        Original: Merge `{"valueScoring": {"enforceFrom": 17}}` into the existing root `workflow.config.json`. Do not recreate or rewrite the file.
 
-- [ ] 5.0 FR-6 — prove the decision at the unit and the sweep at the command
-  - [ ] 5.1 Unit matrix over `value-score.ts` and `lintPrd`: custom valid weights → a
-        total computed from them; a wrong total → the failure names declared **and**
-        recomputed; a malformed header → fails at any id; a pre-cutoff header-less PRD →
-        passes; an at-cutoff header-less PRD → fails.
-  - [ ] 5.2 **Absent id, both spellings** — `undefined` (what every existing caller emits)
-        and explicit `null` — with no header → **passes**. With a present wrong header →
-        **fails**: the arithmetic never depends on the id.
-  - [ ] 5.3 Custom-axis cases: a three-axis config scoring a matching header passes; the
-        same header under the default five-axis config fails as malformed.
-  - [ ] 5.4 Built-CLI fixture for the sweep, as `cli-state.test.ts` does — a seeded repo
-        with one correct PRD, one wrong total, one pre-cutoff header-less PRD. Assert the
-        exit code, the failing PRD named in stdout, and the pre-cutoff one **absent** from
-        the failures.
-  - [ ] 5.5 Mutation-check every negative in 5.1-5.4 (`assert-absent-needs-an-independent-cause`):
-        revert the rule, confirm exactly its own case fails. A negative that survives its
-        own mutation is a defect in the test.
+  - [x] 4.2 Covered by the resolution tests in `config-value-scoring.test.ts` — a config supplying only `enforceFrom` resolves to the shipped axes and weights.
+        Original: Assert the resolved config deep-equals the defaults except the cutoff.
+
+  - [x] 4.3 `config-value-scoring.test.ts` FR-5 block: a lease claimed while the config was committed, then the config edited and committed, then reuse **refused** naming `workflow.config.json` with the merge remedy — and **accepted** after the worktree merges. The remedy is performed, not quoted.
+        Original: FR-5 fixture: editing `workflow.config.json` advances the base, so a pre-existing worktree lease is refused on reuse until it merges — refused before, accepted after. The **introduction** case belongs to PRD-018; prove only the edit.
+
+  - [x] 4.4 Re-checked at the moment of the edit: this worktree's own lease is now stale against base by exactly this mechanism, which is the live instance of what 4.3 fixtures. `_state/locks` holds only PRD-021's lease, so nothing else is affected. Re-check again before the merge — the measurement goes stale.
+        Original: Phase 4 preflight: re-check `_state/locks` immediately before committing the config edit, because the measurement goes stale within hours. Any live lease merges base before its next `gate` command.
+
+
+- [x] 5.0 FR-6 — prove the decision at the unit and the sweep at the command
+  - [x] 5.1 Unit matrix in `value-score.test.ts`: exact arithmetic, a mismatch naming both numbers, the no-tolerance divergence, one- and two-decimal totals, and a three-decimal total failing as malformed rather than as a mismatch.
+        Original: Unit matrix over `value-score.ts` and `lintPrd`: custom valid weights → a total computed from them; a wrong total → the failure names declared **and** recomputed; a malformed header → fails at any id; a pre-cutoff header-less PRD → passes; an at-cutoff header-less PRD → fails.
+
+  - [x] 5.2 Both spellings and omission, all three asserted; and a present-wrong header failing at `undefined`, `null`, 1 and 99.
+        Original: **Absent id, both spellings** — `undefined` (what every existing caller emits) and explicit `null` — with no header → **passes**. With a present wrong header → **fails**: the arithmetic never depends on the id.
+
+  - [x] 5.3 A three-axis config scores its own header; the same header under the default axes is **malformed**, not absent — the author renamed an axis and is told.
+        Original: Custom-axis cases: a three-axis config scoring a matching header passes; the same header under the default five-axis config fails as malformed.
+
+  - [x] 5.4 Built-CLI fixture driving `dist/cli.js` over a seeded corpus: one correct, one wrong, one pre-cutoff header-less. Asserts the exit code, the failing PRD named with both numbers, the correct one absent from failures, and the skip printed with its reason.
+        Original: Built-CLI fixture for the sweep, as `cli-state.test.ts` does — a seeded repo with one correct PRD, one wrong total, one pre-cutoff header-less PRD. Assert the exit code, the failing PRD named in stdout, and the pre-cutoff one **absent** from the failures.
+
+  - [x] 5.5 Every negative mutation-checked. **One assertion did not survive its own mutation and was rebuilt**: folding the header-less counter into the scored counter left the tally test green, because in the cutoff corpus every header-less item is skipped before it can be counted. A no-cutoff case now pins the separation, and the mutation fails it.
+        Original: Mutation-check every negative in 5.1-5.4 (`assert-absent-needs-an-independent-cause`): revert the rule, confirm exactly its own case fails. A negative that survives its own mutation is a defect in the test.
+
 
 - [ ] 6.0 FR-7 — the doc-claims grammar
   - [ ] 6.1 `scripts/verify/verify-doc-claims.mjs`: a line fails when it carries **both** a
@@ -445,6 +447,15 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 ---
 
 ## Deferrals & Decisions
+
+- **5.5 finding — a tally assertion that could not fail, found by its own mutation.** The
+  sweep separates "scored" from "without a header", and the fixture asserted the separated
+  tally. But in that fixture every header-less item is pre-cutoff, so it is skipped before
+  reaching either counter and `headerless` is always 0 — folding the two counters together
+  produced the identical string and the test stayed green. The case that pins it needs **no
+  cutoff configured**, where a header-less item passes and is counted. This is
+  `assert-absent-needs-an-independent-cause` in its positive form: an assertion about a
+  distinction needs an input where the distinction is actually visible.
 
 - **3.2 decision — the sweep's tally counts scored and header-less separately.** The first
   version printed "26 scored item(s) recompute exactly". Eleven of those twenty-six carry a

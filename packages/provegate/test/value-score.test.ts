@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js';
 import { defaultManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
@@ -239,5 +241,118 @@ describe('the seam into lintPrd (FR-2)', () => {
     expect(lintPrd(DEFAULT_CONFIG, manifest, template).issues).not.toContainEqual(
       expect.stringContaining('value header'),
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FR-6 — the sweep, at the COMMAND
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('gate check --value-score sweeps a corpus (FR-3, FR-6)', () => {
+  const CLI_PATH = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+  const roots: string[] = [];
+  afterEach(() => {
+    while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+  });
+
+  interface Cli {
+    code: number;
+    stdout: string;
+    stderr: string;
+  }
+
+  function cli(cwd: string, args: string[]): Cli {
+    try {
+      const stdout = execFileSync(process.execPath, [CLI_PATH, ...args], {
+        cwd,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      return { code: 0, stdout, stderr: '' };
+    } catch (error) {
+      const e = error as { status?: number; stdout?: string; stderr?: string };
+      return { code: e.status ?? -1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
+    }
+  }
+
+  /** A seeded corpus: one correct score, one wrong, one pre-cutoff and
+   * header-less. The thing under test is that the COMMAND reports and exits
+   * non-zero across a corpus — a function call cannot show that. */
+  function corpus(): string {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-sweep-'));
+    roots.push(root);
+    mkdirSync(join(root, '_prds/wip'), { recursive: true });
+    mkdirSync(join(root, '_readiness/wip'), { recursive: true });
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      `${JSON.stringify({ valueScoring: { enforceFrom: 17 } }, null, 2)}\n`,
+    );
+    const write = (n: number, slug: string, header: string): void => {
+      const id = String(n).padStart(3, '0');
+      writeFileSync(
+        join(root, `_prds/wip/prd-${id}-${slug}.md`),
+        [`# PRD-${id}: ${slug}`, '>', '> **Status**: Approved', header, '>', '---', ''].join('\n'),
+      );
+    };
+    write(17, 'correct', '> **Value**: 4.10 (MF/UI/TL/AR/RM: 5/4/4/4/3)');
+    write(18, 'wrong', '> **Value**: 4.55 (MF/UI/TL/AR/RM: 5/4/4/4/3)');
+    write(9, 'legacy', '>'); // pre-cutoff, no header
+    return root;
+  }
+
+  it('names the failing item with both numbers, and exits non-zero', () => {
+    const result = cli(corpus(), ['check', '--value-score']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('PRD-018');
+    expect(result.stderr).toMatch(/declares 4\.55 but its dimensions recompute to 4\.10/);
+  });
+
+  it('the correct item is absent from the failures', () => {
+    // Assert-absent with an independent cause: PRD-017 carries a header and is
+    // past the cutoff, so it IS scored — its absence from the failure list is
+    // evidence the recompute passed, not evidence it was skipped. The tally
+    // proves the distinction.
+    const result = cli(corpus(), ['check', '--value-score']);
+    expect(result.stderr).not.toContain('PRD-017');
+    expect(result.stderr).toMatch(/1 failure\(s\) — 2 scored, 0 without a header, 1 skipped/);
+  });
+
+  it('the pre-cutoff item is reported as skipped WITH its reason, not silently', () => {
+    // A sweep that says nothing about what it did not check reads as a sweep
+    // that checked it.
+    const result = cli(corpus(), ['check', '--value-score']);
+    expect(result.stdout).toMatch(
+      /skipped PRD-009: no header, and id 9 is before the cutoff of 17/,
+    );
+  });
+
+  it('a clean corpus exits 0 and the tally separates scored from header-less', () => {
+    const root = corpus();
+    const wrong = join(root, '_prds/wip/prd-018-wrong.md');
+    writeFileSync(wrong, readFileSync(wrong, 'utf8').replace('4.55', '4.10'));
+    const result = cli(root, ['check', '--value-score']);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toMatch(/ok — 2 scored, 0 without a header, 1 skipped by the cutoff/);
+  });
+
+  it('without a cutoff, a header-less item is counted apart from a scored one', () => {
+    // The case that actually pins the tally's separation. In the cutoff corpus
+    // every header-less item is pre-cutoff, so it is skipped before reaching
+    // the count and `headerless` is always 0 — a mutation folding the two
+    // counters together left that assertion green, which is how this test came
+    // to exist. With no cutoff, a header-less item passes and IS counted.
+    const root = corpus();
+    writeFileSync(join(root, 'workflow.config.json'), '{}\n');
+    const result = cli(root, ['check', '--value-score']);
+    // PRD-018 still fails on its arithmetic; the tally is what is under test.
+    expect(result.stderr + result.stdout).toMatch(
+      /2 scored, 1 without a header, 0 skipped by the cutoff/,
+    );
+  });
+
+  it('refuses an unknown flag rather than sweeping anyway', () => {
+    const result = cli(corpus(), ['check', '--value-scores']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toMatch(/unknown option --value-scores/);
   });
 });
