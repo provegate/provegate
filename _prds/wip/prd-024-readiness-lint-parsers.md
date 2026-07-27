@@ -31,9 +31,12 @@ without converging on 8.0.
 
 That narrowing is the important part of this history, so it is recorded rather than
 smoothed over. The wider PRD carried three defects: this one, plus two in the §9 Open
-Questions reader. Across four rounds **every** blocking finding came from the §9 work — the
+Questions reader. Across four rounds the §9 work produced **every unresolved** blocking finding — the
 exemption grammar moved to a new hiding place four consecutive times, each move created by
-the previous fix — while this defect drew no objection after round two. The §9 work moves
+the previous fix. This defect drew [P1]s of its own in rounds one and two, and they were
+**closed**: the second whole-row reader, the malformed-row channel, the public-API break and
+the undeclared surface are all resolved below. The accurate claim is that the §11 objections
+were answered and stayed answered, not that they never existed. The §9 work moves
 to PRD-028, which is a fair description of what the evidence says: two unrelated problems
 were sharing a document, and the smaller one was being held hostage.
 
@@ -146,9 +149,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    later cell is accepted and ignored — nothing declares one, and refusing it would be a
    rule with no occupant. Fewer than two cells is malformed.
 
-   Two is the threshold, not three, and the difference is load-bearing: three existing test
+   Two is the threshold, not three, and the difference is load-bearing: **four** existing test
    fixtures declare two-column tables (`safety.test.ts:89`, `prd-ready.test.ts:25`,
-   `chain.test.ts:48`). A three-cell minimum would make every one of them malformed, change
+   `chain.test.ts:48`, and `single-package.test.ts:100-119`, which passes one through
+   `buildGateChain`). A three-cell minimum would make every one of them malformed, change
    the lint's verdict on them and trip the new chain refusal — breaking this FR's own
    binding rule that no existing test may need editing to accommodate the guard. Measured
    across the whole fixture corpus: fifteen literal FR rows in five files — ten two-cell,
@@ -185,6 +189,17 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    unreadable row is a table whose gate coverage is unknown, and running the readable
    remainder would report success over an unknown gap —
    `unparseable-command-must-fail-loudly`.
+
+   **Zero sections is not a parser issue, and the distinction is load-bearing.** A missing
+   §11 already fails today, through the required-but-empty Phase-5 gate
+   (`chain.ts:787-790`, bound by `chain.test.ts:173-183`). Routing it through the new issue
+   channel would replace that path with a different refusal and break the compatibility this
+   PRD promises. So: **zero sections is a readiness-lint failure only** — `lintPrd` reports
+   it, `buildGateChain`'s issue guard does not fire on it, and the existing empty-gate
+   failure stands unchanged. Two or more sections **is** a parser issue and the chain refuses,
+   because in that case the commands the parser returned are a subset of the ones declared
+   and its coverage is genuinely unknown. An earlier revision made both cases parser issues
+   and contradicted its own acceptance criteria.
 
    **Exactly one §11 section, because otherwise "any malformed row" is false.** §11 is
    selected by `sectionMatching` in both `safety.ts:45` and `prd-ready.ts:127`, which
@@ -231,9 +246,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    Read the directory from config rather than hardcoding it, so the test follows a
    repository that renames it.
 
-   **The corpus is green today, measured rather than hoped.** Across the six PRDs in the wip
-   directory on 2026-07-27: **zero malformed rows**, and **exactly one verification section
-   each**, in the canonical heading form. FR-1 therefore introduces no new failure anywhere
+   **The corpus is green today, measured rather than hoped.** Across every PRD in the wip
+   directory on 2026-07-27 — seven at the time of the last measurement, and deliberately not
+   fixed as a number, because that count changed three times during this PRD's readiness
+   rounds — **73 FR rows, zero malformed**, and **exactly one verification section each**, in
+   the canonical heading form. FR-1 therefore introduces no new failure anywhere
    in the live corpus. What it does change is a **relaxation** — the three Notes-cell tokens
    in §1 stop reaching the parser, which is the defect being fixed. **This PRD has no corpus
    prerequisite**, and that is a direct consequence of the 2026-07-27 narrowing: every
@@ -250,9 +267,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    at the repository root while `turbo.json:15-17` declares no additional inputs for the
    test task, so a change under the wip directory replays a stale green —
    `turbo-cache-masks-out-of-input-reads`, exactly. **The strategy is chosen rather than left
-   as an either/or:** add the configured wip directory to the test task's declared inputs. A
+   as an either/or:** add `_prds/**` to the test task's declared `inputs` in `turbo.json`. A
    separate uncached command was the alternative and is rejected — it needs a new package
    script, a new manifest entry, and a second place for a check to be forgotten.
+
+   **The glob is deliberately broader than the configured directory, because the two cannot
+   track each other.** The test resolves the wip directory from config so a rename is
+   followed; turbo `inputs` is a static list of glob patterns
+   (`node_modules/turbo/schema.json:585-590`) and cannot read that config. Naming the exact
+   configured path would mean that after a rename the test reads the new directory while the
+   cache still watches the old one — a stale green produced by the very mechanism meant to
+   prevent one. `_prds/**` covers every state directory the artifact root can hold, so it
+   survives a rename of any subdirectory. **The invariant, stated so a later editor does not
+   narrow it back:** this glob must remain at or above the artifact root, never at the
+   configured wip path.
    - **Targets:** `packages/provegate/test/lint-parsers.test.ts`, `turbo.json`
 
 ---
