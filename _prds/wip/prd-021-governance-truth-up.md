@@ -412,9 +412,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    arrives with **no new plumbing** — that is the whole reason this belongs here rather
    than in a standalone script that would have to re-read and re-validate the same file.
 
-   The id is a **parameter, not a re-parse**. `lintPrd(config, manifest, content)` gains a
-   fourth argument carrying the record's `number`; `runCheck` already resolved the record
-   via `findRecord` and has it (`cli.ts:476`, `cli.ts:482`). Deriving the id from the
+   The id is a **parameter, not a re-parse** — and the position is measured, not assumed.
+   `lintPrd` is already four-arity: `lintPrd(config, manifest, content, root?)`
+   (`core/gates/prd-ready.ts:108-113`), and `runCheck` passes the root in that slot
+   (`cli.ts:655`). An earlier revision of this FR said "gains a fourth argument", which
+   would have displaced `root` and silently broken the memory contract's store loading.
+   The id is therefore the **fifth** parameter, `prdNumber: number | null`, after the
+   optional `root`. `runCheck` already resolved the record via `findRecord` and has the
+   number in hand. Every call site and the rollback note in §Migration must name the
+   five-arity form; a rollback that restores a four-arity call is a different function. Deriving the id from the
    `# PRD-NNN:` heading inside the body would make the cutoff depend on a title string the
    lint does not otherwise trust. Existing callers that have no id pass `null`, which
    **skips the cutoff comparison and enforces the arithmetic unconditionally** — absence
@@ -568,9 +574,31 @@ Each FR carries the exact target paths the implementing agent will touch. Use
       green test red. Register-or-remove is the rule, and remove is the right side of it
       here, because nothing substitutes the token (next bullet).
     - `packages/provegate/test/content-placeholders.test.ts` walks `prompts/` and
-      `templates/` only, so no test covers `practices/templates/` and the undeclared
-      token has been shipping invisibly. Add `practices/templates/` to that walk. Expect
-      this to surface other unregistered tokens; report them rather than deleting them.
+      `templates/` only, so no test covers `practices/templates/` and the undeclared token
+      has been shipping invisibly. Add `practices/templates/` to that walk — **and specify
+      the green state, because widening a test without one just moves the red.** Measured
+      on 2026-07-27, `practices/templates/AGENT_BOOTSTRAP.template.md` carries six tokens
+      and none is declared: `{{VALUE_AXES_TABLE}}`, `{{LINK_TO_VISION_DOC}}`,
+      `{{VISION_OR_DECISIONS_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`,
+      `{{PROJECT_SPECIFIC_HARD_RULES}}`, and `{{PLACEHOLDER}}`.
+
+      They split cleanly by **who fills them**, and the disposition follows from that:
+      - **Four are adopter-fill prose** — `LINK_TO_VISION_DOC`, `VISION_OR_DECISIONS_DOC`,
+        `ONE_LINE_PRODUCT_FRAMING`, `PROJECT_SPECIFIC_HARD_RULES`. A bootstrap template is
+        exactly where a fill-in-the-blank belongs, and the registry is exactly where it is
+        declared. **Register all four**, with no config mapping.
+      - **`{{PLACEHOLDER}}` is not a token**; it is the word "placeholder" inside the
+        template's own HTML instruction comment ("Fill every {{PLACEHOLDER}} and delete
+        this comment", line 4). Registering it would declare a token nothing substitutes,
+        and deleting the sentence would remove the instruction that makes the other four
+        usable. **Exclude HTML comments from the walk** — the same masking the readiness
+        lint already applies to its executable view — and state that as the reason.
+      - **`{{VALUE_AXES_TABLE}}` is removed**, per the bullet above: it is config-derived
+        rather than adopter-prose, and nothing substitutes it.
+
+      Green state after this FR: five tokens in that file, four declared, one gone, zero
+      orphans. If the walk surfaces a token this list does not name, report it and stop —
+      an unplanned token is a finding, not a registry row to add on reflex.
     - Nothing substitutes the token — `core/run/init.ts` copies pack files verbatim — so
       `gate init --practices` writes a literal `{{VALUE_AXES_TABLE}}` into the adopter's
       `AGENT_BOOTSTRAP.md`. **This PRD does not add substitution to the installer**
@@ -823,14 +851,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   holds a weight, in the same PRD whose FR-10 was adding a second table — the exact shape of
   the stale-claim defect this PRD exists to fix, committed by the PRD itself.
 
-  So: one authority, two projections, and they differ in how they are kept honest. The
-  practices template's table is **mechanically pinned** to `DEFAULT_CONFIG` by the test
-  FR-10 adds. The root `AGENT_BOOTSTRAP.md` table is **currently manual** — FR-7's
-  doc-claims grammar covers the durable-artifact and deferral claims, not this table.
-  Pinning it too is a one-line extension of the same test and is the obvious follow-up; it
-  is named here rather than claimed as done. The earlier design's two *authorities* (the
-  script's fallback table and `DEFAULT_CONFIG`, mitigated by a parity test) are genuinely
-  gone, and that is the real improvement — one decision point instead of two.
+  So: one authority, two projections, and **both are mechanically pinned to
+  `DEFAULT_CONFIG`** — the root `AGENT_BOOTSTRAP.md` table by FR-9's pin, the practices
+  template's table by FR-10's. Neither is hand-maintained, and a change to the default axes
+  or weights names the document that no longer matches. (A draft of this paragraph called
+  the root projection "currently manual"; FR-9 pins it, so that was wrong in the safe
+  direction and is corrected here rather than left as a claim that undersells the design.)
+  The earlier design's two *authorities* — the script's fallback table and `DEFAULT_CONFIG`,
+  mitigated by a behavioural parity test — are genuinely gone, and that is the real
+  improvement: one decision point instead of two, with the projections proved against it
+  rather than compared to each other.
 - **Introducing a root `workflow.config.json` is not free.** `gate open --worktree`
   snapshots the config file as a control artifact when it exists
   (`run/open.ts` binds `configSourceFor` bytes into the lease). The file must therefore be
@@ -854,10 +884,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   cutoff. Pre-cutoff PRDs that *do* carry a header are still checked for arithmetic — the
   cutoff excuses absence only — and every such header in the corpus recomputes correctly
   today, so the first run is green.
-- **Adopter migration: none, by construction.** With `enforceFrom` absent the gate is
-  presence-triggered, so upgrading the CLI cannot fail a PRD that was passing before.
-  This is the property that makes the release safe to ship ahead of any template change,
-  and it is why FR-1 refuses the "enforce everywhere" default.
+- **Adopter migration on the stock config: none, by construction.** With `enforceFrom`
+  absent the gate is presence-triggered, so upgrading the CLI cannot fail a PRD that was
+  passing before. This is the property that makes the release safe to ship ahead of any
+  template change, and it is why FR-1 refuses the "enforce everywhere" default.
+- **Adopter migration once `axes` is edited: real, and it is a corpus rewrite.** The
+  heading above is true of the upgrade, not of every later config change. A header whose
+  axis list disagrees with the config fails as malformed (FR-2), so changing `axes` reds
+  every already-scored PRD at once, and removing an axis does the same to every header that
+  still names it. The procedure is FR-1's: sweep with `gate check --value-score` to get the
+  exact list, then land the `axes` change and the header rewrites in one commit. Stating
+  only the first bullet is how "no migration" becomes a claim that outlives its condition —
+  which is the class of defect this whole PRD exists to correct.
 - **Rollout order:** release the CLI carrying `valueScoring` (FR-12 minor bump) → adopters
   upgrade → only then may they add the key. The reverse order hard-fails, because unknown
   keys are config errors; the changeset note states this.
@@ -929,8 +967,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
       `test/content-canon.test.ts`, `test/changeset-entry.test.ts`,
       `test/fixtures/value-score/**` (new)
 - [ ] `packages/provegate/prompts/PLACEHOLDERS.md` +
-      `test/content-placeholders.test.ts` — register `{{VALUE_AXES_TABLE}}` and widen the
-      walk to `practices/templates/` (FR-10)
+      `test/content-placeholders.test.ts` — **remove** `{{VALUE_AXES_TABLE}}` from the
+      practices template (do not register it — registering a token no template contains
+      reds the orphan check), register the four adopter-fill tokens the widened walk
+      surfaces, exclude HTML comments from the walk, and widen it to
+      `practices/templates/` (FR-10)
 - [ ] `AGENT_BOOTSTRAP.md`, `STATUS.md`, `_brain/PROTOCOL.md`
 - [ ] `packages/provegate/practices/` counterparts + `pack-drift-ledger.json`
 - [ ] `docs/research/provegate-bootstrap/` status banner + roadmap/whitepaper pointers
@@ -1015,6 +1056,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/src/core/config/types.ts`
 - `packages/provegate/src/core/config/defaults.ts`
 - `packages/provegate/src/core/config/validate.ts`
+- `packages/provegate/src/core/config/load.ts`
 - `packages/provegate/test/config-value-scoring.test.ts`
 - `packages/provegate/test/doc-claims-script.test.ts`
 - `packages/provegate/test/content-canon.test.ts`
