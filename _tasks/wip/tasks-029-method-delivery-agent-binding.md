@@ -140,32 +140,32 @@ a record is evidence only while it is true.
         (`{{` + `!`+, then `{{` + `[A-Z]`). Text in neither class passes through untouched.
   - [x] 2.6 `substituteOnce`: collect every source occurrence before replacing; replace each
         exactly once; treat values as **opaque** and never re-scan output.
-  - [ ] 2.7 Emit the four diagnostics — malformed, undeclared, unresolved, unused — each naming
+  - [x] 2.7 Emit the four diagnostics — malformed, undeclared, unresolved, unused — each naming
         file and line (or key). Prove the refusal against the **shipped corpus with an empty
         `values` map**.
   - [x] 2.8 `bannerFor`: banner first, except where a format requires frontmatter first, where
         it follows the closing `---`. The verbatim file carries no banner.
-  - [ ] 2.9 Generate `<dir>/README.md` stating the tree is generated, the producing version,
+  - [x] 2.9 Generate `<dir>/README.md` stating the tree is generated, the producing version,
         that two adapter destinations live outside the directory, and the reinstall rule.
   - [x] 2.10 `packages/provegate/test/prompts.test.ts`: rule 4 before rule 5; a `.txt` and a
         nested `templates/legacy/x-template.md` each fail by name; a symlink fails; nested
         paths preserved; the pinned path set; escape recursion; `{{lowercase}}` untouched;
         line-broken token malformed; an opaque value containing a token not re-scanned.
 
-- [ ] 3.0 Values and enumerated tokens (FR-4)
-  - [ ] 3.1 `requiredValues`: derive from the tokens FR-2 dispositions as **rendered**, minus
+- [x] 3.0 Values and enumerated tokens (FR-4)
+  - [x] 3.1 `requiredValues`: derive from the tokens FR-2 dispositions as **rendered**, minus
         the config-backed set. Never from the registry.
-  - [ ] 3.2 `CONFIG_BACKED`: the seven mappings, derived from `PLACEHOLDERS.md` rather than
+  - [x] 3.2 `CONFIG_BACKED`: the seven mappings, derived from `PLACEHOLDERS.md` rather than
         restated in code.
-  - [ ] 3.3 Add the `empty` column to `packages/provegate/prompts/PLACEHOLDERS.md`, `allowed`
+  - [x] 3.3 Add the `empty` column to `packages/provegate/prompts/PLACEHOLDERS.md`, `allowed`
         for `{{DOMAIN_CHECKS}}` and `{{ENV_NOTES}}` only, plus the enumerated column.
-  - [ ] 3.4 Unknown-`values`-key detection as the render's `unused` diagnostic, naming the key
+  - [x] 3.4 Unknown-`values`-key detection as the render's `unused` diagnostic, naming the key
         and the tokens the corpus requires.
-  - [ ] 3.5 `enumeratedTokens` / `fragmentFor` / `assertFragmentTerminal`: legal values from the
+  - [x] 3.5 `enumeratedTokens` / `fragmentFor` / `assertFragmentTerminal`: legal values from the
         registry, fragments at `prompts/_fragments/<TOKEN>.<value>.md`, an illegal value fails
         by name, a fragment containing a candidate fails **at render and in a package test —
         not at build time**.
-  - [ ] 3.6 `packages/provegate/test/content-placeholders.test.ts`: nine required; the four
+  - [x] 3.6 `packages/provegate/test/content-placeholders.test.ts`: nine required; the four
         practices-only tokens excluded; a registry row naming a config path `WorkflowConfig`
         lacks fails; the per-token empty policy in both directions; a terminality violation
         fails.
@@ -301,6 +301,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 sentence rationale>`. Never inline on sub-task lines.
 
 - 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 3.2 — `CONFIG_BACKED` is not a constant: the seven mappings are read from `PLACEHOLDERS.md`'s `workflow.config field` column, so the registry stays the single authority for token metadata and a second reader cannot disagree with it (`two-parsers-wrong-together`). A test asserts every declared path resolves against `DEFAULT_CONFIG`.
+- 3.5 — fragment terminality is enforced at RENDER time and by a package test, never "at build time": the package `build` is one `tsup` invocation with no content validation and an adopter does not build package content at install. Wiring it there would be the `gate-wire-or-delete` failure readiness iteration 5 found.
 - 2.5 — `ESCAPE_CANDIDATE` has no standalone constant: `substituteOnce` must match both candidate classes in ONE alternation to keep the escape ordered first, and a second pass would reintroduce the ordering bug readiness iteration 4 found. Documented in the module rather than left to a reader to rediscover.
 - 2.7/2.9 — the four diagnostics and the generated store README are deferred to parent 3, where `requiredValues` supplies the registry the `undeclared`/`unresolved`/`unused` messages need. `scanTokens` already emits `malformed`.
 - 1.4 — unknown `values` keys are deliberately NOT a raw-pass issue; a test asserts they pass config load, and the `unused` render diagnostic (task 3.4) owns them. Recorded because a reviewer will read the permissiveness as a gap.
@@ -316,6 +318,7 @@ sentence rationale>`. Never inline on sub-task lines.
 | 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
 | 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
 | 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 3.0 | 1026 → **1066**. FR-4's central claim is now machine-verified: **9 required values**, not the registry's 20 and not the 13 an earlier draft asserted. The four practices-only tokens are declared and never demanded. |
 | 2026-07-27 | 2.0 | prompts.ts core landed. 21 tests in `prompts.test.ts`. The corpus measurement is now machine-pinned: 12 rendered protocols, 7 rendered templates, 1 verbatim — the figures the PRD states as a measurement rather than a specification. |
 | 2026-07-27 | 1.6 | Mutation-checked: removing `promptsPathContained` from the resolved pass fails the escaping-dir deny test **and only that test** (1 failed / 14 passed). |
 

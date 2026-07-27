@@ -353,3 +353,333 @@ export function bannerFor(content: string, version: string): string {
   const cut = end + '\n---\n'.length;
   return `${content.slice(0, cut)}\n${banner}\n${content.slice(cut)}`;
 }
+
+// --- the registry, one authority (FR-4) -------------------------------------
+
+export interface RegistryRow {
+  token: string;
+  meaning: string;
+  /** Dotted `WorkflowConfig` path that supplies this token, or null. */
+  configField: string | null;
+  /** Whether `''` is a legal value for this token. */
+  emptyAllowed: boolean;
+  /** Legal values when the token is enumerated, else null. */
+  enumerated: string[] | null;
+}
+
+const CELL_TOKEN = /^`\{\{([A-Z][A-Z0-9_]*)\}\}`$/;
+const unset = (cell: string): boolean => cell === '' || cell === '—' || cell === '-';
+const unbacktick = (cell: string): string => cell.replace(/^`|`$/g, '');
+
+/**
+ * `PLACEHOLDERS.md` is the SINGLE authority for token metadata: which tokens
+ * exist, which resolve from config, where `''` is legal, and which are
+ * enumerated. Deriving all four from one table is what keeps a second reader
+ * from disagreeing with it — `two-parsers-wrong-together` is about exactly the
+ * shape this avoids.
+ */
+export function parseRegistry(text: string): RegistryRow[] {
+  const rows: RegistryRow[] = [];
+  for (const line of text.split('\n')) {
+    if (!line.startsWith('| `{{')) continue;
+    const cells = line
+      .trim()
+      .replace(/^\||\|$/g, '')
+      .split('|')
+      .map((c) => c.trim());
+    const first = cells[0];
+    if (first === undefined) continue;
+    const match = CELL_TOKEN.exec(first);
+    if (match === null) continue;
+    const token = match[1];
+    if (token === undefined) continue;
+    const configCell = cells[3] ?? '';
+    const emptyCell = cells[4] ?? '';
+    const enumCell = cells[5] ?? '';
+    rows.push({
+      token,
+      meaning: cells[1] ?? '',
+      configField: unset(configCell) ? null : unbacktick(configCell),
+      emptyAllowed: emptyCell === 'allowed',
+      enumerated: unset(enumCell)
+        ? null
+        : unbacktick(enumCell)
+            .split(',')
+            .map((v) => v.trim())
+            .filter((v) => v.length > 0),
+    });
+  }
+  return rows;
+}
+
+/** Read a dotted path out of the resolved config. Returns null when the path
+ * does not exist, which a package test turns into a build-time failure for the
+ * registry rather than a silent unresolved token at render time. */
+export function readConfigPath(config: unknown, dotted: string): string | null {
+  let current: unknown = config;
+  for (const segment of dotted.split('.')) {
+    if (typeof current !== 'object' || current === null) return null;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return typeof current === 'string' ? current : null;
+}
+
+// --- values and enumerated tokens (FR-4) ------------------------------------
+
+export interface PromptsLike {
+  enabled: boolean;
+  dir: string;
+  adapters: string[];
+  values: Record<string, string | null>;
+}
+
+/** Config shape this module needs. Narrower than `WorkflowConfig` on purpose:
+ * the render reads a handful of fields and must not acquire a dependency on
+ * the whole surface. */
+export interface RenderConfig {
+  prompts: PromptsLike;
+  [key: string]: unknown;
+}
+
+/** Tokens the RENDERED corpus consumes, in first-appearance order. */
+export function corpusTokens(packageDir: string, planned: PlannedFile[]): string[] {
+  const seen = new Set<string>();
+  const order: string[] = [];
+  for (const item of planned) {
+    if (item.rule.disposition !== 'render') continue;
+    const { found } = scanTokens(readFileSync(item.source.abs, 'utf8'), item.source.rel);
+    for (const occurrence of found) {
+      if (seen.has(occurrence.token)) continue;
+      seen.add(occurrence.token);
+      order.push(occurrence.token);
+    }
+  }
+  return order;
+}
+
+/**
+ * The values an adopter must supply: the tokens the RENDERED corpus consumes,
+ * minus those a config field resolves.
+ *
+ * Derived from the corpus, never from the registry. The registry also covers
+ * `practices/templates/`, which the store does not render, so four of its rows
+ * would otherwise become questions an adopter answers to no effect. A
+ * requirement derived from the catalogue rather than from what the consumer
+ * reads produces refusals nobody can satisfy meaningfully.
+ */
+export function requiredValues(
+  packageDir: string,
+  planned: PlannedFile[],
+  registry: RegistryRow[],
+): RegistryRow[] {
+  const backed = new Set(registry.filter((r) => r.configField !== null).map((r) => r.token));
+  const consumed = new Set(corpusTokens(packageDir, planned));
+  return registry.filter((r) => consumed.has(r.token) && !backed.has(r.token));
+}
+
+/** `prompts/_fragments/<TOKEN>.<value>.md`, the package-relative source of an
+ * enumerated token's text. The config supplies the KEY; the prose stays in the
+ * package, where the provenance rule can see it. */
+export const fragmentRel = (token: string, value: string): string =>
+  `prompts/_fragments/${token}.${value}.md`;
+
+/**
+ * Fragments are TERMINAL, and it is enforced rather than assumed: a fragment
+ * containing a token candidate would survive into the output unresolved,
+ * because substitution is one pass and re-scanning would break the opacity
+ * guarantee that makes replacement order irrelevant.
+ *
+ * Enforced at render time and by a package test — NOT "at build time". The
+ * package's `build` is a single `tsup` invocation with no content validation,
+ * and an adopter does not build package content at install; a requirement
+ * wired to a boundary that does not exist is the `gate-wire-or-delete` failure.
+ */
+export function assertFragmentTerminal(rel: string, text: string): void {
+  const { found, bad } = scanTokens(text, rel);
+  if (found.length === 0 && bad.length === 0) return;
+  throw new PromptsError(`fragment ${rel} is not terminal`, [
+    ...found.map((f) => `line ${f.line}: {{${f.token}}}`),
+    ...bad.map((b) => `line ${b.line ?? '?'}: ${b.message}`),
+    'a fragment is substituted into a rendered file and is never itself scanned',
+  ]);
+}
+
+// --- the render (FR-3, FR-4) ------------------------------------------------
+
+export interface RenderResult {
+  /** Store-relative path → content. `init.ts` prefixes `prompts.dir`. */
+  files: Map<string, string>;
+  /** The rows an adopter must supply, for the block the command prints. */
+  required: RegistryRow[];
+}
+
+function packageVersion(packageDir: string): string {
+  try {
+    const raw: unknown = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
+    if (typeof raw === 'object' && raw !== null) {
+      const version = (raw as Record<string, unknown>)['version'];
+      if (typeof version === 'string') return version;
+    }
+  } catch {
+    /* a corpus without a manifest still renders; the banner says `unknown` */
+  }
+  return 'unknown';
+}
+
+/**
+ * Render the store. PURE with respect to the target filesystem — it reads the
+ * shipped corpus and returns a path→content map, and `init.ts` does the
+ * writing under the installer's additive-only contract.
+ *
+ * Throws `PromptsError` carrying every diagnostic at once, so an adopter fixes
+ * one round of problems rather than one problem per run.
+ */
+export function renderPrompts(packageDir: string, config: RenderConfig): RenderResult {
+  const planned = planStore(packageDir);
+  const version = packageVersion(packageDir);
+
+  const registryFile = planned.find((p) => p.rule.disposition === 'verbatim');
+  if (registryFile === undefined) {
+    throw new PromptsError('the shipped corpus has no placeholder registry');
+  }
+  const registryText = readFileSync(registryFile.source.abs, 'utf8');
+  const registry = parseRegistry(registryText);
+  const byToken = new Map(registry.map((r) => [r.token, r]));
+
+  const required = requiredValues(packageDir, planned, registry);
+  const supplied = config.prompts.values;
+  const diagnostics: Diagnostic[] = [];
+
+  // Resolution, one map, built before any file is touched.
+  const values = new Map<string, string>();
+  for (const row of registry) {
+    if (row.configField !== null) {
+      const resolved = readConfigPath(config, row.configField);
+      if (resolved !== null) values.set(row.token, resolved);
+      continue;
+    }
+    const given = supplied[row.token];
+    if (given === undefined || given === null) continue; // unset; diagnosed below
+    if (given === '' && !row.emptyAllowed) {
+      diagnostics.push({
+        kind: 'unresolved',
+        file: 'workflow.config.json',
+        line: null,
+        message: `prompts.values.${row.token} is empty, which this token does not allow — ${row.meaning}`,
+      });
+      continue;
+    }
+    if (row.enumerated !== null) {
+      if (!row.enumerated.includes(given)) {
+        diagnostics.push({
+          kind: 'unresolved',
+          file: 'workflow.config.json',
+          line: null,
+          message: `prompts.values.${row.token} is \`${given}\`; legal values are ${row.enumerated.join(', ')}`,
+        });
+        continue;
+      }
+      const rel = fragmentRel(row.token, given);
+      let text: string;
+      try {
+        text = readFileSync(resolve(packageDir, rel), 'utf8');
+      } catch {
+        throw new PromptsError(`enumerated token ${row.token} declares \`${given}\``, [
+          `but ${rel} does not exist in the package`,
+        ]);
+      }
+      assertFragmentTerminal(rel, text);
+      values.set(row.token, text.trimEnd());
+      continue;
+    }
+    values.set(row.token, given);
+  }
+
+  // `unused`: a supplied key no rendered token consumes. This is a RENDER
+  // diagnostic and not a config-load one — the legal key set is the corpus,
+  // which is package Markdown the config loader must not read.
+  const consumed = new Set(corpusTokens(packageDir, planned));
+  for (const key of Object.keys(supplied)) {
+    if (consumed.has(key)) continue;
+    diagnostics.push({
+      kind: 'unused',
+      file: 'workflow.config.json',
+      line: null,
+      message: `prompts.values.${key} is consumed by no rendered protocol${
+        byToken.has(key) ? ' (the registry declares it, but only for a file the store does not render)' : ''
+      }`,
+    });
+  }
+
+  const files = new Map<string, string>();
+  for (const item of planned) {
+    const source = readFileSync(item.source.abs, 'utf8');
+    if (item.rule.disposition === 'verbatim') {
+      // No banner and no substitution: rendering the registry would consume the
+      // very tokens it documents, and the refusal explaining the failure would
+      // fire on the explanation.
+      files.set(item.storeRel, source);
+      continue;
+    }
+    const { found, bad } = scanTokens(source, item.source.rel);
+    diagnostics.push(...bad);
+    for (const occurrence of found) {
+      if (!byToken.has(occurrence.token)) {
+        diagnostics.push({
+          kind: 'undeclared',
+          file: item.source.rel,
+          line: occurrence.line,
+          message: `{{${occurrence.token}}} is in no registry row — declare it, or escape it as {{!${occurrence.token}}}`,
+        });
+        continue;
+      }
+      if (values.has(occurrence.token)) continue;
+      const row = byToken.get(occurrence.token);
+      diagnostics.push({
+        kind: 'unresolved',
+        file: item.source.rel,
+        line: occurrence.line,
+        message: `{{${occurrence.token}}} has no value — set prompts.values.${occurrence.token} (${row?.meaning ?? ''})`,
+      });
+    }
+    files.set(item.storeRel, bannerFor(substituteOnce(source, values), version));
+  }
+
+  if (diagnostics.length > 0) {
+    const order: DiagnosticKind[] = ['malformed', 'undeclared', 'unresolved', 'unused'];
+    const seen = new Set<string>();
+    const details = diagnostics
+      .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+      .map((d) => `[${d.kind}] ${d.file}${d.line === null ? '' : `:${d.line}`} — ${d.message}`)
+      .filter((line) => (seen.has(line) ? false : (seen.add(line), true)));
+    throw new PromptsError('the protocol store cannot be rendered', details);
+  }
+
+  files.set('README.md', storeReadme(version));
+  return { files, required };
+}
+
+const storeReadme = (version: string): string =>
+  [
+    `<!-- GENERATED by provegate ${version} — \`gate init --prompts\`. Do not edit. -->`,
+    '',
+    '# Protocol store',
+    '',
+    'Every file here is generated from the installed `provegate` package and this',
+    "repository's `workflow.config.json`. Edits are overwritten by nothing and",
+    'preserved by nothing — the tool never rewrites this tree.',
+    '',
+    '## Reinstalling',
+    '',
+    'This store installs **one way**. There is no upgrade path, no reconciliation',
+    'and no `sync` in this version. To reinstall after a package upgrade:',
+    '',
+    '1. Run `gate init --prompts` and read the generated path set it prints.',
+    '2. Delete **every path in that set** — this directory *and* the adapter',
+    '   destinations outside it, which a delete-this-directory instruction would',
+    '   leave behind at the previous version.',
+    '3. Run `gate init --prompts` again.',
+    '',
+    'Automated staleness detection is deliberately not part of this version.',
+    '',
+  ].join('\n');
