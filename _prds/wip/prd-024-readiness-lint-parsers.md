@@ -25,8 +25,8 @@
 
 ## 1. Introduction / Overview
 
-Split from PRD-023 on owner direction, 2026-07-27, after six independent readiness rounds
-scored that PRD between 6.65 and 7.19 without converging on the 8.0 threshold. **Only the
+Split from PRD-023 on owner direction, 2026-07-27, after four independent readiness rounds
+scored that PRD in the high sixes and low sevens without converging on the 8.0 threshold. **Only the
 independent rounds are counted anywhere in this document**; the self-scored ones are
 recorded in that PRD's readiness artifact and are not evidence. The diagnosis
 recorded there was size: three unrelated engineering problems held together by a thesis
@@ -150,6 +150,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    **cell 2**. Scope and Notes are cells 3 and 4 and are optional. Fewer than two cells is
    malformed.
 
+   **Extra cells are accepted and ignored.** Only cells 2, 3 and 4 are read; a fifth or
+   later cell is neither an error nor a command. The measured corpus supports this: fifteen
+   literal FR rows across five test files break down as ten two-cell, four three-cell and
+   one four-cell, with the template round-trip adding two more four-cell rows. Nothing
+   declares five, and refusing them would be a rule with no occupant and a nonzero chance of
+   surprising an adopter.
+
    Two is the threshold, not three, and the difference is load-bearing: three existing test
    fixtures declare `| FR | Command |` tables with exactly two columns
    (`safety.test.ts:89`, `prd-ready.test.ts:25`, `chain.test.ts:48`). A three-cell minimum
@@ -207,6 +214,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `packages/provegate/src/core/run/chain.ts::buildGateChain`,
      `packages/provegate/test/safety.test.ts`,
      `packages/provegate/test/content-templates.test.ts`,
+     `packages/provegate/test/prd-ready.test.ts`,
+     `packages/provegate/test/chain.test.ts`,
      `_brain/learnings/notes-column-runs-commands.md`,
      `packages/provegate/test/lint-parsers.test.ts` (new)
 2. **FR-2 — The Open Questions exemption needs a deferral target, not a substring.**
@@ -221,15 +230,26 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - `Deferred to <work-item-id>`, the identifier matching the configured id pattern
    - `Deferred: <markdown-link>`
 
-   **End-anchored, with nothing after.** An opens-with rule is not enough, and this is the
-   third level of the same hole: with the exemption keyed to the opening,
-   `- (none) — why is auth still undecided?` and
-   `- Deferred to PRD-123 — but who owns the authorization model?` both pass while carrying
-   the question. Nothing syntactic separates a rationale from a question — the same reason
-   continuations are refused — so the exempt form carries no prose at all. Rationale goes in
-   an HTML comment, which FR-3's grammar already permits as a line form. Deny fixtures: both
-   same-line cases above, plus an unresolved bullet containing the word and an unrelated
-   link.
+   **End-anchored, with nothing after** — and **rationale has nowhere to go inside the
+   section**, which is the fourth level of this hole and the last one. The progression is
+   worth recording because each fix created the next: an opens-with rule let
+   `- (none) — why is auth still undecided?` pass; refusing continuations left the same-line
+   form; end-anchoring it pushed rationale into an HTML comment, and a comment holds
+   `<!-- Who owns the authorization decision? -->` just as well. Comments are therefore
+   **not** a permitted line form inside this section (FR-3), and the exempt bullet carries
+   no prose at all. A `(none)` section needs no rationale: it asserts the section is empty,
+   and anything worth saying about why belongs in the Decision Record or §10.
+
+   **The matcher is defined, not left to the implementer.** Comparison is
+   case-insensitive, matching today's behavior (`prd-ready.ts:153`); internal runs of
+   whitespace collapse to one space and leading/trailing whitespace is trimmed, so
+   `- Deferred to   PRD-123` is the same token sequence as `- Deferred to PRD-123`; the
+   identifier must match the configured id pattern in full; and `<markdown-link>` means
+   exactly `[text](target)` with a non-empty target. Nothing else is accepted.
+
+   Deny fixtures: both same-line cases above; a comment carrying a question; an unresolved
+   bullet containing the word and an unrelated link; and a `Deferred:` whose target is
+   empty.
 
    **Do not fix this by deleting the `deferred` exemption.** The template promises a
    deferral-with-a-link escape and removing it outright would break PRDs that legitimately
@@ -245,17 +265,35 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    because "other than a leading explanatory line" is itself an exemption a question can
    hide in** — nothing syntactically distinguishes an explanation from an unresolved
    question, so exactly one paragraph-form question would survive. Inside the section, a
-   **There must be exactly one Open Questions section, and today nothing checks that.**
-   `sectionMatching` returns the **first** match and `''` when there is none
+   **There must be exactly one Open Questions section, identified by its heading and not by
+   a substring.** `sectionMatching` returns the **first** match and `''` when there is none
    (`markdown.ts:90`), and the lint uses it (`prd-ready.ts:149`). So a document with two
-   `## 9. Open Questions` headings has its second one — and every question in it — invisible,
-   and a document with **no** such heading reports zero questions rather than failing. Use
-   `sectionsMatching` (`markdown.ts:65`) and require exactly one: zero fails as missing,
-   two or more fails as ambiguous. Deny fixtures for both.
+   `## 9. Open Questions` headings has its second — and every question in it — invisible, and
+   a document with **no** such heading reports zero rather than failing. Use
+   `sectionsMatching` (`markdown.ts:65`) and require exactly one: zero fails as missing, two
+   or more fails as ambiguous.
 
-   Inside that one section, a line must be one of: blank; an HTML comment; a bullet start
-   matching `^\s*-\s+\S`; or an **indented continuation** of the preceding bullet, matching
-   `^\s+\S`. Anything else fails, and there is **no** leading-prose allowance. A continuation line is part of its
+   **Counting matches of `.*Open Questions.*` is not enough**, because that pattern is
+   case-insensitive and substring-based (`markdown.ts:74`): a document whose only heading is
+   `## Resolved Open Questions` has exactly one match and would pass — the precise trap this
+   FR warns authors about. The heading must, after stripping an optional leading ordinal
+   (`9.`), equal `Open Questions` case-insensitively and nothing more. Measured 2026-07-27:
+   all six PRDs in the wip directory already use `## 9. Open Questions`, so this narrowing
+   costs nothing today and closes the variant that would otherwise pass.
+
+   **The same first-match hole exists in two other readers and is closed with it.** §11 is
+   selected by `sectionMatching` in both `safety.ts:45` and `prd-ready.ts:127`, and the FR
+   block by `frBlocks` at `prd-ready.ts:28`. A malformed or unsafe row in a **second**
+   `## 11. Verification Commands` section is invisible today, which would make FR-1's "the
+   chain refuses when any row is malformed" false as written. Require exactly one of each,
+   by the same heading rule. Deny fixtures: zero and duplicate, for each of the three
+   sections.
+
+   Inside the Open Questions section, a line must be blank, a bullet start matching
+   `^\s*-\s+\S`, or an **indented continuation** of the preceding bullet matching
+   `^\s+\S`. **HTML comments are not permitted here** — see FR-2: a comment is where the
+   rationale went once the exempt form was end-anchored, and a comment holds a question as
+   easily as prose does. Anything else fails, and there is **no** leading-prose allowance. A continuation line is part of its
    bullet, not a separate entry.
 
    **An exempt bullet must be a single line, and that asymmetry is the point.** Continuations
@@ -305,21 +343,42 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    Read the directory from config rather than hardcoding `_prds/wip`, so the test follows a
    repository that renames it.
 
-   **The corpus test reads outside its package, so it must not be cached.** It reads PRDs at
-   the repository root while `turbo.json:15-17` declares no additional inputs for the test
-   task, so a change under the wip directory replays a stale green —
-   `turbo-cache-masks-out-of-input-reads`, exactly. Either declare the wip directory as an
-   input for the test task or give the sweep its own uncached command. Whichever is chosen,
-   `turbo.json` is a target and a claimed path.
+   **The corpus test reads outside its package, so its inputs are declared.** It reads PRDs
+   at the repository root while `turbo.json:15-17` declares no additional inputs for the
+   test task, so a change under the wip directory replays a stale green —
+   `turbo-cache-masks-out-of-input-reads`, exactly. **The strategy is chosen here rather
+   than left as an either/or:** add the configured wip directory to the `test` task's
+   `inputs` in `turbo.json`. A separate uncached command was the alternative and is
+   rejected — it needs a new package script, a new manifest entry, and a second place for a
+   check to be forgotten, which is what PRD-025 and PRD-026 exist to reduce. `turbo.json` is
+   the only added file.
 
    **Scope to wip deliberately.** Completed PRDs are historical artifacts and are never
    rewritten to manufacture compliance. **Report, never edit:** a wip PRD that newly fails
    is a finding for its author.
 
-   **PRD-021 is a Phase-4 prerequisite, not a "known case".** PRD-021's §9 is paragraph-form
-   (`prd-021:1028-1046`), so FR-3 rejects it. The corpus is whatever the configured wip
-   directory holds **when the test runs** — deliberately not a number here, because that
-   count has already changed once during this PRD's own readiness rounds. This PRD cannot reach a green corpus until PRD-021's §9 is remediated by its own
+   **The corpus blockers are five, not one, and they are named.** An earlier revision
+   called PRD-021 "the" blocker; the end-anchored exemption of FR-2 has a wider blast radius
+   than that, and it was not measured when it was written. Measured 2026-07-27 across the
+   configured wip directory:
+
+   | PRD | Why it fails today |
+   | --- | ------------------ |
+   | PRD-021 | §9 is paragraph-form, so FR-3 rejects it |
+   | PRD-023 | `- (none)` followed by trailing prose and a continuation |
+   | PRD-025 | same |
+   | PRD-026 | same |
+   | PRD-027 | `- [ ] none.` — a checkbox form, which is not one of FR-2's three exempt forms |
+
+   Only PRD-024 conforms, and it conforms because it was rewritten to. **Each fix is one
+   line** — move the prose out of the bullet — and four of the five are in this same wave
+   and under active revision anyway, so the coordination cost is real but small. They are
+   Phase-4 prerequisites: this PRD reports, never edits, and **allowlisting a known failure
+   is forbidden**, so the corpus cannot go green until their authors act.
+
+   The corpus itself is whatever the configured wip directory holds **when the test runs** —
+   deliberately not a number, because that count changed twice during this PRD's own
+   readiness rounds. This PRD cannot reach a green corpus until PRD-021's §9 is remediated by its own
    author. **Allowlisting an expected failure in the corpus test is forbidden** — a sweep
    with a known-red exemption is the ledger-shaped bypass `known-red-ledger-must-expire`
    warns about, arriving in a test instead of a ledger. Stop and hand back.
@@ -352,8 +411,14 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Given** an `| FR-N |` row whose Notes cell holds a backticked word, **When** the §11
   parser runs, **Then** that word is not returned as a command — and **given** the same
   row's Command cell, **Then** its command is returned exactly as today.
-- **Given** an `| FR-N |` row that does not split into at least three cells, **When** the
-  parser runs, **Then** it reports the row as malformed rather than skipping it.
+- **Given** an `| FR-N |` row that yields fewer than **two** cells, **When** the parser
+  runs, **Then** it reports the row as malformed rather than skipping it — and **given** a
+  two-column `| FR | Command |` row, **Then** its command is returned exactly as today.
+- **Given** a document with two Open Questions sections, or none, or whose only matching
+  heading is `## Resolved Open Questions`, **Then** the lint fails in each case; and
+  likewise for two or zero Verification Commands sections.
+- **Given** an exempt bullet followed by an HTML comment containing a question, **Then**
+  the lint fails — comments are not a permitted line form inside that section.
 - **Given** an Open Questions bullet that is genuinely unresolved and happens to contain
   the word "deferred", **When** the lint runs, **Then** it is counted as unresolved.
 - **Given** an Open Questions bullet explicitly deferred **with** a link or a `PRD-NNN`
@@ -431,6 +496,10 @@ pack file changes.
 - [ ] `packages/provegate/src/core/run/chain.ts::buildGateChain` — refuse on parser issues
 - [ ] `packages/provegate/test/safety.test.ts`, `test/content-templates.test.ts` — existing
       consumers of the preserved export, asserted unchanged
+- [ ] `packages/provegate/test/prd-ready.test.ts` — its `(none — resolved)` fixture no
+      longer conforms to FR-2 and must be updated; a declared, deliberate lint change
+- [ ] `packages/provegate/test/chain.test.ts` — the refusal proof for FR-1's guard
+- [ ] `turbo.json` — declare the wip directory as an input for the test task (FR-4)
 - [ ] `packages/provegate/test/lint-parsers.test.ts` (new) — fixtures + the wip corpus pass
 - [ ] `_brain/learnings/notes-column-runs-commands.md` — retire the interim guidance
 
@@ -439,16 +508,6 @@ pack file changes.
 ## 9. Open Questions
 
 - (none)
-
-<!-- The three defects are measured, their fixes are stated, and nothing here awaits an
-owner decision.
-
-The bullet above is BARE, deliberately. FR-2's exemption is end-anchored: `(none)` carries
-no trailing prose, because nothing syntactic separates a rationale from a question and a
-question after the marker is the third level of the same hiding place. Rationale therefore
-lives here, in a comment, which FR-3's grammar permits as a line form. Section is a bullet
-list and there is exactly one of it — both FR-3 requirements. A PRD proposing a rule must
-not be written in the shape it forbids. -->
 
 ---
 
@@ -498,6 +557,14 @@ not be written in the shape it forbids. -->
   accommodate the refusal.** If one does, the guard reached a case this PRD did not intend —
   revert it and narrow, rather than updating the test to match. The preserved export
   signature (FR-1) is the same discipline applied to the API.
+
+  **This binds the extraction guard, not the lints.** FR-2 and FR-3 make the readiness lint
+  deliberately stricter, so existing fixtures written against the old rules *will* change —
+  `prd-ready.test.ts:23` uses `- (none — resolved)`, which FR-2 rejects, and it is declared
+  in scope for exactly that reason. The distinction is the record's own: a lint whose rule
+  the PRD changed on purpose is a behavior change with a corpus pass behind it; a guard that
+  appears inside newly shared code and reaches a caller nobody warned is the defect. Only
+  the second is forbidden.
 - applied: `known-red-ledger-must-expire` — FR-4 forbids allowlisting an expected corpus
   failure. A sweep with a known-red exemption is this record's bypass arriving in a test
   rather than a ledger, and PRD-021's §9 is the case that would tempt it.
@@ -529,6 +596,8 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/lint-parsers.test.ts`
 - `packages/provegate/test/safety.test.ts`
 - `packages/provegate/test/content-templates.test.ts`
+- `packages/provegate/test/prd-ready.test.ts`
+- `packages/provegate/test/chain.test.ts`
 - `_brain/learnings/notes-column-runs-commands.md`
 - `_brain/learnings/lint-must-name-the-span-it-judges.md`
 - `turbo.json`
@@ -642,6 +711,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-27 | Claude Opus 5, via owner | **Iteration-4 remediation (Codex, seven [P1]s, two [P2]s). The round that falsified this PRD's working assumption**: iteration 3 added no new requirements and the score still fell 0.45, because closing a hole is not the same as measuring what the closure breaks. Every fix below carries its measurement. **(K, fourth and final level)** end-anchoring the exemption pushed rationale into an HTML comment, and a comment holds a question as well as prose does — the fix created the hiding place it moved into. Comments are now **not** a permitted line form inside §9, the exempt bullet carries no prose at all, and this PRD's own §9 is a bare `- (none)` with its explanation deleted rather than relocated. The matcher is also fully defined: case-insensitive, whitespace-collapsing, id-pattern-complete, and `[text](target)` with a non-empty target. **(X)** heading identity: counting `.*Open Questions.*` matches is substring and case-insensitive (`markdown.ts:74`), so `## Resolved Open Questions` alone passed — the very trap the FR warns about. The heading must equal `Open Questions` after an optional ordinal. Measured: all six wip PRDs already use the canonical form, so the narrowing costs nothing. **(Y)** the same first-match hole exists in §11 (`safety.ts:45`, `prd-ready.ts:127`) and the FR block (`prd-ready.ts:28`), which would have made FR-1's "refuses when any row is malformed" false; exactly-one is now required for all three. **(Z)** the two-versus-three contradiction survived in the **Gherkin criterion** — fixed — and extra cells beyond four are now explicitly accepted and ignored, with the fifteen-row fixture measurement behind it. **(AA)** the exact exemption rejects `- (none — resolved)`, which `prd-ready.test.ts:23` uses; that file and `chain.test.ts` are now declared, and the Memory Input distinguishes a **deliberate lint change with a corpus pass** from the **extraction guard** the record actually forbids. **(AB)** the corpus blockers are **five, not one**, and they are named in a table: PRD-021 (paragraph §9), PRD-023, PRD-025 and PRD-026 (trailing prose), PRD-027 (checkbox form). Only this PRD conforms, and only because it was rewritten to. Each fix is one line and four are in-wave. **(AC)** the Turbo strategy is chosen rather than offered: declare the wip directory as a `test` input, rejecting the separate-uncached-command alternative for needing a script, a manifest entry, and a second place to forget a check. P2s: the deferral grammar's case, whitespace and link syntax are defined above; the round count is now four everywhere |
 | 2026-07-27 | Claude Opus 5, via owner | **Iteration-3 remediation (Codex, three [P1]s, two [P2]s). Score rose 6.83 → 7.40 on the previous round; these close the remainder.** **(K, third level) the exemption grammar is now end-anchored.** Refusing continuations was not enough: with the exemption keyed to how a bullet *opens*, `- (none) — why is auth still undecided?` still carried the question. The exempt forms are now exactly `(none)`, `Deferred to <id>`, `Deferred: <link>` with no trailing prose, and rationale moves into an HTML comment — which FR-3's own line grammar permits. **This PRD's §9 is rewritten to a bare `- (none)` to comply**, the third time it has been reshaped by its own rule. **(V) exactly one Open Questions section is now required.** `sectionMatching` returns the first match and `''` when there is none (`markdown.ts:90`), so a second `## 9. Open Questions` heading hid every question in it and a document with no heading reported zero. FR-3 uses `sectionsMatching` and fails on zero or on more than one, with deny fixtures both ways. **(W) the row grammar is exact, and the threshold is two cells, not three.** Three existing fixtures declare two-column `| FR | Command |` tables (`safety.test.ts:89`, `prd-ready.test.ts:25`, `chain.test.ts:48`); a three-cell minimum would have made all of them malformed, changed `lintPrd`'s verdict and tripped the new chain guard — breaking this FR's own rule that no existing test may need editing. The command is cell 2; Scope and Notes are optional cells 3 and 4. `chain.test.ts` gains a verification row covering refusal on malformed rows, unchanged behavior without them, and the existing no-section-11 failure. P2s: the Non-Goals blast radius now matches the declared scope instead of claiming two files; the rollback names the `buildGateChain` guard and the existing-test edits; Technical Considerations no longer calls this PRD unordered while FR-4 declares a prerequisite; the round count is stated once with no bare number; and FR-4's corpus is defined as whatever the configured wip directory holds when the test runs, since that count changed again mid-round when PRD-027 appeared |
 | 2026-07-27 | Claude Opus 5, via owner | **Iteration-2 remediation (Codex, three [P1]s plus three [P2]s), all six closed.** Two of the three [P1]s were defects the iteration-1 remediation introduced. **(J) the public API break is withdrawn.** `parseVerificationCommands` is exported at `gates/index.ts:16` and consumed as an array by `safety.test.ts` and `content-templates.test.ts`, so widening its return was a breaking change to a published surface this PRD is not otherwise touching. An **internal** `parseVerificationRows` returns `{commands, issues}`; the export keeps its signature and returns `rows.commands`, and the residual — a programmatic caller still silently drops malformed rows — is stated rather than discovered. No changeset needed, because no surface moves. **(K) the hiding place moved one level down and is now closed.** FR-2 exempts a bullet by how it opens and FR-3 permits indented continuations, so `- (none)` followed by an indented unresolved question satisfied both. Since nothing syntactic separates a rationale from a question, the grammar refuses the construction: **an exempt bullet may not carry continuations**, while a genuine open question may be as long as it needs. This PRD's own §9 is rewritten to a single line to comply. **(L) FR-1 now declares the surface it needs.** It requires edits to `chain.ts` and `prd-ready.ts` and touches two existing test files; all five are in Targets, Implementation Scope and the Conflict Surface, where an earlier revision named none of them and its own DO NOT list forbade the edits. P2s: the PRD-021 prerequisite is propagated to the introduction and Non-Goals rather than living only in FR-4; the class rationale no longer claims only verdicts move, and names the two things that do — Phase-5 executed commands and the set of passing documents; and the round count is stated once, as four independent rounds, where the previous fix had produced a fresh contradiction two lines from the original |
 | 2026-07-27 | Claude Opus 5, via owner | **Iteration-1 remediation (Codex, six [P1]s).** **(A) FR-1 now scopes both readers.** `lintPrd` carries its own whole-row backtick scan independent of `parseVerificationCommands` (`prd-ready.ts:127-142`), so scoping one left a row whose Command cell is prose passing readiness on a Notes-cell token while the executor received nothing — a fourth instance of this PRD's own defect class, inside it. Both readers now take cells from one shared extractor, with a deny fixture. **(B) the malformed-row report gains a channel**: `parseVerificationCommands` returns `SafetyCheckedCommand[]` and the executor consumes it directly, so "report it" had nowhere to go. The return widens to `{commands, issues}`, `lintPrd` surfaces them, and `buildGateChain` refuses rather than running the readable remainder over an unknown gap. **(C) FR-2's exemption is a closed form**, opening with `Deferred to <id>` or `Deferred: <link>` — the same opens-with discipline `durable.ts` uses — because "contains the word and contains a link" is still satisfied by an open question that merely cites something. **(D) FR-3 enumerates the accepted line forms** and drops the leading-explanatory-line allowance, which was itself a slot a paragraph question could occupy; indented continuations are named, which this PRD's own wrapped `(none)` bullet requires. **(E) the corpus fixture takes all four arguments.** Measured by the reviewer: a three-argument `lintPrd` fails with an unrelated memory error in this repository, so the fixture could not have failed for its stated reason — `fixture-must-reach-production-shape` moves from reviewed to applied. **(F) the corpus test is un-cached or declares its inputs**, with `turbo.json` claimed: it reads the wip directory at the repository root while the test task declares no additional inputs, which is `turbo-cache-masks-out-of-input-reads` exactly, now a declared Memory Input. **(G) PRD-021 is a stated Phase-4 prerequisite**, not a known case, and allowlisting its expected failure is forbidden. P2s: the metric no longer claims *every* outside-column backtick reaches the gate, since inert file paths are already excluded; the rollback states that FR-1 changes executed commands in both directions; and the round count distinguishes the four independent rounds from the six total |

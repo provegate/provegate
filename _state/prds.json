@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T10:40:31.693Z",
+  "generatedAt": "2026-07-27T10:51:13.954Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.4,
+        "score": 6.95,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -974,21 +974,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-027-landing-adoption-polish.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.93,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
