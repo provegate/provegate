@@ -12,6 +12,7 @@
 - [new package postmerge install](learnings/new-package-postmerge-install.md) — a throwaway baseline checkout skips install → false missing-module errors
 - [durable artifact must commit](learnings/durable-artifact-must-commit.md) — review/ADR artifacts left untracked fail the close gate
 - [verify check phase placement](learnings/verify-check-phase-placement.md) — an invariant check registered in the wrong phase explodes late, not at the gate
+- [score band prescribes the action](learnings/score-band-prescribes-the-action.md) — read the band's required action; a flat trajectory in one band means the wrong action is being applied
 - [score must equal weighted sum](learnings/score-must-equal-weighted-sum.md) — machine-check declared score == Σ(dims×weights) or authors round up to pass
 - [guard destructive by target host](learnings/guard-destructive-by-target-host.md) — gate destructive data ops by target host, not NODE_ENV; even in dry-run
 - [notes column runs commands](learnings/notes-column-runs-commands.md) — a per-FR parser reading the whole row runs backtick commands in Notes too; scope to the Command column

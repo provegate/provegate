@@ -50,3 +50,25 @@ specification, ask for a consistency sweep across named sections rather than a d
 — the finding rate is the same and the class is different. And treat "the score is moving
 by hundredths across rounds" as the signal: it means each round is paying for one survivor,
 not that the item is nearly done.
+
+**Declaring this record does not apply it.** Eight independent rounds on PRD-029 produced
+eight instances, and **four were created by the fix for the previous one**. This record was
+listed as `applied` in the Memory Inputs of every version of that document, by the session
+that then reproduced it. The failure is positional rather than intentional: a session applies
+a record to the defect it has just been shown, and not to the rules it is about to write.
+
+**The sweep is a separate step, and the evidence is that grep would have caught it.** Two of
+the four survivors in one round were findable by a single `grep "store file"`, and were still
+missed by an author who had just written a changelog entry claiming the sweep was done. One
+other survivor in that chain was invisible to grep — the phrase split across a line break —
+which is the reason the step has to be a read rather than a search, but it is not the reason
+the step gets skipped. It gets skipped because the fix feels finished when the owning section
+is correct.
+
+**How to apply, additionally:** make the sweep an explicit step after the fix, not part of it
+— re-read §2, §3, §6, §11, §12 and the Memory Inputs against the FR that changed, every time.
+Never write that a sweep was performed in the same edit that performs it; the claim and the
+act have to be separable or the claim goes unchecked. And when a fix introduces a *new*
+mechanism, check the fix itself for this pattern before shipping it: the disclaimer added to
+quarantine a stale section was itself scoped to the section that owned it and absent from the
+four that restated it.
