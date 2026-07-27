@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T12:28:49.909Z",
+  "generatedAt": "2026-07-27T12:42:51.883Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1063,6 +1063,117 @@
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-030",
+      "number": 30,
+      "slug": "prompt-store-integrity",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-030-prompt-store-integrity.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-031",
+      "number": 31,
+      "slug": "autonomy-mode-method-policy",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-031-autonomy-mode-method-policy.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-032",
+      "number": 32,
+      "slug": "prompt-store-dogfood",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-032-prompt-store-dogfood.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
       },
       "task": {
         "status": "Unknown",
