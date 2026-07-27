@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T09:28:55.964Z",
+  "generatedAt": "2026-07-27T09:59:01.943Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -863,21 +863,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-024-readiness-lint-parsers.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-024-readiness-lint-parsers.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.75,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
@@ -900,21 +900,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-025-wiring-audit-completion.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-025-wiring-audit-completion.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.28,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
@@ -937,21 +937,21 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-026-duplicate-consolidation.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-026-duplicate-consolidation.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 6.85,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
-        "modelTierAudit": null
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
