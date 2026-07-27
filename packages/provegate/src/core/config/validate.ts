@@ -15,6 +15,7 @@ type Spec =
   | { kind: 'boolean' }
   | { kind: 'stringArray' }
   | { kind: 'stringRecord' }
+  | { kind: 'stringOrNullRecord' }
   | { kind: 'numberRecord' }
   | { kind: 'maybeEmptyString' }
   | { kind: 'object'; children: Record<string, Spec> };
@@ -23,6 +24,9 @@ const str: Spec = { kind: 'string' };
 const num: Spec = { kind: 'number' };
 const strArr: Spec = { kind: 'stringArray' };
 const strRec: Spec = { kind: 'stringRecord' };
+/** Values may be `null` (unset) or any string, including `''`. NOT `stringRecord`,
+ * which rejects both — the two values PRD-029 FR-4 declares legal. */
+const strOrNullRec: Spec = { kind: 'stringOrNullRecord' };
 const numRec: Spec = { kind: 'numberRecord' };
 const obj = (children: Record<string, Spec>): Spec => ({ kind: 'object', children });
 const strOrEmpty: Spec = { kind: 'maybeEmptyString' };
@@ -78,6 +82,12 @@ const CONFIG_SPEC = obj({
   verifyScriptPattern: str,
   templates: obj({ prd: strOrEmpty }),
   valueScoring: obj({ axes: strArr, weights: numRec, enforceFrom: cutoff }),
+  prompts: obj({
+    enabled: bool,
+    dir: str,
+    adapters: strArr,
+    values: strOrNullRec,
+  }),
   memory: obj({
     enabled: bool,
     root: str,
@@ -152,6 +162,18 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
         Object.values(value).some((v) => typeof v !== 'string' || v.length === 0)
       ) {
         issues.push({ path, message: 'must be an object mapping strings to non-empty strings' });
+      }
+      return;
+    case 'stringOrNullRecord':
+      // Shape only, and deliberately permissive. `null` means unset and `''` is
+      // legal for the tokens the registry marks so; per-token legality is a
+      // RENDER decision because it needs the registry, which this layer must not
+      // read. Unknown keys are likewise not checked here — see PromptsConfig.
+      if (
+        !isPlainObject(value) ||
+        Object.values(value).some((v) => v !== null && typeof v !== 'string')
+      ) {
+        issues.push({ path, message: 'must be an object mapping strings to a string or null' });
       }
       return;
     case 'object': {

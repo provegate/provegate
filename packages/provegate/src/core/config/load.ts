@@ -120,20 +120,28 @@ function chainEnd(path: string): string | null {
  * not a link and the lexical spelling still names something else entirely.
  * Anything that is not a clean "does not exist yet" fails closed.
  */
-function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
-  const memory = config.memory;
-  // Only for an ENABLED store. Running this on the merged defaults meant a
-  // repository that never opted in — but whose `_brain` happens to be a symlink —
-  // failed every config load: a default-off violation introduced by the fix for
-  // the symlink hole itself. The lexical rules still apply while disabled; they
-  // are pure and cannot punish a filesystem someone else built.
-  if (memory === undefined || !memory.enabled) return [];
+/**
+ * The filesystem containment primitive both configured-path checks share:
+ * resolve each entry under the workspace root and report the ones that escape.
+ *
+ * Extracted for PRD-029 with the callers' decisions left where they were. Each
+ * caller still owns its own enabled-guard and its own entry list, because those
+ * are the decisions `strictness-added-during-extraction-is-a-behavior-change`
+ * warns about relocating. Nothing here is stricter than what
+ * `memoryPathsContained` did before the extraction, and the memory suite passes
+ * unmodified — that is the proof, not this comment.
+ */
+function resolveContainedPaths(
+  root: string,
+  entries: [string, string][],
+): { issues: ConfigIssue[]; resolved: Map<string, string>; under: Under | null } {
   const issues: ConfigIssue[] = [];
+  const resolved = new Map<string, string>();
   let rootReal: string;
   try {
     rootReal = realpathSync(resolve(root));
   } catch {
-    return issues; // an unreadable root is not this check's failure to report
+    return { issues, resolved, under: null }; // an unreadable root is not this check's failure to report
   }
 
   const insensitive = volumeIsCaseInsensitive(rootReal);
@@ -159,12 +167,6 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
     return { path: current };
   };
 
-  const resolved = new Map<string, string>();
-  const entries: [string, string][] = [
-    ['memory.root', memory.root],
-    ['memory.index', memory.index],
-    ...memory.entrypoints.map((e, i): [string, string] => [`memory.entrypoints[${i}]`, e]),
-  ];
   for (const [path, value] of entries) {
     if (value.length === 0 || isAbsolute(value)) continue; // lexical rules own these
     const outcome = destination(value);
@@ -180,6 +182,26 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
     }
     resolved.set(path, outcome.path);
   }
+  return { issues, resolved, under };
+}
+
+/** `(candidate, base) => candidate is at or below base`, volume-case aware. */
+type Under = (candidate: string, base: string) => boolean;
+
+function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue[] {
+  const memory = config.memory;
+  // Only for an ENABLED store. Running this on the merged defaults meant a
+  // repository that never opted in — but whose `_brain` happens to be a symlink —
+  // failed every config load: a default-off violation introduced by the fix for
+  // the symlink hole itself. The lexical rules still apply while disabled; they
+  // are pure and cannot punish a filesystem someone else built.
+  if (memory === undefined || !memory.enabled) return [];
+  const { issues, resolved, under } = resolveContainedPaths(root, [
+    ['memory.root', memory.root],
+    ['memory.index', memory.index],
+    ...memory.entrypoints.map((e, i): [string, string] => [`memory.entrypoints[${i}]`, e]),
+  ]);
+  if (under === null) return issues;
 
   // The index must resolve under the STORE, not merely inside the repository:
   // a link that leaves the store makes the scanner and the loader address two
@@ -190,6 +212,22 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
     issues.push({ path: 'memory.index', message: 'resolves outside memory.root' });
   }
   return issues;
+}
+
+/**
+ * Filesystem containment for the configured protocol store (PRD-029 FR-1).
+ *
+ * `prompts.dir` does not exist on a first install, which is the case a literal
+ * realpath-both-sides check refuses. The shared primitive walks the longest
+ * existing prefix and reattaches the missing tail, so a not-yet-created
+ * `.provegate` passes while a symlink escaping the workspace does not.
+ */
+function promptsPathContained(root: string, config: WorkflowConfig): ConfigIssue[] {
+  const prompts = config.prompts;
+  // Enabled-only, for the reason the memory guard above records: a disabled
+  // block must not fail a config load over a filesystem nobody opted into.
+  if (prompts === undefined || !prompts.enabled) return [];
+  return resolveContainedPaths(root, [['prompts.dir', prompts.dir]]).issues;
 }
 
 /**
@@ -270,7 +308,11 @@ export function resolveConfig(root: string): WorkflowConfig {
   }
   configSourceByRoot.set(resolve(root), source);
   const merged = mergeConfig(parsed as PartialWorkflowConfig);
-  const semanticIssues = [...validateResolvedConfig(merged), ...memoryPathsContained(root, merged)];
+  const semanticIssues = [
+    ...validateResolvedConfig(merged),
+    ...memoryPathsContained(root, merged),
+    ...promptsPathContained(root, merged),
+  ];
   if (semanticIssues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is semantically invalid`, semanticIssues);
   }

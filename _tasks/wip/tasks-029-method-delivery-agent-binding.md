@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-029-method-delivery-agent-binding.md](../../_prds/wip/prd-029-method-delivery-agent-binding.md)
 > **Readiness**: [readiness-029-method-delivery-agent-binding.md](../../_readiness/wip/readiness-029-method-delivery-agent-binding.md)
-> **Status**: Not Started
+> **Status**: In Progress
 > **Readiness Score**: 8.35/10 (PASS, iteration 8)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-27
@@ -94,34 +94,34 @@ a record is evidence only while it is true.
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 Open each Memory Context record and confirm the paths, line numbers and commands
+- [x] 0.0 Pre-flight
+  - [x] 0.1 Open each Memory Context record and confirm the paths, line numbers and commands
         it names still exist; record any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.2 `gate open PRD-029` — claim the lease. Confirm the lease's `ownedPaths` mirror the
+  - [x] 0.2 `gate open PRD-029` — claim the lease. Confirm the lease's `ownedPaths` mirror the
         PRD's Conflict Surface.
-  - [ ] 0.3 Run `gate queue` and re-measure the overlap with PRD-026. The PRD names six shared
+  - [x] 0.3 Run `gate queue` and re-measure the overlap with PRD-026. The PRD names six shared
         paths; **do not trust that paragraph** — if PRD-026 is in flight, stop and hand back.
-  - [ ] 0.4 Record the baseline test count from `pnpm test` in the **Progress Log**, so the
+  - [x] 0.4 Record the baseline test count from `pnpm test` in the **Progress Log**, so the
         Phase 5 delta is measurable.
 
-- [ ] 1.0 Config surface (FR-1)
-  - [ ] 1.1 Add `PromptsConfig` to `packages/provegate/src/core/config/types.ts`: `enabled:
+- [x] 1.0 Config surface (FR-1)
+  - [x] 1.1 Add `PromptsConfig` to `packages/provegate/src/core/config/types.ts`: `enabled:
         boolean`, `dir: string`, `adapters: string[]`, `values: Record<string, string | null>`;
         extend `WorkflowConfig`.
-  - [ ] 1.2 Add the default block to `packages/provegate/src/core/config/defaults.ts` with
+  - [x] 1.2 Add the default block to `packages/provegate/src/core/config/defaults.ts` with
         `enabled: false`, mirroring the `memory` block's shape **and its comment** — the
         rationale at `defaults.ts:95-101` is why presence is never the predicate.
-  - [ ] 1.3 Add a `stringOrNullRecord` kind to the `Spec` union in
+  - [x] 1.3 Add a `stringOrNullRecord` kind to the `Spec` union in
         `packages/provegate/src/core/config/validate.ts` and its arm in the switch. Do **not**
         reuse `stringRecord`: `validate.ts:149-155` rejects non-strings and empty strings,
         which are the two values FR-4 declares legal.
-  - [ ] 1.4 Declare the `prompts` shape in `validateConfig`'s raw-pass spec, including
+  - [x] 1.4 Declare the `prompts` shape in `validateConfig`'s raw-pass spec, including
         `adapters` membership. **Unknown `values` keys are not checked here** — that is task
         3.4's render diagnostic.
   - [ ] 1.5 Add `promptsPathContained(root, config)` to
         `packages/provegate/src/core/config/load.ts` beside `memoryPathsContained`, reusing its
         longest-existing-prefix resolution, and compose it into the resolved pass at line 273.
-  - [ ] 1.6 `packages/provegate/test/config.test.ts`: a config never mentioning `prompts`
+  - [x] 1.6 `packages/provegate/test/config.test.ts`: a config never mentioning `prompts`
         resolves to `enabled: false`; `null` and `""` both pass the new shape; a
         not-yet-created `.provegate` passes containment; an escaping `dir` and a symlinked root
         are both refused **(deny test — PRD §11 hard cap)**.
@@ -300,7 +300,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 > scope cut, or accepted deviation is taken. Format: `- <task#> — <decision>; <≤1
 sentence rationale>`. Never inline on sub-task lines.
 
-- (none yet)
+- 1.5 — extracted `resolveContainedPaths` from `memoryPathsContained` rather than duplicating it; each caller keeps its own enabled-guard, entry list and post-checks, because `strictness-added-during-extraction-is-a-behavior-change` warns that a shared primitive relocates decisions the callers owned. Proof is the unmodified memory suite, not the comment.
+- 1.4 — unknown `values` keys are deliberately NOT a raw-pass issue; a test asserts they pass config load, and the `unused` render diagnostic (task 3.4) owns them. Recorded because a reviewer will read the permissiveness as a gap.
 
 ---
 
@@ -310,7 +311,10 @@ sentence rationale>`. Never inline on sub-task lines.
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
-|      |      |       |
+| 2026-07-27 | 0.3 | `gate queue` re-measured: no overlap warning, PRD-026 is BLOCKED at Draft/ITERATE Phase 1, nothing IN-FLIGHT. Safe to proceed; the PRD's six-path overlap is latent, not active. |
+| 2026-07-27 | 0.4 | Baseline `pnpm test`: **1026 passed, 49 files** (plus web 39/3). |
+| 2026-07-27 | 1.0 | 1026 → 1034 (8 new in `config.test.ts`); every pre-existing test unmodified, which is the extraction proof for 1.5. |
+| 2026-07-27 | 1.6 | Mutation-checked: removing `promptsPathContained` from the resolved pass fails the escaping-dir deny test **and only that test** (1 failed / 14 passed). |
 
 ---
 
