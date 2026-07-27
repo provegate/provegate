@@ -1,0 +1,84 @@
+/* /alt — alternative landing layout rules. Colour, font, radius and shadow all
+   resolve to --pg-* tokens from @provegate/design; nothing hardcoded here. */
+
+.alt-hero,
+.alt-bento,
+.alt-stats,
+.alt-duo,
+.alt-cmd,
+.alt-steps {
+  display: grid;
+}
+
+.alt-hero > *,
+.alt-bento > *,
+.alt-stats > *,
+.alt-duo > *,
+.alt-cmd > * {
+  min-width: 0;
+}
+
+.alt-hero {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.alt-bento {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.alt-stats {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.alt-duo {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.alt-cmd {
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 40px;
+}
+
+.alt-steps {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.alt-navlinks {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .alt-hero,
+  .alt-duo,
+  .alt-cmd {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .alt-bento {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .alt-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .alt-stats {
+    grid-template-columns: 1fr;
+  }
+  .alt-navlinks {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .alt-bento,
+  .alt-steps {
+    grid-template-columns: 1fr;
+  }
+}
