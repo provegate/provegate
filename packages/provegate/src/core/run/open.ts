@@ -37,8 +37,7 @@ import {
   existsOnRef,
   removeWorktree,
   resolveRef,
-  snapshotsMissingFrom,
-  snapshotsNotMatchingRef,
+  revalidateControlArtifacts,
   type ArtifactSnapshot,
   worktreeForBranch,
   worktreeNamesFor,
@@ -304,7 +303,9 @@ function claimPrdLocked(
   // Provenance hashing is WORKTREE-ONLY work: `git hash-object --path` can
   // execute path-based clean filters, and a plain claim must stay free of
   // side effects it never needed (codex r27 P2).
-  const requiredArtifacts: ArtifactSnapshot[] = !worktree
+  // The PRD blob alone — what the claim path passes to the shared revalidation
+  // as `extra`, and what `gate run`/`gate land` deliberately do NOT pass.
+  const prdArtifacts: ArtifactSnapshot[] = !worktree
     ? []
     : [
         {
@@ -316,6 +317,9 @@ function claimPrdLocked(
           content: candidate.sourceContent,
         },
       ];
+  // Provisioning still needs the full set: `createWorktree` validates PRD and
+  // control artifacts against base before it adds the checkout.
+  const requiredArtifacts: ArtifactSnapshot[] = [...prdArtifacts];
   for (const control of worktree ? [CONFIG_FILENAME, MANIFEST_FILENAME] : []) {
     if (existsSync(resolve(root, control)) || existsOnRef(mainForRefs, baseRefName, control)) {
       // Control files get the same provenance binding as the PRD: hash the
@@ -768,25 +772,28 @@ function claimPrdLocked(
       // launched from a linked worktree with edited control files would
       // otherwise build the lease from the caller's config while returning a
       // checkout on base policy (codex r19 P1).
-      const reuseStale = reusable
-        ? [
-            // The parsed bytes must be what base carries…
-            ...snapshotsNotMatchingRef(mainRoot, baseRefName, requiredArtifacts),
-            // …and what the reused checkout actually holds, text included
-            // (blob equality alone is not proof, codex r24 P1).
-            ...snapshotsMissingFrom(expected!, requiredArtifacts),
-          ].filter((rel, i, all) => all.indexOf(rel) === i)
-        : [];
-      if (reusable && reuseStale.length > 0) {
+      // The derivation and the comparison now live in ONE place, shared with
+      // `gate run`/`gate land` (PRD-022 FR-1). The claim passes its PRD blob as
+      // `extra` and its ALREADY-PINNED base, so one claim never resolves two
+      // revisions; the control files are re-derived there from the same parsed
+      // bytes, in the same order, so the refusal text is unchanged.
+      const reuse = reusable
+        ? revalidateControlArtifacts({
+            root,
+            config,
+            relPath: wtNames.relPath,
+            branch: wtNames.branch,
+            baseRef: baseRefName,
+            extra: prdArtifacts,
+          })
+        : { drifted: [], refusal: null };
+      if (reusable && reuse.refusal !== null) {
         const notes = rollbackInstalledLease();
         return {
           ...base,
           globs,
           ok: false,
-          issues: [
-            `claim rolled back: the checkout at ${wtNames.relPath} carries workflow artifacts differing from '${config.branches.base}' (${reuseStale.join(', ')}) — merge or rebase ${config.branches.base} into ${wtNames.branch} first`,
-            ...notes,
-          ],
+          issues: [`claim rolled back: ${reuse.refusal}`, ...notes],
         };
       }
       if (reusable) {

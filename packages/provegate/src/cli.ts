@@ -50,6 +50,7 @@ import {
   leaseHolder,
   releaseLease,
   removeWorktree,
+  revalidateControlArtifacts,
   runChain,
   stopCard as buildStopCard,
   withWorkspaceMutex,
@@ -906,6 +907,40 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
     return 1;
   }
   const stamps = leaseState.stamps;
+
+  // PRD-022 — the checkout must still carry the control artifacts base carries,
+  // BEFORE anything runs. `gate land` is this same function with mergeOnly, so
+  // one insertion covers both commands; it precedes every phase command, every
+  // chain metric write, `mergePreconditions`, the archive, and the merge.
+  //
+  // The PRD blob is deliberately NOT passed: a worktree edits its own PRD for
+  // its whole life, and including it would refuse every run mid-phase.
+  //
+  // Third in precedence, and it changes neither refusal above it: the loaders
+  // throw on an unparseable control file before this function reaches here, and
+  // the malformed-lease refusal fires directly above. The case neither covers is
+  // the one this catches — `loadManifest` falls back to `defaultManifest` when
+  // the file is merely ABSENT, so a locally deleted manifest still committed on
+  // base produces no error at all, just quietly different gates.
+  if (stamps !== null) {
+    const revalidation = revalidateControlArtifacts({
+      root,
+      config,
+      relPath: stamps.worktree,
+      branch: stamps.branch,
+    });
+    if (revalidation.refusal !== null) {
+      console.error(
+        stopCard({
+          id,
+          phase: 'merge',
+          why: `${revalidation.refusal} — nothing ran, nothing merged`,
+          results: [],
+        }),
+      );
+      return 1;
+    }
+  }
 
   // FR-3 — live status line per gate as it resolves. Core stays silent; the CLI
   // supplies the reporter and renders via the shared status-line builder.

@@ -32,6 +32,8 @@
 - [fixture must reach production shape](learnings/fixture-must-reach-production-shape.md) — a regression called with cleaner arguments than production cannot detect the defect
 - [pin the claim the test cannot hold](learnings/pin-the-claim-the-test-cannot-hold.md) — locale/platform properties: assert at the source and say why, a behavioural test is green by luck
 - [cleanup after verified merge](learnings/cleanup-after-verified-merge.md) — learning lands before merge; teardown only after the merge is verified
+- [assert absent needs an independent cause](learnings/assert-absent-needs-an-independent-cause.md) — a negative assertion is vacuous when the scenario also removes what would have created the artifact
+- [strictness added during extraction is a behavior change](learnings/strictness-added-during-extraction-is-a-behavior-change.md) — a "safer" guard added while sharing logic relocates a decision the callers already owned
 
 ## Project gotchas
 
