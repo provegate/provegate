@@ -542,6 +542,18 @@ ceremonial answer this contract exists to prevent.
 
 Required in a memory-enabled repository, alongside Memory Outputs below.
 
+- applied: `shipped-content-needs-a-delivery-gate` — **this PRD's own Memory Output**, and its
+  watch (`packages/provegate/prompts/**`, `core/run/init.ts`) covers files this merge changes,
+  so the contract requires a disposition even though the record did not exist when the work
+  started. It is applied in the strongest sense available: the record states that packaging is
+  not delivering and that no artifact-checking gate detects the gap, and FR-5 and FR-7 are the
+  delivery this repository was missing. Written mid-flight because the trap was hit, per the
+  memory protocol, rather than at close.
+- applied: `derive-the-requirement-from-the-consumer` — also this PRD's own output, watching
+  `prompts/PLACEHOLDERS.md` and `core/run/prompts.ts`, both changed here. FR-4 is the record:
+  the required-value set is computed as the tokens the RENDERED corpus consumes minus the
+  config-backed ones, never read off the registry, and a test asserts the derived count so it
+  moves when the corpus moves.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
   `packages/provegate/src/core/run/**`. Four rounds found this record declared and not applied
   to that round's own new refusals. It is applied here by **removing** a refusal rather than
