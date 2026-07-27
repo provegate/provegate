@@ -1,5 +1,50 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 4 (Codex, independent) — 5.63/10, ITERATE. The first decline, and the round
+> answered the question the brief was built around: the structural blocker did not lift.
+> Ownership returned as hash-qualified membership.** The counterexample is concrete and rated
+> `routine`: a user writes `.claude/commands/prd-3.md` themselves, byte-identical to version
+> 1's render, because they want that command pinned. `init` no-ops and **records the path**.
+> After an upgrade, `sync` sees bytes matching the receipt hash and overwrites with version 2.
+> The tool never wrote the original file — and an identical file *absent* from the receipt
+> would not be eligible, so **path membership supplies the capability and hash equality merely
+> exercises it.** That is the thing FR-8 says no command may do. The "I can reproduce these
+> bytes, so replacing them loses nothing" argument fails three ways: the current package
+> reproduces the *new* bytes, the receipt stores a hash and not the old content, and equality
+> proves no change since a baseline — never consent.
+>
+> Three more are structural and all rated `routine`. **`sync` cannot truthfully rewrite the
+> receipt**: it leaves excepted and diverged files untouched and then writes the whole receipt
+> from the new plan, so the file records a hash the path does not hold. Either the receipt
+> means "these bytes were present" and sync lies, or it means "these are expected bytes" and
+> PRD-029's definition is wrong; an implementer must choose. **`retired` still has no durable
+> home** — reported once, then erased by the next receipt write, invisible thereafter outside
+> `prompts.dir` and reclassified as a *failing* tree orphan inside it. And the two-file model
+> has **no complete invariant**: `prompts-exceptions.json` sits under `prompts.dir`, is
+> neither a plan path nor a receipt entry, and is therefore a tree orphan unless excluded.
+>
+> Four self-contradictions introduced by this round's own remediation, every one verified here.
+> **`{{!NAME}}` is not a token candidate under the candidate rule written five lines above it**
+> — `!` is not an uppercase letter — so the escape is unreachable by its own grammar.
+> **Fragment terminality "at build time" is unwired**: the package's `build` script is only
+> `tsup`, and `gate-wire-or-delete` is declared `applied` in the same document. PRD-030 says
+> "a sixth classification" at line 170 and "the five per-path states" at line 458. PRD-032
+> still says the render refuses on a sentinel after the switch to `null`.
+>
+> **`a-record-declared-is-not-a-record-applied` was declared as a Memory Output by this
+> revision and was not applied to it** — the reviewer names four pieces of evidence and
+> observes that declaring the learning reproduced the failure it describes. Fourth consecutive
+> instance, now self-referential.
+>
+> **The trajectory is the verdict.** 4.48 → 5.73 → 5.90 → **5.63**: local counterexample repair
+> around a protected conclusion, with contradictions migrating into the successor interfaces
+> that are not being scored. The reviewer's instruction is explicit — **another ordinary
+> wording round is not the right instrument.** Pause readiness; make an owner decision on what
+> grants overwrite authority; write that model independently of these four documents; re-enter
+> readiness afterwards.
+>
+> <details><summary>Iteration 3 (5.90 ITERATE)</summary>
+>
 > **Iteration 3 (Codex, independent) — 5.90/10, ITERATE. Up 0.17, and the number is the
 > least useful thing this round produced.** Asked for a decision rather than a list, it
 > answered: **the document is not implementable and the blocker is structural, not another
@@ -22,6 +67,8 @@
 > "thirteen" in three live places** after a changelog entry claiming the count was removed —
 > the third consecutive round in which `a-rule-corrected-survives-where-it-is-restated` is
 > declared `applied` and then reproduced by the same session.
+>
+> </details>
 >
 > <details><summary>Iteration 2 (5.73 ITERATE)</summary>
 >
@@ -62,9 +109,9 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 5.90/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — **not implementable, and the blocker is structural.** One ledger is asked to be a render receipt, a path-ownership manifest, PRD-030's reconciliation scope and the migration state, split between two writers by prose that already contradicts itself. Five of seven new watch items are DESIGN decisions, not wording. W9/W14/W17 closed; six of the nine partially |
-| Iteration              | 3                                                                                                                                                                                                                                                                                                        |
+| Score                  | 5.63/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — **not implementable; the structural blocker did not lift.** Ownership returned as hash-qualified membership: receipt path membership supplies overwrite capability and hash equality exercises it, which is what FR-8 forbids. `sync` cannot truthfully rewrite the receipt while preserving divergences. **The reviewer's instruction is to pause readiness** and make an owner decision on what grants overwrite authority, written independently of these four documents |
+| Iteration              | 4                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD**                                                                                                                                                                                                  |
@@ -190,7 +237,25 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 3** (the current score). Earlier rows are kept below it.
+**Iteration 4** (the current score). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                                          |
+| --------- | ------------------------ | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1         | Clarity                  | 15%    | 7.0/10      | Each rule stated once; four self-contradictions introduced by this round's own remediation                          |
+| 2         | Completeness             | 20%    | 5.5/10      | No schema version, no empty-value policy, no unknown-key policy, no invariant across the two control files          |
+| 3         | Technical Depth          | 20%    | 5.0/10      | Build-time enforcement is unwired; the escape is unreachable by its own candidate rule                              |
+| 4         | Multi-Tenancy & Security | 10%    | 7.0/10      | No tenant surface; containment now reuses the prefix-realpath behaviour it names                                    |
+| 5         | Scope & Testability      | 15%    | 6.5/10      | Ten FRs is right; the adapter skeleton's fixed directive sentence is still unwritten                                |
+| 6         | Migration & Rollback     | 20%    | 4.0/10      | `retired` has no durable home; config removal leaves no locator; recovery from a partial store is undefined         |
+| **Total** | **Weighted**             |        | **5.63/10** | **ITERATE**                                                                                                        |
+
+Arithmetic re-derived here: `7.0×.15 + 5.5×.20 + 5.0×.20 + 7.0×.10 + 6.5×.15 + 4.0×.20 = 5.625`.
+
+Hard caps checked: **none tripped.** Lint passed by direct `lintPrd` invocation.
+
+<details><summary>Iteration 3 scorecard (5.90)</summary>
+
+**Iteration 3.**
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                                              |
 | --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -207,6 +272,8 @@ Arithmetic re-derived here: `7.0×.15 + 6.0×.20 + 5.5×.20 + 7.0×.10 + 7.0×.1
 Hard caps checked: **none tripped.** Lint passed by direct `lintPrd` invocation,
 `{ ok: true, issues: [] }`; the CLI wrapper again refused by sandbox `EPERM` on the state
 write. No client-to-server contract, no runtime dependency, no remote-push path.
+
+</details>
 
 <details><summary>Iteration 2 scorecard (5.73)</summary>
 
@@ -430,13 +497,51 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 3   | 2026-07-27 | 5.90  | ITERATE | **Up 0.17, and the number is the least useful thing the round produced.** Briefed to return a decision rather than a list, with every finding rated for realistic likelihood, it answered that the document **is not implementable and the blocker is structural**. Decision 1 is the problem: one ledger is asked to be a render receipt, a manifest of which paths the tool owns, PRD-030's reconciliation scope, and the migration state across adapter and directory changes — and it is split between two writers by field-level prose that **already contradicts itself**, since PRD-030 FR-1 calls `packageVersion`/`generated` read-never-rewritten while its FR-5 has sync rewrite the ledger, which an upgrade must do. The ownership consequence is concrete and rated `routine`: a pre-existing destination whose bytes already match is a no-op yet still recorded as generated, so the tool claims a path it never wrote and PRD-030 may later overwrite an adopter's own `.cursor/rules/prd-workflow.mdc`. Four transitions have no model at all — retiring an adapter, adding one over a pre-existing file, renaming `prompts.dir`, removing `prompts`. Decision 2 survives for the case it was made for: lines 92–94 of the Phase 3 protocol are one STOP rule plus one exception block, so a fragment can select both renderings and PRD-031 can stay code-free — **but terminality is asserted, not enforced** (a fragment containing a token is left unresolved by the one-pass rule, and rescanning would break it), and two enumerated tokens whose legal values interact cannot be represented, so the document must name its ceiling. `preflight` is a generic `init.ts` target: applied to the base or practices plan it turns ordinary `gate init` from "existing files are skipped" into "a modified file aborts", breaking this PRD's own byte-identical promise. Four stale facts verified here: **`AGENT_BOOTSTRAP.md` has ten stop-and-ask checkpoints, not nine**, repeated in PRD-029, PRD-031 and on the board; the `{{!NAME}}` escape is justified as something "the shipped corpus does" and `grep` finds **zero** `{{!` anywhere; the required-value set is **nine**, not thirteen; and **PRD-032 still says "thirteen" in three live places** under a changelog claiming the count was removed — the third consecutive round in which `a-rule-corrected-survives-where-it-is-restated` is declared `applied` and then reproduced by the session declaring it. Memory contract otherwise clean, with a [P1] that `strictness-added-during-extraction-is-a-behavior-change` is now cited against the *previous* round's overshoots while this round's new refusals — the escape, the sentinel, the generic preflight — again escaped its analysis. W9, W14 and W17 closed; the other six partially. Five of the seven new items are DESIGN |
 
+| 4   | 2026-07-27 | 5.63  | ITERATE | **The first decline, and the round answered the question the brief was built around: the structural blocker did not lift.** Ownership returned as **hash-qualified membership**, with a `routine` counterexample: a user writes `.claude/commands/prd-3.md` themselves, byte-identical to version 1's render, because they want it pinned; `init` no-ops and records the path; after an upgrade `sync` sees bytes matching the receipt hash and overwrites. The tool never wrote that file — and an identical file **absent** from the receipt would not be eligible, so path membership supplies the capability and hash equality only exercises it. That is exactly what FR-8 says no command may do, and the "I can reproduce these bytes so nothing is lost" argument fails three ways: the current package reproduces the *new* bytes, the receipt holds a hash rather than the old content, and equality proves no change since a baseline, never consent. Three more structural, all `routine`: **`sync` cannot truthfully rewrite the receipt** — it leaves excepted and diverged files alone and then writes the whole receipt from the new plan, so the file records a hash the path does not hold, and an implementer must choose whether the receipt means "these bytes were present" or "these are expected bytes"; **`retired` still has no durable home**, reported once and erased by the next receipt write, invisible thereafter outside `prompts.dir` and reclassified as a *failing* tree orphan inside it; and **the two-file model has no complete invariant**, since `prompts-exceptions.json` lives under `prompts.dir`, is neither a plan path nor a receipt entry, and is a tree orphan unless excluded. Four self-contradictions from this round's own remediation, each verified here: **`{{!NAME}}` is not a token candidate under the rule written five lines above it** (`!` is not uppercase), so the escape is unreachable by its own grammar; **fragment terminality "at build time" is unwired** because the package `build` script is only `tsup`, in a document that declares `gate-wire-or-delete` applied; PRD-030 says "a sixth classification" at line 170 and "the five per-path states" at line 458; PRD-032 still says the render refuses on a sentinel after the switch to `null`. Two policy gaps rated `plausible`: an empty-string value resolves a required token and deletes it from the output, and an unknown key in `values` has no defined meaning. And the memory test the brief set: **`a-record-declared-is-not-a-record-applied` was declared as a Memory Output by this revision and was not applied to it**, on four pieces of evidence — declaring the learning reproduced the failure it describes, the fourth consecutive instance and now self-referential. W19 open; W18, W20, W21, W22 partially closed; W23 and W24 partially, with the surviving items named |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 5.90/10, iteration 3, scored independently by Codex.**
+**ITERATE — 5.63/10, iteration 4, scored independently by Codex. The first decline in the
+sequence, and the most useful round of the four.**
+
+The brief asked one question directly: did the structural blocker lift, or did ownership
+return in disguise? It returned. `sync` overwrites a file because its bytes match a receipt
+hash **and its path is in the receipt** — an identical file outside the receipt is not
+eligible — so membership grants the capability and equality merely exercises it. FR-8's
+sentence saying no command may derive a right to write from the receipt is therefore false
+about the system the four documents describe. The reframing from "ownership" to "content"
+that iteration 3's remediation rested on did not change the mechanism; it changed the
+vocabulary.
+
+Three consequences follow and none is wording. `sync` cannot rewrite the receipt truthfully
+while leaving divergences in place. `retired` is erased by the write that reports it.
+`prompts-exceptions.json` is an orphan under the rule its own document writes.
+
+**The trajectory is the finding.** 4.48 → 5.73 → 5.90 → **5.63**. Three remediations, each
+written by the session that received the findings, each correct for the counterexample it was
+given and each introducing a new one — this round's include an escape sequence unreachable by
+the candidate rule five lines above it, and a "fails at build time" requirement in a package
+whose `build` is one `tsup` invocation. The reviewer's description is exact: local
+counterexample repair around a protected conclusion, with contradictions migrating into the
+successor documents that are not being scored.
+
+**Another remediation round is the wrong instrument, and this artifact is where that is
+recorded rather than argued.** The next step is an owner decision on a single question —
+**what grants the authority to overwrite a file?** — with three candidate answers already on
+the table: content equality alone; an explicit, recorded adoption of a path; or nothing,
+because `sync` never overwrites and only proposes. That model, and its state transitions,
+should be written **independently of these four PRDs** and readiness re-entered afterwards.
+
+One process observation belongs here because it is the fourth instance and it is now
+self-referential: `a-record-declared-is-not-a-record-applied` was declared as a Memory Output
+by the revision this round scored, and was not applied to that revision. A session applies a
+memory record to the defect it has just been shown, not to the rules it is about to write.
+Whatever remediation follows should not be authored by the session that received these
+findings.
 
 The score moved 0.17 and the round's value is not in it. Asked for a decision rather than a
 list, the reviewer gave one: **this document is not good enough to implement, and the reason
