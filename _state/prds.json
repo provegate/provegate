@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T10:34:13.056Z",
+  "generatedAt": "2026-07-27T10:40:31.693Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -874,7 +874,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.83,
+        "score": 7.4,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -952,6 +952,43 @@
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-027",
+      "number": 27,
+      "slug": "landing-adoption-polish",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
       },
       "task": {
         "status": "Unknown",
