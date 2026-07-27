@@ -1,5 +1,48 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 6 (Codex via the independent session, own brief) — 6.03/10, ITERATE. The first
+> round in six to leave the 4–5.9 band, which changes the prescribed action from "return to
+> Phase 1" to "iterate on identified gaps, re-score".** The scope cut worked. The reviewer said
+> so plainly and without softening: the lifecycle is genuinely gone from PRD-029, the
+> activation fix is correct **and correctly justified** against `defaults.ts:95-101`, discovery
+> without a write closes the finding that broke PRD-032's derivation, the build-time claims are
+> fully swept from this document, the Conflict Surface is complete for the first time, and **no
+> §11 note inverts its FR this round** — all seven read against their FR bodies.
+>
+> **The one defect that mattered was at the seam the cut left behind, not in what it removed.**
+> FR-6 puts two of three adapter destinations **outside** `<dir>` — `.claude/commands/prd-*.md`
+> and `.cursor/rules/prd-workflow.mdc` — while the reinstall instruction, stated in five
+> places, named only the store directory. Follow it after an upgrade and those files hit `wx`,
+> are reported skipped, and stay at the previous version with stale banners and stale store
+> paths while the adopter believes they have reinstalled. Verified against the executor:
+> `initWorkspace` writes sequentially with `wx` and never deletes (`init.ts:248-283`). **It is
+> the one procedure the entire scope decision rests on**, and nothing tested it.
+>
+> One genuine design item: `prompts.values` asked the raw validation pass for a shape it cannot
+> express — `stringRecord` rejects any value that is not a string **or is empty**
+> (`validate.ts:149-155`), which is exactly the `null` and `""` FR-4 declares legal — and for
+> an authority it does not have, since the legal key set is package Markdown. A TypeScript
+> constant would have made PRD-031 unable to add its token without a code edit its own
+> Non-Goals forbid.
+>
+> The rest are specification: `validateResolvedConfig` takes no repository root so containment
+> cannot live there and `load.ts` had dropped out of Targets; the `globs` derivation was named
+> but never given; "writing nothing" and "no store file" disagreed across three places, leaving
+> a refused run's residue undefined and, under `wx`, permanent. Cross-document, PRD-031's three
+> references to the enumerated-token mechanism still said FR-6 after the renumber, its
+> "fails at build time" claim survived a grep sweep **because it is split across a line break**,
+> and PRD-032 carried an FR-5/FR-4 pair two lines apart in one sentence — the sixth instance of
+> `a-rule-corrected-survives-where-it-is-restated`, created by the fix for the fifth.
+>
+> The reviewer also **rejected one Codex "what holds"** — that PRD-030 and PRD-031 have disjoint
+> surfaces — because both write `_brain/INDEX.md` in Durable Artifacts and **neither declares
+> it**, so the conflict gate cannot see the collision. That remains open. It downgraded one
+> Codex [P1] with executor evidence, corrected two of its line cites, and disagreed with its
+> Migration score with a stated reason; the two scores were 6.03 and 5.45, straddling a band
+> boundary, which it flagged rather than buried.
+>
+> <details><summary>Iteration 5 (4.53 ITERATE)</summary>
+>
 > **Iteration 5 (Codex via an independent Claude session that wrote its own brief) — 4.53/10,
 > ITERATE. The lowest score of the five, and the round found the thing four rounds of aimed
 > briefs could not: the scoring protocol has been prescribing the remedy since round one and
@@ -42,6 +85,8 @@
 > is closed, both control files are excluded from the orphan rule, and the method-content cap
 > is **not** tripped — the registry is an extraction artifact absent from the snapshot, so the
 > new columns are not snapshot-traceable content. Lint green on all four by direct `lintPrd`.
+>
+> </details>
 >
 > <details><summary>Iteration 4 (5.63 ITERATE)</summary>
 >
@@ -156,9 +201,9 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 4.53/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — **and the protocol's own band table prescribes the remedy: 4–5.9 is "Major rework needed. Return to Phase 1."** All five scores are in that band; none has reached 6–7.9, whose action is the iterate-and-re-score this item has received five times. Six findings are mechanism: the upgrade path does not terminate, an excepted edit permanently blocks `init`, the receipt's preflight status breaks either way, an existing repository cannot be activated, and presence-based activation is erased by the config loader |
-| Iteration              | 5                                                                                                                                                                                                                                                                                                        |
+| Score                  | 6.03/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — **but the first score in the 6–7.9 band, whose prescribed action is iterate-and-re-score rather than return-to-Phase-1.** The scope cut worked and the class of remaining defect changed from design to specification. One blocker is the seam the cut left: two adapter destinations sit outside the store directory while the reinstall instruction names only that directory, so the defining procedure of a one-way install does not reinstall. One genuine design item remains — what authority defines the legal `prompts.values` key set |
+| Iteration              | 6                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x), commissioned by a separate Claude session that wrote its own brief — independent in model family AND in framing; neither authored the PRD**                                                                                                                                                                                                  |
@@ -284,7 +329,27 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 5** (the current score). Earlier rows are kept below it.
+**Iteration 6** (the current score). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                                              |
+| --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 6.5/10      | Every FR has Targets and a §11 row; adapter destinations named for the first time. Three places an implementer must guess |
+| 2         | Completeness             | 20%    | 5.5/10      | Activation, discovery, destinations, empty-string policy specified; the reinstall procedure is incomplete wherever it appears |
+| 3         | Technical Depth          | 20%    | 6.0/10      | Activation fix exactly right and cites its precedent; dropping preflight also solved partial-run recovery. Two code claims wrong |
+| 4         | Multi-Tenancy & Security | 10%    | 8.0/10      | No tenant surface; containment reused correctly; symlinks refused; deny test real; the entrypoint narrowing is confined      |
+| 5         | Scope & Testability      | 15%    | 7.0/10      | Seven FRs right-sized, Conflict Surface complete, no §11 inversions. Nothing tests the reinstall or the destination set     |
+| 6         | Migration & Rollback     | 20%    | 4.5/10      | Backward compatibility excellent and machine-tested; the only migration content is the manual procedure, which is incorrect  |
+| **Total** | **Weighted**             |        | **6.03/10** | **ITERATE — band action: iterate on identified gaps, re-score**                                                          |
+
+Arithmetic re-derived here: `6.5×.15 + 5.5×.20 + 6.0×.20 + 8.0×.10 + 7.0×.15 + 4.5×.20 = 6.025`.
+Codex independently scored 5.45; the gap is Migration & Rollback alone (3.0 against 4.5), and it
+straddles a band boundary, which the reviewer flagged rather than buried.
+
+Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four PRDs.
+
+<details><summary>Iteration 5 scorecard (4.53)</summary>
+
+**Iteration 5.**
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                                              |
 | --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -303,6 +368,8 @@ Hard caps checked: **none tripped.** Lint green by direct `lintPrd` on all four 
 Method content checked against the snapshot: `PLACEHOLDERS.md` is absent from
 `source-snapshot/prompts/` and unmentioned in its `MANIFEST.md`, so the registry is an
 extraction artifact and its new columns are not snapshot-traceable content.
+
+</details>
 
 <details><summary>Iteration 4 scorecard (5.63)</summary>
 
@@ -572,13 +639,41 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 5   | 2026-07-27 | 4.53  | ITERATE | **Commissioned differently on purpose — a separate session chose its own brief — and it found what four aimed rounds could not: the protocol has been prescribing the remedy all along.** `phase-2-readiness-scorer.md` §Score Interpretation maps **4–5.9 to "Major rework needed. Return to Phase 1"** and 6–7.9 to "iterate and re-score". The five scores are 4.48, 5.73, 5.90, 5.63, 4.53 — **every one in the 4–5.9 band, none ever in 6–7.9** — so five rounds ran the wrong band's action. The flat trajectory was the process, not the document. **Six findings are mechanism.** The upgrade path does not terminate: after an upgrade every rendered file differs, so deleting one and re-running `init` fails preflight on the rest and selective application is impossible — the two documents were written the same sitting and do not compose. An excepted edit **permanently blocks `init`**, because nothing tells `init` an exception exists and PRD-029 forbids itself an exceptions store. The **receipt's own preflight status is unwritten and both readings break**: as a destination it blocks `init` forever, as a non-destination `init` overwrites an existing file, and PRD-030 already picks the second horn in writing. **An existing repository can never be activated** — `init` never edits an existing config — which also breaks PRD-032's prescribed method for deriving its own value set. **Presence-based activation does not survive the loader**: `mergeConfig` deep-merges defaults, so `merged.prompts` is always present and `unconfigured` is unreachable; this repository rejected exactly that mechanism for `memory` and wrote the rationale at `defaults.ts:95-101`, which the PRD never mentions. And the "fails at build time" claim FR-6 itself disproves survives in five other places, two of them §6 and §11 — the executable sections. **PRD-030 carries nine live restatements of the removed design**, including the FR-1-versus-FR-5 contradiction iteration 3 blocked on, alive through two remediations that each claimed to close it, plus a §11 row asserting the opposite of the FR it verifies. Cross-item: PRD-031 and PRD-032 both claim `AGENT_BOOTSTRAP.md` with compatible prerequisites, and PRD-031 landing after PRD-032 leaves this repository's store un-regenerable by any owner. The reviewer **rejected one Codex finding and downgraded two** with evidence, and recorded eight verified-and-closed items so a later round does not re-spend on them |
 
+| 6   | 2026-07-27 | 6.03  | ITERATE | **First round in six to leave the 4–5.9 band, so the prescribed action changes from "return to Phase 1" to "iterate and re-score".** The scope cut worked and the reviewer said so without softening: the lifecycle is genuinely gone, the activation fix is correct **and correctly justified** against `defaults.ts:95-101`, discovery-without-a-write closes what broke PRD-032's derivation, the build-time claims are fully swept from this document, the Conflict Surface is complete for the first time, and **no §11 note inverts its FR** — all seven read against their bodies. **The blocker was at the seam the cut left, not in what it removed**: FR-6 puts two of three adapter destinations **outside** `<dir>`, while the reinstall instruction — stated in five places — named only the store directory, so following it after an upgrade leaves `.claude/commands/*` and `.cursor/rules/prd-workflow.mdc` at the old version with stale banners while the adopter believes they reinstalled. Verified against `initWorkspace`, which writes with `wx` and never deletes (`init.ts:248-283`). **It is the one procedure the whole scope decision rests on and nothing tested it.** One genuine design item: `prompts.values` asked the raw pass for a shape it cannot express — `stringRecord` rejects any value that is not a string **or is empty** (`validate.ts:149-155`), exactly the `null` and `""` FR-4 declares legal — and for an authority it lacks, since the legal key set is package Markdown; a TypeScript constant would have made PRD-031 unable to add its token without a code edit its own Non-Goals forbid. The rest are specification: `validateResolvedConfig` takes no root so containment cannot live there and `load.ts` had dropped from Targets; the `globs` derivation was named but never given; "writing nothing" and "no store file" disagreed across three places, leaving a refused run's residue undefined and, under `wx`, permanent. Cross-document: PRD-031's three enumerated-token references still said FR-6 after the renumber and its "fails at build time" claim **survived a grep sweep because it is split across a line break**; PRD-032 carried an FR-5/FR-4 pair two lines apart in one sentence — the sixth instance of `a-rule-corrected-survives-where-it-is-restated`, created by the fix for the fifth. The reviewer **rejected one Codex "what holds"** — that PRD-030 and PRD-031 have disjoint surfaces — because both write `_brain/INDEX.md` and neither declares it, so the conflict gate cannot see the collision; that remains open. It also downgraded one Codex [P1] with executor evidence, corrected two line cites, and refuted a hypothesis of its own about `starterConfig` leaking defaults |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 4.53/10, iteration 5. The lowest of the five, and the only round that examined the
+**ITERATE — 6.03/10, iteration 6. The first score in the 6–7.9 band, and the band action is
+now the one this item has been receiving all along.**
+
+Six rounds sat in 4–5.9, whose prescribed action is *return to Phase 1*; the owner took that
+action, PRD-029 was cut to a one-way install, and the score moved out of the band. **The
+instrument now matches the document**, which is what the band action was supposed to produce.
+
+**The cut worked, and the remaining problem is no longer design.** The lifecycle is gone. The
+activation fix is right and cites the precedent it copies. Discovery without a write closes the
+finding that broke PRD-032. The Conflict Surface is complete for the first time in six rounds,
+and not one §11 note inverts its FR.
+
+**What was left was the seam the cut created.** A one-way installer's entire migration story is
+its reinstall instruction, and that instruction named the store directory while two of three
+adapter destinations live outside it. The Non-Goal is honest; the remedy was wrong. That is now
+fixed with a §11 row that fails today rather than with prose.
+
+One design decision was genuinely open and is taken: the unknown-`values`-key check moves out of
+the raw validation pass into the render, because the legal key set is package Markdown the
+loader must not read and a TypeScript constant would break the promise that keeps PRD-031
+parallel to PRD-030.
+
+**Still open and recorded so it does not disappear:** `_brain/INDEX.md` is written by PRD-030
+and PRD-031 in Durable Artifacts and declared by neither, so the path-conflict gate cannot see a
+collision those two items will have. Raised at iteration 5, unremediated, and missed by the
+model reviewer's own "what holds" list — which is the argument for keeping a second reader who
+rejects findings as well as producing them. The lowest of the five, and the only round that examined the
 process rather than the document.**
 
 **The protocol answered this four rounds ago and nobody read the table.**
