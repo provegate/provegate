@@ -126,42 +126,40 @@ Records to open and confirm still accurate before the dependent task starts (tas
         Original: Capture the green baseline for `pnpm test`, `pnpm verify:workflow`, and `node packages/provegate/dist/cli.js check --wiring`; a pre-existing red is ledgered, never normalized silently.
 
 
-- [ ] 1.0 FR-1 — the `valueScoring` config surface
-  - [ ] 1.1 Add the type: `{ enforceFrom?: number, axes: string[], weights: Record<string, number> }`.
-        `enforceFrom` is optional and **absent ≠ 0**; the shipped default omits it.
-  - [ ] 1.2 `DEFAULT_CONFIG` carries `axes: ["MF","UI","TL","AR","RM"]` and the five
-        weights (.25/.25/.20/.15/.15), and **no `enforceFrom`**.
-  - [ ] 1.3 Charset: each identifier matches `/^[A-Za-z][A-Za-z0-9_]{0,15}$/`, validated
-        **before** any pattern is constructed. Reject fixtures: `A/B`, `.*`, `has space`,
-        the empty string.
-  - [ ] 1.4 Uniqueness: identifiers must be unique **case-insensitively**, because the
-        generated pattern is case-insensitive (the snapshot's `/i`, ported deliberately).
-        Reject `["MF","MF"]` and `["MF","mf"]` with a duplicate-identifier message
-        **distinct from** the charset message; the two must not collapse.
-  - [ ] 1.5 Count bound: `axes.length` ≥ 2 and ≤ 10.
-  - [ ] 1.6 Weight rules in `validateResolvedConfig`: the key set exactly equals the
-        **resolved** axis set, each weight finite and `> 0`, at most two decimals by the
-        **lexical** test (`String(weight)` matches `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`),
-        and the set sums to exactly 1 in integer hundredths. Accept 0.29 and 0.58; reject
-        0.155 and 1e-7. Scale with `Math.round(weight * 100)` only after the lexical check.
-  - [ ] 1.7 **The loader exception, in `resolveConfig` and nowhere else.** When the parsed
-        config supplies `valueScoring.axes`, the whole `valueScoring` object replaces the
-        default **before** `deepMerge`, with no default fill-in of any key. `deepMerge`
-        itself is not modified — every other config key wants recursive merge.
-  - [ ] 1.8 **`axes` absent → ordinary recursive merge, deliberately.** A weights-only
-        config is a legal partial retune of the default axes. Do not reject it; the sum
-        rule is what catches an incoherent partial.
-  - [ ] 1.9 Prove 1.7 with a **resolution** test through `loadConfig`, not a validation
-        fixture: a three-axis config file resolves to exactly three weight keys. A
-        hand-built resolved object would pass while the real loader failed — the defect
-        this rule exists to fix.
-  - [ ] 1.10 Prove 1.8 in both directions: a weights-only config retuning two of five and
-        still summing to 1 **resolves and passes**; one retuning one of five to sum 1.05
-        **fails on the sum**, naming the sum rather than the axis set.
-  - [ ] 1.11 Fixtures for the adopter cases: `valueScoring` absent entirely; `weights` set
-        with no `enforceFrom`; a three-axis config with matching weights; weights naming an
-        axis `axes` omits; `axes` naming an identifier `weights` omits. In the first two, a
-        header-less PRD passes.
+- [x] 1.0 FR-1 — the `valueScoring` config surface
+  - [x] 1.1 `ValueScoringConfig` in `types.ts` with `axes`, `weights`, optional `enforceFrom`. The doc comment carries the two rules that live outside validation — ordered axes, and the loader exception — because they are the ones a reader of the type would otherwise not find.
+        Original: Add the type: `{ enforceFrom?: number, axes: string[], weights: Record<string, number> }`. `enforceFrom` is optional and **absent ≠ 0**; the shipped default omits it.
+
+  - [x] 1.2 `DEFAULT_CONFIG.valueScoring` = the five axes and .25/.25/.20/.15/.15, **no `enforceFrom` key at all**. Asserted with `'enforceFrom' in vs === false`, not just `undefined`.
+        Original: `DEFAULT_CONFIG` carries `axes: ["MF","UI","TL","AR","RM"]` and the five weights (.25/.25/.20/.15/.15), and **no `enforceFrom`**.
+
+  - [x] 1.3 `AXIS_ID = /^[A-Za-z][A-Za-z0-9_]{0,15}$/`, checked before any pattern could be built. Reject fixtures: `A/B`, `.*`, `has space`, empty.
+        Original: Charset: each identifier matches `/^[A-Za-z][A-Za-z0-9_]{0,15}$/`, validated **before** any pattern is constructed. Reject fixtures: `A/B`, `.*`, `has space`, the empty string.
+
+  - [x] 1.4 Case-INSENSITIVE uniqueness with a message distinct from the charset one, and the test asserts the distinctness (`not.toMatch` the charset text). Mutation-checked: folding removed → only this test fails.
+        Original: Uniqueness: identifiers must be unique **case-insensitively**, because the generated pattern is case-insensitive (the snapshot's `/i`, ported deliberately). Reject `["MF","MF"]` and `["MF","mf"]` with a duplicate-identifier message **distinct from** the charset message; the two must not collapse.
+
+  - [x] 1.5 2 ≤ `axes.length` ≤ 10, both bounds covered.
+        Original: Count bound: `axes.length` ≥ 2 and ≤ 10.
+
+  - [x] 1.6 Set equality in both directions, `> 0`, the **lexical** two-decimal test, and the sum in integer hundredths. A weight that fails the decimal form sets `scalable = false` so it does not also produce a confusing sum error — asserted.
+        Original: Weight rules in `validateResolvedConfig`: the key set exactly equals the **resolved** axis set, each weight finite and `> 0`, at most two decimals by the **lexical** test (`String(weight)` matches `/^0(\.\d{1,2})?$|^1(\.0{1,2})?$/`), and the set sums to exactly 1 in integer hundredths. Accept 0.29 and 0.58; reject 0.155 and 1e-7. Scale with `Math.round(weight * 100)` only after the lexical check.
+
+  - [x] 1.7 `mergeConfig()` in `load.ts`: when the parsed config declares `axes`, the whole `valueScoring` replaces the default instead of merging. `deepMerge` is untouched — the exception lives where the merge is decided, not in validation, which runs afterwards and cannot see what the adopter wrote.
+        Original: **The loader exception, in `resolveConfig` and nowhere else.** When the parsed config supplies `valueScoring.axes`, the whole `valueScoring` object replaces the default **before** `deepMerge`, with no default fill-in of any key. `deepMerge` itself is not modified — every other config key wants recursive merge.
+
+  - [x] 1.8 `axes` absent → ordinary recursive merge, deliberately. A weights-only config retunes the default axes and resolves.
+        Original: **`axes` absent → ordinary recursive merge, deliberately.** A weights-only config is a legal partial retune of the default axes. Do not reject it; the sum rule is what catches an incoherent partial.
+
+  - [x] 1.9 Proven through `resolveConfig`, writing a real `workflow.config.json`: a three-axis config resolves to exactly three weight keys. Mutation-checked — removing the exception fails this and three others.
+        Original: Prove 1.7 with a **resolution** test through `loadConfig`, not a validation fixture: a three-axis config file resolves to exactly three weight keys. A hand-built resolved object would pass while the real loader failed — the defect this rule exists to fix.
+
+  - [x] 1.10 Both directions: a two-of-five retune summing to 1 resolves; a one-of-five retune summing to 1.05 fails with `must sum to exactly 1 (got 1.05)`, naming the sum rather than the axes.
+        Original: Prove 1.8 in both directions: a weights-only config retuning two of five and still summing to 1 **resolves and passes**; one retuning one of five to sum 1.05 **fails on the sum**, naming the sum rather than the axis set.
+
+  - [x] 1.11 All five adopter fixtures, plus `enforceFrom: 0` legal and an unknown key inside `valueScoring` refused.
+        Original: Fixtures for the adopter cases: `valueScoring` absent entirely; `weights` set with no `enforceFrom`; a three-axis config with matching weights; weights naming an axis `axes` omits; `axes` naming an identifier `weights` omits. In the first two, a header-less PRD passes.
+
 
 - [ ] 2.0 FR-2 — the recompute as a package gate
   - [ ] 2.1 Create `core/gates/value-score.ts` and export it from `core/gates/index.ts`.
@@ -446,6 +444,16 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
 ---
 
 ## Deferrals & Decisions
+
+- **1.6 finding — two assertions written on false premises, caught by their own runs.** The
+  float-sum hazard is real but its usual witnesses are not: the shipped five weights sum to
+  **exactly 1** as doubles, and so does the textbook `0.1 + 0.2 + 0.7`. Two versions of the
+  hundredths test asserted otherwise and failed on themselves. A witness had to be searched
+  for — `0.06 + 0.57 + 0.37` is `0.9999999999999999` — and the test now carries it. The
+  general point is worth more than the case: **a test that asserts a property needs a real
+  witness for it, and "everyone knows floats do this" is not one.** The lexical two-decimal
+  rule has an honest witness independently (`0.29 * 100` is `28.999999999999996`), which is
+  why that half was right the first time.
 
 - **0.5 finding — a snapshot divergence the PRD does not record.** FR-2 specifies
   dimensions as `[1-5]` and justifies it against an earlier *draft of this PRD* that said

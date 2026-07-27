@@ -192,6 +192,35 @@ function memoryPathsContained(root: string, config: WorkflowConfig): ConfigIssue
   return issues;
 }
 
+/**
+ * `DEFAULT_CONFIG` merged with a parsed config — with ONE keyed exception.
+ *
+ * `deepMerge` recurses into plain objects, which is what every config key wants
+ * except `valueScoring`. There, `axes` is an array (replaced wholesale) while
+ * `weights` is an object (merged), so a three-axis override would arrive at
+ * validation carrying the five DEFAULT weight keys and fail its own
+ * set-equality rule. Every legal custom-axis config would be an error.
+ *
+ * So when a config declares `axes`, its `valueScoring` replaces the default
+ * outright and nothing is filled in for it. Declaring `weights` ALONE is a
+ * different case and stays an ordinary recursive merge: that is an adopter
+ * retuning the default axes — moving MF to .30 and UI to .20 while leaving the
+ * rest — which is a normal thing to want, and the sum-to-1 rule is what catches
+ * an incoherent partial rather than a blanket refusal.
+ *
+ * `deepMerge` itself is untouched; the exception lives here, where the merge is
+ * decided, and not in validation, which runs afterwards and cannot see what the
+ * adopter actually wrote.
+ */
+function mergeConfig(parsed: PartialWorkflowConfig): WorkflowConfig {
+  const merged = deepMerge(DEFAULT_CONFIG, parsed);
+  const declaredAxes = parsed.valueScoring?.axes;
+  if (declaredAxes !== undefined) {
+    return { ...merged, valueScoring: parsed.valueScoring as WorkflowConfig['valueScoring'] };
+  }
+  return merged;
+}
+
 export function deepMerge<T>(base: T, override: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override === undefined ? base : override) as T;
@@ -240,7 +269,7 @@ export function resolveConfig(root: string): WorkflowConfig {
     throw new ConfigError(`${CONFIG_FILENAME} is invalid`, issues);
   }
   configSourceByRoot.set(resolve(root), source);
-  const merged = deepMerge(DEFAULT_CONFIG, parsed as PartialWorkflowConfig);
+  const merged = mergeConfig(parsed as PartialWorkflowConfig);
   const semanticIssues = [...validateResolvedConfig(merged), ...memoryPathsContained(root, merged)];
   if (semanticIssues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is semantically invalid`, semanticIssues);
