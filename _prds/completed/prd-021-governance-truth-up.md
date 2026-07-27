@@ -1,6 +1,6 @@
 # PRD-021: Governance Truth-Up — Stale Wave-2 Claims and the Value-Score Recompute Gate
 
-> **Status**: Approved
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25

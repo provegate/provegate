@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T11:26:36.234Z",
+  "generatedAt": "2026-07-27T11:29:10.412Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -746,20 +746,20 @@
       "prd": "PRD-021",
       "number": 21,
       "slug": "governance-truth-up",
-      "status": "Approved",
+      "status": "Ship Verified",
       "cyclePhase": "3 (Task plan)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-021-governance-truth-up.md",
-        "readiness": "_readiness/wip/readiness-021-governance-truth-up.md",
-        "tasks": "_tasks/wip/tasks-021-governance-truth-up.md",
+        "prd": "_prds/completed/prd-021-governance-truth-up.md",
+        "readiness": "_readiness/completed/readiness-021-governance-truth-up.md",
+        "tasks": "_tasks/completed/tasks-021-governance-truth-up.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
