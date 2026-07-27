@@ -1,6 +1,6 @@
 # PRD-020: Adopter Enablement — Manifest Cookbook, Brownfield Playbook, Practices-First Quickstart
 
-> **Status**: Approved
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-25

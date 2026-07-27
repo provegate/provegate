@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T08:21:59.891Z",
+  "generatedAt": "2026-07-27T08:23:44.912Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -709,20 +709,20 @@
       "prd": "PRD-020",
       "number": 20,
       "slug": "adopter-enablement",
-      "status": "Approved",
+      "status": "Ship Verified",
       "cyclePhase": "3 (Task Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-020-adopter-enablement.md",
-        "readiness": "_readiness/wip/readiness-020-adopter-enablement.md",
-        "tasks": "_tasks/wip/tasks-020-adopter-enablement.md",
+        "prd": "_prds/completed/prd-020-adopter-enablement.md",
+        "readiness": "_readiness/completed/readiness-020-adopter-enablement.md",
+        "tasks": "_tasks/completed/tasks-020-adopter-enablement.md",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
         "summary": "missing"
       },
       "readiness": {
