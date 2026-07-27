@@ -70,6 +70,24 @@ describe('the recompute (FR-2)', () => {
     expect(issue).not.toMatch(/recompute/);
   });
 
+  it('rejects exponent notation — the capture must not truncate the total', () => {
+    // Found by self-check during the Phase 6 remediation, and it is a
+    // consequence of the fix for the bare-integer case: the total was captured
+    // as a NUMBER SHAPE, so `4.1e0` matched as `4.1`, scored 4.10 and passed
+    // the gate FR-2 says must reject exponent notation. The capture now takes
+    // the whole token up to the first space or paren, and lets the parser
+    // judge it — "malformed" has to mean the author's text, not the prefix a
+    // regex happened to like.
+    for (const total of ['4.1e0', '1e1', '4,10']) {
+      const issue = valueScoreIssue(
+        DEFAULT_CONFIG,
+        prd(`> **Value**: ${total} (MF/UI/TL/AR/RM: 5/4/4/4/3)`),
+      );
+      expect(issue, total).toMatch(/malformed: total "/);
+      expect(issue, total).not.toMatch(/recompute/);
+    }
+  });
+
   it('rejects a total with three decimals, as malformed rather than as a mismatch', () => {
     // Two different failures that read differently on purpose: one says the
     // number is unreadable, the other says the arithmetic is wrong.

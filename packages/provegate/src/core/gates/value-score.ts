@@ -56,6 +56,13 @@ function metadataBlock(content: string): string {
  * `**`; a colon that may sit inside or outside the bold run; the total; any
  * non-`(` filler; then `(<axes joined by /> : <dims joined by />)`.
  *
+ * The total is captured as EVERYTHING up to the first space or paren, not as a
+ * number shape. A numeric capture silently truncates: `4.1e0` matched as `4.1`
+ * and scored 4.10, so exponent notation passed the gate that FR-2 says must
+ * reject it. Capturing the whole token and letting `totalToHundredths` judge it
+ * is what makes "malformed" mean the author's text rather than the prefix a
+ * regex happened to like.
+ *
  * Deliberately NOT anchored on the closing paren — trailing prose after the
  * dimensions is legal, as it is in the snapshot.
  *
@@ -67,7 +74,7 @@ function headerPattern(axes: string[]): RegExp {
   const axisSegment = axes.join('\\s*/\\s*');
   const dimSegment = axes.map(() => '([1-5])').join('\\s*/\\s*');
   return new RegExp(
-    `^\\s*>?\\s*\\*{0,2}Value\\*{0,2}\\s*:?\\s*\\*{0,2}\\s*:?\\s*([0-9]+(?:\\.[0-9]+)?)[^(]*\\(\\s*${axisSegment}\\s*:\\s*${dimSegment}`,
+    `^\\s*>?\\s*\\*{0,2}Value\\*{0,2}\\s*:?\\s*\\*{0,2}\\s*:?\\s*([^\\s(]+)[^(]*\\(\\s*${axisSegment}\\s*:\\s*${dimSegment}`,
     'im',
   );
 }

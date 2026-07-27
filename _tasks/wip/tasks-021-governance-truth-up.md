@@ -486,6 +486,14 @@ Every watch item the readiness rounds left binding, and the tasks that discharge
      "read-only, no behavior change" while FR-13(c) edits it. All three claimed, and the
      superseded note corrected.
 
+  **And the remediation immediately produced its own survivor, caught by self-check before
+  the confirming round.** Tightening the bare-integer case left the total captured as a
+  NUMBER SHAPE (`[0-9]+(?:\.[0-9]+)?`), so `4.1e0` matched as `4.1`, scored 4.10 and
+  passed — exponent notation slipping through the same paragraph of FR-2 that the fix was
+  answering. The capture now takes the whole token up to the first space or paren and lets
+  the parser judge it. That is this item's characteristic defect appearing for the seventh
+  time, in the fix for the sixth.
+
   The pack counterpart was then re-ported and the ledger reconciled, so the adopter's copy
   carries the same enforcement facts minus this repository's own opt-in.
 
