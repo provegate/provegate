@@ -1,5 +1,30 @@
 # Readiness Assessment: PRD-029 — Method Delivery, Agent Protocol Binding
 
+> **Iteration 3 (Codex, independent) — 5.90/10, ITERATE. Up 0.17, and the number is the
+> least useful thing this round produced.** Asked for a decision rather than a list, it
+> answered: **the document is not implementable and the blocker is structural, not another
+> missing sentence.** Decision 1 — the one this session recommended and the owner approved —
+> is the problem. A single ledger is being asked to be four things at once: a receipt of what
+> was rendered, a manifest of which paths the tool owns, the scope definition for PRD-030's
+> reconciliation, and the migration state across adapter and directory changes. It is also
+> split between two writers by field-level prose, and **that split already contradicts
+> itself**: PRD-030 FR-1 calls `packageVersion` and `generated` read-never-rewritten while
+> its FR-5 has sync rewrite the ledger on success, which an upgrade necessarily does. The
+> reviewer's own words: another wording-only remediation round will not fix it.
+> **Five of the seven new watch items are labelled DESIGN, not wording.**
+>
+> The round also caught four stale facts, every one verified here. `AGENT_BOOTSTRAP.md` has
+> **ten** stop-and-ask checkpoints; "nine" appears in PRD-029, PRD-031 and on the board. The
+> `{{!NAME}}` escape is justified in FR-4 as something "the shipped corpus does" — `grep`
+> finds **zero** `{{!` in any shipped file, and the one document that discusses tokens is
+> verbatim-exempt. The required-value count is **nine**, not thirteen: 20 registry rows minus
+> seven config-backed minus four that appear in no rendered file. And **PRD-032 still says
+> "thirteen" in three live places** after a changelog entry claiming the count was removed —
+> the third consecutive round in which `a-rule-corrected-survives-where-it-is-restated` is
+> declared `applied` and then reproduced by the same session.
+>
+> <details><summary>Iteration 2 (5.73 ITERATE)</summary>
+>
 > **Iteration 2 (Codex, independent) — 5.73/10, ITERATE. Up 1.25, the largest single-round
 > gain in this wave, and the findings changed class.** Iteration 1's were internal
 > contradictions; **none of iteration 2's is.** Every factual claim in the rewrite verified
@@ -15,6 +40,8 @@
 > compose**: PRD-030 requires a ledger PRD-029 never creates, and PRD-031's two-mode
 > rendering needs conditional expansion that `prompts.values` scalar substitution cannot do —
 > which also means 030 and 031 are not parallelizable as written.
+>
+> </details>
 >
 > <details><summary>Iteration 1 (4.48 ITERATE)</summary>
 >
@@ -35,9 +62,9 @@
 | Field                  | Value                                                                                                                                                                                                                                                                                                    |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PRD                    | `_prds/wip/prd-029-method-delivery-agent-binding.md`                                                                                                                                                                                                                                                     |
-| Score                  | 5.73/10                                                                                                                                                                                                                                                                                                  |
-| Verdict                | ITERATE — eight [P1] items, none of them an internal contradiction. Five are specification gaps the rewrite exposed rather than created (render-domain totality, token grammar, activation state machine, adapter grammar, banner-versus-frontmatter); two are hard refusals that reject legitimate input; one is the successor interfaces failing to compose |
-| Iteration              | 2                                                                                                                                                                                                                                                                                                        |
+| Score                  | 5.90/10                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — **not implementable, and the blocker is structural.** One ledger is asked to be a render receipt, a path-ownership manifest, PRD-030's reconciliation scope and the migration state, split between two writers by prose that already contradicts itself. Five of seven new watch items are DESIGN decisions, not wording. W9/W14/W17 closed; six of the nine partially |
+| Iteration              | 3                                                                                                                                                                                                                                                                                                        |
 | Model Tier (Execution) | do not assign — score < 8                                                                                                                                                                                                                                                                                |
 | Model Tier (Audit)     | high (on a PASS)                                                                                                                                                                                                                                                                                         |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD**                                                                                                                                                                                                  |
@@ -163,7 +190,25 @@ record is not applying it.
 Class-conditional weights for `infra`, per `prompts/phase-2-readiness-scorer.md` lines
 74-82. Verified against that table before recording.
 
-**Iteration 2** (the current score). Iteration 1's row is kept below it.
+**Iteration 3** (the current score). Earlier rows are kept below it.
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                                              |
+| --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 7.0/10      | Each rule is now stated once and the two decisions are explicit; several counts restated wrong, one against its own DO NOT |
+| 2         | Completeness             | 20%    | 6.0/10      | The ledger has no schema-evolution, self-exclusion, acquisition or retirement model; fragment terminality unenforced      |
+| 3         | Technical Depth          | 20%    | 5.5/10      | "Transactional" is asserted over a preflight plus `wx` sequence with a race window and no rollback                        |
+| 4         | Multi-Tenancy & Security | 10%    | 7.0/10      | No tenant surface; containment specified, though a literal reading refuses a fresh repository                            |
+| 5         | Scope & Testability      | 15%    | 7.0/10      | Ten FRs is right and the split holds; the adapter grammar is not yet tight enough to implement against                    |
+| 6         | Migration & Rollback     | 20%    | 4.0/10      | The path lifecycle is unpriced: adapter changes, `prompts.dir` moves and config removal all leave undiscoverable state    |
+| **Total** | **Weighted**             |        | **5.90/10** | **ITERATE**                                                                                                            |
+
+Arithmetic re-derived here: `7.0×.15 + 6.0×.20 + 5.5×.20 + 7.0×.10 + 7.0×.15 + 4.0×.20 = 5.90`.
+
+Hard caps checked: **none tripped.** Lint passed by direct `lintPrd` invocation,
+`{ ok: true, issues: [] }`; the CLI wrapper again refused by sandbox `EPERM` on the state
+write. No client-to-server contract, no runtime dependency, no remote-push path.
+
+<details><summary>Iteration 2 scorecard (5.73)</summary>
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                                            |
 | --------- | ------------------------ | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -179,10 +224,10 @@ Arithmetic re-derived here: `6.5×.15 + 5.5×.20 + 6.0×.20 + 6.5×.10 + 6.0×.1
 
 Hard caps checked: **none tripped.** The method-content cap that iteration 1 tripped is gone
 from this document — FR-10 moved to PRD-031, which makes the owner-approved snapshot addendum
-its own precondition FR, and this PRD now targets no file under
-`packages/provegate/prompts/`. No runtime dependency added; no remote-push path added. Lint
-cap: not tripped — `lintPrd` returned `{ ok: true, issues: [] }` by direct invocation, the CLI
-wrapper again refused by sandbox `EPERM` on the state write.
+its own precondition FR. No runtime dependency added; no remote-push path added. Lint cap:
+not tripped.
+
+</details>
 
 <details><summary>Iteration 1 scorecard (4.48)</summary>
 
@@ -209,6 +254,73 @@ now.
 ---
 
 ## Missing Pieces (to reach 10/10)
+
+Iteration 3's watch items. **Five are DESIGN — they change what the mechanism is, not how it
+is described — and the reviewer's decision was explicit that a wording-only round will not
+clear them.** W9–W17 and W1–W8 below are the earlier rounds', retained for the record.
+
+1. **W18 — DESIGN: give the ledger one schema owner and a full-file write contract.**
+   Field-level prose ownership does not survive contact: PRD-030 FR-1 calls `packageVersion`
+   and `generated` read-never-rewritten while its FR-5 has sync rewrite the ledger, which an
+   upgrade must do — and once `exceptions` exist, PRD-029's writer has to preserve them or
+   its planned bytes differ from the file on disk and preflight refuses forever. Needs: a
+   schema version, one full-file read-modify-write owner, canonical serialization, and an
+   explicit statement that the ledger excludes itself from `generated` (it cannot hash
+   itself, which is reasonable and currently unstated and untested).
+2. **W19 — DESIGN: define managed-path acquisition and retirement.** A pre-existing
+   destination whose bytes already match is a no-op, and the plan still records it as
+   generated — so the tool claims a path it did not write, and PRD-030 may later overwrite an
+   adopter's own file because its hash matches. Realistic for `.cursor/rules/prd-workflow.mdc`.
+   The lifecycle has five transitions and the documents specify none: acquire, retain,
+   **retire** (an adapter removed from `prompts.adapters` — dropped from the ledger it becomes
+   invisible, kept it becomes a permanent orphan), **relocate** (`prompts.dir` renamed: the
+   old tree and old ledger fall outside every scan), and **relinquish** (`prompts` removed:
+   nothing records where the old directory was).
+3. **W20 — DESIGN: replace "transactional" with a commit protocol that exists.** Preflight
+   plus a sequence of `wx` writes has a race window and no rollback; disk exhaustion, a
+   permission error, an interrupt or a concurrent `init` still leaves a partial store, and
+   FR-7's four-state table has no state for it. Add `configured-incomplete`, say what
+   concurrency does, and define recovery. Also: `configured-orphaned` is misnamed — its
+   Config column says the config was removed, which is a different condition from an orphaned
+   tree.
+4. **W21 — DESIGN: make fragment terminality enforceable, and choose the ceiling.** A
+   fragment containing a token leaves it unresolved under FR-4's one-pass rule, and rescanning
+   would break that rule — so fragments must be token-free and that must fail at build time.
+   Separately, two enumerated tokens whose legal values interact cannot be represented at all;
+   the document must say whether the answer is a composite enumeration, a cross-token
+   validator, or an admission that a conditional language arrives. "No template language"
+   holds only until the first interacting requirement.
+5. **W22 — DESIGN: remove the sentinel and escape collisions.** A legitimate configured value
+   equal to `<PROVEGATE:UNSET>` is refused, and there is no spelling that renders `{{!NAME}}`
+   itself literally. Both are data-model collisions rather than policy. Note also that FR-4's
+   stated justification is false: `grep` finds **zero** `{{!` in any shipped file, and the one
+   document that discusses tokens is the verbatim-exempt registry. The escape may still be
+   worth having; the reason given for it is not the reason.
+6. **W23 — SPECIFICATION: make the adapter grammar normative, and scope the preflight.** The
+   grammar leaves "optional frontmatter", the "fixed directive", fence syntax, row order and
+   cardinality undefined. And `init.ts::preflight` is a generic target: applying
+   mismatch-refusal to the base or practices plan turns ordinary `gate init` from
+   "existing files are skipped" into "a modified file aborts the plan", which breaks the
+   byte-identical promise this PRD makes for repositories without `prompts`. It must be
+   prompt-plan-only, and the diagnostic must hand an adopter with a legitimately edited store
+   to `doctor`/`sync` — a handoff neither document defines.
+7. **W24 — WORDING: sweep the stale counts.** `AGENT_BOOTSTRAP.md` has **ten** stop-and-ask
+   checkpoints, not nine (PRD-029, PRD-031, STATUS.md). The required-value set is **nine**,
+   not thirteen, and becomes ten when PRD-031 lands; **PRD-032 still says "thirteen" in three
+   live places** despite a changelog claiming otherwise. PRD-032's "3 agent-config files" is
+   not a file count — the outputs are seven Claude commands, one Cursor rule and one snippet.
+   And PRD-029's §12 says "DO NOT state the emitted set as a count anywhere" while FR-2 and
+   the metrics table both do.
+
+Also recorded, [P2], confidence medium: FR-1's containment says to realpath both candidate
+and root, but the default `.provegate` does not exist on first use. `memoryPathsContained`
+already solves this by realpathing the longest existing prefix and reattaching the tail; the
+PRD should require that behaviour rather than leave a literal implementation to refuse a
+fresh repository.
+
+---
+
+## Iteration 2 watch items (retained)
 
 Iteration 2's watch items. W1–W8 below them are iteration 1's, retained for the record;
 W1 is taken, the rest are closed or transferred as the closure audit states.
@@ -316,13 +428,56 @@ W1 is taken, the rest are closed or transferred as the closure audit states.
 
 | 2   | 2026-07-27 | 5.73  | ITERATE | **The split landed and the class of finding changed. Up 1.25.** Every rewritten factual claim verified against source — 20 registry rows with 7 mapped and 13 unmapped, 12 rendered protocols, 7 templates, the README's "tool-shaped entry points", the loader at 267/272/273, the `new.ts:170` fallback, literal `{{TOKEN}}` in the registry's own cells. **Not one of the eight [P1]s is an internal contradiction**, which is what the split was for. Two are the rewrite's own overshoot, and both are the same error: a rule derived from the wrong source. **FR-4 derives the required value set from the registry instead of from what FR-2 renders** — `{{LINK_TO_VISION_DOC}}`, `{{ONE_LINE_PRODUCT_FRAMING}}`, `{{PROJECT_SPECIFIC_HARD_RULES}}` and `{{VISION_OR_DECISIONS_DOC}}` occur in zero rendered files and only in `practices/templates/AGENT_BOOTSTRAP.template.md`, so four sentinels must be answered with values that cannot change a byte of the store. **FR-3's mandatory banner collides with FR-6's `.mdc` frontmatter**, which every `.cursor/rules/*.mdc` here and in the snapshot opens with on line 1. Five more are specification depth the previous size hid: the render domain is not total for non-Markdown files, nested-template basename collisions or symlinks; the token scan has no grammar, so a line-broken token evades it and a documented literal is substituted; the activation invariant is false in the state FR-5 itself creates and `wx` does not make a multi-file render atomic; and the pointer predicate proves neither direction, refusing legitimate Cursor table rows or admitting prose that rides on a path line. **Three are the successors failing to compose**: PRD-030 reconciles against a ledger PRD-029 never creates, its totality argument omits the adapters that live outside `prompts.dir`, and PRD-031's two-mode rendering needs conditional expansion that scalar `prompts.values` substitution cannot provide — so 030 and 031 are not parallelizable as written, and PRD-032's thirteen hardcoded values become fourteen depending on landing order. Also confirmed: `_brain/INDEX.md` is a required durable write outside both the Conflict Surface and `sharedAppendOnly`, so §7's recorded judgement leaves an implementer with no lawful path. Memory contract clean — no watch overlap missing — with a [P2] that several dispositions are ceremonial, the sharpest being that `a-rule-corrected-survives-where-it-is-restated` is declared applied while activation is restated in five places |
 
+| 3   | 2026-07-27 | 5.90  | ITERATE | **Up 0.17, and the number is the least useful thing the round produced.** Briefed to return a decision rather than a list, with every finding rated for realistic likelihood, it answered that the document **is not implementable and the blocker is structural**. Decision 1 is the problem: one ledger is asked to be a render receipt, a manifest of which paths the tool owns, PRD-030's reconciliation scope, and the migration state across adapter and directory changes — and it is split between two writers by field-level prose that **already contradicts itself**, since PRD-030 FR-1 calls `packageVersion`/`generated` read-never-rewritten while its FR-5 has sync rewrite the ledger, which an upgrade must do. The ownership consequence is concrete and rated `routine`: a pre-existing destination whose bytes already match is a no-op yet still recorded as generated, so the tool claims a path it never wrote and PRD-030 may later overwrite an adopter's own `.cursor/rules/prd-workflow.mdc`. Four transitions have no model at all — retiring an adapter, adding one over a pre-existing file, renaming `prompts.dir`, removing `prompts`. Decision 2 survives for the case it was made for: lines 92–94 of the Phase 3 protocol are one STOP rule plus one exception block, so a fragment can select both renderings and PRD-031 can stay code-free — **but terminality is asserted, not enforced** (a fragment containing a token is left unresolved by the one-pass rule, and rescanning would break it), and two enumerated tokens whose legal values interact cannot be represented, so the document must name its ceiling. `preflight` is a generic `init.ts` target: applied to the base or practices plan it turns ordinary `gate init` from "existing files are skipped" into "a modified file aborts", breaking this PRD's own byte-identical promise. Four stale facts verified here: **`AGENT_BOOTSTRAP.md` has ten stop-and-ask checkpoints, not nine**, repeated in PRD-029, PRD-031 and on the board; the `{{!NAME}}` escape is justified as something "the shipped corpus does" and `grep` finds **zero** `{{!` anywhere; the required-value set is **nine**, not thirteen; and **PRD-032 still says "thirteen" in three live places** under a changelog claiming the count was removed — the third consecutive round in which `a-rule-corrected-survives-where-it-is-restated` is declared `applied` and then reproduced by the session declaring it. Memory contract otherwise clean, with a [P1] that `strictness-added-during-extraction-is-a-behavior-change` is now cited against the *previous* round's overshoots while this round's new refusals — the escape, the sentinel, the generic preflight — again escaped its analysis. W9, W14 and W17 closed; the other six partially. Five of the seven new items are DESIGN |
+
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
 ---
 
 ## Verdict
 
-**ITERATE — 5.73/10, iteration 2, scored independently by Codex.**
+**ITERATE — 5.90/10, iteration 3, scored independently by Codex.**
+
+The score moved 0.17 and the round's value is not in it. Asked for a decision rather than a
+list, the reviewer gave one: **this document is not good enough to implement, and the reason
+is structural.** That is the first time in three rounds the answer has been something other
+than a defect list, and it is worth more than the previous two rounds' findings combined.
+
+**Decision 1 is the blocker, and it is this session's recommendation.** A single
+`provegate.lock.json` is carrying four jobs — the receipt of what was rendered, the manifest
+of which paths the tool owns, the scope definition for PRD-030's reconciliation, and the
+migration state across adapter and directory changes — with its fields split between two
+writers by prose. The split contradicts itself already, in documents written in the same
+sitting: PRD-030 FR-1 says `packageVersion` and `generated` are read and never rewritten, and
+its FR-5 has `gate sync --prompts` rewrite the ledger on success, which an upgrade must do.
+The ownership job is the one that bites in ordinary use: a destination that already exists
+with matching bytes is a no-op and is still recorded as generated, so the tool claims a file
+it never wrote and a later `sync` may overwrite the adopter's own Cursor rule.
+
+Four transitions have no model: retiring an adapter, adding one where a file already exists,
+renaming `prompts.dir`, and removing `prompts` entirely. Each leaves state that no command
+can discover. That is a managed-path lifecycle, and no amount of rewording FR-8 produces one.
+
+**Decision 2 holds for the case it was made for and has a stated ceiling problem.** Lines
+92–94 of the Phase 3 protocol are one STOP rule plus one exception block, so fragments can
+express both renderings and PRD-031 can stay code-free — the design works. But terminality is
+asserted rather than enforced, and two enumerated tokens whose legal values interact cannot be
+represented at all. "No template language" is true until the first interacting requirement,
+and the document should say what happens then rather than discover it.
+
+**Three rounds, three instances of the same failure by the same author.**
+`a-rule-corrected-survives-where-it-is-restated` has been declared `applied` in every version
+of this PRD, and every round has found the rule corrected in one place and left standing in
+another — this time PRD-032's "thirteen", under a changelog entry stating the count was
+removed. `strictness-added-during-extraction-is-a-behavior-change` has now been declared for
+three rounds while each round's *newest* refusals escape its analysis. The pattern is not that
+these records are wrong; it is that a session applies them to what it has just been told about
+and not to what it is about to write. That is worth a durable record of its own, and it
+belongs to whoever closes this item.
+
+**Next step is not another remediation round.** W18–W22 are design decisions about what the
+ledger is and where conditional content stops. W23 and W24 are ordinary work and should follow
+the design, not precede it.
 
 The split worked and the score says so, but the more useful signal is that **the class of
 finding changed.** Iteration 1's eight were the document disagreeing with itself; iteration
