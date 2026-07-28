@@ -331,6 +331,19 @@ ceremonial answer this contract exists to prevent.
 
 Required in a memory-enabled repository, alongside Memory Outputs below.
 
+- applied: `shipped-content-needs-a-delivery-gate` — its watch covers four of this PRD's
+  targets (`phase-3-task-generator.md`, both `AUTONOMY_MODE` fragments,
+  `PLACEHOLDERS.md`, `orchestration-runner.md`), and the record's rule is this PRD's
+  central risk: edited prompt content that packages but never renders. The delivery
+  proof is the content round-trip — the token must render through the store pipeline in
+  the package tests, not merely sit in the corpus — and FR-6's registration is checked
+  by the same tests that render it, so the changed content cannot ship dark.
+- applied: `derive-the-requirement-from-the-consumer` — its watch covers
+  `PLACEHOLDERS.md`, an FR-6 target. The record binds the token's registration: the
+  required-value set is derived from rendered consumers (`prompts.ts:467-483`), so
+  `{{AUTONOMY_MODE}}`'s two enumerated values enter through the fragment files the
+  renderer actually consumes — registering a key no consumer renders (or a value no
+  fragment carries) is exactly the catalogue-shaped demand the record forbids.
 - applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers `_prds/**`.
   FR-5 edits one rule in two files and FR-4 states a related rule in a third, which is
   precisely the shape this record describes; the test in FR-5 exists because of it, and FR-3
