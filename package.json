@@ -40,6 +40,7 @@
     "verify:turbo-inputs": "node scripts/verify/verify-turbo-inputs.mjs",
     "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
     "verify:value-score": "node packages/provegate/dist/cli.js check --value-score",
+    "verify:memory-corpus": "node scripts/verify/verify-memory-record-corpus.mjs",
     "verify:workflow": "node scripts/verify/verify-workflow.mjs",
     "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green — ready to push; run git push yourself (push is always human)')\""
   },

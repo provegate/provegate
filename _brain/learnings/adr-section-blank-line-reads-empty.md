@@ -1,8 +1,9 @@
 ---
 name: adr-section-blank-line-reads-empty
 description: >-
-  The ADR section check captures only the line right after the heading, so a blank line
-  there — what prettier writes — reports every section as empty.
+  Retired trap, general lesson kept: `$` under `/m` is end-of-LINE, not end-of-input —
+  and a conformance corpus that asserts agreement cannot catch implementations that are
+  wrong together. The ADR anchor itself was fixed by PRD-035 in all three copies.
 type: gotcha
 scope: workflow
 status: active
@@ -10,33 +11,33 @@ links: [two-parsers-wrong-together, durable-artifact-must-commit]
 watch: [_brain/adr/**, _brain/_templates/adr.md]
 ---
 
-Writing the repository's first ADR fails `verify:brain` with four identical errors —
-`the '## Context' section is empty` and the same for Decision, Consequences, and
-Alternatives — even when every section is full.
+**The defect this record reported is fixed** (PRD-035, 2026-07-28): the ADR section
+capture now ends at `(?=^## |(?![\s\S]))` in all three implementations — the typed
+parser (`core/memory/parse.ts`), the repository validator (`scripts/verify/lib.mjs`),
+and the shipped copy (`practices/verify/lib.mjs`) — held by a corpus case that asserts
+a blank-line-after-every-heading ADR is **valid**, and by `verify:memory-corpus`, which
+executes the repository copy the package corpus never runs. `pnpm format` over
+`_brain/adr/**` is safe since that change. The record stays because both lessons under
+it are general.
 
-The section regex ends its lazy capture at `(?=^## |$)` with the `m` flag, and under `m`
-the `$` matches at the end of **any** line. So the capture stops at the first line
-boundary after the heading: with a blank line there it captures the empty string, and
-with content there it captures only that first line. The rule the code actually
-implements is "the line immediately after the heading must be non-empty", which nobody
-wrote down and which normal Markdown violates.
+**Lesson one — the anchor.** Under the `m` flag, `$` matches at the end of **every**
+line, including the zero-length position on a blank line right after a heading. A lazy
+capture stopping at `(?=^## |$)` therefore truncates at the first line boundary — the
+rule the code actually implements is "the line immediately after the heading must be
+non-empty", which nobody wrote and normal Markdown violates. JavaScript has no `\z`;
+end-of-input is `(?![\s\S])`.
 
-Two things hide it. `_brain/_templates/adr.md` puts its placeholder on the line directly
-under each heading, so the template is the one shape that passes. And the repository had
-no ADR at all until now, so no fixture ever exercised the path — the shared conformance
-corpus proves the typed parser and the standalone validator agree, and here they agree on
-the same wrong answer (see [[two-parsers-wrong-together]]).
+**Lesson two — the corpus.** Three implementations shared the wrong anchor, and 78
+conformance cases proved they agree — agreement was the only claim the cases made. A
+corpus can only catch all-wrong-together when a case pins what the right answer IS
+(see [[two-parsers-wrong-together]]): assert the document is valid, never that the
+implementations match.
 
-`prettier` formats `.md` and inserts a blank line after a heading, so `pnpm format` turns
-a passing ADR into a failing one. `format:check` is not wired into any gate today, which
-is the only reason the two have not collided already.
-
-**Why:** `$` under the `m` flag is an end-of-LINE anchor, not end-of-input; a lazy
-quantifier stopping at it truncates at the first newline instead of running to the next
-section. The same regex shape is duplicated in the typed parser and in the standalone
-validator, so both give the same wrong verdict and their shared corpus cannot expose it.
-**How to apply:** Until the anchor is fixed to end-of-input (`$(?![\s\S])`) in every copy,
-write ADR sections with the content on the line **immediately** after the heading, and do
-not run `pnpm format` over `_brain/adr/`. When fixing it, fix all copies plus the corpus
-in one change — a fix in one implementation alone re-creates the disagreement the corpus
-exists to prevent.
+**Why:** an end-of-line anchor in a multiline capture and an agreement-only corpus are
+each invisible on their own; together they ship the same wrong verdict to every copy
+and every adopter while the whole test suite stays green.
+**How to apply:** in any `/m` regex that must run to end-of-input, write `(?![\s\S])`,
+never `$`. When one format has multiple implementations, every corpus case asserts the
+expected verdict, and each implementation must be **executed** against the corpus — a
+hash reconciliation (`verify:pack-drift`) proves two copies were compared, not that
+either is right.

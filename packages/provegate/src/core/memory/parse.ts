@@ -575,10 +575,13 @@ export function validateRecord(
       // `i` flag accepted `## Context considered` and `## context` as Context.
       // The stop is `^## ` rather than `\n## ` so a heading that follows with no
       // blank line still ends the section — otherwise an empty one swallowed the
-      // next section's body and read as full.
+      // next section's body and read as full. End-of-input is `(?![\s\S])`, not
+      // `$`: under /m, `$` matches at every line end — including the zero-length
+      // position on a blank line right after the heading, which ended the lazy
+      // capture at offset zero and read every prettier-formatted section as empty.
       const suffix = heading === 'Alternatives' ? '(?: considered)?' : '';
       const found = new RegExp(
-        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
+        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`,
         'm',
       ).exec(visibleBody);
       if (found === null) {

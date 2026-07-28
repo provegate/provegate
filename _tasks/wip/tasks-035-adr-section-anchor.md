@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-035-adr-section-anchor.md](../../_prds/wip/prd-035-adr-section-anchor.md)
 > **Readiness**: [readiness-035-adr-section-anchor.md](../../_readiness/wip/readiness-035-adr-section-anchor.md)
-> **Status**: Not Started
+> **Status**: In Progress
 > **Readiness Score**: 8.20/10 (iteration 2, PASS)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -73,42 +73,42 @@ re-derive them. Each binds to the parent whose work depends on it:
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 `node packages/provegate/dist/cli.js open PRD-035` — lease the Conflict
+- [x] 0.0 Pre-flight
+  - [x] 0.1 `node packages/provegate/dist/cli.js open PRD-035` — lease the Conflict
         Surface; refuse-on-overlap is the point (PRD-024/026/036 sessions may hold
         `turbo.json`/`safety.ts`; no overlap expected with this surface).
-  - [ ] 0.2 Add the Active Agents row to `STATUS.md` (PRD-035, Phase 4, date).
-  - [ ] 0.3 Baseline: `pnpm verify:brain` green on the untouched store.
-  - [ ] 0.4 Baseline repro on a COPY (never the live store): copy
+  - [x] 0.2 Add the Active Agents row to `STATUS.md` (PRD-035, Phase 4, date).
+  - [x] 0.3 Baseline: `pnpm verify:brain` green on the untouched store.
+  - [x] 0.4 Baseline repro on a COPY (never the live store): copy
         `_brain/adr/ADR-0003-acceptance-authorship.md` to the scratchpad, insert one
         blank line after `## Context`, run the repository validator against the copy,
         confirm the exact FAIL message the PRD §1 quotes. Record the trace in the
         Progress Log.
-- [ ] 1.0 Repro at corpus level (red-first)
-  - [ ] 1.1 Add the FR-2 case to
+- [x] 1.0 Repro at corpus level (red-first)
+  - [x] 1.1 Add the FR-2 case to
         `packages/provegate/test/fixtures/memory-record-cases.json`: an ADR whose
         EVERY section heading is followed by exactly one blank line, expected
         **valid** — a behavioural claim, not a parity claim. Follow the existing case
         schema (`id`, `content`, `slug`, `isAdr`, `valid`; bare `fields` only for
         invalid cases). Suggested id: `adr-blank-line-after-every-heading-valid`.
-  - [ ] 1.2 Run `pnpm --filter provegate test test/memory.test.ts` — the new case
+  - [x] 1.2 Run `pnpm --filter provegate test test/memory.test.ts` — the new case
         MUST fail on both executed implementations (typed parser and shipped copy)
         before any fix lands. Record the red output in the Progress Log.
-- [ ] 2.0 Fix — the anchor in three copies
-  - [ ] 2.1 `packages/provegate/src/core/memory/parse.ts`: replace the `$`
+- [x] 2.0 Fix — the anchor in three copies
+  - [x] 2.1 `packages/provegate/src/core/memory/parse.ts`: replace the `$`
         alternative in the section-capture lookahead with `(?![\s\S])`, keeping
         `^## ` and the `m` flag: `(?=^## |(?![\s\S]))`. The comment above the
         expression states why `$` was wrong in terms of `/m` (matches at every
         line end, including a zero-length position on a blank line).
-  - [ ] 2.2 Same one-token change + comment in `scripts/verify/lib.mjs`.
-  - [ ] 2.3 Same one-token change + comment in
+  - [x] 2.2 Same one-token change + comment in `scripts/verify/lib.mjs`.
+  - [x] 2.3 Same one-token change + comment in
         `packages/provegate/practices/verify/lib.mjs`.
-  - [ ] 2.4 `pnpm --filter provegate test test/memory.test.ts` — the new case passes
+  - [x] 2.4 `pnpm --filter provegate test test/memory.test.ts` — the new case passes
         on both executed implementations; `adr-empty-section-adjacent` (heading
         immediately followed by heading) still fails as invalid; zero other case
         movement.
-- [ ] 3.0 FR-5 — the repository corpus runner and its wiring
-  - [ ] 3.1 Create `scripts/verify/verify-memory-record-corpus.mjs`: load every case
+- [x] 3.0 FR-5 — the repository corpus runner and its wiring
+  - [x] 3.1 Create `scripts/verify/verify-memory-record-corpus.mjs`: load every case
         from `packages/provegate/test/fixtures/memory-record-cases.json`, run
         `validateMemoryRecord` from `scripts/verify/lib.mjs` (relative import), and
         assert expected validity plus **bare-field containment** — the same contract
@@ -116,55 +116,55 @@ re-derive them. Each binds to the parent whose work depends on it:
         keying: that is the package test's cross-implementation parity contract and
         the fixture declares no expected entry keys (PRD FR-5; readiness iteration-2
         Missing Piece 2).
-  - [ ] 3.2 In the same runner, the formatter smoke: format the FR-2 case's content
+  - [x] 3.2 In the same runner, the formatter smoke: format the FR-2 case's content
         with the repository's installed prettier (`import prettier from 'prettier'`,
         markdown parser — root devDependency, NOT a `packages/provegate` dependency),
         re-validate the formatted output, assert it stays valid with every section
         body captured non-empty.
-  - [ ] 3.3 Fail-closed: a missing or unparseable fixture file exits non-zero naming
+  - [x] 3.3 Fail-closed: a missing or unparseable fixture file exits non-zero naming
         the path — never zero cases iterated into a pass. Exit code 1 on any case
         failure; print one line per failing case (id + expected vs got).
-  - [ ] 3.4 Register `"verify:memory-corpus": "node scripts/verify/verify-memory-record-corpus.mjs"`
+  - [x] 3.4 Register `"verify:memory-corpus": "node scripts/verify/verify-memory-record-corpus.mjs"`
         in root `package.json` (append; shared append-only file).
-  - [ ] 3.5 Add `verify-memory-record-corpus.mjs` to the `CHECKS` array in
+  - [x] 3.5 Add `verify-memory-record-corpus.mjs` to the `CHECKS` array in
         `scripts/verify/verify-workflow.mjs` — the wire-or-delete audit's executing
         surface for the new check.
-  - [ ] 3.6 `pnpm verify:memory-corpus` green (79 cases + smoke); then mutation
+  - [x] 3.6 `pnpm verify:memory-corpus` green (79 cases + smoke); then mutation
         sanity: temporarily restore `$` in `scripts/verify/lib.mjs`, observe the new
         case fail BY NAME, revert. Record both outputs in the Progress Log.
-- [ ] 4.0 Reconcile and retire
-  - [ ] 4.1 Reconcile BOTH moved pack-drift pairs (per the ledger `_readme`
+- [x] 4.0 Reconcile and retire
+  - [x] 4.1 Reconcile BOTH moved pack-drift pairs (per the ledger `_readme`
         procedure): `verify/lib.mjs` ↔ `scripts/verify/lib.mjs` (anchor moved on
         both sides), and `verify/verify-workflow.mjs` ↔
         `scripts/verify/verify-workflow.mjs` — the latter gains a ledger `note`
         recording the repository-only divergence: adopters receive neither the
         fixture nor the runner (PRD FR-3).
-  - [ ] 4.2 `pnpm verify:pack-drift` green.
-  - [ ] 4.3 Retire `_brain/learnings/adr-section-blank-line-reads-empty.md` to what
+  - [x] 4.2 `pnpm verify:pack-drift` green.
+  - [x] 4.3 Retire `_brain/learnings/adr-section-blank-line-reads-empty.md` to what
         remains true: the general lesson — `$` under `/m` is end-of-line, not
         end-of-input, and an agreement corpus proves nothing about correctness
         (three implementations were wrong together here). Keep the record's
         frontmatter valid; do not delete it. NO packed twin is created (PRD FR-4,
         §5 non-goal).
-  - [ ] 4.4 Update the record's hook line in `_brain/INDEX.md` to match the retired
+  - [x] 4.4 Update the record's hook line in `_brain/INDEX.md` to match the retired
         content.
-  - [ ] 4.5 `pnpm verify:brain` green.
-- [ ] 5.0 Phase 5 — Testing: every PRD §11 command, then the floor
-  - [ ] 5.1 `pnpm verify:memory-corpus` — FR-1 (formatter smoke) + FR-5 (repo copy
+  - [x] 4.5 `pnpm verify:brain` green.
+- [x] 5.0 Phase 5 — Testing: every PRD §11 command, then the floor
+  - [x] 5.1 `pnpm verify:memory-corpus` — FR-1 (formatter smoke) + FR-5 (repo copy
         executes all cases; loud on missing fixture)
-  - [ ] 5.2 `pnpm --filter provegate test test/memory.test.ts` — FR-1 + FR-2
-  - [ ] 5.3 `pnpm verify:pack-drift` — FR-3
-  - [ ] 5.4 `pnpm verify:brain` — FR-1 + FR-4
-  - [ ] 5.5 `pnpm verify:workflow` — FR-5 bundle membership (the direct command
+  - [x] 5.2 `pnpm --filter provegate test test/memory.test.ts` — FR-1 + FR-2
+  - [x] 5.3 `pnpm verify:pack-drift` — FR-3
+  - [x] 5.4 `pnpm verify:brain` — FR-1 + FR-4
+  - [x] 5.5 `pnpm verify:workflow` — FR-5 bundle membership (the direct command
         cannot prove CHECKS membership; this one does)
-  - [ ] 5.6 Mutation probes (verification only, reverted immediately, corpus
+  - [x] 5.6 Mutation probes (verification only, reverted immediately, corpus
         untouched — `assert-absent-needs-an-independent-cause`): restore `$` in
         `parse.ts` → package corpus test fails the new case; restore in the shipped
         copy → same; restore in `scripts/verify/lib.mjs` → `verify:memory-corpus`
         fails the new case. Three probes, three reverts, evidence in the ledger.
-  - [ ] 5.7 Cross-cutting floor: `pnpm check-types` && `pnpm lint` && `pnpm test`
+  - [x] 5.7 Cross-cutting floor: `pnpm check-types` && `pnpm lint` && `pnpm test`
         && `pnpm build` — all green.
-  - [ ] 5.8 Re-read PRD §12 DO NOT — confirm none introduced (the `m` flag intact,
+  - [x] 5.8 Re-read PRD §12 DO NOT — confirm none introduced (the `m` flag intact,
         `^## ` intact, no live-store reformat, no packed seed, no turbo-cached
         cross-boundary read).
 - [ ] 6.0 Phase 6 — Final Auditing
@@ -198,16 +198,16 @@ re-derive them. Each binds to the parent whose work depends on it:
 
 | Gate | Command / Check | Scope | Result | Evidence | Notes |
 | ---- | --------------- | ----- | ------ | -------- | ----- |
-| FR-1/FR-5 | `pnpm verify:memory-corpus` | repo | pending | | 79 cases + formatter smoke + fail-closed |
-| FR-1/FR-2 | `pnpm --filter provegate test test/memory.test.ts` | pkg | pending | | new case valid on typed + shipped; adjacent-heading case still invalid |
-| FR-3 | `pnpm verify:pack-drift` | repo | pending | | both pairs reconciled; workflow pair carries the divergence note |
-| FR-4 | `pnpm verify:brain` | repo | pending | | retired record parses; INDEX hook resolves |
-| FR-5 | `pnpm verify:workflow` | repo | pending | | runner executes as CHECKS member |
-| mutation | three anchor-restore probes, reverted | repo+pkg | pending | | each fails the new case by name, nothing else |
-| types | `pnpm check-types` | monorepo | pending | | |
-| lint | `pnpm lint` | monorepo | pending | | |
-| test | `pnpm test` | monorepo | pending | | |
-| build | `pnpm build` | monorepo | pending | | |
+| FR-1/FR-5 | `pnpm verify:memory-corpus` | repo | passed | 79 cases + smoke, PASS 2026-07-28 | 79 cases + formatter smoke + fail-closed |
+| FR-1/FR-2 | `pnpm --filter provegate test test/memory.test.ts` | pkg | passed | 75/75; red-first proven before fix | new case valid on typed + shipped; adjacent-heading case still invalid |
+| FR-3 | `pnpm verify:pack-drift` | repo | passed | 49 pairs, both moved pairs reconciled, note on workflow pair | both pairs reconciled; workflow pair carries the divergence note |
+| FR-4 | `pnpm verify:brain` | repo | passed | PASS after hook shortened to <=120 chars | retired record parses; INDEX hook resolves |
+| FR-5 | `pnpm verify:workflow` | repo | passed | bundle executes runner as CHECKS member, PASS | runner executes as CHECKS member |
+| mutation | three anchor-restore probes, reverted | repo+pkg | passed | each failed the new case by name; see Progress Log | each fails the new case by name, nothing else |
+| types | `pnpm check-types` | monorepo | passed | 4/4 tasks | |
+| lint | `pnpm lint` | monorepo | passed | 4/4 tasks, zero warnings | |
+| test | `pnpm test` | monorepo | passed | 7/7 tasks | |
+| build | `pnpm build` | monorepo | passed | 4/4 tasks | |
 | independent-review | different model/session, `Critical: 0`, Quorum `1/1 pass` | review | pending | | `_docs/reviews/review-035-adr-section-anchor.md` |
 | durable | `pnpm verify:durable-artifacts` | repo | pending | | learning + INDEX + review artifact in diff |
 
@@ -221,7 +221,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
-|      |      |       |
+| 2026-07-28 | 0.4 | repro on scratchpad copy of ADR-0003: blank line after `## Context` -> `body — the '## Context' section is empty`, exact PRD §1 message |
+| 2026-07-28 | 1.2 | red-first: typed parser `expected [ 'body' ] to deeply equal []`; shipped copy flagged all four sections empty (direct node run) |
+| 2026-07-28 | 5.6 | probes: repo copy -> verify:memory-corpus failed case by name + smoke; parse.ts -> package test failed case; shipped copy -> parity test "the two implementations disagree" on the case. All reverted, all suites green after |
+| 2026-07-28 | 5.6 | incident: probe 2 was first reverted with `git checkout parse.ts`, which also dropped the uncommitted fix; caught by re-grep before commit, fix re-applied, later probes reverted by string-replace only |
+| 2026-07-28 | 4.4 | verify:brain caught the rewritten INDEX hook at 144 chars (budget 120); hook shortened, PASS |
 
 ## Blockers / Open Questions
 
