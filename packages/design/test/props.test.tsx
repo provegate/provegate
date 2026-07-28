@@ -58,12 +58,16 @@ describe('each component renders under its contract props', () => {
 
   it('CodeBlock renders a terminal block with a prompt', () => {
     const { container } = render(
-      <DS.CodeBlock filename="gate" prompt copyable>
+      <DS.CodeBlock filename="gate" prompt>
         gate init
       </DS.CodeBlock>,
     );
     expect(container.textContent).toContain('gate init');
     expect(container.querySelector('pre')).not.toBeNull();
+    // PRD-027 FR-9: the server renderer carries NO copy affordance — the old
+    // aria-hidden "copy" span is gone and no button exists here.
+    expect(container.querySelector('button')).toBeNull();
+    expect(container.textContent).not.toContain('copy');
   });
 
   it('GateLine renders the glyph + name + status', () => {
@@ -127,5 +131,129 @@ describe('each component renders under its contract props', () => {
     const current = container.querySelectorAll('[aria-current="step"]');
     expect(current).toHaveLength(1);
     expect(current[0]?.textContent).toContain('Push');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-027 FR-9 — the split renderer. The server barrel carries no copy
+// affordance; the client entry carries the real one, and delivery is asserted
+// where it exists: built output, types, and import paths — a jsdom render
+// cannot see an RSC boundary.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { vi } from 'vitest';
+import { CopyableCodeBlock } from '../src/react/client';
+
+describe('CopyableCodeBlock (FR-9)', () => {
+  it('renders a real button with an accessible copy name', () => {
+    const { getByLabelText } = render(
+      <CopyableCodeBlock filename="terminal">npm install -D provegate</CopyableCodeBlock>,
+    );
+    const btn = getByLabelText(/copy/i) as HTMLButtonElement;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('type')).toBe('button');
+  });
+
+  it('activation writes the payload — children when they are a plain string', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    try {
+      const { getByLabelText } = render(
+        <CopyableCodeBlock filename="terminal">gate init</CopyableCodeBlock>,
+      );
+      (getByLabelText(/copy/i) as HTMLButtonElement).click();
+      expect(writeText).toHaveBeenCalledWith('gate init');
+    } finally {
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it('copyText overrides non-string children', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    try {
+      const { getByLabelText } = render(
+        <CopyableCodeBlock filename="x" copyText="the real payload">
+          <em>styled</em>
+        </CopyableCodeBlock>,
+      );
+      (getByLabelText(/copy/i) as HTMLButtonElement).click();
+      expect(writeText).toHaveBeenCalledWith('the real payload');
+    } finally {
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+
+  it('a missing clipboard does not throw', () => {
+    const { getByLabelText } = render(
+      <CopyableCodeBlock filename="x">gate run</CopyableCodeBlock>,
+    );
+    expect(() => (getByLabelText(/copy/i) as HTMLButtonElement).click()).not.toThrow();
+  });
+
+  it('non-string children with no copyText renders NO control — an affordance with no payload is the defect', () => {
+    const { container } = render(
+      <CopyableCodeBlock filename="x">
+        <em>not a string</em>
+      </CopyableCodeBlock>,
+    );
+    expect(container.querySelector('button')).toBeNull();
+  });
+
+  it('the server barrel type carries no copyable prop', () => {
+    // @ts-expect-error — `copyable` was removed from CodeBlockProps (PRD-027
+    // FR-9); passing it through the barrel is a compile error, which is the
+    // test that rejects server-context imports through the wrong subpath.
+    const bad = <DS.CodeBlock copyable>x</DS.CodeBlock>;
+    expect(bad).toBeTruthy(); // the assertion is the @ts-expect-error above
+  });
+
+  it('a spread cannot smuggle the slot through the public surface — Codex round-2 [P1]', () => {
+    const sneak = { headerControl: <span>copy</span> } as Record<string, unknown>;
+    const { container } = render(<DS.CodeBlock filename="x" {...sneak}>gate init</DS.CodeBlock>);
+    // the wrapper drops the field after the spread: no control, no span
+    expect(container.querySelector('button')).toBeNull();
+    expect(container.textContent).not.toContain('copy');
+  });
+
+  it('the public surface carries no headerControl slot either — Codex round-1 [P1]', () => {
+    // @ts-expect-error — the slot is internal to the client wrapper; a public
+    // slot would let any caller render a handlerless copy affordance.
+    const bad = <DS.CodeBlock headerControl={<span>copy</span>}>x</DS.CodeBlock>;
+    expect(bad).toBeTruthy();
+    // and the barrel does not export the internal base
+    expect('CodeBlockBase' in DS).toBe(false);
+  });
+});
+
+describe('FR-9 delivery — built output and coexistence', () => {
+  const dist = resolve(__dirname, '../dist');
+
+  it('dist/react/client.js opens with the use client directive', () => {
+    const p = resolve(dist, 'react/client.js');
+    expect(existsSync(p), 'run pnpm --filter @provegate/design build first').toBe(true);
+    expect(readFileSync(p, 'utf8').trimStart().startsWith('"use client";')).toBe(true);
+  });
+
+  it('one clean build leaves all five outputs coexisting', () => {
+    for (const f of [
+      'tokens.js',
+      'tokens.d.ts',
+      'cli/index.js',
+      'cli/index.d.ts',
+      'react/index.js',
+      'react/index.d.ts',
+      'react/client.js',
+      'react/client.d.ts',
+    ]) {
+      expect(existsSync(resolve(dist, f)), f).toBe(true);
+    }
+  });
+
+  it('the server barrel emits no use client directive', () => {
+    const src = readFileSync(resolve(dist, 'react/index.js'), 'utf8');
+    expect(src.trimStart().startsWith('"use client"')).toBe(false);
   });
 });

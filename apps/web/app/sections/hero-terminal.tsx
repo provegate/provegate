@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { GateLine } from '@provegate/design/react';
-import { TermBar, mono, prefersReducedMotion, terminal } from './ui';
+import { TermBar, mono, prefersReducedMotion, terminal, termButton } from './ui';
 import * as C from './content';
 
 /** Types `steps[line]` a character at a time, then advances. Inert when paused. */
@@ -66,7 +66,25 @@ export function HeroTerminal(): React.JSX.Element {
 
   return (
     <div ref={ref} style={{ ...terminal, borderRadius: 'var(--pg-radius-md)', boxShadow: 'var(--pg-shadow-md)', ...mono }}>
-      <TermBar title={C.HERO_TERMINAL.title} />
+      <TermBar title={C.HERO_TERMINAL.title}>
+        {/* PRD-027 FR-2: the first action, copy-ready from the first screen. The
+            payload is the real install constant — never a second literal — and
+            the control is live before the typing animation settles (it renders
+            with the chrome, not with the finished state). Clipboard guarded:
+            absent (jsdom, insecure context) means no-op, never a throw. */}
+        <button
+          type="button"
+          aria-label="Copy install command"
+          style={termButton}
+          onClick={() => {
+            void navigator.clipboard?.writeText(C.HERO.install).catch(() => {
+              /* clipboard denied — operator row covers the real copy */
+            });
+          }}
+        >
+          copy
+        </button>
+      </TermBar>
       <div style={{ padding: '15px 16px', fontSize: 'var(--pg-text-sm)', lineHeight: 'var(--pg-leading-relaxed)', minHeight: 188 }}>
         {steps.map((step, i) => {
           if (i > settled) return null;

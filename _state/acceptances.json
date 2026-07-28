@@ -266,6 +266,19 @@
       "date": "2026-07-28",
       "method": "in-session direction",
       "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-027",
+      "owner": "owner",
+      "items": [
+        "9.2a-d live operator rows executed and confirmed by the owner in-browser (Tab focus rings + targets, Cmd+V system clipboard, 375px hero 1240px vs 1562px baseline, scrollspy 5/5)",
+        "9.1 independent review accepted (Codex, 3 rounds, verdict pass, critical 0, quorum 1/1)",
+        "10.3 operator acceptance of the operator-gated close via gate run"
+      ],
+      "reason": "owner personally verified the live browser rows this session ('evet/evet') and directed the close in-session ('Transkribe et', 2026-07-28); the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
     }
   ]
 }

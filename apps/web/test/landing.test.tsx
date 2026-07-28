@@ -232,3 +232,203 @@ describe('the playground plans, it never runs (FR-3)', () => {
     expect(t).not.toContain('passed');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-027 additions — FR-2/4/5/6/9. Appended, never weakening what precedes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import Page from '../app/page';
+import { CopyableCodeBlock } from '@provegate/design/react/client';
+
+describe('FR-2 — the hero copy control', () => {
+  it('renders a copy control whose payload is the real install constant', () => {
+    const { getByLabelText } = render(<S.Hero />);
+    const btn = getByLabelText(/copy/i);
+    expect(btn.tagName).toBe('BUTTON');
+    // payload wiring: the handler reads C.HERO.install — assert the source
+    // binds the constant, not a second literal
+    const src = readFileSync(resolve(__dirname, '../app/sections/hero-terminal.tsx'), 'utf8');
+    expect(src).toContain('writeText(C.HERO.install)');
+    expect(src.match(/npm install -D provegate/g) ?? []).toHaveLength(0);
+  });
+
+  it('is operable with no clipboard (jsdom) — click throws nothing', () => {
+    const { getByLabelText } = render(<S.Hero />);
+    expect(() => (getByLabelText(/copy install/i) as HTMLButtonElement).click()).not.toThrow();
+  });
+
+  it('is present in the reduced-motion finished state', () => {
+    // jsdom has no matchMedia → prefersReducedMotion() answers TRUE → the
+    // finished state renders immediately, and the control is in the chrome.
+    const { getByLabelText, container } = render(<S.Hero />);
+    expect(getByLabelText(/copy install/i)).toBeTruthy();
+    expect(container.textContent).toContain(C.HERO_TERMINAL.earned);
+  });
+});
+
+describe('FR-4 — anchor closure over the real composition', () => {
+  it('every rendered href="#…" resolves to a rendered id — nav and footer included', () => {
+    const { container } = render(<Page />);
+    const hrefs = Array.from(container.querySelectorAll('a[href^="#"]')).map(
+      (a) => (a.getAttribute('href') ?? '').slice(1),
+    );
+    expect(hrefs.length).toBeGreaterThanOrEqual(12); // the pre-change floor
+    const ids = new Set(Array.from(container.querySelectorAll('[id]')).map((el) => el.id));
+    ids.add('top'); // the wordmark's #top targets the document top by convention
+    const orphans = hrefs.filter((h) => h !== '' && !ids.has(h));
+    expect(orphans, `orphaned anchors: ${orphans.join(', ')}`).toEqual([]);
+  });
+
+  it('the three trust-strip claims are focusable anchors to their proof sections', () => {
+    const { container } = render(<S.TrustStrip />);
+    const anchors = Array.from(container.querySelectorAll('a[href^="#"]'));
+    expect(anchors).toHaveLength(3);
+    expect(anchors.map((a) => a.getAttribute('href'))).toEqual(['#ledger', '#proof', '#refusal']);
+  });
+
+  it('Refusal is addressable', () => {
+    const { container } = render(<S.Refusal />);
+    expect(container.querySelector('#refusal')).not.toBeNull();
+  });
+});
+
+describe('FR-5 — the retained-ratio scrollspy', () => {
+  type IOCallback = (entries: Array<{ target: { id: string }; intersectionRatio: number }>) => void;
+
+  function withMockIO(run: (fire: IOCallback) => void): void {
+    let cb: IOCallback = () => {};
+    class MockIO {
+      constructor(callback: IOCallback) {
+        cb = callback;
+      }
+      observe(): void {}
+      disconnect(): void {}
+    }
+    // Nav's effect queries these ids from the document
+    for (const [, href] of C.NAV_LINKS) {
+      const el = document.createElement('section');
+      el.id = href.slice(1);
+      document.body.appendChild(el);
+    }
+    (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
+      MockIO as unknown as typeof IntersectionObserver;
+    try {
+      run((entries) => cb(entries));
+    } finally {
+      delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
+    }
+  }
+
+  it('a later small ratio does not displace a retained large one — sequential callbacks', async () => {
+    const { act } = await import('@testing-library/react');
+    withMockIO((fire) => {
+      const { container } = render(<S.Nav />);
+      act(() => fire([{ target: { id: 'how' }, intersectionRatio: 0.8 }]));
+      // a DELTA callback reporting only the newcomer at 0.1 — 'how' still holds 0.8
+      act(() => fire([{ target: { id: 'method' }, intersectionRatio: 0.1 }]));
+      const current = container.querySelector('[aria-current="location"]');
+      expect(current?.getAttribute('href')).toBe('#how');
+      // 'how' exits; 'method' is now the maximum
+      act(() => fire([{ target: { id: 'how' }, intersectionRatio: 0 }]));
+      expect(
+        container.querySelector('[aria-current="location"]')?.getAttribute('href'),
+      ).toBe('#method');
+      // everything at 0 → the previous active stays, no flicker to none
+      act(() => fire([{ target: { id: 'method' }, intersectionRatio: 0 }]));
+      expect(
+        container.querySelector('[aria-current="location"]')?.getAttribute('href'),
+      ).toBe('#method');
+    });
+  });
+
+  it('exactly one aria-current across the whole Nav, with the drawer open', async () => {
+    const { act, fireEvent } = await import('@testing-library/react');
+    withMockIO((fire) => {
+      const { container, getByLabelText } = render(<S.Nav />);
+      act(() => fire([{ target: { id: 'ledger' }, intersectionRatio: 0.9 }]));
+      fireEvent.click(getByLabelText('Open menu'));
+      const marked = container.querySelectorAll('[aria-current]');
+      expect(marked).toHaveLength(1);
+      expect(marked[0]?.closest('.pg-navlinks')).not.toBeNull(); // the desktop strip owns it
+    });
+  });
+
+  it('renders inert without IntersectionObserver — no active link, no throw', () => {
+    expect('IntersectionObserver' in globalThis).toBe(false); // jsdom baseline
+    const { container } = render(<S.Nav />);
+    expect(container.querySelector('[aria-current]')).toBeNull();
+  });
+});
+
+describe('FR-6 — the mobile hero drops the HandoffCard', () => {
+  it('exactly one HandoffCard in the document, inside the wrapper class', () => {
+    const { container } = render(<Page />);
+    // one occurrence of the card title anywhere in the page — no second DOM copy
+    const occurrences = (container.textContent ?? '').split('HANDOFF CARD').length - 1;
+    expect(occurrences).toBe(1);
+    // and it sits inside the FR-6 wrapper the stylesheet half hides
+    const wrapper = container.querySelector(`.${C.HERO_HANDOFF_CLASS}`);
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.textContent).toContain('HANDOFF CARD');
+  });
+
+  it('the terminal closing lines that carry the beat for mobile are load-bearing', () => {
+    expect(C.HERO_TERMINAL.earned).toContain('merged into LOCAL main');
+    expect(C.HERO_TERMINAL.human).toContain('git push');
+  });
+});
+
+describe('FR-9 — every advertised copy control is real', () => {
+  it('CopyableCodeBlock renders a real button whose payload is its children', () => {
+    const { getByLabelText } = render(
+      <CopyableCodeBlock filename="terminal">{C.HERO.install}</CopyableCodeBlock>,
+    );
+    const btn = getByLabelText(/copy/i) as HTMLButtonElement;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(() => btn.click()).not.toThrow(); // clipboard absent in jsdom → no-op
+  });
+
+  it('the four call sites import from the client subpath — none from the barrel', () => {
+    for (const f of ['index.tsx', 'tabs.tsx']) {
+      const src = readFileSync(resolve(__dirname, `../app/sections/${f}`), 'utf8');
+      expect(src).toContain("from '@provegate/design/react/client'");
+      expect(src).not.toMatch(/\bcopyable\b/);
+    }
+    const idx = readFileSync(resolve(__dirname, '../app/sections/index.tsx'), 'utf8');
+    const tabs = readFileSync(resolve(__dirname, '../app/sections/tabs.tsx'), 'utf8');
+    const count = (s: string): number => (s.match(/<CopyableCodeBlock/g) ?? []).length;
+    expect(count(idx) + count(tabs)).toBe(4);
+  });
+
+  it('all four production controls write their exact payloads — clicked, with a clipboard mock', async () => {
+    const { vi } = await import('vitest');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const controls = (el: HTMLElement): HTMLButtonElement[] =>
+      Array.from(el.querySelectorAll('button[aria-label="Copy command"]'));
+    try {
+      // InstallTabs (npm tab active by default) → INSTALLERS[0].code
+      const tabs = render(<S.InstallTabs />);
+      const tabButtons = controls(tabs.container);
+      expect(tabButtons).toHaveLength(1);
+      tabButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.INSTALLERS[0].code);
+      // CIIntegration (first snippet active) → CI_SNIPPETS[0].code
+      const ci = render(<S.CIIntegration />);
+      const ciButtons = controls(ci.container);
+      expect(ciButtons).toHaveLength(1);
+      ciButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.CI_SNIPPETS[0].code);
+      // Install section carries the two remaining blocks → HERO.install, MANIFEST_SEED
+      const install = render(<S.Install />);
+      const installButtons = controls(install.container);
+      expect(installButtons).toHaveLength(2);
+      installButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.HERO.install);
+      installButtons[1]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.MANIFEST_SEED);
+    } finally {
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
+  });
+});

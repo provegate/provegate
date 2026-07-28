@@ -2,25 +2,32 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import '@provegate/design/styles.css';
 import './globals.css';
+import { PRODUCT_NAME, SITE_TITLE } from './sections/content';
 
 const description =
   "Your coding agent's “done” is not evidence. Seven phases where every autonomous boundary is a machine-checkable gate — a verification command's exit code or an independent cross-model reviewer's structured verdict — and nothing pushes to a remote without a human. MIT, agent-agnostic, zero dependencies.";
 
+// Neither `openGraph.images` nor `twitter.images` is declared, ON PURPOSE
+// (PRD-027 FR-1): next@16.2.11 resolve-metadata.js:137-157 applies the
+// file-convention app/opengraph-image.tsx ONLY when this level declares no
+// `images` key, and :619-653 then fills twitter.images from the resolved
+// openGraph.images — so the one file feeds both, and declaring either key here
+// would switch the convention off. A decision, not an oversight.
 export const metadata: Metadata = {
-  title: 'ProveGate — prove it, then let it propagate.',
+  title: SITE_TITLE,
   description,
-  applicationName: 'ProveGate',
+  applicationName: PRODUCT_NAME,
   metadataBase: new URL('https://provegate.dev'),
   openGraph: {
-    title: 'ProveGate — prove it, then let it propagate.',
+    title: SITE_TITLE,
     description,
     url: 'https://provegate.dev',
-    siteName: 'ProveGate',
+    siteName: PRODUCT_NAME,
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ProveGate — prove it, then let it propagate.',
+    title: SITE_TITLE,
     description,
   },
 };

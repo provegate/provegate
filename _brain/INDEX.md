@@ -28,6 +28,7 @@
 - [docs are a wiring surface](learnings/docs-are-a-wiring-surface.md) — a shipped doc telling adopters to register a check IS wiring; sweep docs on delete
 - [surface set without its predicate](learnings/surface-set-without-its-predicate.md) — inputs ported without their predicate register nothing; an open-ended predicate is the same defect
 - [lint must name the span it judges](learnings/lint-must-name-the-span-it-judges.md) — a check answering about a span it did not read ships confident false verdicts; name the span, read exactly it
+- [metadata declares what it cannot provide](learnings/metadata-declares-what-it-cannot-provide.md) — a declared capability with no asset degrades silently; assert declaration-asset coherence
 - [runner sentinel blocks CLI-spawning tests](learnings/runner-sentinel-blocks-cli-spawning-tests.md) — a §11 row reaching tests that spawn the gate CLI fails under gate run; route whole-suite rows through turbo
 
 ## Orchestration & close gotchas
