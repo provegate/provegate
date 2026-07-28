@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T06:48:25.259Z",
+  "generatedAt": "2026-07-28T06:53:05.321Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1079,21 +1079,21 @@
       "prd": "PRD-030",
       "number": 30,
       "slug": "prompt-store-integrity",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-030-prompt-store-integrity.md",
-        "readiness": "_readiness/wip/readiness-030-prompt-store-integrity.md",
-        "tasks": "_tasks/wip/tasks-030-prompt-store-integrity.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-030-prompt-store-integrity.md",
+        "readiness": "_readiness/completed/readiness-030-prompt-store-integrity.md",
+        "tasks": "_tasks/completed/tasks-030-prompt-store-integrity.md",
+        "summary": "_docs/completed/summary-030-prompt-store-integrity.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.15,
@@ -1102,9 +1102,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 32,
-        "uncheckedCount": 13,
+        "status": "Ship Verified",
+        "checkedCount": 44,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 8
       },
       "summary": {

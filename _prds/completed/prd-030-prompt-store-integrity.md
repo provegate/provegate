@@ -1,6 +1,6 @@
 # PRD-030: Prompt Store State Model — the Precondition for Integrity
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
@@ -251,6 +251,19 @@ A rationale is required in every form.
   `core/run/init.ts`, no longer a target here, and it binds on PRD-034's wiring FR.
 - not-applicable: `push-is-human-by-omission` — this PRD adds no code, so the rule is
   preserved by adding nothing.
+- applied: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/acceptances.json`, which this item's close writes. It landed from PRD-033 while this
+  item was in Phase 4, and it is the reason the acceptance entry puts its substance in the
+  enumerated `authorship` field and in `reason`, with `method` carrying only the phrasing
+  PRD-033's own entry established. The alternative — recording "agent transcribed at the owner's
+  direction" as prose in `method` — is precisely the unread drift ledger the record names, and
+  no gate would have read it.
+- applied: `state-model-before-mechanism` — this item's own Memory Output, whose watch covers
+  `_docs/design/**` and `_prds/wip/**` and therefore matches the diff that creates it. The
+  disposition is recorded rather than dodged by narrowing the watch: the watch is what makes a
+  future design document re-read the record, and self-reference at the moment of creation is not
+  a reason to weaken it. Applied in the strong sense — the record's own falsification condition
+  (PRD-034 closing without a flat readiness stretch) is written into it by this item.
 
 ---
 

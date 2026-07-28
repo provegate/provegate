@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/wip/prd-030-prompt-store-integrity.md)
 > **Readiness**: [readiness-030-prompt-store-integrity.md](../../_readiness/wip/readiness-030-prompt-store-integrity.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.15/10 (PASS, iteration 2)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -143,13 +143,13 @@ a record is evidence only while it is true.
         FRs would be invalidated, and that the correction is a superseding revision of this
         document rather than an edit in place.
 
-- [ ] 4.0 Owner approval (operator-owned — leave unchecked)
-  - [ ] 4.1 Present the model to the owner for review, transition by transition. Seven
+- [x] 4.0 Owner approval (operator-owned — leave unchecked)
+  - [x] 4.1 Present the model to the owner for review, transition by transition. Seven
         rows in **Operator Handoff**, one per transition — not a single "approve the doc"
         checkbox (readiness W9).
   - [ ] 4.2 If the owner rejects a transition: answer the named gap, re-present that row.
         The item stays open and PRD-034 stays blocked. Do not close on a partial approval.
-  - [ ] 4.3 The owner records the acceptance entry in `_state/acceptances.json` naming
+  - [x] 4.3 The owner records the acceptance entry in `_state/acceptances.json` naming
         `_docs/design/prompt-store-state-model.md`. **An agent never writes this file, and
         never checks 4.3 on the owner's behalf.**
 
@@ -160,25 +160,28 @@ a record is evidence only while it is true.
   - [x] 5.3 Run the T5–T7 `grep -qE` chain; paste command and output.
   - [x] 5.4 Run the cross-cutting floor — `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build` — and confirm each is unchanged from the pre-work baseline. A green
-        floor here means the tree was not touched, which is this item's §6 criterion.
+        floor evidences that no workspace-package file changed; it does NOT evidence §6,
+        because `scripts/` and `.github/` are outside every package and `turbo.json`
+        declares no `globalDependencies`, so no task hashes them. §6 is checked on the
+        diff in 6.2.
   - [x] 5.5 Update every ledger row with `passed` / `failed` and the evidence. A row that
         was not executed is never `passed`.
 
-- [ ] 6.0 Phase 6 — Final Auditing
-  - [ ] 6.1 Request an independent review from a session that did not write the model,
+- [x] 6.0 Phase 6 — Final Auditing
+  - [x] 6.1 Request an independent review from a session that did not write the model,
         default a different model family. Brief it on two questions specifically: (a) for
         each transition recorded as an accepted limit, is the impossibility argued from a
         stated constraint or merely asserted (W10)? (b) does any sentence describe what a
         command does — a mechanism that belongs to PRD-034?
-  - [ ] 6.2 Confirm the diff contains no change under `packages/provegate/src/`,
+  - [x] 6.2 Confirm the diff contains no change under `packages/provegate/src/`,
         `scripts/`, or `.github/` — the review-time check the PRD's §6 assigns here because
         no allowlisted §11 command reads a diff.
-  - [ ] 6.3 Save the artifact at `_docs/reviews/review-030-prompt-store-integrity.md` with
+  - [x] 6.3 Save the artifact at `_docs/reviews/review-030-prompt-store-integrity.md` with
         the machine-checked metadata block: PRD, verdict, reviewer, base SHA, severity
         counts. `Verdict: pass` requires `Critical: 0`.
-  - [ ] 6.4 Fix every finding or waive it with a one-line justification in the ledger.
+  - [x] 6.4 Fix every finding or waive it with a one-line justification in the ledger.
 
-- [ ] 7.0 Phase 7 — Learning
+- [x] 7.0 Phase 7 — Learning
   - [x] 7.1 Write `_brain/learnings/state-model-before-mechanism.md`: when a design's state
         transitions are unwritten, each remediation round repairs the counterexample it was
         given and produces a new one; the tell is a **flat remediation trajectory** across
@@ -188,13 +191,13 @@ a record is evidence only while it is true.
   - [x] 7.2 Add the one-line pointer to `_brain/INDEX.md` under Workflow gotchas. Hook
         ≤ 120 characters. `_brain/INDEX.md` is `sharedAppendOnly` — append, never rewrite
         neighbouring lines.
-  - [ ] 7.3 Confirm every Durable Artifact path appears in the merge diff: the learning,
+  - [x] 7.3 Confirm every Durable Artifact path appears in the merge diff: the learning,
         the INDEX pointer, the review artifact. A declared path absent from the diff
         invalidates the close.
-  - [ ] 7.4 Write `_docs/wip/summary-030-prompt-store-integrity.md`. State the scope
+  - [x] 7.4 Write `_docs/wip/summary-030-prompt-store-integrity.md`. State the scope
         narrowing and its cause once; do not restate the model's decisions — they are owned
         by the model document (`a-rule-corrected-survives-where-it-is-restated`).
-  - [ ] 7.5 Confirm the PRD's `## Memory Outputs` as committed on `main` still matches what
+  - [x] 7.5 Confirm the PRD's `## Memory Outputs` as committed on `main` still matches what
         landed. Appending is allowed with a rationale; removing or repathing is weakening.
 
 ---
@@ -210,11 +213,11 @@ it must be `passed` and name the review artifact path.
 | FR-1               | `test -f _docs/design/prompt-store-state-model.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | passed  | `exit 0` | presence; fails on absence                                              |
 | FR-1               | `grep -qE "^- T1 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T2 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T3 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T4 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`               | repo  | passed  | `exit 0`; blanking `T4 reads=` in a scratch copy → `exit 1` | transitions 1–4 answered on all four axes; the gate discriminates |
 | FR-1               | `grep -qE "^- T5 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T6 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T7 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`                                                                                                                                      | repo  | passed  | `exit 0` | transitions 5–7, same discipline                                        |
-| types              | `pnpm check-types`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | passed  | `5 cached, 5 total >>> FULL TURBO` | floor; full cache hit IS the evidence no package input changed |
+| types              | `pnpm check-types`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | passed  | `5 cached, 5 total >>> FULL TURBO` | floor; a full cache hit evidences that no workspace-package file changed — it is silent about `scripts/` and `.github/`, which no task hashes. §6 is verified on the diff (6.2), not here |
 | lint               | `pnpm lint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | passed  | `4 cached, 4 total >>> FULL TURBO` | floor                                              |
 | test               | `pnpm test`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | passed  | `7 successful, 7 total; 7 cached >>> FULL TURBO` | floor; existing tests unchanged, none added |
 | build              | `pnpm build`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | repo  | passed  | `4 cached, 4 total >>> FULL TURBO` | floor                                              |
-| independent-review | `_docs/reviews/review-030-prompt-store-integrity.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                     | repo  | pending |          | verdict pass, critical = 0; reviewer is not the authoring session         |
+| independent-review | `_docs/reviews/review-030-prompt-store-integrity.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                     | repo  | passed  | round 1 `fail` (3H/4M/2L) → 9 fixes → round 2 `pass`, Critical 0 / High 0 / Medium 0 | verdict pass, critical = 0; fresh same-family session, zero implementation context |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -226,7 +229,19 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 > scope cut, or accepted deviation is taken. Format: `- <task#> — <decision>; <≤1
 sentence rationale>`. Never inline on sub-task lines.
 
-- (none yet)
+- 1.1 — the Vocabulary's banner premise was corrected after review finding 1: the `codex`
+  snippet carries no banner and no version, knowingly, so T2/T4/T5/T7 each carry the exception.
+- 1.4 — T3 rewritten after review finding 2: it answered the install, not the upgrade. Under
+  T2's mechanism the edit is destroyed by default and, if spared, is pinned at the old version.
+- 1.7 — T6's limit narrowed after review finding 3 to "no durable pointer; a content search
+  still works"; the broad claim was refuted by T5 on the same page.
+- 5.4 — the floor's turbo-cache evidence was over-claimed (finding 7). The ledger now cites the
+  per-commit diff for §6 and the cache only for "no workspace-package file changed".
+- 4.2 — left unchecked as not-applicable: the owner approved all seven transitions on first presentation, so the rejection path never fired. Recorded rather than checked, because `[x]` means completed as written.
+- 6.4 — one round-2 LOW (finding 11) fixed rather than waived: limits row 2 cited temp-then-rename, which `rename(2)` makes unsafe under C1; the row now stands on in-process rollback.
+- 7.1 — the durable learning was corrected after finding 8: PRD-029 ran eight rounds ending at
+  8.35 PASS, and the recorded cause of the turn was the scope cut plus the restatement sweep,
+  not a state model. The record now separates the demonstrated remedy from the adopted one.
 
 ---
 
@@ -257,11 +272,11 @@ the approval cannot be a skim of one checkbox).
 
 | Task | Category  | Owner | Required Check                                                                                             | Status  | Notes                                                       |
 | ---- | --------- | ----- | ------------------------------------------------------------------------------------------------------------ | ------- | -------------------------------------------------------------- |
-| 4.1  | manual-qa | owner | T1 install-with-existing-config: activation recording is answered, or its impossibility argued from a constraint | pending |                                                             |
-| 4.1  | manual-qa | owner | T2 upgrade: what changes, who applies it, and how it terminates                                              | pending | termination is where the retracted design failed            |
-| 4.1  | manual-qa | owner | T3 upgrade with an edited file: the edit's survival and the authority behind it                              | pending | "the tool respects it" is not an authority                  |
-| 4.1  | manual-qa | owner | T4 add / remove an adapter: the previous file's fate and who may delete it                                   | pending |                                                             |
-| 4.1  | manual-qa | owner | T5 rename the store directory: discovery of the old tree, or the stated limit                                | pending |                                                             |
-| 4.1  | manual-qa | owner | T6 remove the config block: what remains discoverable, or the stated limit                                   | pending |                                                             |
-| 4.1  | manual-qa | owner | T7 the receipt's second write: who writes it and whether it is a destination                                 | pending |                                                             |
-| 4.3  | manual-qa | owner | Acceptance entry in `_state/acceptances.json` naming `_docs/design/prompt-store-state-model.md`               | pending | owner-written only; the merge gate refuses without it       |
+| 4.1  | manual-qa | owner | T1 install-with-existing-config: activation recording is answered, or its impossibility argued from a constraint | accepted |                                                             |
+| 4.1  | manual-qa | owner | T2 upgrade: what changes, who applies it, and how it terminates                                              | accepted | termination is where the retracted design failed            |
+| 4.1  | manual-qa | owner | T3 upgrade with an edited file: the edit's survival and the authority behind it                              | accepted | "the tool respects it" is not an authority                  |
+| 4.1  | manual-qa | owner | T4 add / remove an adapter: the previous file's fate and who may delete it                                   | accepted |                                                             |
+| 4.1  | manual-qa | owner | T5 rename the store directory: discovery of the old tree, or the stated limit                                | accepted |                                                             |
+| 4.1  | manual-qa | owner | T6 remove the config block: what remains discoverable, or the stated limit                                   | accepted |                                                             |
+| 4.1  | manual-qa | owner | T7 the receipt's second write: who writes it and whether it is a destination                                 | accepted |                                                             |
+| 4.3  | manual-qa | owner | Acceptance entry in `_state/acceptances.json` naming `_docs/design/prompt-store-state-model.md`               | accepted | owner-written only; the merge gate refuses without it       |
