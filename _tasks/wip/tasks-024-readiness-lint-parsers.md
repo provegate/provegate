@@ -234,7 +234,7 @@ it must be `passed` and name the review artifact path.
 | FR-1               | `pnpm --filter provegate test test/safety.test.ts`         | pkg   | passed  | unedited, green | exported parser unchanged |
 | FR-2               | `pnpm --filter provegate test test/lint-parsers.test.ts`   | pkg   | passed  | 10 wip files, zero class issues | corpus pass, five args, class predicates |
 | FR-2               | `pnpm --filter provegate test test/lint-parsers.test.ts`   | pkg   | passed  | positive in-class ×1, negative zero issues, glob covers root | classification pair + coverage assertion |
-| FR-2               | `pnpm --filter provegate test`                             | pkg   | passed  | 1122 tests, 51 files, zero existing edits | whole package suite green |
+| FR-2               | `pnpm test`                                                | repo  | passed  | 1125 tests via turbo; direct package run refused by the runner sentinel (see Deferrals) | whole suite green through turbo |
 | types              | `pnpm check-types`                                         | repo  | passed  | 2026-07-28 |                            |
 | lint               | `pnpm lint`                                                | repo  | passed  | 2026-07-28 |                            |
 | test               | `pnpm test`                                                | repo  | passed  | 7/7 turbo tasks | |
@@ -259,7 +259,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - 4.4 — the positive control's Command cell carries a safe runnable command beside the unsafe token; the planted token alone would also trip the no-runnable predicate and the control would assert two class issues instead of the one it names.
 - 7.2 — executed-command delta re-measured at implementation time with a dist-vs-old-behavior diff across all ten wip files: zero commands gained or lost.
 - 9.1 — Codex round-1 [P1]: the corpus test's root config reads (workflow.config.json, gates.manifest.json via the five-argument call) were outside the declared turbo inputs — the record's own defect arriving through its fix, one file over. Fixed in `1f745a9` (both files joined `inputs`, exception reason updated); Codex round 2 verified closed, no new findings. FR-2's two-glob input list was extended rather than contradicted; the learning's input-set clause now records the class.
-- 9.3 — W5 vacuity check executed: parser temporarily widened back to whole-row locally, classification positive control went red, reverted; not committed.
+- 9.3 — W5 vacuity check executed: parser temporarily widened back to whole-row locally, classification positive control went red (3 tests), reverted; not committed.
+- Phase 4/5 — the whole-suite §11 row was rewritten from a direct package invocation to `pnpm test` (turbo): `revalidate.test.ts` spawns the gate CLI and the runner's re-entry sentinel refuses those children; turbo's task context is exempt and its cache key is honest after this PRD's inputs work. Captured as the appended learning `runner-sentinel-blocks-cli-spawning-tests`.
 
 ---
 

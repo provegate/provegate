@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:01:25.847Z",
+  "generatedAt": "2026-07-28T10:34:27.872Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -865,13 +865,13 @@
         "prd": "_prds/wip/prd-024-readiness-lint-parsers.md",
         "readiness": "_readiness/wip/readiness-024-readiness-lint-parsers.md",
         "tasks": "_tasks/wip/tasks-024-readiness-lint-parsers.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-024-readiness-lint-parsers.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.35,
@@ -880,9 +880,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 47,
+        "status": "Ship Verified",
+        "checkedCount": 45,
+        "uncheckedCount": 2,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -999,7 +999,7 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-28"
+      "lastUpdated": "2026-07-27"
     },
     {
       "prd": "PRD-028",
@@ -1270,26 +1270,26 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-035-adr-section-anchor.md",
-        "readiness": "_readiness/wip/readiness-035-adr-section-anchor.md",
-        "tasks": "_tasks/wip/tasks-035-adr-section-anchor.md",
+        "readiness": "",
+        "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": 8.2,
-        "verdict": "PASS",
-        "modelTierExecution": "high",
-        "modelTierAudit": "high"
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
       },
       "task": {
-        "status": "Not Started",
+        "status": "Unknown",
         "checkedCount": 0,
-        "uncheckedCount": 45,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 0
       },
       "summary": {

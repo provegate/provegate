@@ -26,6 +26,7 @@
 - [free-text field is the unread drift ledger](learnings/free-text-field-is-the-unread-drift-ledger.md) — a rule only documentation enforces drifts into the unenumerated field beside it, where nobody can read it
 - [state model before mechanism](learnings/state-model-before-mechanism.md) — flat readiness trajectory: cut the scope or write the state model; remediating again just resamples it
 - [lint must name the span it judges](learnings/lint-must-name-the-span-it-judges.md) — a check answering about a span it did not read ships confident false verdicts; name the span, read exactly it
+- [runner sentinel blocks CLI-spawning tests](learnings/runner-sentinel-blocks-cli-spawning-tests.md) — a §11 row reaching tests that spawn the gate CLI fails under gate run; route whole-suite rows through turbo
 
 ## Orchestration & close gotchas
 
