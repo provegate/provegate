@@ -85,19 +85,38 @@ describe('W1 fill map', () => {
 describe('prd-template round-trip (lintPrd)', () => {
   it('a minimally-filled PRD template passes the structural lint', () => {
     let content = fill(template('prd-template.md'));
-    // minimal authoring pass: resolve the remaining bracketed authoring slots
+    // minimal authoring pass: resolve the remaining bracketed authoring slots.
+    // §9 needs no edit any more — the shipped body IS the closed grammar's
+    // marker, which is PRD-028 FR-4's self-application: a document
+    // instantiated from the template passes the §9 lint green out of the box.
     content = content
       .replace('# PRD-XXX: [Feature Name]', '# PRD-004: Sample Feature')
       .replace(
         '1. **FR-1**: [Requirement with clear pass/fail criteria]',
         '1. **FR-1**: does the sample thing.',
-      )
-      .replace(
-        '- [ ] [Must be empty — or every entry explicitly deferred with a link — before Phase 2 PASS]',
-        '- (none)',
       );
     const report = lintPrd(cfg, manifest, content);
     expect(report.issues).toEqual([]);
+  });
+
+  it('[PRD-028 FR-4] the §9 guidance states the closed forms from OUTSIDE the judged body', () => {
+    // Placement is the requirement: the first version of this guidance sat in a
+    // comment inside §9, which the closed grammar itself refuses — a
+    // template-instantiated PRD would have failed readiness out of the box.
+    const raw = template('prd-template.md');
+    const headingAt = raw.indexOf('## 9. Open Questions');
+    const guidanceAt = raw.indexOf('accepts exactly two entry forms');
+    expect(headingAt).toBeGreaterThan(-1);
+    expect(guidanceAt).toBeGreaterThan(-1);
+    expect(guidanceAt).toBeLessThan(headingAt);
+    // the guidance states both exact forms, verbatim, in the preceding tail
+    const guidance = raw.slice(guidanceAt, headingAt);
+    expect(guidance).toContain('`- (none)`');
+    expect(guidance).toContain('`- Deferred to [{{ID_PREFIX}}-NNN](<path>)`');
+    // and the shipped §9 body is exactly the marker plus section furniture
+    const body = raw.slice(headingAt).split('\n').slice(1).join('\n').split('\n## ')[0]!;
+    const lines = body.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    expect(lines).toEqual(['- (none)', '---']);
   });
 
   it('the raw template still parses §11 rows (commands become visible)', () => {

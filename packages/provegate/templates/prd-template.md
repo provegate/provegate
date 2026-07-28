@@ -114,9 +114,14 @@ changes, cache/queue plans) as your project requires. -->
 
 ---
 
+Section 9 below accepts exactly two entry forms, each alone on its raw line — `- (none)`,
+or `- Deferred to [{{ID_PREFIX}}-NNN](<path>)` where the path resolves to a distinct,
+unfinished, filed work item (create it first, then defer to it). Blank lines and one
+terminal `---` are the only other lines allowed; anything else fails `gate check`.
+
 ## 9. Open Questions
 
-- [ ] [Must be empty — or every entry explicitly deferred with a link — before Phase 2 PASS]
+- (none)
 
 ---
 
