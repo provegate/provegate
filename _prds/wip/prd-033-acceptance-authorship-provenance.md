@@ -403,7 +403,38 @@ None.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — a gate that requires
   an artifact to *say* something can be satisfied by boilerplate. `authorship` is
   enumerated rather than free text precisely because `method` was the free-text
-  version of the same idea and eight honest answers in it changed nothing.
+  version of the same idea and eight honest answers in it changed nothing. Phase 6
+  then found the record applying to this PRD's own gate: its self-accept assertion
+  matched a token the record files carry in frontmatter, so two of five sites were
+  green on their filename.
+- applied: `docs-outlive-the-gate-they-promise` — the record's exact shape, found
+  in this surface. `loadAcceptanceChecked`'s docstring said an authorization caller
+  must read `problem`, and the one authorization caller did not, for as long as
+  both functions existed. The remedy was a code change plus a test, not a firmer
+  comment; a second comment would have been the same defect again.
+- applied: `score-band-prescribes-the-action` — readiness round 1 came to 6.85,
+  and the 6–7.9 band prescribes iterate-and-re-score. That action was applied
+  rather than argued down, and the re-score reached 8.25 by closing the listed
+  gaps without redesigning anything.
+- applied: `assert-absent-needs-an-independent-cause` — the deny tests assert
+  refusals, so each needed the enum to be the independent cause. Checked by
+  mutation: neutering the enum fails exactly four tests and only those, and the
+  allowlist test correctly does NOT fail, which is what shows the two checks do
+  not stand in for each other.
+- applied: `free-text-field-is-the-unread-drift-ledger` — this work item's own
+  output, and its watch covers the store and schema this PRD changes, which is the
+  point rather than a coincidence. Its rule shaped the final form: enumerate the
+  field where the drift is hiding instead of restating the rule that was being
+  ignored.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers
+  `_prds/**` and `_readiness/**`. Checked and found not to apply: readiness took
+  two rounds rather than five, and the findings spread across schema, validator,
+  documentation and gate rather than clustering in one layer, so there is no scope
+  error being reported as a sequence of design errors.
+- not-applicable: `state-model-before-mechanism` — a record belonging to a parallel
+  work item (PRD-030/PRD-034). It is inside this merge diff only because this branch
+  committed that session's uncommitted files to stop `ensureCheckoutClean` from
+  discarding them on the way to the merge. It constrains that work, not this.
 
 ## Memory Outputs
 
