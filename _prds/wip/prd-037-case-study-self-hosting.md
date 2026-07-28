@@ -41,7 +41,7 @@ PRD adds is evidence-by-execution — the product's own thesis applied to its
 marketing.
 
 **The figures are never typed.** A derivation script computes every number from
-`_state/prds.json` — its only input — and the doc embeds the script's output;
+`_state/prds.json` — its only FIGURE source — and the doc embeds the script's output;
 `verify:doc-claims` refuses a drifted figure. A hand-edited number is
 the defect this design makes impossible — the same discipline PRD-027's metrics table
 and PRD-004's figure-tracing lint already enforce.
@@ -125,7 +125,8 @@ so that the launch text links to evidence instead of asserting it.
      `scripts/verify/derive-figures.test-cases.mjs` (the fixture harness — a root
      test script exercising: both current close modes; Superseded exclusion;
      unknown/missing `autonomousClose` → deterministic `unclassified` output;
-     parseable-but-malformed state; all four modes; stale region bytes; the
+     parseable-but-malformed state; all three flagged modes plus the invalid-invocation
+     classes; stale region bytes; the
      first-differing-line diagnostic; missing/duplicate/inverted sentinels;
      outside-byte preservation under `--write`; the no-digit prose rule; and the
      doc-claims verifier's existing behavior preserved)
@@ -196,8 +197,8 @@ so that the launch text links to evidence instead of asserting it.
 - **Given** a figure the artifacts cannot reliably support (scorer sessions, review
   aggregates, resumed stops), **When** the section is read, **Then** the phenomenon
   appears only as unnumbered prose — no digit attaches to it.
-- **Given** the new section's prose, **When** scanned, **Then** no sentence outside the
-  derived table carries a digit absent from FR-1's output.
+- **Given** the `self-hosting-ledger` H2 span, **When** the harness scans it, **Then**
+  any `[0-9]` outside the sentinel pair fails — FR-2's exact rule, repeated.
 - **Given** the MDX source, **When** the fixture harness runs, **Then** the heading
   carries the explicit id `self-hosting-ledger` — asserted in source, not via a build.
 - **Given** `_state/prds.json` absent or unreadable, **When** the script runs, **Then**
@@ -309,7 +310,7 @@ above is dated, not standing.
 | FR-1 | `node scripts/verify/derive-figures.test-cases.mjs` | repo | the fixture harness: modes, close-mode diagnostics, sentinel failures, outside-byte preservation |
 | FR-2 | `node scripts/verify/derive-figures.test-cases.mjs` | repo | the harness asserts the heading source token (`[#self-hosting-ledger]`), the H2-span digit rule, and the region placement — never via a docs build |
 | FR-3 | `pnpm verify:doc-claims`                       | repo  | every section figure equals a fresh derivation; drift fails by name         |
-| FR-4 | `pnpm verify:doc-claims`                       | repo  | the two evidence classes stay labeled; no unsourced digit outside the table |
+| FR-4 | `pnpm verify:doc-claims`                       | repo  | the two evidence classes stay labeled; `[0-9]` in the H2 span outside the sentinel pair fails — FR-2's exact rule |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -339,6 +340,7 @@ Before Phase 2 PASS, run: `gate check PRD-037`
 
 | Date       | Author | Changes                                                                                                            |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session, post-PASS | **Iteration 5 scored PASS 8.40** (fifth fresh scorer; "consistency repairs, not missing design decisions"). The three watch items applied as post-PASS precision edits: the intro says "only FIGURE source"; the fixture catalogue says "three flagged modes plus invalid-invocation classes"; §6 and the FR-4 §11 note repeat FR-2's exact `[0-9]`-in-H2-span rule, retiring the weaker formulations. Verdict unchanged; owner may order a confirmation pass at Phase 3. |
 | 2026-07-28 | orchestrating session (author), fourth rework — grep-verified | **Iteration 4 (7.10) applied, with a correction the score forced: several third-rework edits recorded as applied were ABSENT from the file** (the §12 digits, the §7 parser paragraph, the full mode matrix, the closeModes contract — the batch tooling lost writes while printing success; the third-rework changelog row overstates accordingly and this row is written AFTER a grep of every change below). Landed and verified: the canonical invocation matrix (one flag exactly; zero/combined → usage/exit 2 reading nothing; per-mode reads/streams/mutation/status; sentinel validation only in flagged modes); the consumed-state schema with first-by-array-index diagnostics and the ordered, sorted `unclassified {count, ids}` success form; §7 rewritten state-only with the modes' MDX reads scoped to sentinels; the single no-digit predicate over the `self-hosting-ledger` H2 span; the explicit-id heading source token `[#self-hosting-ledger]`; every generic "read-only" narrowed; the §11 docs-build row replaced by the harness assertion; the harness file added to Scope and Conflict Surface. |
 | 2026-07-28 | orchestrating session (author), third rework | **Iteration 3 (6.40) applied — eight pieces, mostly residual restatements.** The input set narrows to `_state/prds.json` ALONE (readiness/review artifacts left with the figures they served; the §7 parser contract deleted); §12's surviving "the 5.1s" de-numbered. The complete mode matrix defined (default = usage/exit 2; `--print` content-only to stdout, sentinels excluded; `--write` the single permitted in-place mutation with outside-byte preservation; `--check` first-differing-line at exit 1; identical sentinel validation in all three real modes) and "read-only" narrowed to the modes it describes. The `closeModes` contract completed: unknown/missing values emit a deterministic `unclassified {count, ids}` diagnostic, malformed-but-parseable state fails naming the first offending element. The fixture harness added to Targets/§11 with the full case list. The heading id made explicit (`self-hosting-ledger`), asserted in MDX source. The sequencing paragraph dated instead of standing. |
 | 2026-07-28 | orchestrating session (author), second rework | **Iteration 2 (6.28) applied.** `readinessIterations` CUT — the probe measured the history-table grammar varying across all 29 Ship Verified artifacts (`9b` concurring rows included); migrating 29 artifacts is not a marketing section's business, so the derivable pair remains and the texture goes to unnumbered prose. The intro's own `30+` digit and stale figure list swept (the count is the script's answer, never this document's). The no-digit contradiction fixed — "the 5.1s" de-numbered in FR-4. The region lifecycle closed: exactly one ordered sentinel pair, named failures on missing/duplicate/inverted, three modes (default = usage + exit 2, `--print`, `--write` in place), regeneration by `--write`. |

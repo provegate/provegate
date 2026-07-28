@@ -1,94 +1,80 @@
 # Readiness Assessment: PRD-037 — Case Study, Part Two: the Tool's Own Ledger
 
-**ITERATE — 7.10/10.** The surviving figure pair is derivable and the architecture is feasible, but six of the eight claimed closures remain incomplete or contradicted elsewhere in the normative PRD. An implementing agent would still have to invent parts of the CLI, state-validation, and output contracts.
+**PASS — 8.40/10.** The PRD is executable without human clarification. The figure pair is independently derivable, and the mode, state-validation, sentinel, mutation, and verification contracts are now sufficiently deterministic. Three stale restatements remain as PASS-band watch items; the owning FR and verification row resolve each unambiguously.
 
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
-| Score | 7.10/10 |
-| Verdict | ITERATE |
-| Iteration | 4 |
+| Score | 8.40/10 |
+| Verdict | PASS |
+| Iteration | 5 |
 | PRD Class | feature |
 | Scored by | Codex — fresh independent session |
 | Self-scored | no |
 | Date | 2026-07-28 |
-| PRD Lint | waived/green — `node packages/provegate/dist/cli.js check PRD-037` failed with the documented sandbox `EPERM` opening `_state/prds.json.76504.tmp`; the read-only `lintPrd` equivalent returned `{"ok":true,"issues":[]}`; relying on the orchestrating session’s out-of-sandbox green run on 2026-07-28 |
-| State Record | unchanged — analysis-only rescore; `_state/prds.json` records 6.28 ITERATE from iteration 2 |
-| Prior Artifact State | the readiness file on disk contains iterations 1–2 only; iteration 3 at 6.40 is corroborated by the PRD changelog, `STATUS.md`, and the scoring brief |
+| Model Tier (Execution) | high |
+| Model Tier (Audit) | high |
+| PRD Lint | waived/green — `node packages/provegate/dist/cli.js check PRD-037` failed with the documented sandbox `EPERM` opening `_state/prds.json.35604.tmp`; the read-only `lintPrd` equivalent returned `{"ok":true,"issues":[]}`; relying on the orchestrating session’s out-of-sandbox green run on 2026-07-28 |
+| State Record | unchanged — analysis-only rescore; `_state/prds.json` records 7.10 ITERATE from iteration 4 |
 | Repository Changes | none |
 
-## Iteration 4 — Closure Review
+## Iteration 5 — Closure Review
 
 | Rework piece | Status | Verification |
 | --- | --- | --- |
-| 1. `_state/prds.json` alone | **OPEN** | The introduction correctly says the script computes from “`_state/prds.json` — its only input” (`:43-45`), but §7 still says “readiness artifacts carry iteration histories as tables the script parses” (`:205-208`). The latter is the deleted parser contract the changelog claims was removed. Additionally, sentinel validation requires reading the MDX document, so “only input” must be narrowed to “only figure source” rather than describing all operational reads. |
-| 2. De-number §12 and reconcile changelog | **OPEN** | §12 still requires “The ledger includes the 5.1s” (`:319-320`), while the changelog says “§12’s surviving ‘the 5.1s’ de-numbered” (`:331`). The normative text and history directly disagree. |
-| 3. Complete mode matrix | **PARTIAL / NOT EXECUTABLE** | FR-2 calls default, `--print`, and `--write` “Three modes” (`:135-139`), while FR-3 separately introduces `--check` and the harness calls these “all four modes” (`:127,149-151`). “Failure in every mode” (`:135-136`) includes default, contradicting the intended default behavior of reading nothing. Exact exit 1 behavior for `--print`, `--write`, and `--check` sentinel failures is absent; invalid or combined flags are also undecided. |
-| 4. Narrow “read-only” | **OPEN** | The generic script remains described as “read-only” in FR-1 (`:119`), Success Metrics (`:68`), and Implementation Scope (`:232`), even though `--write` deliberately mutates the MDX file. Only the `--print` uses at `:178-179` and `:297` are correctly narrowed. |
-| 5. Complete `closeModes` and malformed-state contract | **OPEN** | The table says “count per value; unknown values listed” and missing values are “listed by id” (`:108`), whereas the harness expects a single deterministic `unclassified` output (`:125-127`). The PRD never normatively states `{count, ids}`, sorted IDs, success status, output channel/placement, or “never folded.” “Parseable-but-malformed state” occurs only in a fixture list; the malformed element grammar and first-offending-element diagnostic are not defined. |
-| 6. Fixture harness and full cases | **CLOSED as requested; scope residue remains** | The harness is in FR-1 Targets with the claimed cases (`:123-130`) and has a runnable §11 row (`:298`). It is nevertheless absent from Implementation Scope and Conflict Surface, despite being a new file. |
-| 7. Explicit heading id asserted from source | **PARTIAL** | FR-2 and §6 correctly require `self-hosting-ledger` to be asserted against MDX source, “never inferred from a docs build” (`:143-146,190-191`). But §11 still claims `pnpm --filter docs build` proves “the heading id is stable” (`:299`). The exact MDX source syntax to assert is also not specified. |
-| 8. Date the sequencing statement | **CLOSED** | §7 explicitly says the lease statement is “at drafting time” and “dated, not standing,” with a fresh `gate queue` before Phase 3 (`:215-219`). |
+| 1. State-only figure source | **CLOSED; wording watch** | §7 now states that `_state/prds.json` is “the script's ONLY figure source” and that flagged modes read MDX “solely for sentinel validation and region comparison, never as a figure input” (`:216-220`). FR-1 agrees: its “FIGURE source is `_state/prds.json` and nothing else” (`:119-123`). The introduction still says state is the script’s “only input” (`:43-45`), which is operationally false but overridden by the exact matrix and §7. |
+| 2. Canonical invocation matrix | **CLOSED; terminology watch** | FR-2 accepts exactly one mode flag; zero, invalid, or combined flags produce usage on stderr, exit 2, and read nothing (`:136-144`). The table fixes each class’s reads, stdout, stderr, mutation, success, and sentinel failure. “Only the three flagged modes validate sentinels” is explicit (`:146`). The fixture list’s “all four modes” (`:128`) should say three flagged modes plus the invalid-invocation class. |
+| 3. Consumed-state schema and `closeModes` | **CLOSED** | FR-1 requires a root object with a `records` array and string `prd`/`status` fields; the first violation by array index exits 1 naming index and field (`:108`). Known modes emit in fixed order; unknown or missing `autonomousClose` values become successful `unclassified {count, ids}`, IDs sorted, never folded into known modes (`:108`). |
+| 4. Consistency sweep | **CLOSED for implementation; acceptance wording watch** | Normative §12 is de-numbered; the only two `5.1s` occurrences are dated changelog history and exempt. Generic read-only claims are now mode-scoped. §11 uses the harness source-token assertion, not a docs build (`:308-312`). FR-2 gives the exact H2 span, `[0-9]` predicate outside the sentinel pair, and source token `[#self-hosting-ledger]` (`:148-157`). §6’s older “digit absent from FR-1’s output” wording (`:199-200`) is weaker, but FR-2 and the harness row identify the executable predicate. |
+| 5. Harness scope declarations | **CLOSED** | `scripts/verify/derive-figures.test-cases.mjs` appears in FR-1 Targets (`:124-131`), Implementation Scope (`:241-244`), Conflict Surface (`:288-293`), and runnable §11 rows (`:309-310`). |
 
-### Derivability Probe
+### Independent Derivability Probe
 
-The current `_state/prds.json` parses successfully and contains 39 records. Applying the PRD’s exact predicate produced:
+The current `_state/prds.json` parses as a root object with a `records` array containing 39 records. Every record has string `prd` and `status`; no consumed-schema violation was found.
 
-| Figure | Current result | Assessment |
-| --- | --- | --- |
-| `shipVerified` | **30** records with `status === "Ship Verified"` | Derivable |
-| `closeModes.operator-gated` | **28** | Derivable |
+| Figure | Current derivation | Assessment |
+| --- | ---: | --- |
+| `shipVerified` | **31** records where `status === "Ship Verified"` | Derivable |
+| `closeModes.operator-gated` | **29** | Derivable |
 | `closeModes.eligible` | **2** (`PRD-015`, `PRD-035`) | Derivable |
-| Unknown/missing close modes among selected records | **0** | Current state is clean; fixture behavior still needs a normative contract |
+| `closeModes.unclassified` | **0**, IDs `[]` | Deterministic success case |
 
-This confirms the narrowed figure set is sound and automatically reflects newly closed work. The earlier 29 / 27 / 2 result was a previous snapshot, not a defect.
+The change from iteration 4’s 30/28/2 snapshot demonstrates the intended property: newly closed work updates the figures without changing the document’s contract.
 
 ### Final Adversarial Sweep
 
-The cut scorer-session, review-round, critical-count, resumed-stop, and readiness-iteration figures are no longer promised as generated numbers in the introduction or FR output. Their unnumbered narrative use is consistent.
+The cut scorer-session, review-aggregate, resumed-stop, and readiness-iteration figures remain absent from generated-number promises. Their narrative treatment is consistently unnumbered.
 
-The remaining residue is contractual:
+The explicit heading syntax is supported by the installed Fumadocs remark-heading pipeline, whose parser recognizes terminal `[#slug]` suffixes. The source-token assertion is therefore anchored to a real repository mechanism.
 
-- §7 resurrects readiness artifacts as parser inputs after readiness iterations were cut.
-- §12 retains `5.1`, directly violating the no-digit rule.
-- The no-digit acceptance criterion is weaker than FR-2: §6 permits a prose digit if it also occurs in FR-1 output (`:188-189`), while FR-2 permits no digit outside the sentinels (`:141-142`). Those rules accept different documents.
-- The span and grammar of the no-digit check are undefined: the PRD should identify the new H2-bounded section and the digit predicate, while excluding the externally sourced origin section.
-- “Three modes,” “all four modes,” and “every mode” encode incompatible dispatch and validation models.
-- The changelog asserts deletion and de-numbering that did not occur, demonstrating that the declared `a-rule-corrected-survives-where-it-is-restated` Memory Input was not successfully applied.
-- The generic “read-only” promise contradicts the deliberate `--write` mutation.
-- The build row retains an assertion the source-level heading fixture was meant to replace.
-- The new harness is outside Implementation Scope and Conflict Surface.
-
-No runtime dependency, network call, telemetry, push path, package method-content change, tenant surface, schema migration, or protected route is introduced.
+No runtime dependency, network call, telemetry, push path, package method-content change, tenant surface, protected route, payload contract, schema migration, or deployment ordering requirement is introduced.
 
 ## Scorecard
 
 | Dimension | Weight | Score | Weighted | Notes |
 | --- | ---: | ---: | ---: | --- |
-| Clarity | 15% | 6.6/10 | 0.990 | Concrete files and commands exist, but the authoritative input, mode, malformed-state, and close-mode contracts contradict their restatements |
-| Completeness | 20% | 6.3/10 | The fixture catalogue is strong; exact validation grammar, exit behavior, invalid flags, deterministic output shape, and digit-span rules remain missing |
-| Technical Depth | 25% | 6.4/10 | State-derived figures, byte preservation, and first-line drift detection are sound choices, but their executable state and CLI models remain partly unwritten |
-| Multi-Tenancy & Security | 20% | 8.4/10 | No tenant, auth, secret, network, dependency, telemetry, or push surface; public-claim integrity has a good mechanism once its contract is reconciled |
-| Scope & Testability | 10% | 7.2/10 | Narrow scope and an adversarial fixture list, reduced by the harness’s absence from scope/conflict declarations and contradictory expected behavior |
-| Migration & Rollback | 10% | 8.5/10 | Plain revert is credible; `--write` is bounded to one region, though its exact failure contract must be pinned |
-| **Total** | **100%** |  | **7.100/10** | **ITERATE** |
+| Clarity | 15% | 7.8/10 | 1.170 | Owning FRs and the canonical matrix are executable; three stale phrases modestly reduce consistency |
+| Completeness | 20% | 8.2/10 | State grammar, malformed input, mode dispatch, sentinels, drift, byte preservation, and unknown close modes are covered |
+| Technical Depth | 25% | 8.4/10 | Sound state-derived projection, deterministic aggregation, bounded mutation, source-level heading assertion, and first-line drift behavior |
+| Multi-Tenancy & Security | 20% | 8.8/10 | No tenant, auth, secret, network, telemetry, dependency, push, or protected-surface exposure |
+| Scope & Testability | 10% | 8.4/10 | Narrow scope, runnable rows, full harness placement, and adversarial fixtures; minor wording residue remains |
+| Migration & Rollback | 10% | 8.9/10 | No migration; plain revert is credible, and `--write` is bounded to bytes strictly inside one validated region |
+| **Total** | **100%** |  | **8.400/10** | **PASS** |
 
 Hard caps: none.
 
-Clarity cap: the mechanical ≤7 condition does not independently fire—every FR has Targets, §11 maps all FRs, DO NOT exists, and Open Questions is empty. The assigned 6.6 reflects substantive ambiguity rather than the formal cap.
+Clarity cap: not triggered. Every FR has concrete Targets, §11 maps every FR to a runnable command, DO NOT exists, Open Questions is empty, and no unresolved placeholder remains.
 
-## Missing Pieces
+## Watch Items
 
-1. Replace §7’s readiness-table parser paragraph with the state-only figure contract. Describe `_state/prds.json` as the only **figure source**, while acknowledging that real modes read the MDX target for sentinel validation or comparison.
+1. Narrow the introduction’s “`_state/prds.json` — its only input” to “its only figure source,” matching FR-1 and §7.
 
-2. Write one canonical invocation matrix covering default, `--print`, `--write`, and `--check`: accepted flag cardinality, reads, stdout/stderr, mutation, success status, sentinel-failure status and diagnostic, and invalid/combined flags. Default must read nothing; only the three flagged modes validate sentinels.
+2. Replace “all four modes” in the fixture catalogue with “all three flagged modes plus invalid invocation classes.”
 
-3. Define the consumed state schema and deterministic output: root/record validation, which element is “first,” exit 1 diagnostics, operator-gated/eligible ordering, and unknown or missing `autonomousClose` aggregated as successful `unclassified {count, ids}` with sorted IDs and no folding.
+3. Make §6 and the FR-4 §11 note repeat FR-2’s exact rule: `[0-9]` anywhere in the `self-hosting-ledger` H2 span outside the sentinel pair fails. This removes the weaker “absent from FR-1 output” and “unsourced digit” formulations.
 
-4. Perform the promised consistency sweep: remove `5.1s`; correct the changelog; narrow all generic “read-only” claims; replace the build row’s heading-id assertion; reconcile the two no-digit rules; and specify the exact H2 span, digit predicate, and MDX heading source syntax.
-
-5. Add `scripts/verify/derive-figures.test-cases.mjs` to Implementation Scope and Conflict Surface.
+These are consistency repairs, not missing design decisions. FR-2 and the harness verification row already tell an implementing agent which behavior to implement.
 
 ## Iteration History
 
@@ -98,20 +84,29 @@ Clarity cap: the mechanical ≤7 condition does not independently fire—every F
 | 2026-07-28 | 2 | 6.28/10 | ITERATE | Sentinel projection improved; corpus probe cut readiness iterations and exposed stale promises, digit conflict, missing lifecycle behavior, and fixture gaps |
 | 2026-07-28 | 3 | 6.40/10 | ITERATE | Eight residual closures requested: state-only inputs, de-numbering, complete modes, narrowed read-only language, close-mode diagnostics, fixture harness, source heading assertion, and dated sequencing |
 | 2026-07-28 | 4 | 7.10/10 | ITERATE | Figure pair re-derived successfully; fixture and sequencing closures hold, but stale normative text leaves the input, mode, mutation, close-mode, digit, and heading contracts contradictory |
+| 2026-07-28 | 5 | 8.40/10 | PASS | Canonical mode and state contracts, deterministic unclassified output, exact digit span, source heading token, and harness scope are present; independent probe derives 31/29/2 with zero unclassified; three non-blocking restatement watches remain |
 
 ## Verdict
 
-**ITERATE — 7.10/10.**
+**PASS — 8.40/10.**
 
-The core design is now viable and the remaining figure pair is unassailable under the current state. This is not being held below PASS for cosmetic residue: the PRD currently gives incompatible instructions about what the script reads, how many modes exist, whether default validates sentinels, what malformed state means, and how unknown close modes are rendered. Those decisions directly change implementation and fixture expectations.
+The fourth rework closes the implementation-changing gaps. An agent can now determine accepted invocations, every read and mutation boundary, failure statuses, sentinel behavior, consumed-state validation order, close-mode aggregation, generated-region comparison, and the exact source-level digit and heading checks without inventing architecture.
 
-One disciplined consistency revision should be sufficient: make the intended contracts normative in FR-1/FR-2, then sweep §1, §6, §7, §8, §11, §12, Conflict Surface, and the changelog against them.
+The remaining contradictions are real and should be cleaned up, especially after the changelog’s prior false closure claims. They do not justify another ITERATE verdict because the owning FR and runnable harness row already provide a single executable answer for each.
+
+## Model Tier Recommendation
+
+| Phase | Tier | Rationale |
+| --- | --- | --- |
+| Implementation | high | The work is small but correctness depends on byte-preserving replacement, fail-closed parsing, deterministic diagnostics, and fixture isolation across several CLI modes |
+| Audit | high | Audit should adversarially compare every restatement against FR-2 and verify mutation boundaries, sentinel failures, malformed-state ordering, and verifier wiring |
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 4 transcribed
-> verbatim from a fresh independent Codex session; 6.40 → 7.10. Five pieces — residual
-> restatements the author's sweeps kept missing plus the invocation-matrix and
-> state-schema precision — applied the same day, this time grep-first. Lint EPERM is
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 5 transcribed
+> verbatim from the fifth fresh independent Codex session of this cycle. PASS 8.40 —
+> "consistency repairs, not missing design decisions"; the three watch items were
+> applied as post-PASS precision edits per the scorer's own prescriptions, recorded
+> in the PRD changelog. Trajectory: 5.30 → 6.28 → 6.40 → 7.10 → 8.40. Lint EPERM is
 > the documented sandbox artifact; out-of-sandbox green the same day.
