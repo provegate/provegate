@@ -9,7 +9,7 @@
 > **Slug**: `adr-section-anchor`
 > **Cycle Phase**: 1 (PRD Generation)
 > **PRD Class**: hotfix
-> **Class Rationale**: a reproduced defect in shipped code with a bounded blast radius — one regex anchor, three copies, one corpus. Not `feature` (no capability), not `test-hardening` (`core/memory/parse.ts` is production code).
+> **Class Rationale**: a reproduced defect in shipped code with a bounded blast radius — one regex anchor in three copies, one corpus case, and one repository corpus runner that makes the third copy's conformance executable. Not `feature` (no capability), not `test-hardening` (`core/memory/parse.ts` is production code).
 > **Value**: 3.65 (MF/UI/TL/AR/RM: 4/4/3/3/4)
 > **Autonomous Close**: eligible
 
@@ -19,8 +19,8 @@ records. UI 4: adopters receive the same broken parser in `practices/verify/lib.
 they hit it on their FIRST ADR. TL 3: unblocks no roadmap item, but every ADR written from
 here on is hand-guarded against the formatter today, which is a standing tax. AR 3: an
 adopter whose first ADR fails validation because they formatted it is a bad first
-impression. RM 4: a one-token anchor change in three copies, held by a corpus that already
-executes every case against all three. -->
+impression. RM 4: a one-token anchor change in three copies, held by a corpus the package
+test executes for the two package-side copies and the FR-5 runner for the third. -->
 
 <!-- Autonomous Close: `eligible` — every verification is machine-checkable and this PRD
 produces no operator-owned rows. -->
@@ -64,16 +64,24 @@ Converted to a work item on 2026-07-28 under the deferral cap rule.
 ### Primary Goals
 
 1. Make the section capture end at end-of-input rather than end-of-line.
-2. Make all three implementations agree **and be right** — the corpus currently
-   proves only the first.
+2. Make all three implementations agree **and be right, under execution** — the
+   package corpus test runs the typed parser and the shipped copy and proves only
+   agreement; the repository copy is never run against the corpus at all today.
 3. Make `pnpm format` safe to run on `_brain/adr/**`.
 
 ### Success Metrics
 
 - A record with a blank line after every section heading validates in all three
-  implementations.
-- `pnpm format` followed by `pnpm verify:brain` is green from a clean tree.
-- Mutation: restoring the `$` anchor fails the new corpus case, and only it.
+  implementations, each under execution: the package corpus test runs the typed
+  parser and the shipped copy; the FR-5 runner runs the repository copy.
+- The formatter smoke in the FR-5 runner proves prettier's output legal: a valid
+  record formatted by the repository's own prettier still validates, with every
+  section body captured non-empty. (Sweeping the live store with `pnpm format`
+  stays a separate call — §5.)
+- Mutation: restoring the `$` anchor in `parse.ts` or the shipped copy fails the
+  new corpus case in the package test; restoring it in `scripts/verify/lib.mjs`
+  fails the FR-5 runner. Each failure has the anchor as its cause, not a missing
+  case.
 
 ---
 
@@ -104,25 +112,60 @@ review step.
      `scripts/verify/lib.mjs`, `packages/provegate/practices/verify/lib.mjs`
 2. **FR-2**: The shared corpus carries the case, asserted as **valid**. A record
    whose every section heading is followed by a blank line is a legal ADR. The
-   corpus executes every case against all three implementations, so one case
-   binds all three — but it must assert correctness rather than agreement, which
-   is what the present 78 cases could not do here: all three agreed, and all
-   three were wrong.
+   package corpus test executes every case against **two** implementations — the
+   typed parser and the shipped practices copy; its own header records that the
+   repository copy is reconciled through `verify:pack-drift`, not run. One case
+   therefore binds those two directly and the third through FR-5's runner — and
+   it must assert correctness rather than agreement, which is what the present
+   78 cases could not do here: the executed implementations agreed, and all
+   were wrong.
    - **Targets:** `packages/provegate/test/fixtures/memory-record-cases.json`,
      `packages/provegate/test/memory.test.ts`
-3. **FR-3**: The three copies stay reconciled. `scripts/verify/lib.mjs` and
+3. **FR-3**: The three copies stay reconciled, and **both** affected ledger pairs
+   are reconciled by name. `scripts/verify/lib.mjs` and
    `packages/provegate/practices/verify/lib.mjs` differ today in ways unrelated to
    this fix; the pack drift ledger records the intended divergence, and this
-   change must not widen it.
+   change must not widen it. The FR-5 wiring also moves the second pair:
+   `verify/verify-workflow.mjs` ↔ `scripts/verify/verify-workflow.mjs`, where the
+   repository side gains the corpus runner and the packed side deliberately does
+   not — adopters receive neither the fixture nor the runner. That is an
+   intentional repository-only divergence, recorded with a ledger `note` on the
+   pair when it is reconciled.
    - **Targets:** `scripts/verify/pack-drift-ledger.json`
 4. **FR-4**: The memory record is retired to what remains true. The anchor bug is
    fixed, so `adr-section-blank-line-reads-empty` no longer describes live
    behaviour; it is edited to record the general lesson (`$` under `/m` is not
-   end-of-input) rather than deleted, so the trap stays discoverable. Its packed
-   twin and both INDEX hooks follow.
+   end-of-input) rather than deleted, so the trap stays discoverable. The
+   repository INDEX hook follows the retired record. **No packed twin exists and
+   none is created.** An earlier draft said "its packed twin and both INDEX hooks
+   follow"; measured 2026-07-28, `packages/provegate/practices/brain/learnings/`
+   carries no copy of this record and the packed INDEX no hook for it. The packed
+   seed set is selective — this record's nearest sibling,
+   `two-parsers-wrong-together`, is likewise unpacked — and promoting a record to
+   a shipped seed is a packing decision this hotfix does not own (§5).
    - **Targets:** `_brain/learnings/adr-section-blank-line-reads-empty.md`,
-     `packages/provegate/practices/brain/learnings/adr-section-blank-line-reads-empty.md`,
-     `packages/provegate/practices/brain/INDEX.md`
+     `_brain/INDEX.md`
+5. **FR-5**: The repository copy's conformance is executed, not inferred from a
+   hash pairing. A standalone runner loads every case from
+   `packages/provegate/test/fixtures/memory-record-cases.json`, runs it against
+   `scripts/verify/lib.mjs`'s `validateMemoryRecord`, and compares the reported
+   issues against the fixture's expected validity and **bare field names**
+   (containment — the same contract the package test's first assertion uses).
+   Entry-keyed `field#entry` comparison is the package test's
+   cross-implementation parity contract; the fixture declares no expected entry
+   keys, and this runner does not conflate the two. It then runs the formatter
+   smoke: the FR-2 case's content is formatted with the repository's own
+   prettier (markdown parser) and re-validated — the result must stay valid with
+   every section body captured non-empty. The runner exits non-zero, naming the
+   path, on a missing or unparseable fixture — it never iterates zero cases into
+   a pass. It is a root script on purpose: `provegate#test` is turbo-cached over
+   package inputs, and a package test reading a repository path replays stale
+   green (`turbo-cache-masks-out-of-input-reads`); root `verify:*` scripts run
+   outside turbo by construction. Wiring: registered as `verify:memory-corpus`
+   in `package.json` and added to the `verify:workflow` CHECKS bundle, so the
+   wire-or-delete audit sees an executing surface.
+   - **Targets:** `scripts/verify/verify-memory-record-corpus.mjs`,
+     `package.json`, `scripts/verify/verify-workflow.mjs`
 
 ---
 
@@ -136,6 +179,10 @@ review step.
   own; see FR-3.
 - **The other multiline-parser deferrals** (`Multiline code spans`,
   `Brain validator INDEX parsing`). Same neighbourhood, different defects.
+- **Promoting the retired learning to a packed seed.** The practices brain seed
+  set is deliberately selective and does not carry this record today; whether the
+  general lesson ships to adopters is a packing decision with provenance and
+  rollback questions of its own, and fixing the defect does not need it.
 
 ---
 
@@ -145,10 +192,18 @@ review step.
   `verify:brain` runs, **Then** it passes.
 - **Given** the same ADR, **When** the package parser validates it, **Then** it
   reports no issue — and likewise the shipped practices copy.
-- **Given** a clean tree, **When** `pnpm format` then `pnpm verify:brain` run,
-  **Then** both are green.
-- **Given** the `$` anchor restored in any one copy, **When** the corpus runs,
-  **Then** the new case fails for that copy and no other case changes.
+- **Given** the FR-2 case's content, **When** the FR-5 runner formats it with the
+  repository's prettier and re-validates, **Then** it stays valid and every
+  section body is captured non-empty.
+- **Given** the `$` anchor restored in `parse.ts` or the shipped practices copy,
+  **When** `pnpm --filter provegate test test/memory.test.ts` runs, **Then** the
+  new case fails and no other case changes.
+- **Given** the `$` anchor restored in `scripts/verify/lib.mjs`, **When**
+  `pnpm verify:memory-corpus` runs, **Then** the new case fails and no other case
+  changes.
+- **Given** the corpus fixture file absent or unparseable, **When** the FR-5
+  runner runs, **Then** it exits non-zero naming the path, rather than iterating
+  zero cases and reporting success.
 - **Given** an ADR whose next heading follows with no blank line, **When** it is
   validated, **Then** the section still ends at that heading and does not swallow
   the next body.
@@ -164,12 +219,18 @@ review step.
 
 ### Architecture
 
-**Three implementations, one contract.** The TypeScript parser and the stdlib
-validator cannot import each other — the validator runs in repositories where the
-package is not installed — and `memory-record-cases.json` is their entire
-contract, executed against both plus the shipped practices copy. That makes the
-corpus the right vehicle and also the reason this defect survived: 78 cases proved
-the three agree, and they agreed on the wrong answer.
+**Three implementations, one contract — two executed, one reconciled.** The
+TypeScript parser and the stdlib validator cannot import each other — the
+validator runs in repositories where the package is not installed — and
+`memory-record-cases.json` is their contract. The package corpus test executes
+the typed parser and the **shipped** practices copy; the repository's own
+`scripts/verify/lib.mjs` is deliberately outside it, reconciled by hash through
+`verify:pack-drift` (`memory.test.ts`'s own header records this). A hash pairing
+proves the two copies were compared once by a human, not that the repository copy
+passes the cases — which is why FR-5 adds a runner that executes it, from the
+repository side of the turbo cache boundary. The corpus is still the right
+vehicle, and also the reason this defect survived: 78 cases proved the executed
+implementations agree, and they agreed on the wrong answer.
 `two-parsers-wrong-together` names this exactly, which is why FR-2 requires the
 case to assert a **behavioural** claim (this document is legal) rather than a
 parity claim.
@@ -180,9 +241,18 @@ dropping the `m` flag that `^## ` needs.
 
 ### Migration & Rollback
 
-None. No stored data changes shape; the fix widens what validates and narrows
-nothing. Rollback is a plain revert of the commit — no artifact is left in a state
-the previous code refuses, because every document legal before stays legal after.
+None for stored data. Nothing changes shape; the fix widens what validates and
+narrows nothing. Rollback is a plain revert of the commit — no artifact is left in
+a state the previous code refuses, because every document legal before stays legal
+after.
+
+The additions land atomically with the fix and leave with it. The FR-5 runner, its
+`package.json` registration, its `verify:workflow` membership, and the FR-3 ledger
+reconciliation are one commit with the anchor change, so a revert removes the
+runner together with both wiring points and restores both reconciled ledger
+pairs (`verify/lib.mjs` and `verify/verify-workflow.mjs`) — no
+intermediate state exists in which a registered check has no script, a script no
+registration, or a ledger row no counterpart.
 
 ---
 
@@ -190,8 +260,9 @@ the previous code refuses, because every document legal before stays legal after
 
 ### In Scope
 
-The anchor in three copies, one corpus case, the drift ledger reconciliation, and
-the record edit with its twin and hooks.
+The anchor in three copies, one corpus case, the repository corpus runner with its
+two wiring points, the drift ledger reconciliation, and the record edit with its
+repository INDEX hook.
 
 ### Out of Scope
 
@@ -230,14 +301,22 @@ None.
   deserves the same scrutiny: FR-1 must not make an empty section legal, which is
   the acceptance criterion about a heading following with no blank line.
 - applied: `assert-absent-needs-an-independent-cause` — its watch covers the
-  corpus and its runner. The mutation check in §2 is where it bites: restoring the
+  package corpus paths (`packages/provegate/test/**`) this PRD edits; the root
+  runner sits outside the watch and the record is applied there voluntarily.
+  The mutation check in §2 is where it bites: restoring the
   `$` anchor must fail the new case *because the anchor is wrong*, not because the
   case was removed alongside it. The check therefore restores the anchor only and
   leaves the corpus untouched, so the failure has a cause independent of the
   scenario that produces it.
-- not-applicable: `false-green-on-missing-file` — its watch covers the verify
-  scripts this PRD edits. No check here greps a file whose absence could pass; the
-  corpus supplies its own content.
+- applied: `false-green-on-missing-file` — applied voluntarily; the record
+  declares no watch. FR-5 reads the corpus fixture from disk, which is exactly
+  this record's trap: the runner must exit non-zero naming a missing or
+  unparseable fixture rather than iterating zero cases into a pass. The last
+  acceptance criterion pins it.
+- applied: `turbo-cache-masks-out-of-input-reads` — the reason FR-5 is a root
+  script rather than a package test: the repository validator and the fixture sit
+  on opposite sides of `provegate#test`'s hashed inputs, and a package test
+  reading across that boundary replays cached green over a real change.
 
 ## Memory Outputs
 
@@ -256,8 +335,8 @@ None.
 - `packages/provegate/test/fixtures/memory-record-cases.json`
 - `packages/provegate/test/memory.test.ts`
 - `_brain/learnings/adr-section-blank-line-reads-empty.md`
-- `packages/provegate/practices/brain/learnings/adr-section-blank-line-reads-empty.md`
-- `packages/provegate/practices/brain/INDEX.md`
+- `scripts/verify/verify-memory-record-corpus.mjs`
+- `scripts/verify/verify-workflow.mjs`
 - `scripts/verify/pack-drift-ledger.json`
 
 ---
@@ -280,9 +359,12 @@ single line — and never a pipe character inside a backticked command in this t
 | ---- | -------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------- |
 | FR-1 | `pnpm --filter provegate test test/memory.test.ts`       | pkg   | a blank line after each heading validates; a heading with no blank line before it still ends the section |
 | FR-1 | `pnpm verify:brain`                                      | repo  | the live store, including three ADRs, still validates                                              |
-| FR-2 | `pnpm --filter provegate test test/memory.test.ts`       | pkg   | the new case runs against all three implementations and asserts valid, not merely equal            |
+| FR-1 | `pnpm verify:memory-corpus`                              | repo  | the formatter smoke: the FR-2 case formatted by the repository's prettier still validates, sections non-empty |
+| FR-2 | `pnpm --filter provegate test test/memory.test.ts`       | pkg   | the new case asserts valid, not merely equal, against the typed parser and the shipped copy        |
 | FR-3 | `pnpm verify:pack-drift`                                 | repo  | the packed validator and record reconcile; the intended divergence is not widened                  |
-| FR-4 | `pnpm verify:brain`                                      | repo  | the retired record parses and both INDEX hooks resolve                                             |
+| FR-4 | `pnpm verify:brain`                                      | repo  | the retired record parses and its INDEX hook resolves                                              |
+| FR-5 | `pnpm verify:memory-corpus`                              | repo  | every fixture case executes against the repository validator; fails loudly on a missing fixture    |
+| FR-5 | `pnpm verify:workflow`                                   | repo  | the bundle executes the runner as a CHECKS member — the direct command above cannot prove membership |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -314,7 +396,15 @@ Hard caps (when your gates manifest configures them):
   stays discoverable after the code stops exhibiting it.
 - **Do not reformat the existing ADRs as part of this change.** They are legal
   before and after; mixing a formatting sweep into the fix hides which one moved
-  the gate.
+  the gate. The formatter claim is proven by FR-5's isolated smoke, never by
+  formatting the live store during verification.
+- **Do not run the corpus from inside the turbo-cached package test against
+  repository paths.** `provegate#test` hashes package inputs only; a package test
+  reading `scripts/verify/lib.mjs` replays stale green from cache. The runner is
+  a root script for exactly that reason.
+- **Do not create the packed seed while fixing the defect.** The packed brain set
+  is selective and this record is not in it; promotion is a separate decision
+  with its own provenance and rollback questions.
 
 ---
 
@@ -323,3 +413,5 @@ Hard caps (when your gates manifest configures them):
 | Date       | Change                                                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-28 | PRD created (Phase 1). Converted from the `ADR section regex` deferral under the cap rule; defect re-reproduced first. |
+| 2026-07-28 | **Iteration 2 scored PASS 8.20** (fresh independent Codex session, zero remediation context). Its four watch-item prescriptions applied as post-PASS precision edits, quoted from the report: `pnpm verify:workflow` added as an FR-5 verification row (the direct command cannot prove CHECKS membership); FR-5's comparison contract stated as expected-validity + bare-field containment, never entry-keyed parity; FR-3 names both moved ledger pairs, the workflow pair as an intentional repository-only divergence with a ledger note; the two memory-input rationales corrected to stop claiming watch coverage the records do not declare (`assert-absent…` watches package test paths only, `false-green…` declares no watch). Verdict unchanged by these edits; owner may order a confirmation pass at Phase 3 approval. |
+| 2026-07-28 | Remediated after readiness iteration 1 (ITERATE 7.85, independent Codex scorer; remediation by the non-scorer orchestrating session). The three-implementation execution claim corrected to the measured topology — the package corpus test runs the typed parser and the shipped copy, the repository copy is hash-reconciled via `verify:pack-drift`. FR-5 added: a repository corpus runner (`verify:memory-corpus`, wired into `verify:workflow`) executes the third copy and carries the isolated prettier smoke that replaces the unsafe repo-wide `pnpm format` verification. FR-4 narrowed: no packed twin exists and none is created; `_brain/INDEX.md` added to its Targets. Migration paragraph states atomic land/revert for the added wiring. Memory inputs `false-green-on-missing-file` re-dispositioned to applied and `turbo-cache-masks-out-of-input-reads` added. |
