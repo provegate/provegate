@@ -120,8 +120,9 @@ set.
    clean repo-relative form — and no backslash can survive in it, because `prompts.dir`
    itself refuses backslashes at load from this PRD on (FR-2's strictness clause).
    This defines only how the CHECK reports; no file on disk moves, the installer's
-   writes are untouched, and no adopter migrates anything except the empty
-   backslash-dir set FR-2 names. The
+   writes are untouched, and the only migration is FR-2's backslash-dir procedure —
+   needed by no known accepted repository/default/fixture configuration, while
+   external adopter usage is unknowable. The
    classification is **total** over every path it examines:
    - every **planned** path (a member of `generatedPaths()`) gets exactly one of:
      `missing` (absent on disk); `current` (bytes equal the fresh render); `stale`
@@ -353,7 +354,9 @@ set.
 - **Given** `prompts.enabled` false with bannered files left on disk, **When** the
   check runs, **Then** its note carries the exact T6 text — the unexercised
   reconciliation and both adopter consequences — asserted verbatim against the CLI
-  output; the files on disk produce no finding in any configuration (limits 4-6).
+  output; and in this disabled configuration the files left on disk produce no
+  finding — the limits-4-6 pin for the unplanned/disabled case, not a claim about
+  enabled planned paths, which the classification criteria above own.
 - **Given** a valid unexpired `prompts.exceptions[]` entry for a `modified` path,
   **When** the check runs, **Then** that path reports `excepted (expires <date>)` and
   does not fail the run — and a write is never performed on its behalf.
@@ -423,15 +426,20 @@ independently:
   changeset carries these steps verbatim): (1) pick the new backslash-free directory
   name and, on POSIX where the old spelling is a literal filename, `git mv` the store
   directory to it (on Windows the same value already named the forward-slash-equivalent
-  path — only the config spelling changes); (2) edit `prompts.dir` to the new value;
+  path — only the config spelling changes); (2) edit `prompts.dir` to the new value
+  — **and in the same config edit, update `templates.prd` wherever it points beneath
+  the old store spelling** (the model's T6 consequence applied to a rename: leaving
+  it stale makes `gate new` read a path that no longer exists);
   (3) delete every generated file whose CONTENT embeds `prompts.dir` and re-run
   `gate init --prompts` — that set comes from `renderAdapters()`, not from memory:
   every `.claude/commands/prd-<phase>.md` (one per phase; each embeds the store path
   in its body), `.cursor/rules/prd-workflow.mdc` (the table), and the codex snippet
   `<dir>/AGENTS.md.provegate.snippet` (the table again, and the file itself moves
   with the directory) — the additive installer rewrites none of them in place. A
-  §11-mapped fixture proves the changeset carries this procedure verbatim and that
-  the migrated generated set reconciles clean afterwards. Blast-radius evidence is scoped to what is measurable: this
+  §11-mapped fixture proves the changeset carries this procedure verbatim, that the
+  migrated generated set reconciles clean afterwards, and that the production
+  template resolver (`gate new`'s read of `templates.prd`) resolves against the moved
+  template rather than the abandoned spelling. Blast-radius evidence is scoped to what is measurable: this
   repository's config and every shipped default and fixture are backslash-free; an
   adopter population cannot be enumerated, so the changeset states the procedure
   rather than asserting nobody needs it.
@@ -626,7 +634,7 @@ Phase 5 unable to report which requirement failed.
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | total five-class arm over planned paths only; the same-version values-change case; the three limit pins (T4 removed-adapter, T5 rename, stripped-unplanned) |
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export`       | pkg   | `reconcilePrompts` and `evaluatePromptReconciliation` import from the package root         |
 | FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expiry-boundary / duplicate / malformed date / non-normalized path / stale entry / backslash-dir load refusal; suppression scoped to `modified` only |
-| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised search, enabled-but-absent failure, T2 remedy text |
+| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised planned-set reconciliation + T6 consequences verbatim, enabled-but-absent failure, T2 remedy text |
 | FR-4 | `pnpm verify:prompts`                                                             | repo  | dormant note + exit 0 here until PRD-032 enables; executes the built CLI                   |
 | FR-4 | `pnpm verify:workflow`                                                            | repo  | the bundle executes the new member; wire-or-delete sees the surface                        |
 | FR-4 | `pnpm verify:prompts -- --assert-ci-order`                                        | repo  | the script's second mode reads `ci.yml` and exits non-zero unless the provegate build step precedes the aggregate — the order is asserted by an allowlisted command, not by prose |
@@ -667,6 +675,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (non-scorer), eighth pass | **Iteration-7 residues applied (7.7).** The §6 disabled-case pin scoped to its configuration; §11's FR-3 row says exactly what the note says; FR-1's surviving "empty backslash-dir set" replaced by the measurable form. The real catch landed: the backslash migration's step 2 now updates `templates.prd` in the same config edit (the model's T6 consequence applied to the rename), and the migration fixture exercises the production template resolver against the moved template, not just a clean reconcile. |
 | 2026-07-28 | orchestrating session (non-scorer), seventh pass | **Iteration-6 sweep pieces applied (7.6 — the narrowing accepted; findings moved from design to sweep completeness).** Five stale walk-era sentences replaced in live sections (§2 metric now planned-path-scoped with limits named; §4's derivation header; §6's walked-domain, bannered-orphan-search and disabled-tail wordings; §11's FR-3 note alignment). The backslash migration's delete set is now derived from `renderAdapters()` rather than remembered wrongly as "two adapters" — every claude phase file, the cursor rule and the codex snippet embed the dir — with a §11-mapped fixture proving the changeset text and a clean post-migration reconcile. Every empty-blast-radius phrase replaced by the measurable form: no known accepted config uses an internal backslash; external adopter usage is unknowable; the procedure is stated rather than the need denied. |
 | 2026-07-28 | owner decision + orchestrating session, sixth pass | **Narrowed radically after iteration 5 (7.5; trajectory flat at 7.4/7.6/7.5 with every round in the walk layer — the owner chose option (a) per `scope-out-the-layer-the-rounds-keep-hitting` and the PRD-025 precedent).** Orphan/content discovery is CUT: the primitive reads exactly the planned paths (one readFileSync per `generatedPaths()` member — no listing, no walk, no filesystem contract), the `orphaned` class is gone, and the model's limits 4-6 are pinned as fixtures asserting NO finding (T4 removed-adapter file, T5 renamed-away tree, unplanned stripped/bannered files). T5's adapter-staleness signal survives through the planned set. The two small iteration-5 pieces landed with it: the backslash-dir migration gains its executable three-step order in §7 and the changeset (git mv on POSIX, config edit, delete + re-init the two adapters whose content embeds the old spelling; blast-radius claims scoped to measurable configs), and User Story 2 narrows to the actual guarantee (never overwritten, reported on upgrade, rebased by hand). A future discovery item inherits the walk-contract questions with iterations 2-5 as design input (§5). |
 | 2026-07-28 | orchestrating session (non-scorer), fifth pass | **Iteration-4 seams closed (7.6 ITERATE; three pieces confirmed genuinely closed).** The walk domain now includes the two fixed adapter roots UNCONDITIONALLY — deriving them from live membership would have made T4's removed-adapter orphan undiscoverable exactly when it matters; the store side stays planned-dirname-derived so the `.` bound holds. And the backslash seam is closed at the config surface: `prompts.dir` refuses backslashes at load — this PRD's one strictness addition to an existing key, stated as a behavior change with its changeset migration line and an empty measured blast radius (the feature shipped this week), with `strictness-added-during-extraction-is-a-behavior-change` moved to `applied`; the canonical-spelling claim is now conditioned on it, and a backslash-dir fixture proves the refusal at the seam an entry fixture cannot reach. |
