@@ -1,6 +1,6 @@
 # Readiness Assessment: PRD-034 — Prompt Store Reconciliation
 
-**ITERATE — 7.8/10.** All three iteration-7 remediation pieces are genuinely closed, and the planned-set-only design is internally consistent across its principal requirements. The final code sweep found two user-visible reconciliation denials that the PRD does not require the implementation to remove, plus an unresolved disabled-exception precedence rule and planned-path I/O behavior. These could mislead an implementing agent or adopter, so the item remains below the 8.0 gate.
+**PASS — 8.4/10.** The ninth pass closes all three iteration-8 seams. The planned-set-only design is internally consistent, faithful to Revision 2, and executable without an unresolved design decision. No remaining issue rises above a PASS-band watch item.
 
 ## Quick Meta
 
@@ -8,200 +8,167 @@
 | --- | --- |
 | PRD | `_prds/wip/prd-034-prompt-store-reconciliation.md` |
 | PRD Class | `infra` |
-| Score | 7.8/10 |
-| Verdict | ITERATE |
-| Iteration | 8 |
-| Prior Iterations Reviewed | 1–7, including their committed readiness revisions |
-| Model Tier (Execution) | none — ITERATE |
-| Model Tier (Audit) | none — ITERATE |
+| Score | 8.4/10 |
+| Verdict | PASS |
+| Iteration | 9 |
+| Prior Iterations Reviewed | 1–8, including all committed readiness revisions |
+| Model Tier (Execution) | high |
+| Model Tier (Audit) | high |
 | PASS-band Tier | 8.0–8.9 → high/high |
 | Scored by | GPT-5 via Codex — fresh independent Phase 2 re-score |
 | Self-scored | no |
 | Date | 2026-07-28 |
 | State Record | pending |
 | Analysis Mode | read-only; no files changed |
-| PRD Lint | WAIVED at the command surface. `node packages/provegate/dist/cli.js check PRD-034` failed at the documented sandbox write with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.45248.tmp'`. The read-only `resolveConfig` + `loadManifest` + `lintPrd(config, manifest, content, root, 34)` equivalent returned `{ "ok": true, "issues": [] }`. Command-level evidence relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
+| PRD Lint | WAIVED at the command surface. `node packages/provegate/dist/cli.js check PRD-034` failed only at the documented sandbox write with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.10063.tmp'`. The read-only `resolveConfig` + `loadManifest` + `lintPrd(config, manifest, content, root, 34)` equivalent returned `{ "ok": true, "issues": [] }`. Command-level evidence relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
 
-## Iteration 8 — Consistency Review
+## Model Tier Recommendation
 
-### 1. Disabled-case scope and §11 wording — GENUINELY CLOSED
+Implementation: **high**. Audit: **high**.
 
-The formerly universal no-finding claim is now explicitly limited:
+The implementation spans configuration validation, filesystem containment, public exports, two command surfaces, packed delivery, CI wiring, migration, and production prose. The design is settled, but the cross-surface work benefits from frontier-level consistency checking.
 
-> “in this disabled configuration the files left on disk produce no finding — the limits-4-6 pin for the unplanned/disabled case, not a claim about enabled planned paths” (§6)
+## Iteration 9 — Final Consistency Review
 
-The second disabled criterion repeats the same boundary:
+### 1. Disabled-exception precedence — CLOSED
 
-> “Any generated files left on disk produce no finding in this configuration” (§6)
+FR-2 now gives config validation precedence explicitly:
 
-Section 11 now matches FR-3’s production-surface wording:
+> “structural and semantic validity of `prompts.exceptions[]` is enforced at every config load — a malformed entry fails the load whether or not prompts is enabled”
 
-> “disabled note names the unexercised planned-set reconciliation + T6 consequences verbatim” (§11, FR-3)
+It separately limits evaluation to an enabled reconciliation:
 
-No live acceptance or verification sentence still requires an orphan search.
+> “with `prompts.enabled` false there are no findings to suppress and no run to fail, so valid, expired and would-be-stale entries alike are inert — present, validated, unevaluated”
 
-### 2. Accepted-configuration blast-radius wording — GENUINELY CLOSED
+Section 6 repeats the complete decision:
 
-FR-1 replaces the rejected empty-population claim with:
+> “a malformed entry still fails the load, while valid, expired and would-be-stale entries are inert — validated, unevaluated, unmentioned by the note”
 
-> “needed by no known accepted repository/default/fixture configuration, while external adopter usage is unknowable” (§4, FR-1)
+Section 11 binds disabled-exception inertness to the production-shaped command test. FR-2, FR-3, §6, and §11 no longer permit competing outcomes.
 
-FR-2 and Memory Inputs use the same measurable qualification:
+### 2. Planned-path read failures — CLOSED
 
-> “no known accepted repository, shipped default or fixture configuration uses an internal backslash, while external adopter usage is unknowable” (§4, FR-2)
+FR-1 now distinguishes absence from every other read failure:
 
-Section 7 similarly distinguishes measurable repository/default/fixture evidence from an adopter population that cannot be enumerated. The `C:\evil` rejection fixture no longer contradicts the claim because the statement is expressly about accepted configurations.
+> “a planned path whose read fails with `ENOENT` is `missing`; any other read failure … fails the run closed, naming the path and the error”
 
-### 3. Backslash migration and `templates.prd` — GENUINELY CLOSED
+It also decides the leaf-symlink case:
 
-The migration now updates both config pointers atomically:
+> “a planned path that is a symlink is read only if its realpath stays inside the repository’s canonical containment, else it fails closed naming the escape”
 
-> “edit `prompts.dir` to the new value — **and in the same config edit, update `templates.prd` wherever it points beneath the old store spelling**” (§7)
+The rule remains per planned leaf: no directory is listed and no orphan walk returns. Section 11 expressly requires read-error fixtures in the command test. This is sufficient to implement missing, directory-at-file, permission/I/O, and leaf-symlink behavior without reopening discovery scope.
 
-It also requires production-shaped verification:
+### 3. Shipped reconciliation prose — CLOSED
 
-> “the production template resolver (`gate new`’s read of `templates.prd`) resolves against the moved template rather than the abandoned spelling” (§7)
+FR-3 enumerates every existing production surface that becomes stale:
 
-Code confirms the need and the closure: `promptsConfigBlock()` derives `templates.prd` from `config.prompts.dir`, while `createPrd()` reads `config.templates.prd`. The migration also correctly derives its generated-content delete set from `renderAdapters()`: every Claude phase file, the Cursor rule, and the Codex snippet embed the configured directory.
+> “`storeReadme()`’s rendered README, the `gate init --prompts` printed output, `practices/NEXT_STEPS.md`, the `prompts.ts` module comment, the CLI help text and the `runCheck` usage line”
 
-The §11 whole-matrix row names the backslash migration and renderer-derived delete set. Section 7 supplies the additional mandatory template-resolver assertion, so the test contract is implementable without guessing.
+It gives one consistent replacement rule:
 
-### 4. New contradiction: disabled reconciliation versus exception staleness
+> “every one of those sentences is updated to name `gate check --prompts` as the detector while preserving the true halves — the install stays one-way, and nothing repairs or syncs automatically”
 
-FR-2 states without qualification:
+Section 6 requires the rendered README and CLI help to name the command without claiming that nothing detects staleness. Section 11 maps those production-surface assertions to the command test.
 
-> “An entry whose path is not currently `modified` is a stale entry and fails the run.”
+Code inspection confirms all six sites exist as described:
 
-FR-3 states:
+- `storeReadme()` currently emits “There is no upgrade path, no reconciliation” and denies automated staleness detection.
+- `gate init --prompts` currently prints “no reconciliation and no sync.”
+- `practices/NEXT_STEPS.md` says nothing detects staleness.
+- The `prompts.ts` module comment denies reconciliation.
+- CLI help enumerates `--wiring` but not `--prompts`.
+- `runCheck`’s usage line likewise omits `--prompts`.
 
-> “`prompts.enabled` false → exit 0 with a note”
+The target files already belong to FR-1, FR-3, and FR-5 scope, so no undeclared production edit is required.
 
-and §6 repeats an unconditional disabled exit-zero criterion.
+## Full-Document Consistency Sweep
 
-A valid config can retain `prompts.exceptions` while switching `enabled` to `false`. The document does not decide whether:
+Every live section in the PRD was checked against the post-narrowing contract.
 
-- exceptions become dormant and their runtime expiry/staleness checks are skipped;
-- non-empty exceptions are invalid while disabled; or
-- exception failures take precedence over the disabled exit-zero rule.
+- **§1:** Describes the detection problem without restoring a receipt, sync, overwrite, or repair mechanism.
+- **§2:** Measures planned-path divergences only; unplanned files are explicitly recorded as no-finding limits.
+- **§3:** Promises no overwrite, visible reporting, and manual rebase—not automatic survival through upgrade.
+- **§4:** Reads exactly `generatedPaths()`, defines five total planned-path classes, fails closed on non-ENOENT reads, performs no directory listing, and keeps exception evaluation separate from disabled config validation.
+- **§5:** Places orphan/content discovery outside scope and hands its former operational questions to a future item.
+- **§6:** Pins removed-adapter, renamed-tree, unplanned-file, and disabled-file invisibility to their exact scenarios. It does not promise discovery outside the planned set.
+- **§7:** Keeps every deletion human-owned, makes existing-adopter pack wiring executable, updates `templates.prd` during the backslash migration, derives the generated delete set from `renderAdapters()`, and gives forward and downgrade ordering.
+- **§8:** Contains every implementation file required by the FRs, including the exact pack manifest.
+- **§9:** Has no unresolved questions.
+- **§10:** References the state model and narrowing rationale without introducing an alternative mechanism.
+- **Memory Inputs:** Each declared disposition matches the record’s actual lesson. In particular, the path domain comes from `generatedPaths()`, calendar expiry is identified as PRD-owned, extraction strictness is treated as a behavior change, and production-shaped fixtures are required.
+- **Memory Outputs and Durable Artifacts:** Consistently say no stored hash and no receipt; banner version supplies attribution only.
+- **Conflict Surface:** Covers the config, run, CLI, pack, CI, test, ledger, changeset, and durable-learning edits. Root `package.json` remains correctly excluded as shared append-only.
+- **§11:** Maps every FR to runnable checks and binds classification, limits, read errors, disabled exceptions, production prose, pack delivery, CI ordering, and both migration scenarios.
+- **§12:** Preserves zero runtime dependencies, no push/network path, no adopter-file deletion, no comparison reimplementation, and no behavior change for configurations omitting `prompts`.
 
-An implementing agent must choose. The fixture matrix has no disabled-plus-exception case. This is a live FR-2/FR-3 contradiction, so Clarity remains capped at 7.0.
-
-### 5. New code defect: shipped surfaces still deny reconciliation exists
-
-The PRD targets all affected files but never requires their existing statements to change.
-
-`storeReadme()` emits a planned `README.md` containing:
-
-> “There is no upgrade path, no reconciliation”
-
-and:
-
-> “Automated staleness detection is deliberately not part of this version.”
-
-`gate init --prompts` prints:
-
-> “There is no upgrade path, no reconciliation and no sync in this version.”
-
-The packed `practices/NEXT_STEPS.md` similarly says:
-
-> “There is no upgrade path, no reconciliation … nothing detects that it is stale”
-
-These become false when PRD-034 lands. Because `renderPrompts()` always adds the generated README to the planned set, a fresh post-034 install would ship documentation saying the new command does not exist. The module-level comment in `prompts.ts` repeats the same obsolete rule.
-
-The implementation could satisfy every current FR and test while leaving all these contradictions intact. The correct replacement should preserve the true boundary—one-way additive installation, no automated repair or sync—while naming the new read-only reconciliation check.
-
-The CLI help and its no-argument usage text also enumerate `--wiring` but not the new `--prompts` command surface, with no test requiring discoverability.
-
-### 6. New edge ambiguity: planned-path read failures
-
-FR-1 promises a total five-class result for every planned path and then says no filesystem contract is needed. A planned destination that exists but is unreadable, is a directory, or is a symlink whose target cannot be read is neither `missing` nor byte-comparable.
-
-The orphan-walk filesystem questions are correctly out of scope, but planned-file reads still need a narrow rule: distinguish `ENOENT` from other read failures, name the affected planned path, fail closed, and decide whether reconciliation follows a leaf symlink outside the workspace. The current matrix covers absence but not these reachable read failures.
-
-## Full-Document Sweep
-
-Every live sentence in §§1–12, Memory Inputs, Memory Outputs, Conflict Surface, and Durable Artifacts was checked.
-
-No live statement:
-
-- defines or implies a directory walk or scan root;
-- restores an `orphaned` classification;
-- promises discovery of an unplanned file;
-- claims the backslash migration population is empty; or
-- gives the renamed-away tree or removed adapter file a finding.
-
-Remaining references to walks, searches, orphan discovery, or unplanned files are explicit denials, recorded limits, future-item boundaries, or explanations of the owner’s narrowing. Dated changelog rows retain historical designs and are exempt.
-
-The principal §2/§4/§6/§7/§11 planned-set contract is consistent:
-
-- §2 measures planned paths and records unplanned files as no-finding limits.
-- §4 reads exactly `generatedPaths()` and has five total byte-based classes.
-- §6 pins removed-adapter, renamed-tree, and unplanned-file invisibility.
-- §7’s migration performs human deletion and additive reinstall without granting write authority to reconciliation.
-- §11 tests planned classification and all three limit pins.
-
-The disabled-exception precedence issue is the remaining internal contradiction.
+No live normative statement restores an `orphaned` class, directory walk, scan root, or discovery promise. Walk/search references are denials, recorded state-model capabilities that this check does not exercise, or future-item/history context. No live statement retains the rejected empty-blast-radius claim: the measurable form consistently distinguishes accepted repository/default/fixture configurations from unknowable external adoption.
 
 ## Derivation Fidelity
 
-The Revision 2 boundaries remain intact:
+Revision 2’s load-bearing boundaries remain intact:
 
-- **T3 no-write:** the primitive returns typed findings and “writes nothing”; exceptions suppress only `modified` and never authorize a write.
-- **T7 no-receipt:** expected bytes come from the installed package and current config; Memory Outputs and Durable Artifacts consistently say “no stored hash and no receipt.”
-- **Constraint 1:** installation remains additive-only; existing files are skipped.
-- **Constraint 2:** every deletion is an adopter action. The command prints the reinstall remedy but performs neither deletion nor reinstall.
-- **Limit 4:** a removed adapter file produces no finding.
-- **Limit 5:** a renamed-away tree produces no finding.
-- **Limit 6:** an unplanned bannered, unbannered, or stripped file produces no finding.
-- **T5 through the planned set:** current Claude/Cursor adapters still report divergence because their bytes embed the old store path.
-
-The stale shipped “no reconciliation” messages contradict the new capability, but they do not relax the model’s no-write or no-receipt boundaries.
+- **T3 no-write:** `reconcilePrompts` returns typed findings and writes nothing. Exceptions suppress only an exact `modified` finding and never grant write authority.
+- **T7 no-receipt:** Expected bytes are recomputed from the installed package and current config. Memory Outputs and Durable Artifacts consistently say no stored hash and no receipt.
+- **Constraint 1:** Installation remains additive-only; existing files are skipped.
+- **Constraint 2:** The check performs no deletion or reinstall. Every removal is an adopter action.
+- **Limit 4:** A removed adapter’s surviving file produces no finding.
+- **Limit 5:** A renamed-away tree produces no finding.
+- **Limit 6:** Unplanned bannered, unbannered, or stripped files produce no finding.
+- **T5 through the planned set:** Currently planned Claude/Cursor adapters still report divergence because their bytes embed the old store path.
+- **Revision 2 attribution split:** Both deliberately unbannered paths remain byte-comparable while losing only stale-versus-modified attribution.
 
 ## Code Verification
 
 Read-only inspection confirmed:
 
-- `renderPrompts()` copies `PLACEHOLDERS.md` verbatim and unbannered, while the Codex snippet is also unbannered.
-- `generatedPaths()` contains the rendered store and only currently configured adapters.
-- All default Claude, Cursor, and Codex adapter outputs embed `prompts.dir`.
-- Current validation accepts an internal relative backslash; the PRD’s new load-time rejection is therefore a real behavior change.
-- `promptsConfigBlock()` derives `templates.prd` from the store directory, and `createPrd()` consumes that pointer.
-- `PACK_MAP`, the exact pack manifest, both workflow bundles, and the drift ledger require the FR-5 edits named by the PRD.
-- The hygiene job currently lacks a build before `verify:workflow`; FR-4’s ordered build remains necessary.
-- The existing generated README, init output, packed next-steps document, module comment, and CLI usage text all require a consistency update that the PRD does not presently mandate.
+- `renderPrompts()` copies `prompts/PLACEHOLDERS.md` verbatim and unbannered.
+- The Codex snippet is also unbannered.
+- `generatedPaths()` contains rendered store members and only currently configured adapters.
+- Claude, Cursor, and Codex adapter content embeds `prompts.dir`.
+- Current validation accepts an internal relative backslash, so FR-2’s rejection is a real compatibility change.
+- Structural and semantic config validation already have distinct stages suitable for the new exception rules.
+- `promptsConfigBlock()` derives `templates.prd` from `prompts.dir`, and `createPrd()` consumes that pointer.
+- `PACK_MAP`, both workflow bundles, the exact pack manifest, and the drift ledger require the named FR-5 changes.
+- The hygiene job currently runs `verify:workflow` without building, so FR-4’s build-before-aggregate requirement is necessary.
+- The six PRD-029-era production surfaces exist with the stale wording or missing command discoverability described by FR-3.
+- The worktree remained clean after the failed command-level lint attempt.
 
 ## Hard Caps and Clarity Gate
 
-No readiness hard cap is triggered:
+No hard cap is triggered:
 
 - no runtime dependency is added to `packages/provegate`;
-- no network or remote-push path is introduced;
-- no command gains overwrite or deletion authority;
-- no receipt or stored hash is introduced;
-- method-content files are not changed;
-- the lint command failure is the documented sandbox `EPERM`, and the read-only lint is green.
+- no network, telemetry, or remote-push path is introduced;
+- no protected endpoint or client/server payload is involved;
+- no method-content file is changed;
+- no command gains overwrite, deletion, or receipt authority;
+- the command-level lint failure has the documented sandbox waiver, and the equivalent lint is green.
 
-Clarity is capped at 7.0 because FR-2 and FR-3 give incompatible outcomes for a disabled configuration retaining exceptions.
+The Clarity cap does not apply. Every FR has concrete targets, every FR maps to a runnable §11 command, the DO NOT section is present, Open Questions is empty, and no undecided marker remains.
 
 ## Scorecard
 
 | Dimension | Weight | Score | Weighted |
 | --- | ---: | ---: | ---: |
-| Clarity | 15% | 7.0 | 1.05 |
-| Completeness | 20% | 7.0 | 1.40 |
-| Technical Depth | 20% | 8.0 | 1.60 |
+| Clarity | 15% | 8.0 | 1.20 |
+| Completeness | 20% | 8.25 | 1.65 |
+| Technical Depth | 20% | 8.25 | 1.65 |
 | MT&S — repository critical rules | 10% | 9.5 | 0.95 |
-| Scope & Testability | 15% | 7.0 | 1.05 |
+| Scope & Testability | 15% | 8.0 | 1.20 |
 | Migration & Rollback | 20% | 8.5 | 1.70 |
-| **Total** | **100%** |  | **7.75 → 7.8** |
+| **Total** | **100%** |  | **8.35 → 8.4** |
 
-## Missing Pieces
+## Missing Pieces / Watch Items
 
-1. Decide disabled-exception precedence. Align FR-2, FR-3, §6, and the fixture matrix on whether valid, expired, and stale exception entries are ignored, refused, or evaluated while `prompts.enabled` is false.
+No blocking missing pieces.
 
-2. Require a reconciliation-restatement sweep across the existing production surfaces already in scope: `storeReadme()` output, `gate init --prompts` output, `practices/NEXT_STEPS.md`, the `prompts.ts` module comment, CLI help, and `runCheck` usage. Preserve “one-way/no automated repair or sync” while removing the false “no reconciliation/nothing detects staleness” claim, with production-surface tests.
+1. **Canonical containment through symlinked parents.** FR-1 explicitly covers a leaf symlink. During task generation, interpret “canonical containment” over the realpath of every existing planned destination so a non-symlink leaf beneath a symlinked parent cannot escape. The repository’s existing containment helpers document this exact distinction; add a parent-symlink escape fixture alongside the leaf-symlink fixture.
 
-3. Define planned-path read-error behavior independently of orphan discovery: `ENOENT` maps to `missing`; other I/O/type failures fail closed and name the path; explicitly decide leaf-symlink containment. Add focused fixtures that do not reintroduce a directory walk.
+2. **Adjacent CI comment.** When the hygiene job gains a build, update the existing `.github/workflows/ci.yml` comment claiming that the other job is the “ONLY” built-CLI surface because hygiene “never builds.” The behavioral requirement is unambiguous, but leaving that comment would create another stale restatement.
+
+3. **Production-prose audit breadth.** Automated assertions are required for the rendered README and help output, while four other named surfaces are governed by explicit implementation prose. Phase 6 should inspect all six so the untested init output, `NEXT_STEPS.md`, module comment, and `runCheck` usage line do not retain a survivor.
+
+4. **Historical wording precision.** The newest changelog row says §6 and §11 restate all three iteration-8 seams. The read-error rule is owned by FR-1 and fixture-bound in §11, but it has no dedicated §6 criterion. This does not make implementation ambiguous, but future edits should avoid treating the historical summary as an additional normative source.
 
 ## Iteration History
 
@@ -215,20 +182,25 @@ Clarity is capped at 7.0 because FR-2 and FR-3 give incompatible outcomes for a 
 | 2026-07-28 | 6 | 7.6 | ITERATE |
 | 2026-07-28 | 7 | 7.7 | ITERATE |
 | 2026-07-28 | 8 | 7.8 | ITERATE |
+| 2026-07-28 | 9 | 8.4 | PASS |
 
 ## Verdict
 
-ITERATE. The eighth pass genuinely closes all three iteration-7 residues: the planned-set wording is consistent, the blast-radius claim is measurable, and the backslash migration now updates and exercises `templates.prd`. The document still permits an implementation that chooses contradictory disabled-exception semantics and ships multiple production surfaces falsely stating that reconciliation and staleness detection do not exist. Planned-path read failures are also outside the supposedly total classification. Those remaining points would mislead an implementing agent or adopter and must be specified before PASS.
+PASS. Disabled-exception precedence is decided across load and run behavior; planned-path read failures now fail closed without restoring discovery; and every stale shipped reconciliation statement is explicitly in scope with production-surface verification. The planned-set-only contract is consistent across §2, §4, §6, §7, and §11, and Revision 2’s T3, T7, constraints 1–2, limits 4–6, and T5 adapter signal remain intact.
+
+The remaining points are bounded implementation/audit watch items. None requires a product or architectural decision, contradicts the normative behavior, trips a hard cap, or would prevent an implementing agent from proceeding autonomously.
+```
+
 
 ---
 
-
----
-
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 8 transcribed
-> verbatim from a fresh independent Codex session. 7.7 → 7.8; the seven prior pieces
-> held, three new legitimate seams: disabled-exception precedence undecided, the
-> PRD-029-era production surfaces still claim "nothing detects staleness" (which this
-> PRD falsifies — `a-rule-corrected-survives-where-it-is-restated` on shipped prose),
-> and planned-path read-error behavior needed its own contract now that the walk is
-> gone. Lint EPERM is the documented sandbox artifact; out-of-sandbox green same day.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 9 transcribed
+> verbatim from the eighth fresh independent Codex session of this PRD's cycle. PASS
+> 8.4 — all three iteration-8 seams closed, the planned-set-only design judged
+> internally consistent, faithful to Revision 2, and executable without an unresolved
+> design decision; four PASS-band watch items bind Phases 3/4/6 (parent-symlink
+> containment interpretation + fixture, the stale CI comment, the six-surface prose
+> audit at Phase 6, and the changelog-not-normative caution). Nine iterations end to
+> end: 5.1 → 7.3 → 7.4 → 7.6 → 7.5 → 7.6 → 7.7 → 7.8 → 8.4, with the owner's
+> iteration-5 narrowing as the turning point. Lint EPERM is the documented sandbox
+> artifact; out-of-sandbox green the same day.
