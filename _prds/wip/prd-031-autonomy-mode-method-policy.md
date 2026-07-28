@@ -444,6 +444,14 @@ ceremonial answer this contract exists to prevent.
 
 Required in a memory-enabled repository, alongside Memory Outputs below.
 
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this PRD
+  file, which the closing diff edits (changelog and close-time dispositions). The
+  record's action was already taken in this item's own history: iteration 1's decisive
+  finding WAS a scope error (the impossible text-only boundary) and the rework admitted
+  the corpus-test layer instead of clause-patching around it.
+- reviewed: `state-model-before-mechanism` — same watch trigger, same file; this diff
+  carries close bookkeeping, not a re-sampled mechanism, and the item's readiness
+  trajectory (5.78 → 7.40 → 8.88) rose monotonically rather than oscillating in-band.
 - applied: `docs-are-a-wiring-surface` — its watch covers `practices/**`, and FR-5 edits
   the shipped bootstrap template, which is exactly this record's surface: a document that
   becomes an adopter's operating rules. The record's discipline is applied — the added
