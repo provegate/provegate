@@ -135,6 +135,13 @@ set.
      Per Revision 2: detection still works for the unattributable arm — the fresh
      render is the expected content (`PLACEHOLDERS.md`'s is its packaged source,
      verbatim) — only the stale-versus-modified split is lost;
+   **Read-error contract (iteration 8), stated without reintroducing any walk:** a
+   planned path whose read fails with `ENOENT` is `missing`; any other read failure
+   (permission, a directory where a file was planned, an I/O error) fails the run
+   closed, naming the path and the error — never skipped into a class; and a planned
+   path that is a symlink is read only if its realpath stays inside the repository's
+   canonical containment, else it fails closed naming the escape — one rule per leaf,
+   no directory ever listed.
    **And nothing else: this check reads no directory it did not plan** (narrowed by
    owner decision after iteration 5 — three consecutive rounds landed every finding
    in the orphan-walk layer, which `scope-out-the-layer-the-rounds-keep-hitting`
@@ -192,6 +199,14 @@ set.
    need denied) and
    `strictness-added-during-extraction-is-a-behavior-change` moves to `applied` for
    exactly this clause.
+   **Disabled precedence, decided (iteration 8):** structural and semantic validity
+   of `prompts.exceptions[]` is enforced at every config load — a malformed entry
+   fails the load whether or not prompts is enabled, because config validity is not
+   feature-scoped. Entry EVALUATION (expiry, stale-entry-versus-findings) happens only
+   when the check runs enabled: with `prompts.enabled` false there are no findings to
+   suppress and no run to fail, so valid, expired and would-be-stale entries alike are
+   inert — present, validated, unevaluated — and the FR-3 disabled note does not
+   mention them. §6 and the fixture matrix state this same rule.
    A valid, unexpired entry suppresses the `modified` finding for its exact path and
    reports `excepted (expires <date>)`. It suppresses **nothing else**: `stale`,
    `missing` and `unattributable` are never exceptable — an unattributable
@@ -222,6 +237,17 @@ set.
    and a silent pass must not imply nothing is discoverable; enabled with the store directory absent →
    non-zero naming the directory (`false-green-on-missing-file`; T6: absence under an
    enabled config is a finding, not not-configured).
+   **Restatement sweep over the shipped surfaces this PRD already targets
+   (iteration 8):** the PRD-029-era prose claims "no reconciliation exists / nothing
+   detects staleness" in `storeReadme()`'s rendered README, the `gate init --prompts`
+   printed output, `practices/NEXT_STEPS.md`, the `prompts.ts` module comment, the CLI
+   help text and the `runCheck` usage line. This PRD makes those claims false, and
+   `a-rule-corrected-survives-where-it-is-restated` applies to shipped prose exactly
+   as to rules: every one of those sentences is updated to name `gate check
+   --prompts` as the detector while preserving the true halves — the install stays
+   one-way, and nothing repairs or syncs automatically. Production-surface tests
+   assert the shipped texts: the rendered README and the help output must mention the
+   check, and must not claim nothing detects staleness.
    - **Targets:** `packages/provegate/src/cli.ts`
 4. **FR-4**: Wiring, layer one — this repository. `scripts/verify/verify-prompts.mjs`
    invokes the built CLI (`node packages/provegate/dist/cli.js check --prompts`);
@@ -366,6 +392,14 @@ set.
 - **Given** an entry naming a path that is not `modified`, a duplicate path, a
   malformed date, or a non-normalized path, **When** the config loads or the check
   runs, **Then** the failure names the entry and the exact rule it broke.
+- **Given** `prompts.enabled` false with `prompts.exceptions[]` present, **When** the
+  config loads and the check runs, **Then** a malformed entry still fails the load,
+  while valid, expired and would-be-stale entries are inert — validated, unevaluated,
+  unmentioned by the note (the disabled-precedence rule).
+- **Given** the rendered store README and the CLI help after this PRD, **When** read,
+  **Then** each names `gate check --prompts` as the staleness detector and neither
+  claims nothing detects it — while still stating the install is one-way and nothing
+  repairs automatically.
 - **Given** `prompts.enabled` false, **When** the check runs, **Then** it exits 0 with
   a note naming what was not exercised — the planned-set reconciliation — and
   carrying the T6 consequences; never a bare silence. (Any generated files left on
@@ -634,7 +668,7 @@ Phase 5 unable to report which requirement failed.
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | total five-class arm over planned paths only; the same-version values-change case; the three limit pins (T4 removed-adapter, T5 rename, stripped-unplanned) |
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export`       | pkg   | `reconcilePrompts` and `evaluatePromptReconciliation` import from the package root         |
 | FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expiry-boundary / duplicate / malformed date / non-normalized path / stale entry / backslash-dir load refusal; suppression scoped to `modified` only |
-| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised planned-set reconciliation + T6 consequences verbatim, enabled-but-absent failure, T2 remedy text |
+| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised planned-set reconciliation + T6 consequences verbatim, enabled-but-absent failure, T2 remedy text, disabled-exception inertness, restatement-sweep surface assertions (README + help), read-error contract fixtures |
 | FR-4 | `pnpm verify:prompts`                                                             | repo  | dormant note + exit 0 here until PRD-032 enables; executes the built CLI                   |
 | FR-4 | `pnpm verify:workflow`                                                            | repo  | the bundle executes the new member; wire-or-delete sees the surface                        |
 | FR-4 | `pnpm verify:prompts -- --assert-ci-order`                                        | repo  | the script's second mode reads `ci.yml` and exits non-zero unless the provegate build step precedes the aggregate — the order is asserted by an allowlisted command, not by prose |
@@ -675,6 +709,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (non-scorer), ninth pass | **Iteration-8 seams applied (7.8; the seven prior pieces held).** Disabled-exception precedence DECIDED: structural/semantic validity enforced at every config load (config validity is not feature-scoped), evaluation only on an enabled run — disabled entries are present, validated, unevaluated, unmentioned. The read-error contract stated without any walk: ENOENT→missing, every other read failure fails closed naming path and error, leaf symlinks read only inside canonical containment. And the restatement sweep the scorer demanded: the PRD-029-era "nothing detects staleness" prose in storeReadme, init output, NEXT_STEPS, the module comment, CLI help and runCheck usage is updated to name `gate check --prompts` while preserving the true one-way/no-auto-repair halves, held by production-surface tests over the rendered README and help output. §6 and §11 restate all three. |
 | 2026-07-28 | orchestrating session (non-scorer), eighth pass | **Iteration-7 residues applied (7.7).** The §6 disabled-case pin scoped to its configuration; §11's FR-3 row says exactly what the note says; FR-1's surviving "empty backslash-dir set" replaced by the measurable form. The real catch landed: the backslash migration's step 2 now updates `templates.prd` in the same config edit (the model's T6 consequence applied to the rename), and the migration fixture exercises the production template resolver against the moved template, not just a clean reconcile. |
 | 2026-07-28 | orchestrating session (non-scorer), seventh pass | **Iteration-6 sweep pieces applied (7.6 — the narrowing accepted; findings moved from design to sweep completeness).** Five stale walk-era sentences replaced in live sections (§2 metric now planned-path-scoped with limits named; §4's derivation header; §6's walked-domain, bannered-orphan-search and disabled-tail wordings; §11's FR-3 note alignment). The backslash migration's delete set is now derived from `renderAdapters()` rather than remembered wrongly as "two adapters" — every claude phase file, the cursor rule and the codex snippet embed the dir — with a §11-mapped fixture proving the changeset text and a clean post-migration reconcile. Every empty-blast-radius phrase replaced by the measurable form: no known accepted config uses an internal backslash; external adopter usage is unknowable; the procedure is stated rather than the need denied. |
 | 2026-07-28 | owner decision + orchestrating session, sixth pass | **Narrowed radically after iteration 5 (7.5; trajectory flat at 7.4/7.6/7.5 with every round in the walk layer — the owner chose option (a) per `scope-out-the-layer-the-rounds-keep-hitting` and the PRD-025 precedent).** Orphan/content discovery is CUT: the primitive reads exactly the planned paths (one readFileSync per `generatedPaths()` member — no listing, no walk, no filesystem contract), the `orphaned` class is gone, and the model's limits 4-6 are pinned as fixtures asserting NO finding (T4 removed-adapter file, T5 renamed-away tree, unplanned stripped/bannered files). T5's adapter-staleness signal survives through the planned set. The two small iteration-5 pieces landed with it: the backslash-dir migration gains its executable three-step order in §7 and the changeset (git mv on POSIX, config edit, delete + re-init the two adapters whose content embeds the old spelling; blast-radius claims scoped to measurable configs), and User Story 2 narrows to the actual guarantee (never overwritten, reported on upgrade, rebased by hand). A future discovery item inherits the walk-contract questions with iterations 2-5 as design input (§5). |
