@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T06:19:00.245Z",
+  "generatedAt": "2026-07-28T06:25:14.662Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1233,6 +1233,43 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-035",
+      "number": 35,
+      "slug": "adr-section-anchor",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "eligible",
+      "artifacts": {
+        "prd": "_prds/wip/prd-035-adr-section-anchor.md",
         "readiness": "",
         "tasks": "",
         "summary": ""
