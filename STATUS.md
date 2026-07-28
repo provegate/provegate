@@ -11,6 +11,8 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent | Work item | Phase | Started |
 | ----- | --------- | ----- | ------- |
+| Claude Fable 5 (Claude Code) | PRD-024 — implementation on owner Go (worktree `feat/prd-024-readiness-lint-parsers`, lease held) | 4 (Implement) | 2026-07-28 |
+| Claude Fable 5 (this session) | PRD-025 — phases 4-7 on owner Go (worktree per task 0.3) | 4 (Implement) | 2026-07-28 |
 
 ## Current state
 
