@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-033-acceptance-authorship-provenance.md](../../_prds/wip/prd-033-acceptance-authorship-provenance.md)
 > **Readiness**: [readiness-033-acceptance-authorship-provenance.md](../../_readiness/wip/readiness-033-acceptance-authorship-provenance.md)
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 > **Readiness Score**: 8.25/10
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -171,7 +171,7 @@ a record is evidence only while it is true.
         prohibition. Package files only — the repo-root sites belong to 4.0.
   - [x] 3.14 Confirm `push-is-human-by-omission`, `gate push` and the runner are
         untouched, and that no edit in this parent reads as precedent for the push rule.
-  - [ ] 3.15 **Operator-owned** — owner reads the four amended prose sites and ADR-0003
+  - [x] 3.15 **Operator-owned** — owner reads the four amended prose sites and ADR-0003
         and confirms the landed rule is the one they decided. See **Operator Handoff**.
         Leave unchecked; the agent cannot complete it.
 

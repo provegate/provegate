@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T06:05:25.095Z",
+  "generatedAt": "2026-07-28T06:11:55.295Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1190,21 +1190,21 @@
       "prd": "PRD-033",
       "number": 33,
       "slug": "acceptance-authorship-provenance",
-      "status": "Operator Verification",
+      "status": "Ship Verified",
       "cyclePhase": "7 (Learning)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-033-acceptance-authorship-provenance.md",
-        "readiness": "_readiness/wip/readiness-033-acceptance-authorship-provenance.md",
-        "tasks": "_tasks/wip/tasks-033-acceptance-authorship-provenance.md",
-        "summary": "_docs/wip/summary-033-acceptance-authorship-provenance.md"
+        "prd": "_prds/completed/prd-033-acceptance-authorship-provenance.md",
+        "readiness": "_readiness/completed/readiness-033-acceptance-authorship-provenance.md",
+        "tasks": "_tasks/completed/tasks-033-acceptance-authorship-provenance.md",
+        "summary": "_docs/completed/summary-033-acceptance-authorship-provenance.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.25,
@@ -1213,9 +1213,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Operator Verification",
-        "checkedCount": 66,
-        "uncheckedCount": 2,
+        "status": "Ship Verified",
+        "checkedCount": 67,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 1
       },
       "summary": {

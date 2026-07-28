@@ -1,6 +1,6 @@
 # PRD-033: Acceptance Authorship Provenance
 
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-27
