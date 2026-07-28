@@ -243,23 +243,23 @@ a record is evidence only while it is true.
 
 | Gate               | Command / Check                                              | Scope | Result  | Evidence | Notes                                                     |
 | ------------------ | ------------------------------------------------------------ | ----- | ------- | -------- | ----------------------------------------------------------- |
-| FR-1               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | PASS    | run 2026-07-28 | schema required list + exactly two enum values            |
-| FR-2               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | PASS    | run 2026-07-28 | missing and out-of-enum refused by index, both values named |
-| FR-2               | `pnpm check-types`                                           | repo  | PASS    | run 2026-07-28 | authorship is a union of two literals, not a string       |
-| FR-3               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | PASS    | run 2026-07-28 | mapping over the fixture; no method string changes        |
-| FR-4               | `pnpm --filter provegate test test/content-canon.test.ts`    | pkg   | PASS    | run 2026-07-28 | the two shipped sites carry the new rule                  |
-| FR-5               | `pnpm verify:acceptance-rule`                                | repo  | PASS    | run 2026-07-28 | cache-free: absence, five sites by path, 16 store entries      |
-| FR-5               | `pnpm verify:gates-wired`                                    | repo  | PASS    | run 2026-07-28 | registered on every wiring surface                        |
-| FR-6               | `pnpm verify:pack-drift`                                     | repo  | PASS    | run 2026-07-28 | record and twin reconcile, hash pair updated              |
-| FR-6               | `pnpm verify:brain`                                          | repo  | PASS    | run 2026-07-28 | both INDEX hooks resolve; amended record parses           |
-| FR-7               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | PASS    | run 2026-07-28 | waived reason names owner and authorship, both paths      |
-| FR-8               | `pnpm verify:brain`                                          | repo  | PASS    | run 2026-07-28 | ADR-0003 parses with non-empty sections and is indexed    |
-| types              | `pnpm check-types`                                           | repo  | PASS    | run 2026-07-28 | floor                                                     |
-| lint               | `pnpm lint`                                                  | repo  | PASS    | run 2026-07-28 | floor                                                     |
-| test               | `pnpm test`                                                  | repo  | PASS    | run 2026-07-28 | floor — added tests pass, existing unchanged              |
-| build              | `pnpm build`                                                 | repo  | PASS    | run 2026-07-28 | floor                                                     |
-| rollback (W1)      | revert the combined commit in a scratch worktree, validate   | repo  | PASS    | full revert: 10/10 tests green, store consistent. Partial revert (code only) refused: `acceptances[0]: unexpected field "authorship" in the acceptance entry`, entry null | task 5.2 — exercised, not asserted; §7 predicted both |
-| independent-review | `_docs/reviews/review-033-acceptance-authorship-provenance.md` | repo  | PASS    | run 2026-07-28 | verdict pass, critical = 0                                |
+| FR-1               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | passed  | 22 passed | schema required list + exactly two enum values            |
+| FR-2               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | passed  | 22 passed | missing and out-of-enum refused by index, both values named |
+| FR-2               | `pnpm check-types`                                           | repo  | passed  | 5 tasks, 0 errors | authorship is a union of two literals, not a string       |
+| FR-3               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | passed  | 22 passed | mapping over the fixture; no method string changes        |
+| FR-4               | `pnpm --filter provegate test test/content-canon.test.ts`    | pkg   | passed  | 12 passed | the two shipped sites carry the new rule                  |
+| FR-5               | `pnpm verify:acceptance-rule`                                | repo  | passed  | 5 sites, 16 entries | cache-free: absence, five sites by path, 16 store entries      |
+| FR-5               | `pnpm verify:gates-wired`                                    | repo  | passed  | 13 registered / 12 on disk | registered on every wiring surface                        |
+| FR-6               | `pnpm verify:pack-drift`                                     | repo  | passed  | 49 pairs | record and twin reconcile, hash pair updated              |
+| FR-6               | `pnpm verify:brain`                                          | repo  | passed  | store valid | both INDEX hooks resolve; amended record parses           |
+| FR-7               | `pnpm --filter provegate test test/acceptance.test.ts`       | pkg   | passed  | 22 passed | waived reason names owner and authorship, both paths      |
+| FR-8               | `pnpm verify:brain`                                          | repo  | passed  | store valid | ADR-0003 parses with non-empty sections and is indexed    |
+| types              | `pnpm check-types`                                           | repo  | passed  | 5 tasks, 0 errors | floor                                                     |
+| lint               | `pnpm lint`                                                  | repo  | passed  | 0 warnings | floor                                                     |
+| test               | `pnpm test`                                                  | repo  | passed  | 1110 + 43 + 39 | floor — added tests pass, existing unchanged              |
+| build              | `pnpm build`                                                 | repo  | passed  | 4 tasks clean | floor                                                     |
+| rollback (W1)      | revert the combined commit in a scratch worktree, validate   | repo  | passed  | full revert: 10/10 tests green, store consistent. Partial revert (code only) refused: `acceptances[0]: unexpected field "authorship" in the acceptance entry`, entry null | task 5.2 — exercised, not asserted; §7 predicted both |
+| independent-review | `_docs/reviews/review-033-acceptance-authorship-provenance.md` | repo  | passed  | verdict pass, 0/0/0 | verdict pass, critical = 0                                |
 
 ---
 
@@ -308,4 +308,4 @@ a record is evidence only while it is true.
 
 | Task | Category | Owner | Required Check | Status | Notes |
 | ---- | -------- | ----- | -------------- | ------ | ----- |
-| 3.15 | manual-qa | owner | Read the four amended prose sites and ADR-0003, and confirm the landed rule says what the owner decided: an agent may write the acceptance store, only on explicit in-session owner direction, only with `authorship: agent-transcribed`, and `owner` still names who decided | PASS | This is a governance change to the method's own contract. The agent can verify the text is consistent across eight sites; it cannot verify the text is the rule the owner wanted |
+| 3.15 | manual-qa | owner | Read the four amended prose sites and ADR-0003, and confirm the landed rule says what the owner decided: an agent may write the acceptance store, only on explicit in-session owner direction, only with `authorship: agent-transcribed`, and `owner` still names who decided | passed | This is a governance change to the method's own contract. The agent can verify the text is consistent across eight sites; it cannot verify the text is the rule the owner wanted |
