@@ -595,7 +595,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   running the packed bundle without the CLI on PATH loses three checks — is stated, not
   denied.
 - **Porting the deferral-policy check into the package**, or reclassifying any `repo`-class
-  script. FR-8's ledger carries both as pending.
+  script. FR-8's ledger carries the three method rules — `verify-brain`,
+  `verify-deferred`, `verify-memory-record-corpus` — as pending; the repo-class scripts
+  are entries, not pending items.
 - **Replacing the whole CI job list with `gate run`.** FR-4 adds one invocation; making the
   runner the sole CI entrypoint should follow evidence that the first one is stable.
 - **Editing the source snapshot or any historical work-item artifact** to remove references
