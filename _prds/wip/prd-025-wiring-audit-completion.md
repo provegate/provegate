@@ -858,6 +858,21 @@ failure. -->
   Changelog history, which is the one place a superseded rule belongs.
 - reviewed: `fixture-must-reach-production-shape` — the wiring fixtures call `auditWiring`
   with the config and manifest its real callers pass, not hand-built arguments.
+- not-applicable: `free-text-field-is-the-unread-drift-ledger` — its watch fires because
+  the closing diff refreshes the generated `_state/prds.json`; this PRD adds no
+  documentation-only rule and no free-text field, and the state change is the builder
+  recording scores and statuses. (Appended at close, when the watch fired on the merge
+  diff.)
+- reviewed: `state-model-before-mechanism` — its watch fires on this PRD's own file in
+  the closing diff (status-header advances). Its subject — a flat trajectory means cut
+  scope or write the state model — is what produced the 2026-07-28 narrowing, and that
+  application is already carried by `scope-out-the-layer-the-rounds-keep-hitting` above.
+  (Appended at close.)
+- applied: `surface-set-without-its-predicate` — this PRD's own declared Memory Output,
+  whose watch covers `gates/wiring.ts` and therefore fires on the very diff that creates
+  it. Applied by construction: the two halves it names are FR-1/FR-3's surfaces and
+  predicate, and the deny/control pairing it prescribes ships here. (Appended at close —
+  a record born in a diff watches that diff, which is the contract working, not drift.)
 
 ---
 
