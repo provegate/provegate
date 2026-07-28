@@ -1,13 +1,13 @@
 # PRD-035: ADR Section Anchor — the Formatter Must Not Break Every ADR
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-28
 > **Updated**: 2026-07-28
 > **Author**: owner
 > **Audience**: Implementing Agent
 > **Slug**: `adr-section-anchor`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Closed)
 > **PRD Class**: hotfix
 > **Class Rationale**: a reproduced defect in shipped code with a bounded blast radius — one regex anchor in three copies, one corpus case, and one repository corpus runner that makes the third copy's conformance executable. Not `feature` (no capability), not `test-hardening` (`core/memory/parse.ts` is production code).
 > **Value**: 3.65 (MF/UI/TL/AR/RM: 4/4/3/3/4)
@@ -65,19 +65,29 @@ Converted to a work item on 2026-07-28 under the deferral cap rule.
 
 1. Make the section capture end at end-of-input rather than end-of-line.
 2. Make all three implementations agree **and be right, under execution** — the
-   package corpus test runs the typed parser and the shipped copy and proves only
-   agreement; the repository copy is never run against the corpus at all today.
-3. Make `pnpm format` safe to run on `_brain/adr/**`.
+   package corpus asserts each case's expected verdict, but no case exercises the
+   formatter's blank-line shape, and the repository copy is never run against the
+   corpus at all today.
+3. Make prettier's **body** formatting legal: a blank line after every heading no
+   longer reads as an empty section. *(Narrowed in Phase 6 round 1 from "make
+   `pnpm format` safe on `_brain/adr/**`": the reviewer measured that prettier
+   ALSO reflows a long frontmatter inline list into a block form the documented
+   subset rejects, so a full format sweep remains unsafe for a reason outside
+   this anchor. The FR-5 runner pins that limitation as an executing assertion;
+   the retired learning carries the live warning.)*
 
 ### Success Metrics
 
 - A record with a blank line after every section heading validates in all three
   implementations, each under execution: the package corpus test runs the typed
   parser and the shipped copy; the FR-5 runner runs the repository copy.
-- The formatter smoke in the FR-5 runner proves prettier's output legal: a valid
-  record formatted by the repository's own prettier still validates, with every
-  section body captured non-empty. (Sweeping the live store with `pnpm format`
-  stays a separate call — §5.)
+- The formatter smoke in the FR-5 runner proves prettier's **body** output legal:
+  a valid record formatted by the repository's own prettier still validates, with
+  every section body captured non-empty — and its second smoke pins the known
+  frontmatter limitation: prettier's reflow of a long `links` inline list is
+  REFUSED by the subset, asserted as current behavior so a future change retires
+  the pin consciously. (Sweeping the live store with `pnpm format` stays a
+  separate call — §5 — and stays unsafe while the pin stands.)
 - Mutation: restoring the `$` anchor in `parse.ts` or the shipped copy fails the
   new corpus case in the package test; restoring it in `scripts/verify/lib.mjs`
   fails the FR-5 runner. Each failure has the anchor as its cause, not a missing
@@ -95,9 +105,10 @@ bisection that a blank line is illegal.
 
 #### User Story 2
 
-**As** a maintainer of this repository, **I want** to run `pnpm format` without
-inspecting every ADR afterwards, **so that** formatting stops being a manual
-review step.
+**As** a maintainer of this repository, **I want** the validator to stop rejecting
+prettier-shaped section bodies, **so that** the formatter and the governance gate
+stop disagreeing about a blank line — knowing the frontmatter reflow limitation
+remains recorded and pinned until its own fix.
 
 ---
 
@@ -116,9 +127,10 @@ review step.
    typed parser and the shipped practices copy; its own header records that the
    repository copy is reconciled through `verify:pack-drift`, not run. One case
    therefore binds those two directly and the third through FR-5's runner — and
-   it must assert correctness rather than agreement, which is what the present
-   78 cases could not do here: the executed implementations agreed, and all
-   were wrong.
+   its contribution is **coverage**: the existing 78 cases already assert
+   expected verdicts, but none exercised the formatter's blank-line shape, so
+   the assertion never ran against this defect while all three copies shared the
+   same wrong anchor.
    - **Targets:** `packages/provegate/test/fixtures/memory-record-cases.json`,
      `packages/provegate/test/memory.test.ts`
 3. **FR-3**: The three copies stay reconciled, and **both** affected ledger pairs
@@ -156,7 +168,10 @@ review step.
    keys, and this runner does not conflate the two. It then runs the formatter
    smoke: the FR-2 case's content is formatted with the repository's own
    prettier (markdown parser) and re-validated — the result must stay valid with
-   every section body captured non-empty. The runner exits non-zero, naming the
+   every section body captured non-empty — plus the pinned-limitation smoke: a
+   long `links` inline list formatted by prettier reflows into a block form the
+   subset rejects, and the runner asserts that refusal so the limitation is a
+   named executing fact (Phase 6 round 1). The runner exits non-zero, naming the
    path, on a missing or unparseable fixture — it never iterates zero cases into
    a pass. It is a root script on purpose: `provegate#test` is turbo-cached over
    package inputs, and a package test reading a repository path replays stale
@@ -229,11 +244,13 @@ the typed parser and the **shipped** practices copy; the repository's own
 proves the two copies were compared once by a human, not that the repository copy
 passes the cases — which is why FR-5 adds a runner that executes it, from the
 repository side of the turbo cache boundary. The corpus is still the right
-vehicle, and also the reason this defect survived: 78 cases proved the executed
-implementations agree, and they agreed on the wrong answer.
-`two-parsers-wrong-together` names this exactly, which is why FR-2 requires the
-case to assert a **behavioural** claim (this document is legal) rather than a
-parity claim.
+vehicle — and the reason this defect survived is a coverage hole, not a weak
+assertion: the 78 cases assert expected verdicts, but none exercised a blank
+line after a heading, and all three copies shared the same wrong anchor, so the
+typed-versus-shipped parity check had no disagreement to show.
+`two-parsers-wrong-together` names the all-wrong-together shape, which is why
+FR-2 puts the formatter's own output into the corpus as a **behavioural** claim
+(this document is legal) rather than relying on parity.
 
 **Why not `\z`.** JavaScript has no `\z`. `(?![\s\S])` is the idiomatic
 end-of-input assertion and composes inside the existing lookahead without
@@ -300,6 +317,29 @@ None.
   the other way, widening what validates. Recorded because the reverse direction
   deserves the same scrutiny: FR-1 must not make an empty section legal, which is
   the acceptance criterion about a heading following with no blank line.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers
+  this PRD file, and Phase 6 round 2 demonstrated the record live: the corrected
+  corpus history landed in the learning while goal 2, §7, FR-2, the DO NOT
+  rationale and the task file still restated the old account. The round-2 fix
+  swept every restatement, which is exactly this record's prescription.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this
+  PRD file. Two Phase 6 rounds put their findings in one layer (the formatter
+  claim), and the response was the record's: the layer was scoped out — the claim
+  narrowed to body scope, the frontmatter reflow pinned as a recorded limitation
+  owned by a future item — rather than a third wording round.
+- reviewed: `score-band-prescribes-the-action` — its watch covers this PRD's
+  readiness artifact, which the close archives. The band's action was followed
+  both times: 7.85 sat in the iterate band and was remediated then re-scored, and
+  8.20 in the proceed band went to task generation — no flat trajectory, no
+  band/action mismatch.
+- reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`.
+  Not the failure shape here: this hotfix specifies a mechanism whose ground
+  truth is written and executable (a reproduced defect, a one-token fix, a
+  corpus), and its readiness trajectory converged in two rounds.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/**`, which the close touches only through the generated
+  `_state/prds.json`, rewritten mechanically by the state builder. This PRD adds
+  no documentation-enforced rule and no free-text field beside one.
 - applied: `assert-absent-needs-an-independent-cause` — its watch covers the
   package corpus paths (`packages/provegate/test/**`) this PRD edits; the root
   runner sits outside the watch and the record is applied there voluntarily.
@@ -387,8 +427,9 @@ Hard caps (when your gates manifest configures them):
   one swallows the next body and reads as full.
 - **Do not fix one copy.** Three implementations share one contract, and a
   one-sided fix ships the defect to adopters while the repository looks green.
-- **Do not add a corpus case that only asserts the three agree.** They agree today
-  and are wrong today. The case must assert that the document IS valid.
+- **Do not add a corpus case that only asserts the three agree.** Before this fix
+  all three copies agreed on the wrong anchor, so a parity-only case had no
+  disagreement to catch. The case must assert that the document IS valid.
 - **Do not make an empty section legal.** Widening the capture must not turn a
   genuinely empty `## Context` into a pass; the acceptance criteria pin both
   directions.
@@ -413,5 +454,7 @@ Hard caps (when your gates manifest configures them):
 | Date       | Change                                                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-28 | PRD created (Phase 1). Converted from the `ADR section regex` deferral under the cap rule; defect re-reproduced first. |
+| 2026-07-28 | **Phase 6 round 2 (same independent Codex session, GATE: FAIL — one [P1] still open, one new [P1]; both closed).** [P1 still open] the round-1 pin formatted at prettier's default width 80 while `pnpm format` runs `.prettierrc.json`'s printWidth 100 and leaves the synthetic line unchanged — a false green about the very behavior it pins; rebuilt on `prettier.resolveConfig` with three assertions (source valid, bytes changed under the repo config, output refused) and a links line past the configured width. [new P1] the corrected corpus history had not been propagated: goal 2, §7, FR-2, the DO NOT rationale and the task file's Memory Context still said the 78 cases proved only agreement — all now state the coverage-hole account the learning records. |
+| 2026-07-28 | **Phase 6 round 1 (independent Codex review, GATE: FAIL — two [P1], one [P2], all closed).** [P1] the formatter smoke over-claimed: formatting a real ADR still fails validation because prettier reflows long frontmatter inline lists into a block form the subset rejects — goal 3, the metric, user story 2 and FR-5 narrowed to the body-scoped claim, and the runner gained a pinned-limitation smoke asserting the refusal on prettier's own output. [P1] the retired learning's history was wrong — the corpus asserted per-case correctness; the escape was a coverage hole plus a never-executed repository copy, and the learning now says so, keeping the format-sweep warning live. [P2] the workflow ledger note had overwritten the prior verify-pack-drift/verify-turbo-inputs rationale — restored and appended. |
 | 2026-07-28 | **Iteration 2 scored PASS 8.20** (fresh independent Codex session, zero remediation context). Its four watch-item prescriptions applied as post-PASS precision edits, quoted from the report: `pnpm verify:workflow` added as an FR-5 verification row (the direct command cannot prove CHECKS membership); FR-5's comparison contract stated as expected-validity + bare-field containment, never entry-keyed parity; FR-3 names both moved ledger pairs, the workflow pair as an intentional repository-only divergence with a ledger note; the two memory-input rationales corrected to stop claiming watch coverage the records do not declare (`assert-absent…` watches package test paths only, `false-green…` declares no watch). Verdict unchanged by these edits; owner may order a confirmation pass at Phase 3 approval. |
 | 2026-07-28 | Remediated after readiness iteration 1 (ITERATE 7.85, independent Codex scorer; remediation by the non-scorer orchestrating session). The three-implementation execution claim corrected to the measured topology — the package corpus test runs the typed parser and the shipped copy, the repository copy is hash-reconciled via `verify:pack-drift`. FR-5 added: a repository corpus runner (`verify:memory-corpus`, wired into `verify:workflow`) executes the third copy and carries the isolated prettier smoke that replaces the unsafe repo-wide `pnpm format` verification. FR-4 narrowed: no packed twin exists and none is created; `_brain/INDEX.md` added to its Targets. Migration paragraph states atomic land/revert for the added wiring. Memory inputs `false-green-on-missing-file` re-dispositioned to applied and `turbo-cache-masks-out-of-input-reads` added. |

@@ -199,7 +199,7 @@
       "items": [
         "3.15 owner confirms the landed acceptance-authorship rule is the rule they decided, across the three prose sites, the memory record and its packed twin, and ADR-0003"
       ],
-      "reason": "owner directed this change, chose the structural option over the documentation-only one when the trade was put to them, and approved the close in session after reading the phase report. The agent verified the rule is consistent across eight sites and machine-checks five of them; it cannot verify the text is the rule the owner wanted, which is exactly what this row records. Written by the agent at the owner’s explicit in-session direction under the rule this PRD lands — the first entry the new field governs",
+      "reason": "owner directed this change, chose the structural option over the documentation-only one when the trade was put to them, and approved the close in session after reading the phase report. The agent verified the rule is consistent across eight sites and machine-checks five of them; it cannot verify the text is the rule the owner wanted, which is exactly what this row records. Written by the agent at the owner\u2019s explicit in-session direction under the rule this PRD lands \u2014 the first entry the new field governs",
       "date": "2026-07-28",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
@@ -208,18 +208,41 @@
       "prd": "PRD-030",
       "owner": "owner",
       "items": [
-        "4.1 T1 install into a repo that already has a config — activation is the adopter's paste, and it is a precondition rather than a step that can lag the store",
-        "4.1 T2 upgrade — `init` cannot deliver one; the mechanism is adopter deletion of the reinstall unit followed by reinstall, terminating over a finite enumerable set",
-        "4.1 T3 upgrade with a deliberately edited file — survives an install by the additive-only contract; destroyed by the default upgrade path, and pinned at the old version permanently if spared by hand",
-        "4.1 T4 add / remove an adapter — the previous file keeps working until a human deletes it; discovery is by re-render or banner signature, and neither covers the unbannered codex snippet",
-        "4.1 T5 rename the store directory — the old tree is discoverable only by content, and the adapters keep pointing at it because the reinstall skips them",
-        "4.1 T6 remove the config block — recorded limit in its narrow form: no durable pointer survives, a content search still works",
-        "4.1 T7 the receipt's own second write — no receipt exists and this model introduces none; if one ever is, `init` is its only writer and it is not itself a destination",
+        "4.1 T1 install into a repo that already has a config \u2014 activation is the adopter's paste, and it is a precondition rather than a step that can lag the store",
+        "4.1 T2 upgrade \u2014 `init` cannot deliver one; the mechanism is adopter deletion of the reinstall unit followed by reinstall, terminating over a finite enumerable set",
+        "4.1 T3 upgrade with a deliberately edited file \u2014 survives an install by the additive-only contract; destroyed by the default upgrade path, and pinned at the old version permanently if spared by hand",
+        "4.1 T4 add / remove an adapter \u2014 the previous file keeps working until a human deletes it; discovery is by re-render or banner signature, and neither covers the unbannered codex snippet",
+        "4.1 T5 rename the store directory \u2014 the old tree is discoverable only by content, and the adapters keep pointing at it because the reinstall skips them",
+        "4.1 T6 remove the config block \u2014 recorded limit in its narrow form: no durable pointer survives, a content search still works",
+        "4.1 T7 the receipt's own second write \u2014 no receipt exists and this model introduces none; if one ever is, `init` is its only writer and it is not itself a destination",
         "4.3 the model as a whole: `_docs/design/prompt-store-state-model.md`, including its six recorded limits and their design/mixed classification"
       ],
-      "reason": "owner read the seven transition answers and the six recorded limits as presented in session and approved them explicitly, which unblocks PRD-034. What the machine established is narrow and is recorded as such: the §11 gates hold the document's structure only (all seven transitions present, all four axes non-blank, discrimination proved by blanking an axis and observing exit 1), and the independent review caught three factual errors about the shipped installer — a banner premise false for the codex adapter, a T3 that answered the install instead of the upgrade, and a T6 limit its own sibling transition refuted — with all nine findings fixed in the files rather than waived. No gate can establish that these are the right design decisions, which is exactly what this row records. Two disclosures the owner accepted with the decision: the reviewer was a fresh same-family session with zero implementation context, the method's documented fallback rather than its different-model-family default, and this same session wrote the PRD, scored it, planned it and authored the deliverable. Written by the agent at the owner's explicit in-session approval, under ADR-0003.",
+      "reason": "owner read the seven transition answers and the six recorded limits as presented in session and approved them explicitly, which unblocks PRD-034. What the machine established is narrow and is recorded as such: the \u00a711 gates hold the document's structure only (all seven transitions present, all four axes non-blank, discrimination proved by blanking an axis and observing exit 1), and the independent review caught three factual errors about the shipped installer \u2014 a banner premise false for the codex adapter, a T3 that answered the install instead of the upgrade, and a T6 limit its own sibling transition refuted \u2014 with all nine findings fixed in the files rather than waived. No gate can establish that these are the right design decisions, which is exactly what this row records. Two disclosures the owner accepted with the decision: the reviewer was a fresh same-family session with zero implementation context, the method's documented fallback rather than its different-model-family default, and this same session wrote the PRD, scored it, planned it and authored the deliverable. Written by the agent at the owner's explicit in-session approval, under ADR-0003.",
       "date": "2026-07-28",
       "method": "interactive (owner-directed, agent-transcribed)",
+      "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-024",
+      "owner": "owner",
+      "items": [
+        "9.1 independent review (Codex, 2 rounds) reviewed and accepted (verdict pass, critical 0)",
+        "10.4 operator acceptance of the operator-gated close via gate run"
+      ],
+      "reason": "owner reviewed the green phase 4-7 chain and the review artifact and directed the close in-session ('kabulu transkribe et', 2026-07-28); the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-025",
+      "owner": "owner",
+      "items": [
+        "9.5 operator acceptance of the operator-gated close: six-round independent Codex review at Critical: 0 (quorum 1/1 pass, round-5 rejection adjudicated and upheld), Verification Ledger fully green (1168 tests, floor, verify:gates-wired agreement, W4 mutation checks)"
+      ],
+      "reason": "reviewed the six-round review artifact and summary in-session; the round-5 rejection and its adjudication were surfaced explicitly before this approval; accepting the gated close via gate run",
+      "date": "2026-07-28",
+      "method": "in-session direction",
       "authorship": "agent-transcribed"
     }
   ]

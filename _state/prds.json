@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T11:09:30.523Z",
+  "generatedAt": "2026-07-28T11:02:12.138Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -857,21 +857,21 @@
       "prd": "PRD-024",
       "number": 24,
       "slug": "readiness-lint-parsers",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-024-readiness-lint-parsers.md",
-        "readiness": "_readiness/wip/readiness-024-readiness-lint-parsers.md",
-        "tasks": "_tasks/wip/tasks-024-readiness-lint-parsers.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-024-readiness-lint-parsers.md",
+        "readiness": "_readiness/completed/readiness-024-readiness-lint-parsers.md",
+        "tasks": "_tasks/completed/tasks-024-readiness-lint-parsers.md",
+        "summary": "_docs/completed/summary-024-readiness-lint-parsers.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.35,
@@ -880,9 +880,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 47,
+        "status": "Ship Verified",
+        "checkedCount": 47,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -894,21 +894,21 @@
       "prd": "PRD-025",
       "number": 25,
       "slug": "wiring-audit-completion",
-      "status": "Operator Verification",
-      "cyclePhase": "7 (Operator Verification)",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-025-wiring-audit-completion.md",
         "readiness": "_readiness/wip/readiness-025-wiring-audit-completion.md",
         "tasks": "_tasks/wip/tasks-025-wiring-audit-completion.md",
-        "summary": "_docs/wip/summary-025-wiring-audit-completion.md"
+        "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "wip"
+        "summary": "missing"
       },
       "readiness": {
         "score": 8.3,
@@ -917,9 +917,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 63,
-        "uncheckedCount": 3,
+        "status": "Not Started",
+        "checkedCount": 0,
+        "uncheckedCount": 66,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -985,7 +985,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.55,
+        "score": 7.25,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": "high"
@@ -1036,7 +1036,7 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-27"
+      "lastUpdated": "2026-07-28"
     },
     {
       "prd": "PRD-029",
@@ -1233,19 +1233,19 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 5.1,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },
@@ -1264,21 +1264,21 @@
       "prd": "PRD-035",
       "number": 35,
       "slug": "adr-section-anchor",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "eligible",
       "artifacts": {
-        "prd": "_prds/wip/prd-035-adr-section-anchor.md",
-        "readiness": "_readiness/wip/readiness-035-adr-section-anchor.md",
-        "tasks": "_tasks/wip/tasks-035-adr-section-anchor.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-035-adr-section-anchor.md",
+        "readiness": "_readiness/completed/readiness-035-adr-section-anchor.md",
+        "tasks": "_tasks/completed/tasks-035-adr-section-anchor.md",
+        "summary": "_docs/completed/summary-035-adr-section-anchor.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.2,
@@ -1287,9 +1287,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 45,
+        "status": "Ship Verified",
+        "checkedCount": 45,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 0
       },
       "summary": {

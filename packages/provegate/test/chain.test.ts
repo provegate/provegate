@@ -182,6 +182,71 @@ describe('runChain', () => {
     expect(outcome.stopped?.why).toContain('PRD gap');
   });
 
+  // PRD-024 FR-1: the zero-section case is a DIFFERENT input from the fixture
+  // above (which declares the section with no runnable rows). A document with
+  // no §11 at all keeps the existing required-empty Phase-5 failure — the
+  // parser-issue guard deliberately does not fire on it.
+  it('keeps the required-empty failure for a document with no §11 section at all', () => {
+    const root = tempRoot();
+    const outcome = runChain({
+      config: cfg,
+      root,
+      id: 'PRD-002',
+      chain: chainFor(root, '## Durable Artifacts\n\n- none\n'),
+      fromPhase: null,
+    });
+    expect(outcome.stopped?.why).toContain('PRD gap');
+  });
+
+  it('refuses before executing anything when a §11 row is malformed', () => {
+    const root = tempRoot();
+    const prd = [
+      '## 11. Verification Commands',
+      '',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 `node -e "process.exit(0)"` |',
+      '| FR-2 | `node -e "process.exit(0)"` |',
+    ].join('\n');
+    const outcome = runChain({
+      config: cfg,
+      root,
+      id: 'PRD-002',
+      chain: chainFor(root, prd),
+      fromPhase: null,
+    });
+    expect(outcome.stopped?.why).toContain('§11 table is unreadable');
+    expect(outcome.stopped?.why).toContain('§11 row is malformed');
+    // The readable FR-2 row was never executed: the refusal fires first.
+    expect(outcome.results.some(([label]) => label.includes('process.exit'))).toBe(false);
+  });
+
+  it('refuses when the document declares two verification sections', () => {
+    const root = tempRoot();
+    const prd = [
+      '## 11. Verification Commands',
+      '',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-1 | `node -e "process.exit(0)"` |',
+      '',
+      '## 11. Verification Commands',
+      '',
+      '| FR   | Command |',
+      '| ---- | ------- |',
+      '| FR-2 | `node -e "process.exit(0)"` |',
+    ].join('\n');
+    const outcome = runChain({
+      config: cfg,
+      root,
+      id: 'PRD-002',
+      chain: chainFor(root, prd),
+      fromPhase: null,
+    });
+    expect(outcome.stopped?.why).toContain('§11 table is unreadable');
+    expect(outcome.stopped?.why).toContain('declared more than once');
+  });
+
   it('refuses unsafe commands instead of executing them', () => {
     const root = tempRoot();
     const outcome = runChain({
