@@ -13,7 +13,13 @@
     },
     "lint": {},
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/_prds/**",
+        "$TURBO_ROOT$/workflow.config.json",
+        "$TURBO_ROOT$/gates.manifest.json"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:34:30.879Z",
+  "generatedAt": "2026-07-28T10:38:30.556Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -865,13 +865,13 @@
         "prd": "_prds/wip/prd-024-readiness-lint-parsers.md",
         "readiness": "_readiness/wip/readiness-024-readiness-lint-parsers.md",
         "tasks": "_tasks/wip/tasks-024-readiness-lint-parsers.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-024-readiness-lint-parsers.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.35,
@@ -880,9 +880,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 47,
+        "status": "Ship Verified",
+        "checkedCount": 45,
+        "uncheckedCount": 2,
         "operatorHandoffCount": 1
       },
       "summary": {

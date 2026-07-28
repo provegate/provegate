@@ -5,7 +5,7 @@ import { contractView,
 import { declaredArtifactsStrict } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
-import { parseVerificationCommands } from './safety.js';
+import { parseVerificationTable } from './safety.js';
 import { valueScoreIssue } from './value-score.js';
 
 /**
@@ -130,19 +130,20 @@ export function lintPrd(
     }
   }
 
-  const verification = sectionMatching(content, '.*Verification Commands.*');
+  // One shared extraction for both readers of the §11 table (PRD-024 FR-1):
+  // the parser's own issues surface here as readiness failures, and every
+  // per-row read below sees the Command cell only — never Scope or Notes.
+  const table = parseVerificationTable(config, content);
+  issues.push(...table.issues);
   const rowsByFr = new Map<number, string>();
-  for (const line of verification.split('\n')) {
-    const m = /^\s*\|\s*FR-(\d+)\b/.exec(line);
-    if (m) rowsByFr.set(Number.parseInt(m[1]!, 10), line);
-  }
+  for (const row of table.rows) rowsByFr.set(row.fr, row.commandCell);
   for (const fr of frs) {
-    const row = rowsByFr.get(fr.number);
-    if (!row) {
+    const cell = rowsByFr.get(fr.number);
+    if (cell === undefined) {
       issues.push(`FR-${fr.number}: no §11 verification row`);
       continue;
     }
-    const hasRunnable = [...row.matchAll(/`([^`]+)`/g)].some((m) =>
+    const hasRunnable = [...cell.matchAll(/`([^`]+)`/g)].some((m) =>
       config.commands.allowedPrefixes.some((p) => m[1]!.trim().startsWith(p)),
     );
     if (!hasRunnable) issues.push(`FR-${fr.number}: §11 row has no runnable command`);
@@ -166,7 +167,7 @@ export function lintPrd(
     issues.push('placeholder text (TBD / ??? / to be decided) outside code quotes');
   }
 
-  for (const { cmd, safe } of parseVerificationCommands(config, content)) {
+  for (const { cmd, safe } of table.commands) {
     if (!safe) issues.push(`unsafe §11 command (would be refused at run time): ${cmd}`);
   }
 
