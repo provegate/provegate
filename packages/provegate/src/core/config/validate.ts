@@ -96,6 +96,7 @@ const CONFIG_SPEC = obj({
     verifyCommand: strOrEmpty,
     retroAfterCompleted: countOrZero,
   }),
+  wiring: obj({ scriptsDir: str, hooksDir: str, bundlePath: str }),
 });
 
 /** The adapters this package can generate. A closed set by design: an adapter
@@ -247,6 +248,7 @@ export function validateResolvedConfig(config: {
     verifyCommand: string;
   };
   valueScoring?: { axes: string[]; weights: Record<string, number>; enforceFrom?: number };
+  wiring?: { scriptsDir?: string; hooksDir?: string; bundlePath?: string };
 }): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
 
@@ -313,6 +315,12 @@ export function validateResolvedConfig(config: {
     // directory was created, and the printed one-way reinstall set — whose
     // instruction is "delete EVERY path above" — expanded to the adopter's HOME.
     ['prompts.dir', config.prompts?.dir],
+    // PRD-025: the wiring audit's three READ paths. Lexical only here — the
+    // audit resolves each through the runtime containment check before it is
+    // opened, because a symlink escape is invisible to this function.
+    ['wiring.scriptsDir', config.wiring?.scriptsDir],
+    ['wiring.hooksDir', config.wiring?.hooksDir],
+    ['wiring.bundlePath', config.wiring?.bundlePath],
   ];
   for (const [path, value] of configuredPaths) {
     if (value === undefined) continue;

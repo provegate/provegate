@@ -131,7 +131,11 @@ function chainEnd(path: string): string | null {
  * `memoryPathsContained` did before the extraction, and the memory suite passes
  * unmodified — that is the proof, not this comment.
  */
-function resolveContainedPaths(
+// Exported for PRD-025's wiring-audit read paths — deliberately NOT re-exported
+// from `config/index.ts` (the named-list public API is unchanged); `wiring.ts`
+// imports it from `../config/load.js` directly. One containment implementation,
+// per `two-parsers-wrong-together`.
+export function resolveContainedPaths(
   root: string,
   entries: [string, string][],
 ): { issues: ConfigIssue[]; resolved: Map<string, string>; under: Under | null } {

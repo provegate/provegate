@@ -129,4 +129,13 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
     axes: ['MF', 'UI', 'TL', 'AR', 'RM'],
     weights: { MF: 0.25, UI: 0.25, TL: 0.2, AR: 0.15, RM: 0.15 },
   },
+  // PRD-025: the wiring audit's read paths. These are THIS repository's shapes
+  // as defaults, not requirements — an adopter with a different hooks
+  // directory (or none) configures or simply lacks it, and absence is "not a
+  // surface", never an error.
+  wiring: {
+    scriptsDir: 'scripts/verify',
+    hooksDir: '.githooks',
+    bundlePath: 'scripts/verify/verify-workflow.mjs',
+  },
 };

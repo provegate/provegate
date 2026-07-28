@@ -116,6 +116,24 @@ export interface WorkflowConfig {
   prompts: PromptsConfig;
   /** Value-triage scoring: the axes, their weights, and the optional cutoff. */
   valueScoring: ValueScoringConfig;
+  /** Wiring-audit read paths; every one repo-relative and containment-checked. */
+  wiring: WiringConfig;
+}
+
+/**
+ * Read paths for the wiring audit (PRD-025). Three keys, but not one per
+ * surface: script bodies need no key (they come from `package.json`, which the
+ * audit already reads), and `scriptsDir` serves the on-disk→registered
+ * direction rather than any surface. Absence of a configured path on disk is
+ * "not a surface", never an error.
+ */
+export interface WiringConfig {
+  /** Directory walked by the on-disk→registered direction. */
+  scriptsDir: string;
+  /** Git-hooks directory read as a command surface. */
+  hooksDir: string;
+  /** Bundle whose declared membership counts as a surface. */
+  bundlePath: string;
 }
 
 /**
