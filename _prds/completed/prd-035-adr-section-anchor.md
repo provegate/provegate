@@ -327,6 +327,11 @@ None.
   claim), and the response was the record's: the layer was scoped out — the claim
   narrowed to body scope, the frontmatter reflow pinned as a recorded limitation
   owned by a future item — rather than a third wording round.
+- reviewed: `score-band-prescribes-the-action` — its watch covers this PRD's
+  readiness artifact, which the close archives. The band's action was followed
+  both times: 7.85 sat in the iterate band and was remediated then re-scored, and
+  8.20 in the proceed band went to task generation — no flat trajectory, no
+  band/action mismatch.
 - reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`.
   Not the failure shape here: this hotfix specifies a mechanism whose ground
   truth is written and executable (a reproduced defect, a one-token fix, a
