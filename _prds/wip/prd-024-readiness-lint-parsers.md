@@ -729,6 +729,27 @@ No state, artifact, config, or published-surface migration exists.
   agreeing on a wrong answer. And it is why the class predicate is bound to behavior — the
   classification fixture pair makes the deny case fail on the field it names, so a classifier
   that reports nothing cannot pass by agreeing with a corpus that asks it nothing.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this PRD
+  file, which the closing diff edits (changelog, §11 row, appended outputs). The record's
+  action — cut the layer the rounds keep hitting — is this PRD's own recorded history
+  (the §9 narrowing); nothing in the closing diff adds a layer.
+- reviewed: `state-model-before-mechanism` — same watch trigger, same file. This diff
+  carries no flat-trajectory remediation; the edits are close bookkeeping, not a
+  re-sampled mechanism.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — every correction made
+  during implementation was swept at each restatement: the whole-suite §11 row changed in
+  the row, the ledger, the Deferrals entry and the changelog together; the turbo input
+  extension changed in `turbo.json`, the exceptions reason, the review artifact and the
+  changelog together.
+- applied: `gate-run-resume-after-archive` — its watch covers `run/**` and this diff
+  changes `chain.ts`. Verified against the record: the new §11 refusal guard sits in the
+  phase-5 position, before the archive boundary the record warns about; and this close
+  follows its rule — if the merge step stops, fix the cause and complete without
+  re-entering the gates across the archive.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/prds.json`, which an intermediate commit had put in this diff; the snapshot was
+  restored to main's copy and dropped from the diff (it regenerates on main after the
+  merge), and this change adds no free-text field anywhere.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — FR-1 is exactly this
   record's shape: it extracts a shared cell reader and then adds a **fail-closed guard in
   `buildGateChain`** that the original never had, which is a decision the caller already
