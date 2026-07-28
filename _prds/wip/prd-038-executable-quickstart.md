@@ -98,46 +98,72 @@ so that the first-touch promise is a gate I cannot forget, not prose I must reme
 
 ## 4. Functional Requirements
 
-1. **FR-1**: The extraction. A harness parses `packages/provegate/QUICKSTART.md`'s
-   fenced shell blocks in document order — the doc is the single source; the harness
-   stores no command copy (`derive-the-requirement-from-the-consumer`: the consumer is
-   the reader, and the harness runs what the reader reads). Non-command fences (output
-   examples) are distinguished by the doc's own fence language tags; if the tags are
-   ambiguous today, the FR includes tagging them — a docs-only edit that changes no
-   visible rendering.
+**Reworked at iteration 1 (4.95 → Phase 1 rework):** the scorer measured the real
+corpus — 14 commands in `QUICKSTART.md` versus 8 in the docs twin, edit distance 7 —
+found the unpublished-package install contradiction, and surfaced the runner-sentinel
+record. Every mechanism below is now closed, decided, and hermetic.
+
+1. **FR-1**: The extraction, under a **closed scenario grammar**. `QUICKSTART.md` gains
+   rendering-neutral markers: one `<!-- qs:scenario -->` … `<!-- /qs:scenario -->`
+   region delimits the canonical first-touch path; within it, every ` ```sh ` fence is
+   executable and every ` ```text ` fence is output illustration — the corpus's
+   existing output tags are already adequate for that split (measured at iteration 1;
+   recorded rather than re-invented). Command splitting: one command per line;
+   backslash continuations joined; `#`-prefixed and blank lines skipped; every command
+   retains its doc line number for failure naming. Package-only extras (worktree,
+   practices) live OUTSIDE the region and are not part of the canonical scenario.
+   The harness stores no command copy; it parses the region at run time
+   (`derive-the-requirement-from-the-consumer`).
    - **Targets:** `packages/provegate/test/quickstart-e2e.test.ts`,
      `packages/provegate/QUICKSTART.md`
-2. **FR-2**: The execution and the assertions. Each extracted command runs in a scratch
-   git repository (temp dir; the built CLI on PATH via `node dist/cli.js`
-   substitution), in sequence, with per-step assertions derived from the doc's own
-   stated outcomes: `init` scaffolds the promised tree; `new` allocates the promised
-   hotfix-class PRD; `check` prints the promised verdict; the first close completes
-   with the promised artifacts. A step exiting non-zero, or an assertion failing,
-   names the step and the doc line it came from. The harness never touches the real
-   repository (`push-is-human-by-omission` preserved by construction: the scratch repo
-   has no remote).
+2. **FR-2**: The execution — hermetic, with the scratch state model explicit.
+   - **Install mapping, exhaustive:** the doc's `npm install -D provegate` line maps —
+     by exact source-line match, with an assertion that no OTHER install line exists
+     unmapped — to installing the locally packed tarball (`pnpm --filter provegate
+     build` + `npm pack` in setup). The child npm's registry is pointed at an
+     unreachable local path, so any accidental registry fetch fails loudly: **no
+     network fallback can exist**.
+   - **Scratch state model, enumerated:** harness setup (deterministic, not doc):
+     temp root; HOME, XDG dirs, npm userconfig and TMPDIR remapped under it; `git
+     init -b main`; repository-local `user.name`/`user.email`; initial commit. Doc
+     commands (from the region): install → `gate init` → config fill → `gate new`
+     (hotfix class) → `gate check` → the close path the doc prints. Harness setup
+     between doc steps where the CLI's own rules demand committed state (the PRD/
+     control files must be committed before a claim — PRD-007's rule): filling the
+     generated PRD minimally and committing is setup, labeled as such in a
+     doc-command-versus-setup table inside the test file.
+   - **Sentinel hygiene:** every spawned CLI child receives a sanitized environment
+     with `PROVEGATE_RUN_ACTIVE` (and every runner sentinel) removed — the
+     `runner-sentinel-blocks-cli-spawning-tests` record's prescription for a
+     CLI-spawning test, so the §11 rows stay green under `gate run` itself.
+   - **Remote-impossibility, asserted:** `git remote` is asserted EMPTY before and
+     after every step; no inherited global git config can add one (HOME is remapped).
+   - **Cleanup:** in `finally`; deletion verified after both a passing run and a
+     planted-failure run; on failure the scratch log tail is copied into the test
+     failure message BEFORE deletion so diagnostics survive the cleanup.
    - **Targets:** `packages/provegate/test/quickstart-e2e.test.ts`
-3. **FR-3**: The two docs, one sequence. The docs-site quickstart
-   (`apps/docs/content/docs/quickstart.mdx`) either derives its command blocks from
-   `QUICKSTART.md` or is asserted command-sequence-equivalent by the harness — the
-   implementation picks whichever the MDX pipeline supports cleanly and records the
-   choice; what it may not do is leave two independently-edited sequences
-   (`two-parsers-wrong-together`, applied to prose).
-   - **Targets:** `apps/docs/content/docs/quickstart.mdx`,
-     `packages/provegate/test/quickstart-e2e.test.ts`
-4. **FR-4**: The cache boundary, honestly. The harness lives in
-   `packages/provegate/test/` and reads `QUICKSTART.md` **inside the package** — no
-   turbo input issue. The docs-site file in FR-3 is OUTSIDE the package: whatever
-   mechanism FR-3 picks must not read it from inside `provegate#test`
-   (`turbo-cache-masks-out-of-input-reads`) — either the derivation happens at docs
-   build time, or the equivalence check runs as a root script. The FR is satisfied
-   only with the boundary stated in a comment at the read site.
-   - **Targets:** `packages/provegate/test/quickstart-e2e.test.ts` or
-     `scripts/verify/verify-quickstart-parity.mjs` (the implementation's recorded
-     choice), `package.json`, `scripts/verify/verify-workflow.mjs` (only if the root
-     script route is taken)
-
----
+3. **FR-3**: Parity, DECIDED — a root verifier over the tagged region only.
+   `scripts/verify/verify-quickstart-parity.mjs` extracts the `qs:scenario` region
+   from `packages/provegate/QUICKSTART.md` and from
+   `apps/docs/content/docs/quickstart.mdx` (which gains the same markers) and asserts
+   command-sequence equality; package-only optional sections stay package-only and
+   unmeasured. **Measured baseline, recorded:** today the docs are 14 versus 8
+   commands, edit distance 7 — the implementation converges the canonical region (the
+   docs twin adopts the package sequence; teaching prose stays free) and the verifier
+   holds the convergence. It is a root script because the docs file sits outside the
+   package's turbo inputs (`turbo-cache-masks-out-of-input-reads`), with the comment
+   at the read site.
+   - **Targets:** `scripts/verify/verify-quickstart-parity.mjs`,
+     `apps/docs/content/docs/quickstart.mdx`, `packages/provegate/QUICKSTART.md`
+4. **FR-4**: The verifier's wiring and classification. `verify:quickstart-parity` in
+   root `package.json`; a `verify:workflow` CHECKS member (`gate-wire-or-delete`); a
+   row in `scripts/verify/script-classes.json`; and the class assignment justified
+   under `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — the parity rule governs
+   THIS repository's two documents, a repo rule, and the ADR gains that row (an
+   amendment, declared in Memory Outputs and Durable Artifacts).
+   - **Targets:** `package.json`, `scripts/verify/verify-workflow.mjs`,
+     `scripts/verify/script-classes.json`,
+     `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`
 
 ## 5. Non-Goals (Out of Scope)
 
@@ -202,9 +228,10 @@ Phase 3.
       assertions, mutation-provable doc-sourcing
 - [ ] `packages/provegate/QUICKSTART.md` — fence language tags only, if needed (FR-1)
 - [ ] `apps/docs/content/docs/quickstart.mdx` — derivation or parity per FR-3
-- [ ] `scripts/verify/verify-quickstart-parity.mjs` + `package.json` +
-      `scripts/verify/verify-workflow.mjs` — only if FR-3/FR-4 take the root-script
-      route (recorded choice)
+- [ ] `scripts/verify/verify-quickstart-parity.mjs` + `package.json` (shared
+      append-only, out of Conflict Surface by rule) + `scripts/verify/verify-workflow.mjs`
+      + `scripts/verify/script-classes.json` — the decided root-verifier route (FR-3/4)
+- [ ] `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — the class-row amendment
 
 ---
 
@@ -239,6 +266,20 @@ Phase 3.
   for that reason alone.
 - applied: `push-is-human-by-omission` — the scratch repo never has a remote; the
   harness cannot push by construction, and the §6 criterion asserts it.
+- applied: `runner-sentinel-blocks-cli-spawning-tests` — its subject exactly: this
+  harness spawns the CLI from a test, so every child gets a sanitized environment with
+  the runner sentinels removed (FR-2), keeping the §11 rows green under `gate run`.
+- applied: `gate-wire-or-delete` — the FR-4 wiring exists because of it: the parity
+  verifier is registered, a CHECKS member, and classed, or it would be a registered
+  check with no executing surface.
+- applied: `ADR-0004-method-rule-vs-repo-rule` — the parity rule governs this
+  repository's two documents, a repo rule by the ADR's own test; FR-4 amends the ADR
+  with the class row rather than leaving the assignment implicit.
+- reviewed: `adr-section-blank-line-reads-empty` — its watch covers `_brain/adr/**`,
+  which FR-4's amendment touches. The anchor defect is fixed (PRD-035); the live
+  half of the record binds here: the ADR edit must not be swept by `pnpm format`
+  (frontmatter reflow hazard), so the amendment is hand-placed in the existing
+  section shape and `verify:brain` holds it.
 - reviewed: `two-parsers-wrong-together` — two independently-edited quickstart
   sequences are two implementations of one promise; FR-3 exists to keep it one.
 - reviewed: `fixture-must-reach-production-shape` — the harness invokes the BUILT CLI
@@ -253,6 +294,9 @@ Phase 3.
   a test fixture with a rendering: extract-and-execute beats restate-and-hope, the doc
   must be the runtime source so both directions of drift fail, and the mutation probe
   that proves doc-sourcing is part of the pattern, not optional.
+- adr: `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — amended with the parity
+  verifier's repo-rule class row (FR-4); the decision framework is untouched, one
+  application row is added.
 
 ---
 
@@ -262,12 +306,16 @@ Phase 3.
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/quickstart.mdx`
 - `scripts/verify/verify-quickstart-parity.mjs`
+- `scripts/verify/verify-workflow.mjs`
+- `scripts/verify/script-classes.json`
+- `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`
 
 ---
 
 ## Durable Artifacts
 
 - `_brain/learnings/quickstart-is-a-fixture.md` — the Memory Output above, repeated here
+- `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — the amendment, repeated here
 - `_brain/INDEX.md` — one pointer line, per the memory protocol
 - `_docs/reviews/review-038-executable-quickstart.md` — the independent Phase 6 artifact
 
@@ -313,4 +361,5 @@ Before Phase 2 PASS, run: `gate check PRD-038`
 
 | Date       | Author | Changes                                                                                                    |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2026-07-28 | orchestrating session (author), Phase 1 rework | **Iteration 1 scored 4.95 ITERATE; band prescribes Phase 1 rework, taken the same day.** The extraction gains a closed scenario grammar (`qs:scenario` region markers, per-line splitting rules, doc-line retention; the existing output tags recorded as adequate). The install contradiction resolved hermetically: the unpublished-package `npm install -D provegate` line maps by exact source match to a locally packed tarball with an unreachable registry — no network fallback can exist. The scratch state model enumerated (remapped HOME/XDG/npm/TMP, local git identity, the doc-command-vs-setup split incl. the committed-state preconditions PRD-007 demands). Sentinel hygiene added per `runner-sentinel-blocks-cli-spawning-tests`. FR-3 decided: a root parity verifier over the tagged region only, with the measured 14-vs-8/edit-distance-7 baseline recorded and the docs twin converging. FR-4 adds wiring + `script-classes.json` + the ADR-0004 repo-rule amendment (Memory Output + Durable). Remote-impossibility and cleanup made executable assertions. |
 | 2026-07-28 | orchestrating session, for owner review | Drafted as the second of three Faz E launch items (portfolio-review outward-gap action): the first-touch promise becomes an executed fixture — doc-sourced commands, scratch-repo e2e, both-direction drift gates, and a parity rule for the rendered twin. |
