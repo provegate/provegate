@@ -16,11 +16,12 @@ with no guard, an autonomous agent will "accept" its own operator rows and merge
 the human gate entirely.
 
 The rule is about **deciding**, not about typing, and the two were conflated for a long time.
-"An agent never writes the acceptance store" was the documented form, and it was measurably
-false: half this repository's entries had been written by an agent at explicit owner
-direction, each saying so honestly in `method`, the one field with no enumeration. A
-prohibition nobody follows protects nothing; what protects the gate is that the DECISION is
-the owner's and the record says who typed.
+The documented form put the prohibition on the typing, and it was measurably false: half this
+repository's entries had been produced by an agent at explicit owner direction, each saying so
+honestly in `method`, the one field with no enumeration. A prohibition nobody follows protects
+nothing; what protects the gate is that the DECISION is the owner's and the record says who
+typed. (ADR-0003 quotes the superseded sentence verbatim — this record teaches the rule, the
+ADR keeps the history.)
 
 **Why:** the whole point of an operator row is that a human must vouch for it; a self-service
 acceptance turns the human gate into a rubber stamp the agent presses itself. Transcription

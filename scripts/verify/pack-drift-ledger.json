@@ -140,7 +140,7 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "7e5cfd4e9eafcee9",
-      "repo": "150374e23c3bd010",
+      "repo": "5b349c987b6c5d1d",
       "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit"
     },
     "verify/gates-wired-exceptions.json": {
@@ -243,8 +243,8 @@
     },
     "brain/learnings/operator-acceptance-no-self-accept.md": {
       "dest": "_brain/learnings/operator-acceptance-no-self-accept.md",
-      "pack": "c937cda399f0355e",
-      "repo": "c937cda399f0355e"
+      "pack": "e6ed258147729463",
+      "repo": "e6ed258147729463"
     },
     "brain/learnings/push-is-human-by-omission.md": {
       "dest": "_brain/learnings/push-is-human-by-omission.md",
