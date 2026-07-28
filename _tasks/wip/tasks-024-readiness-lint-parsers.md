@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-024-readiness-lint-parsers.md](../../_prds/wip/prd-024-readiness-lint-parsers.md)
 > **Readiness**: [readiness-024-readiness-lint-parsers.md](../../_readiness/wip/readiness-024-readiness-lint-parsers.md)
-> **Status**: Code Complete (pending Phase 6 review + close)
+> **Status**: Ship Verified (pending merge + operator acceptance)
 > **Readiness Score**: 8.35/10 PASS (quorum 2/2 — concurring independent 8.18)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -194,23 +194,23 @@ on it: a record is evidence only while it is true.
         evidence. No ad-hoc additions, no omissions.
   - [x] 8.2 Cross-cutting floor: `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build`, `pnpm verify:workflow` — all green.
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review (different model or session — never this
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review (different model or session — never this
         implementation's author): artifact at
         `_docs/reviews/review-024-readiness-lint-parsers.md`, Quorum row present,
         verdict `pass` with `Critical: 0`.
-  - [ ] 9.2 W1 check: FR-1's prefix table, FR-2's predicate table, and the shipped
+  - [x] 9.2 W1 check: FR-1's prefix table, FR-2's predicate table, and the shipped
         strings agree byte-for-byte.
-  - [ ] 9.3 W5 vacuity check: temporarily mutate the implementation (e.g. widen the
+  - [x] 9.3 W5 vacuity check: temporarily mutate the implementation (e.g. widen the
         parser back to whole-row), watch the classification positive control go red,
         revert. A deny sweep that cannot fail is not evidence.
-  - [ ] 9.4 Confirm W6/W7 are honored in code: predicate 4 matched full-match against
+  - [x] 9.4 Confirm W6/W7 are honored in code: predicate 4 matched full-match against
         an unmodified string; fixtures lint-green apart from the planted cell.
-- [ ] 10.0 Phase 7 — Learning & close
-  - [ ] 10.1 Write `_brain/learnings/lint-must-name-the-span-it-judges.md` (the
+- [x] 10.0 Phase 7 — Learning & close
+  - [x] 10.1 Write `_brain/learnings/lint-must-name-the-span-it-judges.md` (the
         declared Memory Output) and append its one-line pointer to `_brain/INDEX.md`
         (capture protocol §7 — a learning without its pointer is not captured).
-  - [ ] 10.2 Confirm both durable learnings and the review artifact are in the merge
+  - [x] 10.2 Confirm both durable learnings and the review artifact are in the merge
         diff (`verify:durable-artifacts` runs in the bundle; Memory Outputs are
         compared against the PRD as committed on `main`).
   - [ ] 10.3 Write the summary artifact to the configured summary directory and move
@@ -240,7 +240,7 @@ it must be `passed` and name the review artifact path.
 | test               | `pnpm test`                                                | repo  | passed  | 7/7 turbo tasks | |
 | build              | `pnpm build`                                               | repo  | passed  | clean | |
 | workflow           | `pnpm verify:workflow`                                     | repo  | passed  | PASS after pack-drift reconcile | includes verify:turbo-inputs |
-| independent-review | `_docs/reviews/review-024-readiness-lint-parsers.md`       | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-024-readiness-lint-parsers.md`       | repo  | passed  | Codex, 2 rounds: 1 critical found→fixed (`1f745a9`)→re-verified clean | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -258,6 +258,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - 6.1 — the edited record has a PACKED TWIN (`packages/provegate/practices/brain/learnings/notes-column-runs-commands.md`) outside the PRD's Conflict Surface; `verify:pack-drift` mechanically requires the port when the repo side changes, so the twin was edited (adopter-neutral voice) and reconciled (`scripts/verify/pack-drift-ledger.json` updated by the tool). A gate-forced one-file consequence of the in-scope record edit, not scope creep — the surface omission is a readiness gap nine rounds missed; flagged for the Phase 6 reviewer.
 - 4.4 — the positive control's Command cell carries a safe runnable command beside the unsafe token; the planted token alone would also trip the no-runnable predicate and the control would assert two class issues instead of the one it names.
 - 7.2 — executed-command delta re-measured at implementation time with a dist-vs-old-behavior diff across all ten wip files: zero commands gained or lost.
+- 9.1 — Codex round-1 [P1]: the corpus test's root config reads (workflow.config.json, gates.manifest.json via the five-argument call) were outside the declared turbo inputs — the record's own defect arriving through its fix, one file over. Fixed in `1f745a9` (both files joined `inputs`, exception reason updated); Codex round 2 verified closed, no new findings. FR-2's two-glob input list was extended rather than contradicted; the learning's input-set clause now records the class.
+- 9.3 — W5 vacuity check executed: parser temporarily widened back to whole-row locally, classification positive control went red, reverted; not committed.
 
 ---
 

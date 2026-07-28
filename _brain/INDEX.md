@@ -25,6 +25,7 @@
 - [narrow the grammar not the parser](learnings/narrow-the-grammar-not-the-parser.md) — a hand-rolled Markdown reader never reaches renderer parity; restrict what the document may contain instead
 - [free-text field is the unread drift ledger](learnings/free-text-field-is-the-unread-drift-ledger.md) — a rule only documentation enforces drifts into the unenumerated field beside it, where nobody can read it
 - [state model before mechanism](learnings/state-model-before-mechanism.md) — flat readiness trajectory: cut the scope or write the state model; remediating again just resamples it
+- [lint must name the span it judges](learnings/lint-must-name-the-span-it-judges.md) — a check answering about a span it did not read ships confident false verdicts; name the span, read exactly it
 
 ## Orchestration & close gotchas
 
