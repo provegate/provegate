@@ -650,6 +650,65 @@ describe('auditWiring round-2 hardening', () => {
   });
 });
 
+describe('auditWiring round-3 hardening', () => {
+  it('a dot-segment spelling of scriptsDir still derives keys and registrations', () => {
+    const dotCfg = { ...cfg, wiring: { ...cfg.wiring, scriptsDir: 'scripts/./verify' } };
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    const report = auditWiring(dotCfg, defaultManifest(dotCfg), root);
+    expect(report.issues.some((i) => i.includes('"verify:foo" is wired nowhere'))).toBe(false);
+    expect(report.issues.some((i) => i.includes('is not registered'))).toBe(false);
+  });
+
+  it('a verify body chaining two checks registers BOTH files; the first is the key', () => {
+    const root = repo({
+      scripts: {
+        ...FLOOR,
+        'verify:both':
+          'node scripts/verify/verify-a.mjs && node scripts/verify/verify-b.mjs',
+      },
+      ci: 'jobs:\n  a:\n    steps:\n      - run: pnpm verify:both\n',
+      scriptFiles: ['verify-a.mjs', 'verify-b.mjs'],
+    });
+    const report = auditWiring(cfg, defaultManifest(cfg), root);
+    expect(report.issues.some((i) => i.includes('verify-a.mjs" is not registered'))).toBe(false);
+    expect(report.issues.some((i) => i.includes('verify-b.mjs" is not registered'))).toBe(false);
+  });
+
+  it('a contained symlink candidate does not evade wire-or-delete; external ones stay out', () => {
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    // contained target, unregistered → must surface as an FR-1 orphan
+    writeFileSync(resolve(root, 'shadow.mjs'), '// contained target');
+    symlinkSync(resolve(root, 'shadow.mjs'), resolve(root, 'scripts/verify', 'verify-linked.mjs'));
+    const report = auditWiring(cfg, defaultManifest(cfg), root);
+    expect(report.issues).toContainEqual(
+      expect.stringContaining('script on disk "verify-linked.mjs" is not registered'),
+    );
+    // external target: not a candidate at all
+    const outside = mkdtempSync(join(tmpdir(), 'provegate-ext-'));
+    roots.push(outside);
+    writeFileSync(join(outside, 'ext.mjs'), '// external');
+    const root2 = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    symlinkSync(join(outside, 'ext.mjs'), resolve(root2, 'scripts/verify', 'verify-ext.mjs'));
+    expect(
+      auditWiring(cfg, defaultManifest(cfg), root2).issues.some((i) =>
+        i.includes('verify-ext.mjs'),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('auditWiring on-disk direction (FR-1)', () => {
   it('an unregistered on-disk verify script fails, naming the file', () => {
     const root = repo({

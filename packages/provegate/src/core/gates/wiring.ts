@@ -509,8 +509,16 @@ export function auditWiring(
   // is refused outright — `scripts/verify/../outside/verify-foo.mjs` must not
   // pass a prefix test whose claim is "under scriptsDir". Fail closed: a
   // traversal is no key, never a resolved one.
+  // Interior `.` segments are legal spellings of the same directory and are
+  // normalized out on BOTH sides; `..` stays refused on the invocation side
+  // (config-side `..` is already refused by lexical validation).
   const normLexical = (p: string): string =>
-    p.replace(/^(\.\/)+/, '').replace(/[/\\]+/g, '/').replace(/\/+$/, '');
+    p
+      .replace(/[/\\]+/g, '/')
+      .split('/')
+      .filter((seg, idx) => seg !== '.' || idx === -1)
+      .join('/')
+      .replace(/\/+$/, '');
   const scriptsDirNorm = normLexical(config.wiring.scriptsDir);
   // `.` (and its spellings) legally mean the repository root: the prefix is
   // then empty and every non-traversal relative path is under it.
@@ -530,13 +538,14 @@ export function auditWiring(
       const file = interpreterInvokedFile(tokens);
       if (file === null || !file.endsWith('.mjs')) continue;
       const normalized = normLexical(file);
-      if (normalized.split('/').some((seg) => seg === '.' || seg === '..')) continue;
+      if (normalized.split('/').includes('..')) continue; // a traversal is no key
       if (!normalized.startsWith(scriptsDirPrefix)) {
         continue; // invokes a file outside wiring.scriptsDir — not a key
       }
+      // EVERY qualifying invocation registers (a verify body may chain two
+      // checks — round-3 [P2]); the FIRST one is the surface-matching key.
       registeredRelative.add(normalized.slice(scriptsDirPrefix.length));
-      keyOf.set(name, baseOf(normalized));
-      break;
+      if (!keyOf.has(name)) keyOf.set(name, baseOf(normalized));
     }
   }
 
@@ -636,12 +645,32 @@ export function auditWiring(
   // decided by the same command rule as everything else, never a substring
   // search (`echo verify-foo.mjs` in an unrelated body is not registration).
   if (scriptsDirPath !== null && existsSync(scriptsDirPath)) {
+    let candidateRootReal: string | null;
+    try {
+      candidateRootReal = realpathSync(resolve(root));
+    } catch {
+      candidateRootReal = null;
+    }
+    // A regular file is a candidate; a symlink is one only when its target is
+    // a regular file INSIDE the repository (node executes such a link, so it
+    // must not evade wire-or-delete — round-3 [P2]); dangling and external
+    // targets are skipped, never a crash (round-2 [P2]).
+    const isCandidateFile = (full: string): boolean => {
+      const entry = lstatSync(full);
+      if (entry.isFile()) return true;
+      if (!entry.isSymbolicLink() || candidateRootReal === null || contained.under === null) {
+        return false;
+      }
+      try {
+        const target = realpathSync(full);
+        return contained.under(target, candidateRootReal) && statSync(target).isFile();
+      } catch {
+        return false;
+      }
+    };
     let onDisk = 0;
     for (const name of readdirSync(scriptsDirPath)) {
-      // lstat and never dereference: a dangling symlink named like a script
-      // must not crash the audit, and a symlink to an external file is not an
-      // in-directory candidate (round-2 [P2]). FR-1 selects regular FILES.
-      if (!lstatSync(resolve(scriptsDirPath, name)).isFile()) continue;
+      if (!isCandidateFile(resolve(scriptsDirPath, name))) continue;
       if (!/^verify-.*\.mjs$/.test(name)) continue;
       onDisk += 1;
       if (!registeredRelative.has(name)) {
