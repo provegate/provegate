@@ -212,6 +212,19 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - Phase 3 — the Phase A→B approval gate was collapsed into the owner's single "Go"
   (2026-07-28), per the protocol's autonomous-execution clause, recorded here as that
   clause requires.
+- 1.2 — the owner approved the drafted addendum in-session ("ok 031 için onay",
+  2026-07-28) BEFORE any method byte moved (W3 held); the approval is sealed into A2's
+  status line, and the committed acceptance naming the exact addendum path lands at the
+  merge gate per the 024/027 close pattern.
+- 4.2/5.1 — the proceed-rule block carries NO inline addendum-path citation: the shipped
+  template would dangle the repo-only path at adopters, and FR-5 requires the two copies
+  identical — the trace is held by the FR-4 test quoting the addendum's clause.
+- 6.x — OUT-OF-SURFACE, recorded per §12: `packages/provegate/test/pack-manifest.json`
+  and `scripts/verify/pack-drift-ledger.json` sit outside the declared Conflict Surface
+  and were touched as gate-forced consequences of in-scope work — the pack manifest's
+  conscious-addition gate caught the two new fragments (as designed), and
+  `verify:pack-drift --reconcile` ran once because BOTH bootstrap sides changed by
+  design in one commit. Neither file is claimed by any active PRD.
 
 ---
 
