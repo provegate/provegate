@@ -1,6 +1,6 @@
 # PRD-031: Autonomy Mode and the Phase 4–7 Proceed Rule
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
