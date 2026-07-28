@@ -22,24 +22,26 @@ Then edit `commitlint.config.mjs`: replace the example SCOPES with your own.
 
 ## 3. Verify library — package.json scripts
 
-Add to your root package.json `scripts` (then SHRINK
-`scripts/verify/gates-wired-exceptions.json` — remove each entry as you wire it; the
-meta-gate enforces that the list only shrinks):
+Add to your root package.json `scripts` (wiring exceptions live in
+`gates.manifest.json` under `wiringExceptions`, each with a justification; the audit
+enforces that the set only shrinks):
 
 ```json
 "verify:brain": "node scripts/verify/verify-brain.mjs",
-"verify:review-artifact": "node scripts/verify/verify-review-artifact.mjs",
-"verify:durable-artifacts": "node scripts/verify/verify-durable-artifacts.mjs",
 "verify:deferred": "node scripts/verify/verify-deferred.mjs",
 "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
-"verify:gates-wired": "node scripts/verify/verify-gates-wired.mjs",
 "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
 "verify:workflow": "node scripts/verify/verify-workflow.mjs",
 "ship:pre": "node scripts/verify/verify-workflow.mjs"
 ```
 
-Wire CI: run `verify:workflow` + `verify:gates-wired` in a hygiene job;
-`verify:dependency-audit` needs registry access, so keep it CI-only.
+Wire CI: run `verify:workflow` in a hygiene job; `verify:dependency-audit` needs
+registry access, so keep it CI-only. The review-artifact, durable-artifacts and wiring
+rules run from the CLI you already installed — `gate check --review-artifacts`,
+`gate check --durable-artifacts`, `gate check --wiring` — per PRD at `gate check
+PRD-NNN` and corpus-wide with those flags; there is no script to register for them.
+Upgrading from a pack that shipped those scripts? The release note for provegate 0.3
+carries the five-step migration, including the exceptions conversion.
 
 ## 4. Agent entrypoint shims
 

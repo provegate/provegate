@@ -28,6 +28,8 @@
     "changeset": "changeset",
     "prepare": "git config core.hooksPath .githooks",
     "check-egress": "node scripts/check-static-egress.mjs",
+    "check:review-artifacts": "node packages/provegate/dist/cli.js check --review-artifacts",
+    "check:durable-artifacts": "node packages/provegate/dist/cli.js check --durable-artifacts",
     "verify:brain": "node scripts/verify/verify-brain.mjs",
     "verify:review-artifact": "node scripts/verify/verify-review-artifact.mjs",
     "verify:doc-claims": "node scripts/verify/verify-doc-claims.mjs",

@@ -22,6 +22,8 @@ export {
 } from './classes.js';
 export {
   extractReviewArtifactPath,
+  sweepReviewArtifacts,
+  type ReviewSweepIssue,
   validateReviewArtifact,
   validateReviewArtifactFile,
   validateTasksReviewRow,

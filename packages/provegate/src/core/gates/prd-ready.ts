@@ -2,7 +2,7 @@ import type { WorkflowConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
 import { contractView,
   lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
-import { declaredArtifactsStrict } from '../run/durable.js';
+import { declaredArtifactsStrict, durableDeclarationIssue } from '../run/durable.js';
 import { sectionMatching } from '../state/markdown.js';
 import type { GatesManifest } from './manifest.js';
 import { parseVerificationTable } from './safety.js';
@@ -166,6 +166,13 @@ export function lintPrd(
   if (/\bTBD\b|\?\?\?|to be decided/i.test(prose)) {
     issues.push('placeholder text (TBD / ??? / to be decided) outside code quotes');
   }
+
+  // PRD-026 FR-2: a wip PRD declares its durable artifacts at readiness — the
+  // deleted script's lint mode, now at the phase where a missing declaration
+  // should stop the work. Measured across the whole wip corpus before landing:
+  // zero newly failing sections.
+  const declarationIssue = durableDeclarationIssue(content);
+  if (declarationIssue !== null) issues.push(declarationIssue);
 
   for (const { cmd, safe } of table.commands) {
     if (!safe) issues.push(`unsafe §11 command (would be refused at run time): ${cmd}`);

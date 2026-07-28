@@ -85,6 +85,10 @@ function artifactPaths(section: string): string[] {
       // prose appears in this section, so shape is all that is left to check.
       if (!/^[^\s`]+$/.test(value)) continue;
       if (/[{}]/.test(value)) continue;
+      // PRD-026 FR-2, the reconciled divergence: an unfilled template
+      // placeholder may be a glob, so a value containing `*` is not a claim —
+      // the deleted script excluded it and the package now agrees.
+      if (value.includes('*')) continue;
       // The EXACT token, not a substring: `_docs/none.md` and `none-file` are
       // real paths, and dropping them hid a promised output entirely.
       if (/^none$/i.test(value)) continue;
@@ -92,6 +96,38 @@ function artifactPaths(section: string): string[] {
     }
   }
   return [...new Set(paths)];
+}
+
+/**
+ * PRD-026 FR-2: the declaration lint the deleted script's lint mode had and
+ * the package did not. A wip PRD must DECLARE its durable artifacts at
+ * readiness: the section holds at least one bullet, and every bullet is
+ * either an explicit `none` or extracts at least one path under the
+ * reconciled parser. Mixing is legal — a `none` beside real claims means
+ * "this axis has no durable output", not "this section is empty".
+ * Returns the issue string, or null when the declaration satisfies the rule.
+ */
+export function durableDeclarationIssue(content: string): string | null {
+  const section = sectionAfter(content, 'Durable Artifacts');
+  if (section.trim().length === 0) {
+    return 'Durable Artifacts: section missing or empty — declare paths or an explicit `none`';
+  }
+  const bullets = section.split('\n').filter((line) => /^\s*-\s+\S/.test(line));
+  if (bullets.length === 0) {
+    return 'Durable Artifacts: no bullets — declare paths or an explicit `none`';
+  }
+  for (const bullet of bullets) {
+    const declared = bullet.split('—')[0]!;
+    // The corpus writes `none` two ways: a bullet OPENING with the word
+    // (artifactPaths' own skip rule) and a labelled axis whose only claim is
+    // the backticked token — `- Decision: \`none\` — …`. Both declare nothing,
+    // deliberately.
+    if (/^\s*-\s+none\b/i.test(declared)) continue;
+    if (/`none`/i.test(declared)) continue;
+    if (artifactPaths(bullet).length > 0) continue;
+    return `Durable Artifacts: bullet is neither a \`none\` nor a path-bearing claim: ${bullet.trim().slice(0, 80)}`;
+  }
+  return null;
 }
 
 export interface DurableGateResult {

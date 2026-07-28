@@ -185,13 +185,10 @@ each to be invoked by a manifest command or a CI step. So it is adding
 invisible to it — and the `classDefaults` entry above is what satisfies the requirement. Delete the manifest rule and keep the script, and the audit fails;
 that is the point, and it is why this key stays empty here.
 
-**If you also installed the practices pack**, expect one disagreement, measured in a
-scratch adopter repo built exactly from these instructions: `gate check --wiring` passes
-(the manifest rule is an executing surface it knows about) while the pack's
-`scripts/verify/verify-gates-wired.mjs` **fails** on the same repo — it counts CI steps,
-git hooks, the bundle and `ship:pre`, and not manifest class defaults. So a manifest-wired
-domain gate reads as unwired to it. Until the two agree, either also invoke the script from
-CI, or record it in that script's exceptions file. This is a known duplication in the
+**One rule, one implementation**: `gate check --wiring` is the wiring audit, and since
+provegate 0.3 it also reads git hooks, the bundle's declared membership and sibling
+script bodies — the surfaces the pack's
+retired wiring script used to cover. A manifest-wired domain gate reads as wired. This closed the
 tooling, not something your manifest did wrong.
 
 ## Commands this manifest assumes exist

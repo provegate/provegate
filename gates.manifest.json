@@ -6,8 +6,12 @@
       "pnpm build",
       "pnpm test",
       "pnpm verify:workflow",
-      "pnpm check-egress"
+      "pnpm check-egress",
+      "pnpm check:review-artifacts",
+      "pnpm check:durable-artifacts"
     ],
-    "7": ["pnpm verify:brain"]
+    "7": [
+      "pnpm verify:brain"
+    ]
   }
 }

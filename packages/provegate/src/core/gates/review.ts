@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { escapeRegExp, getMetaValue } from '../state/markdown.js';
@@ -132,6 +132,45 @@ export function validateReviewArtifactFile(
     return { ok: false, issues: [`review artifact not found: ${artifactPath}`] };
   }
   return validateReviewArtifact(readFileSync(full, 'utf8'), options);
+}
+
+/**
+ * PRD-026 FR-1: the corpus sweep the deleted repo script's scope becomes.
+ * Selection is two rules exactly as that script had: a file directly under the
+ * configured reviews directory whose basename matches `^review-.*\.md$` AND
+ * does not contain `.template.` — not recursive. Binding derives the expected
+ * identifier from `^review-(\d{3})-` so a valid review filed under the wrong
+ * PRD's name fails; a selected name yielding no identifier fails as
+ * unparseable rather than being skipped.
+ */
+export interface ReviewSweepIssue {
+  file: string;
+  issues: string[];
+}
+
+export function sweepReviewArtifacts(config: WorkflowConfig, root: string): ReviewSweepIssue[] {
+  const dir = resolve(root, config.dirs.reviewsDir);
+  if (!existsSync(dir)) return [];
+  const out: ReviewSweepIssue[] = [];
+  for (const name of readdirSync(dir).sort()) {
+    if (!/^review-.*\.md$/.test(name)) continue;
+    if (name.includes('.template.')) continue;
+    if (!lstatSync(resolve(dir, name)).isFile()) continue;
+    const bound = /^review-(\d{3})-/.exec(name);
+    if (bound === null) {
+      out.push({
+        file: name,
+        issues: ['filename yields no work-item identifier (expected review-NNN-slug.md)'],
+      });
+      continue;
+    }
+    const expectedId = formatId(config.idPattern, Number.parseInt(bound[1]!, 10));
+    const check = validateReviewArtifactFile(config, root, `${config.dirs.reviewsDir}/${name}`, {
+      expectedId,
+    });
+    if (!check.ok) out.push({ file: name, issues: check.issues });
+  }
+  return out;
 }
 
 /** The Phase 6 fn-gate: ledger row must be `passed` and its artifact valid. */

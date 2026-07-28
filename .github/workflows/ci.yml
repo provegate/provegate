@@ -37,6 +37,13 @@ jobs:
       - name: build
         run: pnpm build
 
+      # PRD-026 FR-4: the CLI sweeps, after the build that produces the CLI.
+      - name: check-review-artifacts
+        run: pnpm check:review-artifacts
+
+      - name: check-durable-artifacts
+        run: pnpm check:durable-artifacts
+
       # The ONLY gate that runs the built CLI, so it lives here rather than in
       # the hygiene job — that job installs but never builds, and a check whose
       # first act is to require `dist/` would report the absence of a build as a
@@ -72,23 +79,17 @@ jobs:
       - name: verify-brain
         run: pnpm verify:brain
 
-      - name: verify-review-artifact
-        run: pnpm verify:review-artifact
-
-      - name: verify-durable-artifacts
-        run: pnpm verify:durable-artifacts
-
       - name: verify-deferred
         run: pnpm verify:deferred
 
       - name: verify-test-task-coverage
         run: pnpm verify:test-task-coverage
 
-      - name: verify-gates-wired
-        run: pnpm verify:gates-wired
-
       - name: verify-pack-drift
         run: pnpm verify:pack-drift
+
+      - name: verify-script-classes
+        run: pnpm verify:script-classes
 
       - name: verify-turbo-inputs
         run: pnpm verify:turbo-inputs

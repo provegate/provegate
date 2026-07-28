@@ -30,6 +30,7 @@ import {
   loadManifest,
   parsePrdClass,
   scoreValueHeader,
+  sweepReviewArtifacts,
   valueScoreIssue,
 } from './core/gates/index.js';
 import { existsSync, readdirSync } from 'node:fs';
@@ -44,6 +45,7 @@ import {
   initWorkspace,
   planPractices,
   planPrompts,
+  durableDeclarationIssue,
   practicesPackDir,
   promptsConfigBlock,
   promptsPackageDir,
@@ -760,7 +762,7 @@ function runValueScoreSweep(config: WorkflowConfig, root: string): number {
 }
 
 function runCheck(args: string[]): number {
-  const unknown = unknownOption(args, ['--wiring', '--value-score']);
+  const unknown = unknownOption(args, ['--wiring', '--value-score', '--review-artifacts', '--durable-artifacts']);
   if (unknown !== null) {
     console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
@@ -784,11 +786,45 @@ function runCheck(args: string[]): number {
     return 0;
   }
 
+  if (args.includes('--review-artifacts')) {
+    // PRD-026 FR-1: the deleted repo script's value was its SCOPE — every
+    // record, not only the closing PRD's. This is that scope on the stronger
+    // package rule, with the identifier bound from the filename so a valid
+    // review under the wrong PRD's name fails.
+    const invalid = sweepReviewArtifacts(config, root);
+    for (const entry of invalid) {
+      console.error(`[check --review-artifacts] ${entry.file}: ${entry.issues.join('; ')}`);
+    }
+    if (invalid.length > 0) return 1;
+    console.log('[check --review-artifacts] ok — every review record validates');
+    return 0;
+  }
+
+  if (args.includes('--durable-artifacts')) {
+    // PRD-026 FR-2: the declaration lint, corpus-wide over the configured wip
+    // directory.
+    const wipDir = resolve(root, config.dirs.artifacts.prd.dir, config.dirs.stateRoles.wip);
+    let failures = 0;
+    if (existsSync(wipDir)) {
+      for (const name of readdirSync(wipDir).sort()) {
+        if (!name.endsWith('.md')) continue;
+        const issue = durableDeclarationIssue(readFileSync(resolve(wipDir, name), 'utf8'));
+        if (issue !== null) {
+          failures += 1;
+          console.error(`[check --durable-artifacts] ${name}: ${issue}`);
+        }
+      }
+    }
+    if (failures > 0) return 1;
+    console.log('[check --durable-artifacts] ok — every wip PRD declares its durable artifacts');
+    return 0;
+  }
+
   if (args.includes('--value-score')) return runValueScoreSweep(config, root);
 
   const idArg = args.find((a) => !a.startsWith('-'));
   if (!idArg) {
-    console.error('usage: gate check PRD-XXX | gate check --wiring');
+    console.error('usage: gate check PRD-XXX | gate check --wiring | gate check --review-artifacts | gate check --durable-artifacts');
     return 1;
   }
   const found = findRecord(config, root, idArg);
