@@ -115,9 +115,10 @@ changes, cache/queue plans) as your project requires. -->
 ---
 
 Section 9 below accepts exactly two entry forms, each alone on its raw line — `- (none)`,
-or `- Deferred to [{{ID_PREFIX}}-NNN](<path>)` where the path resolves to a distinct,
-unfinished, filed work item (create it first, then defer to it). Blank lines and one
-terminal `---` are the only other lines allowed; anything else fails `gate check`.
+or `- Deferred to [{{ID_PREFIX}}-NNN](<path>)` where `NNN` runs at the configured id
+width and the path resolves to a distinct, unfinished, filed work item (create it
+first, then defer to it). Blank lines and one terminal `---` are the only other lines
+allowed; anything else fails `gate check`.
 
 ## 9. Open Questions
 

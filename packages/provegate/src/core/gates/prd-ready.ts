@@ -48,18 +48,32 @@ const OPEN_QUESTIONS_HEADING = String.raw`(?:\d+\.[ \t]+)?Open Questions`;
  * normalization; the slice start is recovered by reference identity, which
  * keeps the exported `sectionBounds` signature untouched.
  */
-function rawSection(content: string, heading: string): { count: number; lines: string[] } {
+function rawSection(
+  content: string,
+  heading: string,
+): { count: number; lines: string[]; executable: string[] } {
   const scan = scanDocument(content);
   const found = sectionBounds(scan.lines, heading);
-  if (found.count !== 1 || found.body.length === 0) return { count: found.count, lines: [] };
+  if (found.count !== 1 || found.body.length === 0) {
+    return { count: found.count, lines: [], executable: [] };
+  }
   const start = scan.lines.indexOf(found.body[0]!);
   const raw = content.replace(/\r\n|\r/g, '\n').split('\n');
-  return { count: 1, lines: raw.slice(start, start + found.body.length) };
+  return {
+    count: 1,
+    lines: raw.slice(start, start + found.body.length),
+    // The EXECUTABLE view of the same span: only lines the scan classifies as
+    // Markdown text, with comments masked. Round 2: the FR reader must consume
+    // this one — a requirement written inside a fence is an example to every
+    // renderer, and reading it as a real FR let a document with no live
+    // requirements pass.
+    executable: found.body.filter((line) => line.kind === 'text').map((line) => line.text),
+  };
 }
 
 function frBlocks(content: string): { count: number; blocks: FrBlock[] } {
   const found = rawSection(content, FR_HEADING);
-  const section = found.lines.join('\n');
+  const section = found.executable.join('\n');
   const blocks: FrBlock[] = [];
   const matches = [...section.matchAll(/^\s*\d+\.\s+\*\*FR-(\d+)/gm)];
   for (let i = 0; i < matches.length; i += 1) {
@@ -178,6 +192,14 @@ function deferralIssue(
     return 'deferral unverifiable — the lint received no declaring PRD number';
   }
   const prd = config.dirs.artifacts.prd;
+  // Round 2: the path is a REPOSITORY-RELATIVE state-layer coordinate, and it
+  // must read the same to the lint, the filesystem, and a renderer. `#` opens
+  // a fragment, `\` is a separator on one platform and a name character on
+  // another, `:` opens a URL scheme — each makes two readers disagree about
+  // the referent, so all three are refused outright.
+  if (/[#\\:]/.test(target)) {
+    return 'the target path carries a character the link and the filesystem read differently (`#`, `\\`, `:`)';
+  }
   // Rule 2 — containment inside the configured artifact root, path-boundary
   // safe (never a string prefix), and repository-relative to begin with.
   if (isAbsolute(target) || target.split('/').includes('..')) {
@@ -223,6 +245,18 @@ function deferralIssue(
     return 'the target file does not exist';
   }
   if (!stat.isFile()) return 'the target is not a regular file — a symlink is refused';
+  // Round 2: the ON-DISK name must be byte-equal to the linked one. On a
+  // case-insensitive filesystem `lstat` opens `PRD-123-x.md` through a
+  // lowercase link, but the state builder enumerates the real basename and
+  // refuses it — the deferral would resolve to an item absent from state. The
+  // directory listing is the state layer's own source of names, so it is the
+  // authority here.
+  if (
+    !readdirSync(artifactRoot).includes(state) ||
+    !readdirSync(resolve(artifactRoot, state)).includes(segments[1]!)
+  ) {
+    return "the target's on-disk name differs from the link — the state layer would not register it";
+  }
   // Round 1: a hardlink is a second NAME for the same inode — realpath
   // canonicalizes pathnames, not file identity, so a finished artifact
   // hardlinked into a wip role would pass every path-level rule. A repository
@@ -332,7 +366,10 @@ function openQuestionsIssues(
       separatorSeen = true;
       continue;
     }
-    issues.push(`Open Questions: ${lineShape(line)} is not in the closed grammar: "${line.trim()}"`);
+    // Round 2: a line that trims to nothing (an NBSP-only line is not blank to
+    // this grammar) must still show WHAT was refused — codepoints, not "".
+    const shown = line.trim().length > 0 ? `"${line.trim()}"` : JSON.stringify(line);
+    issues.push(`Open Questions: ${lineShape(line)} is not in the closed grammar: ${shown}`);
   }
   return issues;
 }

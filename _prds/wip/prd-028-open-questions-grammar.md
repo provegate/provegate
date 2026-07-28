@@ -184,14 +184,23 @@ Each FR carries the exact target paths the implementing agent will touch. Use
         than "active", because the state query's active set excludes deferred records,
         `state/query.ts:58-69`) — a completed-role target is finished work, not a
         follow-up;
-     6. the target is a **regular file**: `lstat`, never `stat` — a symlink is refused
-        outright, because iteration 4 built the eighth hiding place from one
-        (`_prds/wip/prd-123-followup.md` → the declaring PRD passes every
-        basename-level check while canonically self-linking);
+     6. the target is a **regular file with exactly one hard link**: `lstat`, never
+        `stat` — a symlink is refused outright, because iteration 4 built the eighth
+        hiding place from one (`_prds/wip/prd-123-followup.md` → the declaring PRD
+        passes every basename-level check while canonically self-linking); and a
+        multiply-linked target is refused too, because realpath canonicalizes names,
+        not identity (Phase 6 round 1);
      7. identity is **canonical**: the realpath of the target must remain under the
-        realpath of the artifact root, and must differ from the realpath of the
-        declaring PRD's own artifact — the alias comparison rule 5's number check
-        cannot see;
+        realpath of the artifact root, must differ from the realpath of the declaring
+        PRD's own artifact — the alias comparison rule 5's number check cannot see —
+        and the **canonical state segment must equal the lexical one**, because a
+        symlinked state directory relabels finished work as unfinished while every
+        file-level check passes (Phase 6 round 1); the **on-disk basename must be
+        byte-equal to the linked one** (the state layer's own directory listing is the
+        authority), because a case-insensitive filesystem otherwise resolves a
+        deferral to an item the state builder refuses (round 2); and the path carries
+        no `#`, `\` or `:`, each of which makes the link and the filesystem disagree
+        about the referent (round 2);
      8. the target is a **recognized record, not a stub**: its first heading is the H1
         the template ships — the configured prefix, the target's own number and a
         colon (`# PRD-NNN: …`) — so a parser-valid file holding only a smuggled
@@ -207,7 +216,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    A label/target number mismatch fails. A missing file fails. A path outside the
    artifact root fails. A self-reference fails — by number or by canonical alias. A
    completed-role target fails. A basename the artifact parser rejects fails. A
-   wrong-width label fails. A symlink fails. A stub without its own H1 fails. A
+   wrong-width label fails. A symlink fails. A hardlinked target fails. A state
+   directory that is an alias fails. An on-disk name that differs from the link
+   fails. A `#`, `\` or `:` in the path fails. A stub without its own H1 fails. A
    deferral linted without the declaring number fails. There is no field left in
    either form where an author can type a question, and no way to satisfy the form
    without a **real, distinct, unfinished, filed work item** on the other end — the snapshot
@@ -269,7 +280,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    **(d) The same first-match hole exists in the FR block** (`frBlocks`,
    `prd-ready.ts:28`) and is closed the same way: exactly one Functional Requirements
-   section, heading-identified. §11's copy is **not** here: PRD-024 shipped it
+   section, heading-identified — and its entries are read from the **executable**
+   view (scanner text lines), because a requirement written inside a fence is an
+   example to every renderer, and reading it as a real FR let a document with no
+   live requirements pass (Phase 6 round 2). §11's copy is **not** here: PRD-024 shipped it
    (`fc610f9`), and the boundary was independently confirmed not to be a seam.
    - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
      `packages/provegate/src/core/gates/prd-ready.ts::frBlocks`,
@@ -389,6 +403,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   (alias to self or anything — non-regular is refused outright), an **H1-less stub**, or
   a Deferred entry linted **without the declaring number**, **Then** each fails — the
   resolution rejections. *(history row 7 covers the alias)*
+- **Given** a **hardlinked** target, a **symlinked state directory**, an on-disk name
+  that differs from the link by case, or a path carrying `#`, `\` or `:`, **Then**
+  each fails — the Phase 6 canonical-identity extensions, deny-tested with positive
+  controls.
+- **Given** a Functional Requirements entry written **inside a fence**, **Then** the
+  document reports no functional requirements — an example is not a requirement.
 - **Given** `- (none)` alone, or `- Deferred to [PRD-NNN](<path>)` resolving to a
   distinct registered work item in a directory named by the configured
   `dirs.stateRoles.wip` or `dirs.stateRoles.deferred` role, **Then** each
@@ -705,6 +725,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, Phase 6 round 2 (Codex, independent) | **Two of three [P1]s taken as defects; the third adjudicated to a rule tightening.** (1) Case-insensitive filesystems resolved a deferral to an item the state builder refuses — closed by on-disk byte-equality against the directory listing (the state layer's own name source), portable deny fixture asserting the verdict, not the platform-dependent reason. (2) A fenced FR entry read as a real requirement let a document with no live requirements pass — `frBlocks` now consumes the scanner's executable lines; deny fixture added. (3) The render/lint referent disagreement (doc-relative links, `#` fragments) is not a fail-open — every non-repo-relative form fails closed — so the path stays a repository-relative state-layer coordinate and the charset that makes two readers disagree (`#`, `\`, `:`) is refused; adjudication recorded. [P2]s: these rules written into FR-1/FR-2/§6 normatively (this row's edit), template guidance names the configured width, corpus test derives the declaring number through `parseArtifactName`. [P3]: refused lines that trim to nothing are shown as codepoints |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 1 (Codex, independent) | **Two [P1] canonical-identity bypasses closed as FR-1 rule extensions.** Rule 6 extends: a target with **multiple hard links** is refused (realpath canonicalizes names, not identity — a finished artifact hardlinked into a wip role passed every path-level rule). Rule 7 extends: the **canonical state segment must equal the lexical one** (a symlinked state DIRECTORY — `deferred` → `completed` — relabeled finished work as unfinished while every file-level check passed). Both carry deny fixtures with positive controls; the wrong-width and parser-rejected rows gained otherwise-valid existing targets so each rule is its row's only failing cause ([P2]). The two live "active" restatements corrected to "unfinished" and the two historical changelog count claims marked superseded ([P2]/[P3]) |
 | 2026-07-28 | Claude Fable 5 (rewrite author, non-scorer), iteration-4 remediation | **Canonical resolution replaces basename resolution; both iteration-4 [P1]s and both [P2]s closed.** The eighth hiding place — a wip symlink alias passing every basename-level check while canonically self-linking — dies at three added rules: lstat-regular (symlinks refused outright), realpath containment under the realpath'd artifact root, and realpath distinctness against the declaring PRD's own artifact; the H1-recognition rule closes the deferred-stub path, and the absent fifth argument now **fails closed** as unverifiable when a Deferred entry is present. History row 7 records the alias; the counts are nine history rows and sixteen deny fixtures, swept by grep this time — the §8 seven-row survivor iteration 4 caught is fixed, and the `a-rule-corrected…` disposition now names its own failure instead of claiming a clean sweep. Config-role [P2]: `wip`/`deferred` literals replaced by `dirs.stateRoles` names with the prefix from config, and "active" corrected to "unfinished" against `query.ts:58-69`. The `turbo-cache…` disposition flips to applied (024's inputs did not cover the store). Dependencies' one-line claim corrected to FR-3's measured comments-and-continuations shape. **Value re-declared 3.45 (4/4/2/3/4) at the scorer's supportable derivation** — MF 4 held deliberately after two broken re-earn claims; MF 5 waits for a round the mechanism survives |
 | 2026-07-28 | Claude Fable 5 (rewrite author, non-scorer), iteration-3 remediation | **All three iteration-3 [P1]s closed and the cross-item [P2] taken; the referent is now resolved, not matched.** **(H)** FR-1's link rule rewrites from shape-plus-existence to **state-layer resolution**: label at the configured width (`defaults.ts:26-29`), basename accepted by `parseArtifactName` (`state/artifacts.ts:33-47`) with the parsed number equal to the label's, file existing under the artifact root, and the referent a **distinct, active** item — not the declaring PRD (the lint's fifth argument names it) and not `completed`. The self-link, completed-target, look-alike and wrong-width cases each gain a deny fixture; history row 6 records the seventh hiding place and the deny matrix is twelve rows (eight history + four resolution rejections), swept at every count [superseded by the iteration-4 revision: nine history rows, sixteen deny fixtures]. **(I)** FR-4's guidance moves outside the judged body — immediately before the §9 heading — after the first version put it in a comment FR-2 itself refuses; the round-trip now asserts the instantiated document lints green, the self-application that would have caught it. **(J)** FR-3's Phase-3 record is discovery output only; the corpus oracle is zero closed-grammar failures with offenders named. **(K)** `$TURBO_ROOT$/_brain/**` joins the test task inputs with the exceptions reason extended — `lintPrd` reads the store (`prd-ready.ts:212`) and nobody's cache key knew, landed PRD-024's corpus test included; `turbo.json` and the exceptions file return to the surface, serializing with PRD-036's FR-1. Value stays 3.70: MF 5 now rests on resolution rather than the disproved shape premise, AR 3 on the corrected template delivery — re-derivation recorded here as iteration 3's missing piece 6 asked |

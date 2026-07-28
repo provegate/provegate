@@ -15,6 +15,7 @@ import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js
 import { loadConfig } from '../src/core/config/load.js';
 import { defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
+import { parseArtifactName } from '../src/core/state/artifacts.js';
 
 /**
  * PRD-028: the closed §9 grammar. Eight successive exemption rules produced
@@ -320,6 +321,32 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     ).toContain("'done' is not the configured wip or deferred role");
   });
 
+  it('[R2-P1-1] a target carrying `#`, `\\` or `:` is refused — two readers, one referent', () => {
+    const root = workspace();
+    writeFileSync(join(root, '_prds/wip/prd-133-a#b.md'), '# PRD-133: Fragmented\n');
+    for (const target of [
+      '_prds/wip/prd-133-a#b.md',
+      '_prds\\wip\\prd-123-followup.md',
+      'file:_prds/wip/prd-123-followup.md',
+    ]) {
+      expect(oq(doc([`- Deferred to [PRD-133](${target})`]), root).join('; '), target).toContain(
+        'read differently',
+      );
+    }
+  });
+
+  it('[R2-P1-2] the on-disk basename must be byte-equal to the linked one', () => {
+    // On a case-insensitive filesystem the lowercase link opens the uppercase
+    // file while the state builder refuses its real basename; on a
+    // case-sensitive one the open itself fails. Either way the deferral is
+    // DENIED — the reason differs by platform, the verdict must not.
+    const root = workspace();
+    writeFileSync(join(root, '_prds/wip/PRD-132-CASE.md'), '# PRD-132: Case\n');
+    const denied = oq(doc(['- Deferred to [PRD-132](_prds/wip/prd-132-case.md)']), root);
+    expect(denied.length).toBeGreaterThan(0);
+    expect(denied.join('; ')).toMatch(/on-disk name differs|does not exist/);
+  });
+
   it('the exact form tolerates nothing: case, spacing, punctuation', () => {
     const root = workspace();
     for (const line of [
@@ -392,6 +419,18 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
     );
   });
 
+  it('[R2-P1-3] a requirement written inside a fence is an example, not an FR', () => {
+    const fenced = doc(['- (none)']).replace(
+      '1. **FR-1**: does a thing.\n   - **Targets:** `packages/x/src/a.ts`',
+      ['```markdown', '1. **FR-1**: does a thing.', '   - **Targets:** `packages/x/src/a.ts`', '```'].join(
+        '\n',
+      ),
+    );
+    expect(lintPrd(cfg, manifest, fenced, workspace(), 42).issues.join('; ')).toContain(
+      'no functional requirements found',
+    );
+  });
+
   it('the same first-match hole in the FR block is closed the same way', () => {
     const twice = doc(['- (none)']).replace(
       '## 9. Open Questions',
@@ -421,7 +460,12 @@ describe('FR-3 — the wip corpus under the closed grammar, five production argu
     expect(files.length).toBeGreaterThan(0);
     const offenders: string[] = [];
     for (const file of files) {
-      const number = Number.parseInt(/-(\d+)-/.exec(file)?.[1] ?? '0', 10);
+      // Round 2: the declaring number comes from the state layer's own parser,
+      // exactly as production resolves the record — an ad-hoc regex diverges
+      // on legal exotic prefixes and mislabels a self-link.
+      const parsed = parseArtifactName(config.idPattern, config.dirs.artifacts.prd.prefix, file);
+      if (parsed === null) continue;
+      const number = parsed.number;
       const issues = lintPrd(
         config,
         repoManifest,
