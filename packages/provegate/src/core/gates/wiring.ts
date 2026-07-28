@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
+import { resolveContainedPaths } from '../config/load.js';
 import { manifestCommands, type GatesManifest } from './manifest.js';
 
 /**
@@ -64,6 +65,245 @@ export function yamlRunText(content: string): string[] {
 export interface WiringReport {
   ok: boolean;
   issues: string[];
+  /**
+   * PRD-025: the surfaces the audit actually read, each with what it found
+   * there (`hooks:2`, `bundle:10`, …). A narrow grammar loses a surface
+   * SILENTLY when the input stops satisfying it — this list is what turns a
+   * silently-lost surface into a number a maintainer can watch change.
+   */
+  surfaces: string[];
+}
+
+// ————————————————————————— PRD-025: the narrow command grammar —————————————————————————
+
+/**
+ * The closed interpreter head list. In source, not config: an adopter silently
+ * widening their own gate is the failure the meta-gate exists to prevent, so
+ * extension costs a code change and a test. There is deliberately NO flag
+ * table beside it — see `interpreterInvokedFile`.
+ */
+const INTERPRETERS = new Set(['node', 'bun', 'deno', 'tsx', 'ts-node']);
+
+/** Basename after stripping any directory prefix (`/usr/bin/node` counts). */
+const baseOf = (p: string): string =>
+  p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1);
+
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+
+/**
+ * One left-to-right scan of a command surface (a whole hook file body or a
+ * whole package.json script body), carrying exactly three pieces of state:
+ * in-single-quote, in-double-quote, and pending-backslash. Both the command
+ * boundaries and the tokens fall out of this one pass — a separate segmenter
+ * and lexer is exactly how three boundary cases disagreed for two review
+ * rounds (PRD-025 FR-3(b)).
+ *
+ * Rules, each a fact about the state:
+ *  1. a backslash escapes the next character — except a newline;
+ *  2. a newline ALWAYS cuts a command boundary;
+ *  3. `;`, `&&`, `||` cut only outside both quote states and unescaped
+ *     according to that state (so `\;` does not cut and `\\;` does);
+ *  4. a `#` that begins a token outside quotes starts a comment discarded
+ *     through the newline — a commented-out invocation declares nothing, and
+ *     the shebang is just a comment.
+ *
+ * A quoted run therefore cannot span a newline; a quote still open at one is
+ * unterminated, and an unterminated quote anywhere returns `null`: the WHOLE
+ * surface is unparseable, no fragment is salvaged, never a crash, never a
+ * substring fallback.
+ */
+export function scanCommandSurface(text: string): string[][] | null {
+  const commands: string[][] = [];
+  let tokens: string[] = [];
+  let token: string | null = null;
+  let inSingle = false;
+  let inDouble = false;
+  let backslash = false;
+  let comment = false;
+  const endToken = (): void => {
+    if (token !== null) {
+      tokens.push(token);
+      token = null;
+    }
+  };
+  const endCommand = (): void => {
+    endToken();
+    if (tokens.length > 0) {
+      commands.push(tokens);
+      tokens = [];
+    }
+  };
+  const append = (ch: string): void => {
+    token = (token ?? '') + ch;
+  };
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i]!;
+    if (comment) {
+      if (ch === '\n') {
+        comment = false;
+        endCommand();
+      }
+      i += 1;
+      continue;
+    }
+    if (backslash) {
+      backslash = false;
+      if (ch === '\n') {
+        // The backslash does not escape a newline: it stays an ordinary
+        // character in the command before the cut, and the cut happens.
+        append('\\');
+        if (inSingle || inDouble) return null;
+        endCommand();
+        i += 1;
+        continue;
+      }
+      append(ch);
+      i += 1;
+      continue;
+    }
+    if (ch === '\\') {
+      backslash = true;
+      i += 1;
+      continue;
+    }
+    if (inSingle || inDouble) {
+      if (ch === '\n') return null; // quote open at a newline: unterminated, whole surface
+      if ((inSingle && ch === "'") || (inDouble && ch === '"')) {
+        inSingle = false;
+        inDouble = false;
+        i += 1;
+        continue;
+      }
+      append(ch);
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      // A quoted run is (part of) one token, quotes stripped.
+      inSingle = ch === "'";
+      inDouble = ch === '"';
+      token = token ?? '';
+      i += 1;
+      continue;
+    }
+    if (ch === '\n') {
+      endCommand();
+      i += 1;
+      continue;
+    }
+    if (ch === ' ' || ch === '\t' || ch === '\r') {
+      endToken();
+      i += 1;
+      continue;
+    }
+    if (ch === '#' && token === null) {
+      comment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === ';') {
+      endCommand();
+      i += 1;
+      continue;
+    }
+    if (ch === '&' && text[i + 1] === '&') {
+      endCommand();
+      i += 2;
+      continue;
+    }
+    if (ch === '|' && text[i + 1] === '|') {
+      endCommand();
+      i += 2;
+      continue;
+    }
+    // A single `|` or `&` is not a separator here (matches the set production
+    // already used); it is an ordinary character, and a command reachable only
+    // through a pipe or background operator declares no wiring — fail closed.
+    append(ch);
+    i += 1;
+  }
+  if (inSingle || inDouble) return null;
+  if (backslash) append('\\'); // a trailing backslash at EOF is an ordinary character
+  endCommand();
+  return commands;
+}
+
+/**
+ * The narrow command shape (PRD-025 FR-3(b)): strip `NAME=value` wrappers and
+ * a leading literal `env` with its own `NAME=value` arguments; the head token
+ * must be a closed-list interpreter (directory prefix stripped); `deno` may
+ * take one optional literal `run`; the IMMEDIATELY next token is the script
+ * path — it must not start with `-` — and everything after it is a script
+ * argument, never read.
+ *
+ * Any `-`-leading token between the head (or `run`) and the path means the
+ * command declares no wiring, fail-closed. That single rule replaces both
+ * flag tables an earlier draft carried: `--check`, `-e`, `--require` and
+ * `--enable-source-maps` all resolve identically, and the question of which
+ * flag consumes a value for which interpreter is not answered here — it is
+ * not asked. The false negative on a harmless flag surfaces as "wired
+ * nowhere", never as a silent pass; the remedies are dropping the flag or a
+ * justified `wiringExceptions` entry.
+ */
+export function interpreterInvokedFile(tokens: string[]): string | null {
+  let i = 0;
+  while (i < tokens.length && ASSIGNMENT.test(tokens[i]!)) i += 1;
+  if (tokens[i] === 'env') {
+    // `env` carrying anything but NAME=value (-i, -u VAR) leaves a head token
+    // that is not an interpreter, so the command declares no wiring — there
+    // is no env option table for the same reason there is no flag table.
+    i += 1;
+    while (i < tokens.length && ASSIGNMENT.test(tokens[i]!)) i += 1;
+  }
+  const head = tokens[i];
+  if (head === undefined || !INTERPRETERS.has(baseOf(head))) return null;
+  i += 1;
+  // deno's one subcommand: the literal `run`, optional — both `deno run x`
+  // and `deno x` wire. No other head takes a subcommand (`bun run x` reads
+  // `run` as the path and matches nothing — a stated false negative).
+  if (baseOf(head) === 'deno' && tokens[i] === 'run') i += 1;
+  const path = tokens[i];
+  if (path === undefined || path.startsWith('-')) return null;
+  return path;
+}
+
+/**
+ * The bundle's declared membership under the line- and column-anchored grammar
+ * (PRD-025 FR-3(c)). Opens at a line whose FIRST character begins
+ * `const CHECKS = [` (column zero); closes at the first subsequent line whose
+ * first non-whitespace is `];`. Between them every line is a single
+ * string-literal element (no backslash, no occurrence of its own delimiting
+ * quote, optional trailing comma, optional `//` comment after that comma), a
+ * whole-line `//` comment, or blank. Anything else — and more than one opening
+ * line anywhere in the file, including inside what a JavaScript parser would
+ * call a string or template literal — declares NO membership: absence,
+ * unparseability and ambiguity are the same verdict, fail closed, never an
+ * error, never a fallback to text search. The worst an impostor achieves is
+ * removing this surface (visible in `WiringReport.surfaces`), never adding a
+ * member.
+ */
+export function bundleMembers(content: string): string[] {
+  const lines = content.split('\n');
+  const openers: number[] = [];
+  for (const [idx, line] of lines.entries()) {
+    if (line.startsWith('const CHECKS = [')) openers.push(idx);
+  }
+  if (openers.length !== 1) return [];
+  const members: string[] = [];
+  for (let i = openers[0]! + 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (/^\s*\];/.test(line)) return members;
+    if (line.trim() === '') continue;
+    if (/^\s*\/\//.test(line)) continue;
+    const m = /^\s*(['"])(.*)\1\s*(?:,\s*(?:\/\/.*)?)?$/.exec(line);
+    if (m === null) return [];
+    const quote = m[1]!;
+    const body = m[2]!;
+    if (body.includes('\\') || body.includes(quote)) return [];
+    members.push(body);
+  }
+  return []; // never closed — unparseable, no membership
 }
 
 /** Manager subcommands that are NOT package.json script invocations. */
@@ -213,13 +453,17 @@ export function auditWiring(
 
   // Direction 2: verify-pattern scripts must be wired or excepted.
   const pattern = new RegExp(config.verifyScriptPattern);
+  const surfaces: string[] = ['manifest'];
   const wiringText: string[] = [...manifestCommands(manifest)];
   const workflowsDir = resolve(root, '.github/workflows');
   if (existsSync(workflowsDir)) {
+    let ciFiles = 0;
     for (const name of readdirSync(workflowsDir)) {
       if (!/\.ya?ml$/.test(name)) continue;
+      ciFiles += 1;
       wiringText.push(...yamlRunText(readFileSync(resolve(workflowsDir, name), 'utf8')));
     }
+    surfaces.push(`ci:${ciFiles}`);
   }
   // The script a COMMAND resolves to, decided by the same parser the rest of
   // this audit uses. Text matching failed both ways: `echo pnpm verify:brain`
@@ -233,7 +477,92 @@ export function auditWiring(
       if (script !== null) wiredScripts.add(script);
     }
   }
-  const wiredIn = (script: string): boolean => wiredScripts.has(script);
+  // ——— PRD-025: the three read paths, containment-checked before any read.
+  // Lexical validation cannot see a symlink escape, so each read resolves
+  // through the same containment primitive the other configured paths use
+  // (`resolveContainedPaths`, exported from config/load.ts — never a copy).
+  // An escaping path is refused loudly; an ABSENT path is "not a surface".
+  const contained = resolveContainedPaths(root, [
+    ['wiring.scriptsDir', config.wiring.scriptsDir],
+    ['wiring.hooksDir', config.wiring.hooksDir],
+    ['wiring.bundlePath', config.wiring.bundlePath],
+  ]);
+  for (const issue of contained.issues) {
+    issues.push(`${issue.path} ${issue.message} — refusing to read it`);
+  }
+  const readPath = (label: string): string | null => contained.resolved.get(label) ?? null;
+
+  // FR-3(a): derive each verify script's KEY — the basename of the .mjs file
+  // its own body invokes under wiring.scriptsDir. The new surfaces match keys
+  // (a hook or bundle names a file, not a package.json script name). The
+  // under-scriptsDir test is LEXICAL against the configured value — comparing
+  // a lexical path against a realpath'd base is the exact mismatch
+  // `absolute-in-repo-symlink-refused` records, so like is compared with like.
+  const scriptsDirPath = readPath('wiring.scriptsDir');
+  const scriptsDirPrefix = config.wiring.scriptsDir.replace(/[/\\]+$/, '') + '/';
+  const keyOf = new Map<string, string>();
+  for (const [name, body] of Object.entries(scripts)) {
+    if (!pattern.test(name)) continue;
+    const cmds = scanCommandSurface(body);
+    if (cmds === null) continue;
+    for (const tokens of cmds) {
+      const file = interpreterInvokedFile(tokens);
+      if (file === null || !file.endsWith('.mjs')) continue;
+      if (!file.replace(/^\.\//, '').startsWith(scriptsDirPrefix)) {
+        continue; // invokes a file outside wiring.scriptsDir — not a key
+      }
+      keyOf.set(name, baseOf(file));
+      break;
+    }
+  }
+
+  // FR-2: the three surfaces the repository script counted and the package
+  // did not — hooks, the bundle's declared membership, and every NON-verify
+  // script body. The verify-prefix exclusion is load-bearing: without it a
+  // bundle listing its members marks them all wired by existing, and two
+  // checks naming each other wire themselves.
+  const wiredKeys = new Set<string>();
+  const collectKeys = (surface: string): void => {
+    const cmds = scanCommandSurface(surface);
+    if (cmds === null) return; // unparseable — the surface declares nothing
+    for (const tokens of cmds) {
+      const file = interpreterInvokedFile(tokens);
+      if (file !== null) wiredKeys.add(baseOf(file));
+    }
+  };
+
+  const hooksDirPath = readPath('wiring.hooksDir');
+  if (hooksDirPath !== null && existsSync(hooksDirPath)) {
+    let hookFiles = 0;
+    for (const name of readdirSync(hooksDirPath)) {
+      const full = resolve(hooksDirPath, name);
+      if (!statSync(full).isFile()) continue;
+      hookFiles += 1;
+      collectKeys(readFileSync(full, 'utf8'));
+    }
+    surfaces.push(`hooks:${hookFiles}`);
+  }
+
+  let nonVerifyBodies = 0;
+  for (const [name, body] of Object.entries(scripts)) {
+    if (pattern.test(name)) continue; // the exclusion — a verify body wires nothing
+    nonVerifyBodies += 1;
+    collectKeys(body);
+  }
+  surfaces.push(`scripts:${nonVerifyBodies}`);
+
+  const bundlePath = readPath('wiring.bundlePath');
+  if (bundlePath !== null && existsSync(bundlePath)) {
+    const members = bundleMembers(readFileSync(bundlePath, 'utf8'));
+    for (const member of members) wiredKeys.add(member);
+    surfaces.push(`bundle:${members.length}`);
+  }
+
+  const wiredIn = (script: string): boolean => {
+    if (wiredScripts.has(script)) return true;
+    const key = keyOf.get(script);
+    return key !== undefined && wiredKeys.has(key);
+  };
 
   for (const script of scriptNames) {
     if (!pattern.test(script)) continue;
@@ -243,9 +572,29 @@ export function auditWiring(
       issues.push(`stale wiring exception: "${script}" is wired now — remove the exception`);
     } else if (!wired && !excepted) {
       issues.push(
-        `gate script "${script}" is wired nowhere (manifest or CI) — wire it, delete it, or add a justified wiringExceptions entry`,
+        `gate script "${script}" is wired nowhere (manifest, CI, hooks, bundle, or another script body) — wire it, delete it, or add a justified wiringExceptions entry`,
       );
     }
+  }
+
+  // FR-1: the direction the repository script had and the package did not —
+  // on-disk → registered. Selection is a FILENAME pattern (distinct from
+  // `verifyScriptPattern`, which matches script NAMES); registration is
+  // decided by the same command rule as everything else, never a substring
+  // search (`echo verify-foo.mjs` in an unrelated body is not registration).
+  if (scriptsDirPath !== null && existsSync(scriptsDirPath)) {
+    const registeredFiles = new Set(keyOf.values());
+    let onDisk = 0;
+    for (const name of readdirSync(scriptsDirPath)) {
+      if (!/^verify-.*\.mjs$/.test(name)) continue;
+      onDisk += 1;
+      if (!registeredFiles.has(name)) {
+        issues.push(
+          `script on disk "${name}" is not registered as a package.json gate — register it or delete it`,
+        );
+      }
+    }
+    surfaces.push(`scriptsDir:${onDisk}`);
   }
 
   // Exceptions for scripts that no longer exist are stale too.
@@ -255,5 +604,5 @@ export function auditWiring(
     }
   }
 
-  return { ok: issues.length === 0, issues };
+  return { ok: issues.length === 0, issues, surfaces };
 }
