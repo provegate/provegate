@@ -279,6 +279,19 @@
       "date": "2026-07-28",
       "method": "interactive",
       "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-031",
+      "owner": "owner",
+      "items": [
+        "1.2 addendum approval: docs/research/provegate-bootstrap/source-snapshot/addenda/autonomy-mode-and-proceed-rule-2026-07-27.md approved in-session before any method byte moved (W3 held; W2 satisfied by this item naming the exact path)",
+        "9.1 independent review accepted (Codex, 3 rounds, verdict pass, critical 0, quorum 1/1)",
+        "operator acceptance of the operator-gated close via gate run"
+      ],
+      "reason": "owner approved the drafted addendum in-session ('ok 031 icin onay') and directed this transcription ('et', 2026-07-28); the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
     }
   ]
 }
