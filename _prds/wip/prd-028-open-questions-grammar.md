@@ -1,13 +1,13 @@
 # PRD-028: Open Questions Grammar — Implement the Rule the Method Already States
 
-> **Status**: Draft
+> **Status**: Operator Verification
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28
 > **Author**: Claude Opus 5 (original), Claude Fable 5 (narrowing rewrite), for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `open-questions-grammar`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Operator Verification)
 > **PRD Class**: infra
 > **Class Rationale**: A method-fidelity defect in the readiness lint's §9 reader, plus the
 > section cardinality it needs, plus the template line that teaches the form. No new flag,
@@ -569,6 +569,9 @@ artifact.
   did NOT cover everything the lint reads: the `_brain` store was outside every cache
   key. FR-3 adds it and asserts all four root inputs; `turbo.json` and the exceptions
   file are back on this surface for exactly that write.
+- not-applicable: `exemption-marker-needs-no-prose` — this PRD's own Memory Output;
+  its watch on `prd-ready.ts` fires on the very diff that created the record, not on a
+  prior trap (the same newborn-watch pattern PRD-025 and PRD-026 recorded at close).
 - reviewed: `evidence-pattern-satisfied-by-the-template` — FR-4 writes the exact forms
   into the shipped template, which is precisely the surface this record warns can satisfy
   a required-line check vacuously; the §9 lint judges real documents' sections, never the

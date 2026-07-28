@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T14:24:36.060Z",
+  "generatedAt": "2026-07-28T14:51:33.242Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1005,21 +1005,21 @@
       "prd": "PRD-028",
       "number": 28,
       "slug": "open-questions-grammar",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Operator Verification",
+      "cyclePhase": "7 (Operator Verification)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-028-open-questions-grammar.md",
         "readiness": "_readiness/wip/readiness-028-open-questions-grammar.md",
         "tasks": "_tasks/wip/tasks-028-open-questions-grammar.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-028-open-questions-grammar.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.7,
@@ -1028,9 +1028,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 30,
-        "uncheckedCount": 8,
+        "status": "Operator Verification",
+        "checkedCount": 37,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 1
       },
       "summary": {

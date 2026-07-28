@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-028-open-questions-grammar.md](../../_prds/wip/prd-028-open-questions-grammar.md)
 > **Readiness**: [readiness-028-open-questions-grammar.md](../../_readiness/wip/readiness-028-open-questions-grammar.md)
-> **Status**: In Progress
+> **Status**: Operator Verification
 > **Readiness Score**: 8.70/10 PASS (iteration 5, Codex; traceability cap clear)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -161,20 +161,20 @@ that PRD's author — report, never edit, never allowlist.
 - [x] 6.0 Phase 5 — Testing
   - [x] 6.1 Every §11 command into the Verification Ledger with evidence; floor green
         (`check-types`, `lint`, `test`, `build`, `verify:workflow`).
-- [ ] 7.0 Phase 6 — Final Auditing
-  - [ ] 7.1 Independent adversarial review (different model/session):
+- [x] 7.0 Phase 6 — Final Auditing
+  - [x] 7.1 Independent adversarial review (different model/session):
         `_docs/reviews/review-028-open-questions-grammar.md`, Quorum row, `pass`
         with `Critical: 0`.
-  - [ ] 7.2 W4 inspection: all sixteen deny fixtures + positive controls —
+  - [x] 7.2 W4 inspection: all sixteen deny fixtures + positive controls —
         symlink-to-self, symlink-to-other, absent fifth argument, H1-less stub, and a
         custom `stateRoles` configuration case; vacuity check by mutation (widen the
         resolver, watch the matrix go red, revert).
-  - [ ] 7.3 Restatement sweep by grep (counts nine/sixteen, "unfinished", configured
+  - [x] 7.3 Restatement sweep by grep (counts nine/sixteen, "unfinished", configured
         role names) — sweep, don't hunt.
-- [ ] 8.0 Phase 7 — Learning & close
-  - [ ] 8.1 Write `_brain/learnings/exemption-marker-needs-no-prose.md` + its
+- [x] 8.0 Phase 7 — Learning & close
+  - [x] 8.1 Write `_brain/learnings/exemption-marker-needs-no-prose.md` + its
         `_brain/INDEX.md` pointer line.
-  - [ ] 8.2 Durable artifacts in the merge diff (`verify:durable-artifacts`); Memory
+  - [x] 8.2 Durable artifacts in the merge diff (`verify:durable-artifacts`); Memory
         Outputs vs the PRD as committed on main.
   - [ ] 8.3 Summary artifact; archive; board close; `gate status`. Push stays with the
         owner.
@@ -195,7 +195,7 @@ that PRD's author — report, never edit, never allowlist.
 | test               | `pnpm test`                                                    | repo  | passed  | 2026-07-28 |       |
 | build              | `pnpm build`                                                   | repo  | passed  | 2026-07-28 |       |
 | workflow           | `pnpm verify:workflow`                                         | repo  | passed  | 2026-07-28 | includes verify:turbo-inputs |
-| independent-review | `_docs/reviews/review-028-open-questions-grammar.md`           | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-028-open-questions-grammar.md`           | repo  | passed  | 7 rounds; C:0 sustained r6-r7; quorum 1/1 | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -246,6 +246,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-28 | 3.x | corpus oracle zero offenders (9 wip files); `_brain/**` joined turbo test inputs; four-input assertion |
 | 2026-07-28 | 4.x | two declared fixture invalidations + template guidance before the heading; instantiated template lints green |
 | 2026-07-28 | 5.x–6.x | rollback/asymmetry/turbo-revert recorded; floor green: 1248/1248, types/lint/build/workflow PASS |
+| 2026-07-28 | 7.x | seven Codex rounds: C 2→3→1→1→1→0→0; five real bypasses closed (dir-alias, hardlink, case-identity, fenced FR, charset family); mutation vacuity check pre-round-1; sweep clean |
+| 2026-07-28 | 8.1–8.2 | learning `exemption-marker-needs-no-prose` + INDEX pointer (hook 103); summary artifact; verify:brain PASS; final floor 1255/1255 |
 
 ---
 
