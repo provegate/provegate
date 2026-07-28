@@ -1,3 +1,3 @@
 {
-  "test": "PRD-024 FR-2: the provegate corpus test reads repository-root PRDs under _prds/** — a surface the package-default hash set cannot see. $TURBO_DEFAULT$ keeps the package inputs; $TURBO_ROOT$/_prds/** adds the corpus. Delete this entry when the corpus test is removed."
+  "test": "PRD-024 FR-2: the provegate corpus test reads repository-root inputs the package-default hash set cannot see \u2014 _prds/** (the corpus), workflow.config.json and gates.manifest.json (the five-argument production lint call resolves both). $TURBO_DEFAULT$ keeps the package inputs. Delete this entry when the corpus test is removed."
 }
