@@ -748,6 +748,20 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 
 ## Memory Inputs
 
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this PRD
+  file, which the closing diff edits (changelog rows, the §9 conformance rewrite, the
+  FR-9 seam corrections). The record's action was already taken where it applied: both
+  review criticals landed in one seam (FR-9 delivery) and were closed inside it, not
+  re-scoped — two rounds in one seam with converging fixes is repair, not the flat
+  oscillation the record names.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — same watch, same file, and
+  applied in earnest: the FR-9 slot correction was swept across the component, the
+  client wrapper, both deny tests, the ledger evidence and the decision record, after
+  round 2 caught the decision record still describing the round-1 shape.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/prds.json`, which an intermediate merge commit had put in this diff; the
+  snapshot was restored to main's copy and leaves the diff (it regenerates after the
+  merge), and no free-text field is added anywhere.
 - applied: `grep-token-anchors-real-impl` — FR-7's census is exactly the shape this record
   warns about, and it was measured failing: `PROOF` is a **prefix of `PROOF_EVIDENCE`**
   (`content.ts:284` vs `:291`), so a substring scan would green the orphan the FR exists to
