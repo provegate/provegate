@@ -1,5 +1,21 @@
 # Readiness Assessment: PRD-031 — Autonomy-Mode Method Policy
 
+> **Iteration 3 (Codex, independent) — 8.88/10, PASS. All four iteration-2 pieces
+> closed against live source; the traceability cap is clear.** Same orchestration
+> disclosure (rework author orchestrates, Codex owns every verdict). The migration
+> surface verified complete by repository-wide search (no remaining builder or count
+> the enumerated-aware rule misses); **the approval binding held the decisive test** —
+> the scorer read `acceptance.ts:219-288` and confirmed no contract-compliant path
+> reaches green without an owner act: the residual (the gate accepts any non-empty
+> `items` and cannot semantically verify a path name) is an honestly bounded
+> ADR-0003 limitation, filed as a [P3] watch item rather than a finding, because the
+> PRD never claims the machinery checks more than it does. FR-2/FR-4 assertions owned;
+> the §7 survivor corrected everywhere operative. Scorecard 8.5 / 8.75 / 8.75 / 9.5 /
+> 9.0 / 9.0 → **8.88**; Value 3.55 exact; §9 conforms; tiers high/high. Four watch
+> items bind Phases 3/6. Trajectory: 5.78 → 7.40 → 8.88.
+>
+> <details><summary>Iteration 2 (7.40 ITERATE, Codex)</summary>
+>
 > **Iteration 2 (Codex, independent) — 7.40/10, ITERATE; up 1.62, four of seven pieces
 > fully closed — and the method-content cap re-trips on a sharper reading of FR-1.**
 > Scored the rework (`eb4e929`); same orchestration disclosure (rework author
@@ -20,6 +36,8 @@
 > shape-and-clauses. Two smaller: FR-2/FR-4's §11 rows expect assertions in a test
 > neither FR targets; one "no TypeScript file" survivor in §7. Scorecard
 > 7.0 / 6.5 / 7.5 / 9.5 / 6.0 / 8.5 → 7.40.
+>
+> </details>
 >
 > <details><summary>Iteration 1 (5.78 ITERATE, Codex)</summary>
 >
@@ -55,11 +73,11 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-031-autonomy-mode-method-policy.md` |
-| Score                  | 7.40/10                                        |
-| Verdict                | ITERATE — the migration surface reaches two undeclared test files (plus five uncited sites in the declared one), and FR-1's approval proof is self-issuable: approval-shaped text satisfies the package test without an owner act, so the method-content cap trips until the approval is bound to an operator-owned row and a committed acceptance naming the addendum path |
-| Iteration              | 2                                              |
-| Model Tier (Execution) | do not assign — fix the PRD first              |
-| Model Tier (Audit)     | — (assign on a PASS)                           |
+| Score                  | 8.88/10                                        |
+| Verdict                | **PASS** — migration surface complete by repository-wide search, the approval structurally bound (operator-owned row + committed acceptance naming the addendum path; the gate's item-text blindness an honestly bounded ADR-0003 limit, watch-itemed), FR-2/FR-4 assertions owned, every cap clear. Four watch items bind Phases 3/6 |
+| Iteration              | 3                                              |
+| Model Tier (Execution) | high                                           |
+| Model Tier (Audit)     | high                                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts** |
 | Self-scored            | no                                             |
 | Date                   | 2026-07-28                                     |
@@ -179,6 +197,7 @@ land first and the repaired FR-1 test must prove the ordering).
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 3   | 2026-07-28 | 8.88  | **PASS** | **First PASS: 5.78 → 7.40 → 8.88; every cap clear.** All four iteration-2 pieces CLOSED against live source: the enumerated-aware builder rule applied at every site (repo-wide search found no survivor — `prompts.test.ts:291`, `init.test.ts:324`, the three censuses); **FR-1's approval held the decisive test** — `operatorGateOk`/`acceptanceFrom` (`acceptance.ts:219-288`) admit no contract-compliant ownerless path; the item-text blindness is a bounded ADR-0003 limit filed as [P3] watch, never overclaimed by the PRD; FR-2/FR-4 own their named assertions; the §7 absolute corrected everywhere operative. Zero new [P1]/[P2]. Scorecard 8.5/8.75/8.75/9.5/9.0/9.0 → 8.88; Value 3.55 exact; tiers high/high. **Watch items:** Phase 3 materializes the operator approval row (≥1 operator row in task state); Phase 6 inspects the committed acceptance for the exact addendum path; FR-1 lands and is approved before any method byte moves; `gate queue` + 026/032 serialization at claim. |
 | 2   | 2026-07-28 | 7.40  | ITERATE | **Scored the rework `eb4e929`; four of seven pieces CLOSED** (mutation-checked enumeration coverage — renderer contract confirmed `prompts.ts:595-613`; 026/032 serialization; the re-founded chain verified against `_state/prds.json`; honest bundle note + three corrected dispositions; Value 3.55 with rollback verified to the `[unused]` diagnostic at `prompts.ts:621-650`). **Piece 1 PARTIAL**: the four specified fixture moves are not the complete set — `content-placeholders.test.ts:164,173,185,206,217` plus `prompts.test.ts:289-292` and `init.test.ts:315-325,383-395` (illegal synthesized `v-AUTONOMY_MODE` values, hardcoded nine-key sets) sit in files outside Targets. **Piece 3 PARTIAL → [P1]**: the direct-read addendum assertion is non-vacuous against today's tree, but it proves approval-shaped TEXT — an agent can self-issue it; the cap re-trips until approval is an operator-owned row plus a committed owner acceptance naming the exact path. [P2]: FR-2/FR-4 §11 rows expect `content-prompts.test.ts` assertions neither FR targets. [P3]: one §7 no-TypeScript survivor. 7.0/6.5/7.5/9.5/6.0/8.5 → 7.40. |
 | 1   | 2026-07-28 | 5.78  | ITERATE | First independent round. The decisive finding is a self-contradiction: the first enumerated token in the registry necessarily moves the corpus tests the PRD forbids touching. Beside it: a claimed package test that does not exist, an addendum verification green without the addendum, undeclared surface collisions with 026/032, the 030→034 staleness class, and three ceremonial dispositions. Architecture use, FR-3's snapshot accuracy, and the addenda mechanism's legality all held. Honest Value 3.55 — above threshold, candidacy keeps. |
 
