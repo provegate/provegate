@@ -156,7 +156,8 @@ export function sweepReviewArtifacts(config: WorkflowConfig, root: string): Revi
     if (!/^review-.*\.md$/.test(name)) continue;
     if (name.includes('.template.')) continue;
     if (!lstatSync(resolve(dir, name)).isFile()) continue;
-    const bound = /^review-(\d{3})-/.exec(name);
+    const width = config.idPattern.width;
+    const bound = new RegExp(`^review-(\\d{${width}})-`).exec(name);
     if (bound === null) {
       out.push({
         file: name,

@@ -27,7 +27,9 @@ you migrate BY HAND. The five steps — the fifth loses data if skipped:
    that is already wired (the audit refuses a wired exception as stale); record what
    remains in `gates.manifest.json` under `wiringExceptions` with a real, non-whitespace
    justification — and only THEN delete the old `gates-wired-exceptions.json`, as this
-   step's last act. Skip this step only when that file is absent or empty.
+   step's last act. If the file is absent there is nothing to do; if it is present but
+   empty, skip the conversion and still delete the file — a retired store needs no
+   contents to be retired.
 
 Downgrading back: restore the four files from the pack of the previous release and
 reverse steps 2–5; nothing happens automatically in either direction, which is what makes

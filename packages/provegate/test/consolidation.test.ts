@@ -231,12 +231,25 @@ function liveMarkdown(root: string): string[] {
  * quotes history by the board's own rule, while Topic/Item/Owner are live. */
 function statusLiveText(content: string): string {
   const live = content.split('## Recent activity')[0] ?? content;
-  return live
-    .split('\n')
+  const lines = live.split('\n');
+  let inDeferrals = false;
+  let noteColumns = 0; // column count of the Deferrals header, so a Note cell containing pipes is fully dropped
+  return lines
     .map((line) => {
-      if (!/^\|/.test(line)) return line;
+      if (/^##\s/.test(line)) {
+        inDeferrals = /^##\s+Deferrals/.test(line);
+        noteColumns = 0;
+        return line;
+      }
+      if (!inDeferrals || !/^\|/.test(line)) return line;
       const cells = line.split('|');
-      return cells.length > 2 ? cells.slice(0, -2).join('|') : line; // drop the last (Note) cell
+      if (noteColumns === 0) {
+        noteColumns = cells.length; // the header row fixes the column count
+        return line;
+      }
+      // keep exactly the first (noteColumns - 2) cells: everything except the
+      // final Note column — extra pipes inside the Note stay inside the drop
+      return cells.slice(0, noteColumns - 2).join('|');
     })
     .join('\n');
 }
@@ -286,6 +299,25 @@ describe('no live document names a deleted check (FR-6)', () => {
     // …while the Note column and Recent activity are not
     expect(live).not.toContain('historical quote');
     expect(live).not.toContain('old entry');
+  });
+
+  it('a Note cell containing pipes is dropped whole, and other tables keep all columns', () => {
+    const planted = [
+      '# Status',
+      '## Active Agents',
+      '| Agent | Work item | Started |',
+      '| --- | --- | --- |',
+      '| a | live `verify:gates-wired` mention here | 2026-07-28 |',
+      '## Deferrals',
+      '| Topic | Item | Note |',
+      '| --- | --- | --- |',
+      '| t | live item | historical `verify:gates-wired` quote with a pipe: `a || b` |',
+      '## Recent activity',
+    ].join('\n');
+    const live = statusLiveText(planted);
+    expect(live).toContain('2026-07-28'); // non-Deferrals tables keep every column
+    expect(live).toContain('live `verify:gates-wired` mention here'); // and are scanned
+    expect(live).not.toContain('historical'); // the whole piped Note cell is gone
   });
 });
 
