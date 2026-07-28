@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T12:57:10.361Z",
+  "generatedAt": "2026-07-28T13:06:00.062Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1307,6 +1307,117 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-036-frozen-snapshot-digest-gate.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-037",
+      "number": 37,
+      "slug": "case-study-self-hosting",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-037-case-study-self-hosting.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-038",
+      "number": 38,
+      "slug": "executable-quickstart",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "eligible",
+      "artifacts": {
+        "prd": "_prds/wip/prd-038-executable-quickstart.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-039",
+      "number": 39,
+      "slug": "landscape-verification",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-039-landscape-verification.md",
         "readiness": "",
         "tasks": "",
         "summary": ""
