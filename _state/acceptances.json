@@ -233,6 +233,17 @@
       "date": "2026-07-28",
       "method": "interactive",
       "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-025",
+      "owner": "owner",
+      "items": [
+        "9.5 operator acceptance of the operator-gated close: six-round independent Codex review at Critical: 0 (quorum 1/1 pass, round-5 rejection adjudicated and upheld), Verification Ledger fully green (1168 tests, floor, verify:gates-wired agreement, W4 mutation checks)"
+      ],
+      "reason": "reviewed the six-round review artifact and summary in-session; the round-5 rejection and its adjudication were surfaced explicitly before this approval; accepting the gated close via gate run",
+      "date": "2026-07-28",
+      "method": "in-session direction",
+      "authorship": "agent-transcribed"
     }
   ]
 }
