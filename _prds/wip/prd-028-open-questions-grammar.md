@@ -70,7 +70,7 @@ two counts this document uses everywhere.**
 Iteration 2's cap finding was exact: with existence unchecked, *nothing proves the link
 points at a follow-up PRD*. Iteration 3 sharpened it: with existence checked as a
 **shape**, a self-link, a completed PRD, or a parser-rejected look-alike still passes —
-existence and number agreement do not establish a *distinct, registered, active
+existence and number agreement do not establish a *distinct, registered, unfinished
 follow-up*. So the referent is **resolved**, not matched: through `parseArtifactName`
 (the state builder's own parser), at the configured id width, to an item that is not the
 declaring PRD and not finished. The "suffix free text" hole dissolves the same way it
@@ -98,8 +98,8 @@ PRD with a link"* — wanted all along.
       better predicate.
 - [ ] Make an unresolved question fail the lint regardless of the shape it is written in,
       including every one of the nine historical shapes.
-- [ ] Prove — not assume — that a deferral resolves to a distinct, registered, active
-      follow-up, which is what the snapshot's rule states and what closes the
+- [ ] Prove — not assume — that a deferral resolves to a distinct, registered,
+      unfinished follow-up, which is what the snapshot's rule states and what closes the
       traceability cap.
 - [ ] Require exactly one §9 section, identified by its heading; same for the FR block.
 - [ ] Teach the form where authors first meet it: the shipped PRD template's §9 guidance.
@@ -113,7 +113,7 @@ PRD with a link"* — wanted all along.
 | Places an unresolved question can hide in §9 | 9, measured across eight successive rules plus the original | 0 | the FR-1 deny matrix, sixteen rows |
 | Unresolved questions hidden by paragraph, fence, HTML or comment form | unbounded — a prose §9 reports 0 whatever it contains | 0 — any line outside the closed grammar fails | FR-2 fixtures |
 | §9 sections a document may declare | unbounded; only the first is read | exactly 1 | FR-2 fixture |
-| Deferrals resolving to a distinct, registered, active follow-up | not checked — shape and existence only, which iteration 3 broke with a self-link | all | FR-1 fixtures |
+| Deferrals resolving to a distinct, registered, unfinished follow-up | not checked — shape and existence only, which iteration 3 broke with a self-link | all | FR-1 fixtures |
 | Wip PRDs failing the restored rule | measured at Phase 3 against the live directory, never hardcoded | 0, by their authors before this lands | the FR-3 prerequisite procedure |
 | Template §9 guidance stating the exact closed forms, outside the judged body | 0 | 1, and the instantiated document lints green | FR-4, `content-templates.test.ts` |
 | Turbo test inputs covering every root surface the lint reads | 3 of 4 — the `_brain` store is missing, in landed PRD-024's test too | 4 of 4 | FR-3; the corpus test asserts presence |
@@ -135,7 +135,8 @@ so that a green verdict means the section is resolved rather than mis-read.
 - [ ] An unresolved question fails the lint regardless of whether it is a bullet, a
       paragraph, a continuation, a same-line tail, a comment, a fenced block, a link
       label, or a link-target slug pointing at nothing.
-- [ ] An entry deferred to a distinct, registered, active follow-up, in the exact form,
+- [ ] An entry deferred to a distinct, registered, unfinished follow-up, in the exact
+      form,
       still passes.
 
 #### User Story 2
@@ -389,7 +390,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   a Deferred entry linted **without the declaring number**, **Then** each fails — the
   resolution rejections. *(history row 7 covers the alias)*
 - **Given** `- (none)` alone, or `- Deferred to [PRD-NNN](<path>)` resolving to a
-  distinct registered work item in a `wip` or `deferred` state directory, **Then** each
+  distinct registered work item in a directory named by the configured
+  `dirs.stateRoles.wip` or `dirs.stateRoles.deferred` role, **Then** each
   is exempt — the positive controls, paired per deny shape, sixteen in all.
 - **Given** a §9 written as bold paragraphs containing an unresolved question, **Then**
   the lint fails — the reviewer's injected case, which returns clean today.
@@ -429,8 +431,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   taxonomy, no renderer parity race.
 - **Resolution is the proof.** The link is not validated as a *shape* — iteration 3
   broke shape-plus-existence with a self-link — it is resolved through the state layer
-  to a distinct, registered, active work item. That is what "deferred to a follow-up
-  PRD" means, and it is the difference between this revision and the seven that failed.
+  to a distinct, registered, unfinished work item. That is what "deferred to a
+  follow-up PRD" means, and it is the difference between this revision and the eight
+  that failed.
 - **Measure the blast radius with the rule, at Phase 3.** The corpus procedure, not a
   table; two hardcoded tables have already aged into falsehood inside this one document.
 

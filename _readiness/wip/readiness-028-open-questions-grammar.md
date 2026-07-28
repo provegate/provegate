@@ -1,5 +1,28 @@
 # Readiness Assessment: PRD-028 — Open Questions Grammar
 
+> **Iteration 5 (Codex, independent) — 8.70/10, PASS. First PASS in five rounds; the
+> traceability cap is CLEAR.** Scored the iteration-4 remediation (`469025f`); same
+> orchestration disclosure as iterations 3–4 (the rewrite author orchestrates and
+> verifies citations; Codex owns every verdict). **The decisive test survived**: the
+> scorer tried hardlinks (git does not preserve the inode relation), case-insensitive
+> aliases (cannot change the required number), unicode confusables (still a parser-valid
+> existing file with the right H1), a filed document whose body is a question (a filed,
+> visible follow-up — not a hidden one), and bind-mount/TOCTOU constructions (an
+> adversarial local environment outside the lint's accident-oriented threat model,
+> `safety.ts:4-9`) — and reported **no tenth hiding place reachable through a repository
+> file authored in a reviewed commit**. Iteration-4 P1s CLOSED (canonical resolution:
+> lstat-regular, realpath containment and distinctness, recognized H1, fail-closed fifth
+> argument), all six missing pieces CLOSED, the cap measured clear against the snapshot
+> line. One [P2] of editorial residue ("active" survivors, Gherkin's literal role names,
+> a seven-vs-eight count in Architecture) was applied as post-PASS precision edits per
+> the PRD-035/024 precedent — recorded in the changelog, `gate check` green after.
+> Scorecard 8.0 / 8.5 / 9.0 / 9.5 / 9.0 / 8.5 → **8.70**; band 8–8.9 "Solid — proceed
+> with watch items". Four watch items bind Phases 3 and 6. Trajectory: 6.18 → 6.55 →
+> 6.48 → 6.93 → 8.70 — the owner's narrowing decision plus canonical resolution is what
+> a nine-hiding-place history converged to.
+>
+> <details><summary>Iteration 4 (6.93 ITERATE, Codex)</summary>
+>
 > **Iteration 4 (Codex, independent) — 6.93/10, ITERATE; the traceability cap is tripped a
 > third time, now by an EIGHTH hiding place: a symlink alias.** Scored the iteration-3
 > remediation (`6da6f05`); same orchestration disclosure as iteration 3 (rewrite author
@@ -25,6 +48,8 @@
 > Value: MF 5 unsupported while the referent is bypassable — **3.45 at MF 4** is the
 > supportable declaration until canonical resolution lands. Trajectory 6.18 → 6.55 →
 > 6.48 → 6.93: inside the iterate band, converging, cap open.
+>
+> </details>
 >
 > <details><summary>Iteration 3 (6.48 ITERATE, Codex)</summary>
 >
@@ -91,10 +116,10 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-028-open-questions-grammar.md`   |
-| Score                  | 6.93/10                                        |
-| Verdict                | ITERATE — two [P1]s and the **traceability cap tripped a third time**: the resolved referent is a filename-shaped alias (a symlink under wip passes every check while canonically self-linking; the absent fifth argument fails open; a deferred stub is never validated), and the seven-vs-twelve deny-matrix conflict survives in Implementation Scope |
-| Iteration              | 4                                              |
-| Model Tier (Execution) | do not assign — score < 8                      |
+| Score                  | 8.70/10                                        |
+| Verdict                | **PASS** — canonical resolution survived the decisive adversarial round (no tenth hiding place reachable through a reviewed-commit file), every prior [P1] closed, all hard caps clear including method-content traceability; the editorial [P2] applied as post-PASS precision edits. Four watch items bind Phases 3 and 6 |
+| Iteration              | 5                                              |
+| Model Tier (Execution) | high                                           |
 | Model Tier (Audit)     | high (on a PASS)                               |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD. Orchestrated by the rewrite's author, who verified citations and authored no verdicts; caveat stated in the banner** |
 | Self-scored            | **no**                                         |
@@ -284,6 +309,7 @@ Rewritten at iteration 3; the iteration-2 list is superseded.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 5   | 2026-07-28 | 8.70  | **PASS** | **First PASS in five rounds: 6.18 → 6.55 → 6.48 → 6.93 → 8.70; the traceability cap is clear.** Scored `469025f`. Canonical resolution held the decisive test — hardlinks, case aliases, unicode confusables, filed-question documents and bind-mount/TOCTOU constructions all judged either non-hiding or outside the accident-oriented threat model (`safety.ts:4-9`); **no tenth hiding place reachable through a repository file authored in a reviewed commit**. Iteration-4 P1-1 CLOSED (`prd-028` FR-1 rules 1–8 + fail-closed fifth argument), P1-2/P2-3/P2-4 partially — the residue was purely editorial and was applied as post-PASS precision edits (three "active" survivors → "unfinished", Gherkin literal roles → configured `stateRoles` names, "seven that failed" → eight), `gate check` green after. All six missing pieces CLOSED, including the `_brain` turbo input that also closes landed PRD-024's stale-green exposure, and the Value at **3.45 (4/4/2/3/4)** judged honest-and-conservative — MF 5 defensible after this round but not pre-awarded. Scorecard 8.0 / 8.5 / 9.0 / 9.5 / 9.0 / 8.5 → 8.70; tiers high/high. **Watch items (Phases 3/6):** configured `stateRoles` + "unfinished" wording is authoritative over any stale restatement; H1 recognition through the scanner's real heading semantics, never a raw `^#` match; path-boundary-safe containment with lstat → canonical containment → canonical distinctness → H1 in fail-closed order; Phase 6 inspects all sixteen deny fixtures with their positive controls, symlink-to-self/-other, absent-fifth-argument, stub and custom-role cases especially. |
 | 4   | 2026-07-28 | 6.93  | ITERATE | **Scored the iteration-3 remediation (`6da6f05`). I, J CLOSED; missing pieces 2, 3, 4, 5 CLOSED; H, K and piece 1/6 PARTIAL.** The eighth hiding place: `parseArtifactName` parses a basename and the collector follows symlinks (`artifacts.ts:15-23,33-47`), so a wip **symlink alias** to the declaring PRD passes width, containment, existence, parsing and distinctness while canonically self-linking; the omitted fifth argument fails open by FR-1's own text; a parser-valid deferred stub passes unvalidated. Remedies: reject non-regular targets, canonical containment and self-comparison, recognized-record requirement, fail-closed absent-argument, four new deny fixtures. Sweep failures the remediator's own: §8 still says seven-row matrix; the `a-rule-corrected…` disposition claims a sweep that missed a restatement. [P2]s: hardcoded `wip`/`deferred` vs `dirs.stateRoles` config and the `query.ts:58-69` active-set definition; Dependencies' one-line-edit claim vs FR-3's comments-and-continuations. Corpus moved again: seven files, four failing (025 landed mid-round). Scorecard 7.0 / 6.5 / 7.0 / 9.0 / 6.5 / 6.5 → 6.93. Value supportable at **3.45 (4/4/2/3/4)** until canonical resolution re-earns MF 5. |
 | 3   | 2026-07-28 | 6.48  | ITERATE | **First round on the owner-directed narrowing rewrite; scored by Codex, orchestrated by the rewrite's author (verdicts Codex's own, citations re-verified by the orchestrator).** B, C, E CLOSED; D, F PARTIALLY CLOSED; A OPEN at a seventh hiding place — the closed form admits a **self-link** (existence + number match ≠ distinct registered active follow-up; the stated `PRD-\d+` also ignores the configured width) — so the **traceability cap stays tripped**. Two new [P1]s are the rewrite's own: FR-4 ships guidance as a §9 comment the grammar itself refuses (template-instantiated PRDs fail out of the box), and FR-3's Phase-3 record goes stale as its prerequisites are repaired. One cross-item [P2] with reach: `_brain/**` is absent from the turbo test inputs while `lintPrd` reads the store — landed PRD-024's corpus test shares the exposure; the fix is assigned here. Scorecard 7.0 / 5.5 / 6.5 / 8.5 / 6.5 / 6.0 → 6.48. Value judged 3.30-supportable until findings 1–2 land. The trajectory reading: the narrowing direction is right (three closures, both prior reader problems dissolved), and the remaining work is binding the link to the state layer that already exists — specification, not design. |
 | 2   | 2026-07-27 | 6.55  | ITERATE | **Score up 0.37; a hard cap tripped, which matters more.** **(A, OPEN — the sixth hiding place)** the free text moved from the link *label* into the link *target*: `Deferred to [PRD-123](_prds/wip/prd-123-who-owns-authorization.md)` satisfies every predicate the PRD states, because only the basename **prefix** is constrained and the suffix is author-controlled — and since existence is deliberately unchecked, nothing proves PRD-123 is a real follow-up. The target is also never constrained to the configured artifact directory, so `docs/prd-123-who-owns-authorization.md` passes too. The rule therefore does **not** implement `source-snapshot/.../phase-2-readiness-scorer.md:210`, and the **method-content traceability cap is tripped**. **(G, PARTIALLY CLOSED)** the 3.55 arithmetic is exact and the weights match config, but the Method-Fidelity 5 was justified by "this exactly restores the snapshot", which finding A disproves; at MF 4 the total is 3.30, below the 3.40 candidate threshold — the item fails triage on the same premise it fails the cap on. **(C, OPEN)** the history says five while the Gherkin enumerates six distinct cases and labels continuation and comment both "3"; the prior rounds record them separately. **(B, PARTIALLY CLOSED)** line-kind validation is feasible but **not through `sectionsMatching`**, which blanks non-text lines; the workable route is `scanDocument` plus the exported `sectionBounds` — and **comments are not a `LineKind` at all**, they are emitted as `text` carrying a mask (`scan.ts:382, 412`), so the rule as written cannot be followed literally. **(new)** the corpus fixture specifies a four-argument call, but production now passes **five** — `cli.ts:721` adds the PRD number, and omitting it disables value-score presence enforcement (`value-score.ts:176, 197`), so the fixture still would not reach production shape. **(D, PARTIALLY CLOSED)** the Phase-3 table is specified as both a prerequisite list and a lasting test oracle; expecting named files to stay red **is** the allowlist the PRD forbids. **(F, PARTIALLY CLOSED)** `_prds/**` does not cover the config, the manifest, or the live memory store the lint reads. **(E, CLOSED)**. Confirmed: the snapshot line reads exactly as quoted, the shipped lint is still the permissive substring check, the arithmetic is exact, and the rollback asymmetry is sound. |
@@ -293,18 +319,18 @@ Rewritten at iteration 3; the iteration-2 list is superseded.
 
 ## Verdict
 
-**ITERATE — 6.48/10, iteration 3, scored independently by Codex.**
+**PASS — 8.70/10, iteration 5, scored independently by Codex.**
 
-The owner's narrowing decision survived its first adversarial round in direction and
-failed it in one binding: a closed grammar whose link is validated as a *shape* still is
-not a link to a *follow-up* — self, completed and unregistered targets all pass. The
-state layer that answers "is this a distinct, registered, active work item" already
-exists (`parseArtifactName`, the state record); the next revision binds FR-1 to it
-instead of to the filesystem, moves the template guidance out of the judged body, and
-makes the corpus oracle zero-failures. Those are the whole list; nothing else in the
-design was refuted. Remediate in a session that is not this scorer, then one more
-independent round.
+Nine hiding places across eight failed rules, and the shape that finally held is the one
+the owner's narrowing decision forced: a closed grammar whose referent is not matched but
+**canonically resolved** — regular file, realpath containment and distinctness,
+configured role, recognized H1, fail-closed identity. The scorer's own adversarial round
+could not construct a tenth hiding place inside the reviewed-commit threat model, and the
+method-content traceability cap that held three consecutive rounds measured clear. The
+four watch items bind Phases 3 and 6; the owner's Go opens Phase 3. Model tiers
+high / high.
 
-*(Iteration 2 verdict, for history: ITERATE 6.55 — "replace the exemption with something
-that cannot carry text at all." The narrowing did; the text moved into the link's
-referent, which is why the referent must now be resolved, not matched.)*
+*(Iteration 2 verdict, for history: "replace the exemption with something that cannot
+carry text at all." It took three more rounds to learn that the text can hide in the
+referent, the alias, and the reader's own guidance — and that closing a grammar means
+resolving what it points at.)*
