@@ -1,5 +1,39 @@
 # Readiness Assessment: PRD-024 — Readiness Lint Parsers
 
+> **Iteration 9 (Claude Fable 5) — 8.35/10, PASS.** First PASS in nine rounds. The
+> round-2 remediation closed both iteration-8 [P1]s the way the remedies prescribed:
+> the §11-parser class is an exact five-predicate issue-identity set whose strings are
+> verified byte-level against `prd-ready.ts`, and the turbo input is bound to the
+> configured artifact root by a coverage assertion that fails a rename by name. All four
+> P2s swept; corpus re-measured at ten files / 60 rows / zero class issues. Integrity
+> note, stated rather than implied: this scorer wrote the round-2 work orders (on the
+> owner's direction) and authored none of the document's text — the remediation was two
+> isolated sessions; Phase 3's owner Go and Phase 6's independent review remain the
+> load-bearing outside readers. Five watch items bind them.
+>
+> **Concurring independent round, same day (Claude Fable 5, separate session) — 8.18/10,
+> PASS. Quorum 2/2.** This second scorer wrote neither the PRD, nor either remediation,
+> nor the round-2 work orders, and scored without reading the 8.35 round first — the two
+> rounds collided in the working tree, which is the disclosure. Every load-bearing claim
+> was re-executed rather than read: all four emitted issue strings byte-checked
+> (`prd-ready.ts:124,142,148,170`), the caller shape at `cli.ts:795`, the turbo trio
+> (`turbo.json` test task bare today, exceptions `{}`, `verify-turbo-inputs.mjs:60-77`
+> both refusal directions), PRD-036's Dependencies serialization, the template's no-pipe
+> contract, and the archived PRD-021 row at `:1278`. The full lint was re-run across all
+> ten wip files: the same three red for the same out-of-class reasons, zero class-predicate
+> issues. **One dated count corrected, same class as the iteration-7 correction: the live
+> corpus is 65 FR rows at this scoring, not 60** — a fourth same-day move, +2 from
+> PRD-027's remediation (its new FR-9 rows) and +3 from PRD-035's, both landing after the
+> round-2 remediation measured; ten files / zero malformed / one canonical section each
+> all reproduced, so the qualitative claims hold and the enumerate-don't-pin design
+> absorbs the drift. The fixture census reproduced at sixteen with one definitional note:
+> a raw grep finds a seventeenth `| FR-N` literal at `prd-ready.test.ts:48`, which is the
+> argument of a `.replace()` deleting a row, not a fixture row. Dimensions (infra):
+> 8.5 / 8.0 / 8.0 / 9.0 / 8.0 / 8.0 → 8.175. Two watch items added as W6 and W7; neither
+> blocks, both are one-sentence Phase-3 fixes.
+>
+> <details><summary>Iteration 8 (7.68 ITERATE)</summary>
+>
 > **Iteration 8 (Codex, independent) — 7.68/10, ITERATE, UP 0.35.** First round on the
 > remediated document, by a scorer who wrote neither the document nor its remediation.
 > Five of seven open items CLOSED with citations; what remains is specification
@@ -67,21 +101,23 @@
 > </details>
 > </details>
 > </details>
+> </details>
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-024-readiness-lint-parsers.md`   |
-| Score                  | 7.68/10                                        |
-| Verdict                | ITERATE — two [P1] items on the remediated document: the §11-parser-class must become an exact, testable predicate over `lintPrd`'s string issues, and the turbo cache glob must be bound to the configured artifact root rather than the literal `_prds` |
-| Iteration              | 8                                              |
-| Model Tier (Execution) | do not assign — score < 8                      |
-| Model Tier (Audit)     | high (on a PASS)                               |
-| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family; wrote neither the PRD nor its 2026-07-28 remediation** |
-| Self-scored            | **no**                                         |
+| Score                  | 8.35/10                                        |
+| Verdict                | PASS — both iteration-8 [P1]s closed as prescribed (exact five-predicate issue-identity set; turbo input bound to the configured artifact root), all four P2s swept, corpus clean of class issues. Five watch items bind Phase 3 and Phase 6 |
+| Iteration              | 9                                              |
+| Model Tier (Execution) | high                                           |
+| Model Tier (Audit)     | high                                           |
+| Scored by              | **Claude Fable 5 — authored none of the document's text (remediation by two isolated sessions); caveat stated: this scorer wrote the round-2 work orders on owner direction, so Phase 3's Go and Phase 6's independent review remain the load-bearing outside readers** |
+| Self-scored            | **no** (with the caveat above)                 |
+| Quorum                 | **2/2 PASS** — a concurring independent round the same day (Claude Fable 5, separate session; wrote neither the PRD, the remediations, nor the work orders) scored **8.18 PASS** without reading this round first, re-executed every load-bearing measurement, corrected the corpus count to 65 rows (fourth same-day move), and added watch items W6–W7 |
 | Date                   | 2026-07-28                                     |
-| PRD Lint               | Codex did not run the CLI (read-only round; `gate check` writes `_state/`) and said so; the orchestrating session ran `gate check PRD-024` exit 0 on the same document earlier the same day |
+| PRD Lint               | passed — `gate check PRD-024` exit 0, run live by the scorer; `gate check --value-score` green (21 scored, 0 without a header) |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -93,14 +129,21 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Execution (Phase 4) | do not assign | score below the PASS band |
-| Audit (Phase 6)     | high | parser changes with a corpus blast radius |
+| Execution (Phase 4) | high | parser semantics + a build-tool cache contract; the deny fixtures are the value and a medium-tier session under-writes them |
+| Audit (Phase 6)     | high | parser changes with a corpus blast radius; string-identity verification against FR-2's predicate table is the first check |
 
 ---
 
 ## Analysis
 
 ### Findings
+
+(Iteration 1's findings below are historical — see the Iteration History table for
+rounds 2-9. The iteration-9 scorecard: Clarity 8.5, Completeness 8.5, Technical Depth
+8.0, Multi-Tenancy & Security 9.0, Scope & Testability 8.5, Migration & Rollback 8.0 →
+`0.15×8.5 + 0.20×8.5 + 0.20×8.0 + 0.10×9.0 + 0.15×8.5 + 0.20×8.0 = 8.35`. Hard caps:
+none tripped — no protected surface, no client-server payload, lint green, zero runtime
+dependencies, no push path, no method content.)
 
 **[P1] A — FR-1 scopes the executor's parser and leaves the readiness predicate reading
 the whole row.** FR-1 targets `parseVerificationCommands`, but `lintPrd` independently
@@ -199,28 +242,46 @@ method-content caps each checked explicitly.
 
 ---
 
-## Missing Pieces (watch items — binding on Phase 3 and Phase 6)
+## Missing Pieces → Watch items (PASS at iteration 9 — these bind Phase 3 and Phase 6)
 
-Rewritten at iteration 8 — earlier lists are superseded where they conflict. (An earlier
-wording of this preamble began with the bare word "Updated" and the state builder's
-`getMetaValue` third pattern — `^Updated\s*:?\s*…`, colon optional — captured the rest of
-the sentence as the record's `lastUpdated` value. That is `lint-must-name-the-span-it-judges`,
-this PRD's own declared Memory Output, reproduced live by the state builder while it
-recorded this PRD's score. Deferral filed on the board.)
+Rewritten at iteration 9; the iteration-8 remediation list is complete and closed. (An
+earlier wording of this preamble began with the bare word "Updated" and the state
+builder's `getMetaValue` third pattern captured the rest of the sentence as the record's
+`lastUpdated` value — `lint-must-name-the-span-it-judges`, this PRD's own declared Memory
+Output, live in the state builder. Deferral filed on the board.)
 
-- Make the §11-parser-class an exact predicate: a diagnostic-prefix or code set over
-  `lintPrd`'s issue strings, an explicit include/exclude decision for the
-  no-runnable-command issue (FR-1 changes that predicate, so silence is not an option),
-  and a classification fixture whose positive control is an unsafe **Command-cell**
-  command.
-- Bind the turbo cache input to the **configured** artifact root: a coverage assertion
-  that the resolved `dirs.artifacts.prd.dir` is inside a declared input glob — the shape
-  PRD-036 FR-2 sketches; coordinate with it rather than shipping two versions.
-- P2 sweep: the Success Metric's "reach the gate" label vs the inert-token exclusion;
-  the two "skips/disables the value header check" restatements (Memory Inputs, §12) →
-  "skips missing-header enforcement"; the PRD-034 example's "no §4 FR section" → "the
-  heading with zero numbered FR entries" (also in the newest Changelog row); mark the
-  2026-07-27 Changelog row as superseded by the 2026-07-28 correction.
+- **W1 — string identity is the contract.** FR-1's implementation must emit the three
+  new prefixes byte-exactly as FR-2's predicate table states them; Phase 6's first check
+  is that the two FRs and the shipped strings agree — drift between the tables is this
+  document's own defect class arriving in code.
+- **W2 — the turbo edit and the exceptions entry are one change.** They land in one
+  commit and revert in one (the two-way order is in Rollback); Phase 5 re-runs
+  `verify:turbo-inputs` and `verify:workflow` after the edit.
+- **W3 — PRD-036 extends the same `inputs` array** and serializes behind this PRD by its
+  own Dependencies section; re-run `gate queue` at claim.
+- **W4 — the three red corpus files (026 / 031 / 034) belong to their authors.** Phase 4
+  re-runs the class sweep before writing the per-file expectations; a new red on a class
+  predicate is a stop, not an allowlist.
+- **W5 — the classification pair's positive control is the vacuity guard.** Phase 6
+  confirms the unsafe-Command-cell fixture can actually fail (mutate the implementation,
+  watch it go red) — a deny sweep that cannot fail is not evidence.
+- **W6 (concurring round) — predicate 4's anchor contradicts the table's own detail
+  rule.** FR-1's prefix table says "detail may follow a prefix … appending detail never
+  breaks the predicate"; FR-2's predicate 4 is `$`-anchored full-match, so that sentence
+  is true of predicates 1–3 and 5 and false of 4. Today's emitted string matches exactly
+  (`prd-ready.ts:148`, byte-checked) and FR-1 does not license changing it, so nothing is
+  wrong yet — but an implementer who follows the detail sentence for the no-runnable
+  issue breaks the class predicate silently. Phase 3 makes it consistent one way: drop
+  the `$`, or state that the two existing member strings are matched as-is and must not
+  gain detail.
+- **W7 (concurring round) — the negative control's "no issue at all" needs the fixture
+  green outside the planted cell.** The corpus-shaped fixture asserts zero issues when
+  the unsafe token sits in Notes, but its own conformance elsewhere is unspecified — a
+  fixture numbered at or past `enforceFrom` without a Value header fails for an unrelated
+  reason, the exact trap `assert-absent-needs-an-independent-cause` names and this PRD
+  teaches. The failure direction is loud, not silent, which is why this is a watch item:
+  Phase 3 states the fixture is lint-green apart from the planted cell and picks its PRD
+  number against `enforceFrom` deliberately.
 
 ---
 
@@ -228,6 +289,8 @@ recorded this PRD's score. Deferral filed on the board.)
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 9   | 2026-07-28 | 8.35  | **PASS** | **First PASS in nine rounds: 6.75 → 6.83 → 7.40 → 6.95 → 7.80 → 7.34 → 7.33 → 7.68 → 8.35.** Scored by the session that wrote the round-2 work orders (owner-directed) and authored none of the document's text; the caveat is in Quick Meta and the outside readers are Phase 3 and Phase 6. **Both iteration-8 [P1]s verified closed against source, not against the changelog.** (A) The §11-parser class is an exact issue-identity set: FR-1 fixes three new prefixes with the chain-versus-lint split marked per row, FR-2 enumerates five predicates — the three new ones plus `^FR-\d+: §11 row has no runnable command$` (`prd-ready.ts:148`, byte-checked this round) and the `unsafe §11 command` prefix (`:170`, byte-checked) — each membership reasoned, the `no §11 verification row` issue (`:142`) explicitly OUT, the unimplementable provenance qualifier deleted with its reason, and a classification fixture pair required whose positive control is an unsafe **Command-cell** command. (B) The turbo input is bound: the corpus test must read `turbo.json`, resolve `dirs.artifacts.prd.dir`, and assert a declared `test`-task glob at or above the resolved root, so a rename fails by name; the PRD-036 coordination is stated in both directions with PRD-036's own Dependencies section as the evidence. **All four P2s verified swept** (metric now 0 with a separate "merely present" row; both fifth-argument overstatements corrected to missing-header-enforcement-only per `value-score.ts:189-201`; the PRD-034 example corrected to heading-with-zero-FR-entries per `prd-ready.ts:124`, including inside the newest changelog row; the 2026-07-27 row carries its supersession marker). **Corpus re-measured by the scorer this round:** ten files, 60 FR rows, zero malformed, one canonical section each, zero issues matching any of the five class predicates; three files red on rules FR-1 never reads. Residual leftover sweep for the old wordings came back empty outside history. Scorecard: 8.5 / 8.5 / 8.0 / 9.0 / 8.5 / 8.0 → 8.35; no hard cap tripped. **Five watch items bind Phase 3 and Phase 6** — see Missing Pieces, now the watch list. |
+| 9b  | 2026-07-28 | 8.18  | **PASS** | **Concurring independent round, quorum 2/2.** Scored by a separate Claude Fable 5 session that wrote neither the PRD, nor either remediation, nor the round-2 work orders, and had not read row 9 when it scored — the two rounds collided in the working tree. Method: re-execution over reading. All four emitted issue strings byte-checked against `prd-ready.ts` (:124, :142, :148, :170); `cli.ts:795` five-argument caller re-read; the turbo trio measured (test task bare at `turbo.json:15-17`, exceptions `{}`, both refusal directions of `verify-turbo-inputs.mjs:60-77`); PRD-036's `Dependencies` serialization confirmed at `prd-036:151-155`; the template no-pipe contract at `templates/prd-template.md:198-200`; the archived PRD-021 hazard row at `:1278`; the full lint re-run across all ten wip files — the same three red (026 ×3 dispositions, 031 ×2, 034 `no functional requirements found`), zero class-predicate issues. **Corpus count corrected, iteration-7-correction class: 65 FR rows at scoring time, not 60** — the fourth same-day move, +2 from PRD-027's remediation (new FR-9 rows) and +3 from PRD-035's, both landing after the round-2 measurement; ten files, zero malformed, one canonical section each all reproduced, so the enumerate-don't-pin design absorbs it and no edit is demanded. Fixture census reproduced at sixteen; the seventeenth raw-grep hit is `prd-ready.test.ts:48`, a `.replace()` deletion selector, recorded as the definitional note. **Two new findings, filed as watch items rather than [P1]s because today's strings satisfy both:** W6 — predicate 4's `$`-anchor contradicts the table's "detail may follow" sentence, true of four predicates and false of one; W7 — the negative control's "no issue at all" assertion leaves the fixture's own conformance unpinned against `enforceFrom`, the `assert-absent-needs-an-independent-cause` trap with a loud failure direction. Dimensions (infra): Clarity 8.5, Completeness 8.0, Tech Depth 8.0, Multi-Tenancy 9.0, Scope & Testability 8.0, Migration & Rollback 8.0 → **8.175**. No hard cap tripped; `gate check PRD-024` exit 0 run by this scorer. Disclosure: this scorer's own PRD-027 remediation earlier the same session is what moved the corpus count — stated so the correction's provenance is auditable |
 | 8   | 2026-07-28 | 7.68  | ITERATE | **First independent round on the remediated document (Codex; wrote neither the PRD nor the remediation), and the largest score in this item's history: 6.75 → 6.83 → 7.40 → 6.95 → 7.80* → 7.34 → 7.33 → 7.68** (*7.80 scored the narrowed doc pre-blocker). Dimensions: Clarity 7.5, Completeness 7.5, Tech Depth 7.5, Multi-Tenancy 9.0, Scope & Testability 7.0, Migration & Rollback 8.0 → 7.675. Both [P1]s re-verified against source by the orchestrating session before recording. **(P1-A, carried at a deeper level)** the corpus scoping was the right move and its definition is not implementable: `lintPrd` exposes `issues: string[]` with no diagnostic codes (`prd-ready.ts:98`), the class prose omits the `§11 row has no runnable command` issue **that FR-1 itself changes the predicate for**, and the emitted unsafe-command string carries no cell provenance — so "unsafe issue raised from a cell other than the Command column" cannot be read off the result. An implementer can satisfy the prose by classifying all unsafe strings, none, or `/§11/` — three different tests. Remedy: an exact diagnostic-prefix set (or code enum), an explicit include/exclude decision on the no-runnable issue, and a classification fixture with an unsafe **Command-cell** positive control. **(P1-B, NEW)** the turbo strategy passes its gate and misses a rename: the corpus test reads the wip directory from config (`dirs.artifacts.prd.dir`, `types.ts:7`, default `_prds` at `defaults.ts:9`) while the cache input is the literal `$TURBO_ROOT$/_prds/**` — rename the configured artifact root and the test reads the new directory while turbo hashes the old glob, and `verify:turbo-inputs` stays green because it checks only that the exception reason is non-empty (`verify-turbo-inputs.mjs:60-68`). The PRD's own glob invariant covered subdirectory renames, not the root. Remedy: a coverage assertion binding the resolved configured path to the declared glob — the same shape PRD-036's FR-2 census sketches; coordinate rather than duplicate. **P2s:** the re-anchored Success Metric still labels one inert token as "reaching the gate" (it is excluded at `safety.ts:51-58`; the value is zero or the label changes); two restatements overstate the fifth argument ("skips/disables the value header check" in Memory Inputs and §12) where the owning FR is exact — omission skips only missing-header enforcement from `enforceFrom`, arithmetic and malformed-header checks still run (`value-score.ts:189`); the PRD-034 example says it "declares no §4 FR section at all" where PRD-034 has the literal heading with zero numbered `**FR-N**` entries (`prd-ready.ts:121`'s actual diagnostic); the older Changelog row still carries three superseded claims and should be marked superseded rather than rewritten. **Corpus drift, third instance in one day:** PRD-036's creation (the deferral-cap conversion) made the corpus ten files and sixty rows again — the dated 2026-07-28 nine-file measurement in FR-2 aged within hours of being written, which is precisely why the FR enumerates the directory instead of pinning a count. **CLOSED with citations:** the turbo strategy at the gate level (all three parts verified against `verify-turbo-inputs.mjs:60-68,72-77`, exceptions `{}`, `schema.json:585`), the duplicate-section chain proof (§11 row + hard-cap line), the zero-section distinction (`chain.test.ts:173` body is the word `nothing`), the fixture census — **independently recounted at sixteen rows in six files with all eleven locations cited**, and the four-fixture/narrowing-history sweeps (sole survivor: the historical Changelog row). **Verified exact:** `cli.ts:795` five-argument call, `enforceFrom: 17` (`workflow.config.json:18`), `turbo.json:15` no inputs today, all three workspaces carry test scripts (the stated invalidation cost is real), PRD-021's archived `pnpm build` row at `_prds/completed/prd-021-governance-truth-up.md:1278`, and the live corpus: sixty rows, one canonical section each, zero malformed, the sole outside-Command token the inert `pack-manifest.json` in PRD-026. |
 | 7   | 2026-07-28 | 7.33  | ITERATE | **Confirmation round on an unchanged document — every open finding re-verified against live source rather than carried on faith, and the corpus re-measured after PRD-021's close.** Dimension scores (infra weights): Clarity 8.0, Completeness 6.5, Tech Depth 7.0, Multi-Tenancy 9.0, Scope & Testability 7.5, Migration & Rollback 7.0 → 7.325. **(AE, CONFIRMED OPEN)** `verify-turbo-inputs.mjs:60-68` refuses any cached task carrying `inputs` unless named in `turbo-inputs-exceptions.json` — measured `{}` today — and that check runs inside the `verify:workflow` bundle FR-2's own floor requires green. The `$TURBO_ROOT$`/`$TURBO_DEFAULT$` forms and the exceptions entry are still absent from the text, and the exceptions file from every target list. The sanctioned path is the one the verifier's own header states — an exceptions entry with a written reason — and the FR should take it explicitly. **(corpus, WORSE)** `gate check` run across all ten wip PRDs: **four are red today** — PRD-026 (three missing memory dispositions), PRD-030 (one), PRD-031 (two), PRD-034 (no FR section) — while the §11 substance holds exactly: 70 FR rows *(scorer correction 2026-07-28: **60** — the counting script also matched each table's header row, one per file; independent recount by the remediation session at the readiness commit; qualitative claims unaffected)*, zero malformed, exactly one canonical verification section per file, re-measured by cell-splitting every row. So FR-1's relaxation claim survives and FR-2's expectation model does not: a per-file-outcome corpus test cannot be written green today, allowlisting is forbidden by the FR itself, and none of the four reds is anything FR-1 changes. The FR must either state the corpus-green prerequisite it currently denies having, or scope its per-file assertion to the §11 issue class this PRD introduces — which its own "report, never edit" paragraph almost says. **(AD residual, NARROWED)** `chain.test.ts:173-183`'s fixture contains a `## 11.` heading whose body is the word `nothing` — one section, no runnable rows *(scorer correction 2026-07-28: originally written "empty body"; the bind claim — one-section-not-zero-sections — stands either way)* — so it binds one-section-no-rows, not zero-sections, exactly as iteration 6 read it; the §11 chain row now claims the zero-section case, but the **duplicate-section chain refusal** — FR-1's own "two or more sections is a parser issue and the chain refuses" — is assigned to no chain test anywhere in §11; only the lint test covers duplicates. **(stale measurements, NEW)** PRD-021 closed 2026-07-27 and its archive removed §1's only allowlisted-command instance from the wip corpus: the live hazard count is now **zero** (PRD-027's `sections/content.ts` token is gone too; only PRD-026's inert `pack-manifest.json` remains), so "one live instance … is the whole case for this work" is a dated claim that should re-anchor on the archived measurement or on the class. Line anchors drifted the same way: the missing-root refusal now sits at `prd-ready.ts:181-185`, the whole-row scan at `:133-148` — PRD-021's fifth parameter moved them. P2s carried: the DO NOT still says "three existing fixtures" where FR-1 counts four; Non-Goals and References still say every blocking finding came from the §9 half where the introduction was corrected to "closed after round two" — `a-rule-corrected-survives-where-it-is-restated`, still live in the document that cites it. **Confirmed exact this round:** `chain.ts:491` and `:787-790`, `gates/index.ts:16`, `safety.test.ts:62/89/94/112`, the two-column fixtures in `prd-ready.test.ts`, `chain.test.ts:48` and `single-package.test.ts:100-119`, `markdown.ts:90` first-match and `:74` case-insensitive heading pattern, and the four-fixture two-cell census. |
 | 6   | 2026-07-27 | 7.34  | ITERATE | **Down 0.46 from the wave's high-water mark.** Two of the three [P1]s are the iteration-5 fixes failing at a level below where they were written. **(AE, OPEN)** the turbo remediation is wrong three ways: task `inputs` are **package-relative**, so a root corpus needs `$TURBO_ROOT$/_prds/**`; specifying `inputs` **replaces** the package defaults, so it needs `$TURBO_DEFAULT$`; and — the blocker — `scripts/verify/verify-turbo-inputs.mjs:61-68` **rejects any cached task carrying `inputs`** unless named in `turbo-inputs-exceptions.json`, which is `{}` today, and that check runs inside the `verify:workflow` bundle this PRD's own floor requires green. As specified, FR-2 fails its own verification, and the exceptions file is in no target list. **(AD, PARTIALLY CLOSED)** the zero-versus-duplicate split is coherent in prose and unproven in evidence: the cited `chain.test.ts:173-183` fixture **contains** a `## 11.` heading, so it binds *one empty section*, not zero sections, and the duplicate case is assigned to the lint test while the chain test covers only malformed rows. An implementation could get either case backwards and still satisfy the named proofs. **(new)** the live wip corpus is **red today** — PRD-026 fails readiness because it targets `_prds/README.md` while omitting a disposition for `a-rule-corrected-survives-where-it-is-restated`, an active record whose watch covers `_prds/**` — so this PRD's "no corpus prerequisite" is false as of this round and must be re-measured or recorded. P2s: the broader glob's cross-workspace invalidation cost is unstated — `turbo.json:15-17` is the generic `test` task, so every workspace pays; the DO NOT list still says "three existing fixtures" where FR-1 now correctly says four; and **the narrowing-history correction reached the introduction but not Non-Goals, References or the changelog**, which is `a-rule-corrected-survives-where-it-is-restated` demonstrated by the document that record was written about. |
@@ -241,15 +304,19 @@ recorded this PRD's score. Deferral filed on the board.)
 
 ## Verdict
 
-**ITERATE — 7.68/10, iteration 8, scored independently by Codex.**
+**PASS — 8.35/10, iteration 9.**
 
-The remediation held: five of seven open items closed with citations, the score moved
-+0.35, and nothing the remediation wrote was refuted — both remaining [P1]s are the two
-new rules needing one more turn of precision. The §11-parser-class must be defined as a
-predicate an implementer cannot satisfy three different ways, and the turbo glob must
-follow the configured artifact root it exists to watch. Both are bounded specification
-work with a stated remedy; neither is a design question. One more remediation round —
-again by a session that is not the scorer — then re-score.
+Nine rounds, four scorers (Codex ×6, Claude Fable 5 ×2, the split's own authors ×0),
+and the document that emerges is the strongest form of a small idea: one reader, scoped
+to the span its claim is about, with an issue class you can grep and a cache key you can
+audit. Every rule that survived did so by being made exact — the row grammar measured
+against sixteen fixtures, the issue class enumerated as five string predicates, the
+corpus assertion decoupled from three red files it cannot affect, the turbo input tied
+to the config it watches. **A concurring independent round the same day scored 8.18 PASS
+(quorum 2/2)** — a scorer with no hand in the work orders, colliding in the working tree
+rather than coordinating, which upgrades the integrity caveat above from a promise to a
+verified fact. The seven watch items above (W1–W5, plus the concurring round's W6–W7)
+bind Phase 3 and Phase 6; the owner's Go opens Phase 3. Model tiers high / high.
 
 *(Iteration 1 verdict, for history: ITERATE 6.75 — "the carry-over is faithful; the
 specification is not yet falsifiable." That diagnosis no longer describes the document.)*
