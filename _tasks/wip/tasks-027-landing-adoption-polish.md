@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-027-landing-adoption-polish.md](../../_prds/wip/prd-027-landing-adoption-polish.md)
 > **Readiness**: [readiness-027-landing-adoption-polish.md](../../_readiness/wip/readiness-027-landing-adoption-polish.md)
-> **Status**: Code Complete (pending Phase 6 review + operator rows + close)
+> **Status**: Ship Verified (pending owner acceptance + merge)
 > **Readiness Score**: 8.20/10 (iteration 7, PASS — fourth independent scorer)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -201,19 +201,19 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
   - [x] 8.10 Re-read PRD §12 DO NOT — confirm none introduced (no section reorder, no
         copy-hierarchy change, no `.changeset/` write, no reformat sweep, no
         aria-hidden fallback span).
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review, different model/session, `Critical: 0`,
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review, different model/session, `Critical: 0`,
         `Quorum` field present (`1/1 pass`) →
         `_docs/reviews/review-027-landing-adoption-polish.md`.
-  - [ ] 9.2 Operator rows executed in a real browser (Claude-in-Chrome per the
+  - [x] 9.2 Operator rows executed in a real browser (Claude-in-Chrome per the
         PRD-013 pattern; same-origin 375px iframe for the viewport rows) — results
         recorded in Operator Handoff, `skipped` illegal.
-  - [ ] 9.3 `pnpm verify:workflow` green after any review-driven fix.
-  - [ ] 9.4 Draft `_docs/wip/summary-027-landing-adoption-polish.md`.
+  - [x] 9.3 `pnpm verify:workflow` green after any review-driven fix.
+  - [x] 9.4 Draft `_docs/wip/summary-027-landing-adoption-polish.md`.
 - [ ] 10.0 Phase 7 — Learning and close (operator-gated)
-  - [ ] 10.1 Write `_brain/learnings/metadata-declares-what-it-cannot-provide.md` +
+  - [x] 10.1 Write `_brain/learnings/metadata-declares-what-it-cannot-provide.md` +
         the `_brain/INDEX.md` hook (≤120 chars).
-  - [ ] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact,
+  - [x] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact,
         launch-checklist section all in the merge diff.
   - [ ] 10.3 Owner acceptance: the merge gate refuses without an owner-signed entry in
         `_state/acceptances.json` covering the operator rows — the agent transcribes
@@ -241,8 +241,8 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
 | lint | `pnpm lint` | monorepo | passed | 0 warnings | |
 | test | `pnpm test` | monorepo | passed | 7/7 turbo tasks | |
 | build | `pnpm build` + `pnpm --filter web build` | monorepo | passed | clean | |
-| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | pending | | |
-| durable | `pnpm verify:durable-artifacts` | repo | pending | | incl. launch checklist section |
+| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | passed | 3 Codex rounds: 2 criticals found→fixed→re-verified; round 3 'No findings … PASS' | `_docs/reviews/review-027-landing-adoption-polish.md` |
+| durable | `pnpm verify:durable-artifacts` | repo | passed | learning + INDEX hook + review artifact + launch checklist all in the diff | incl. launch checklist section |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -283,10 +283,10 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | Task | Category | Owner | Required Check | Status | Notes |
 | ---- | -------- | ----- | -------------- | ------ | ----- |
 | 0.4 | manual-qa | owner | **Baseline: 375×667 hero block rendered height on the PRE-change tree.** Recorded value: **1562 px** | recorded | measured 2026-07-28 BEFORE any 7.x implementation, via Claude-in-Chrome + 375px same-origin iframe (PRD-013 pattern) against the pre-change main tree served at localhost; HandoffCard visible, no h-scroll, iframe width verified 375; agent-measured through the sanctioned method — the owner's close acceptance covers it per the PRD-013 precedent |
-| 9.2a | manual-qa | owner | hero copy control and install-tab control write the real command to the system clipboard, both themes | pending | FR-2 + FR-9 |
-| 9.2b | manual-qa | owner | 375×667 post-change: hero measurably shorter than the recorded baseline; no `HandoffCard` in the hero; no horizontal scroll | pending | FR-6; CTAs explicitly NOT claimed above the fold |
-| 9.2c | manual-qa | owner | scrolling `/` highlights exactly one nav link incl. fast scroll; no text shift; nothing below 900px | pending | FR-5 |
-| 9.2d | manual-qa | owner | the three trust-strip anchors take focus, show a visible ring, land on the right section (keyboard) | pending | FR-4 |
+| 9.2a | manual-qa | owner | hero copy control and install-tab control write the real command to the system clipboard, both themes | passed | 2026-07-28: payload captured in-browser both themes (exact install constant, 4 controls); real click + owner Cmd+V confirmed the system clipboard |
+| 9.2b | manual-qa | owner | 375×667 post-change: hero measurably shorter than the recorded baseline; no `HandoffCard` in the hero; no horizontal scroll | passed | 2026-07-28: 1240px vs 1562px baseline (−322px); wrapper display:none; the only other HANDOFF CARD text is the Next flight payload, not DOM; no h-scroll |
+| 9.2c | manual-qa | owner | scrolling `/` highlights exactly one nav link incl. fast scroll; no text shift; nothing below 900px | passed | 2026-07-28, visible tab: 5/5 sections each exactly one aria-current; fast out-of-order scroll retains the last max (no flicker to none); initial hidden-tab zero readings were rAF suspension, not a defect |
+| 9.2d | manual-qa | owner | the three trust-strip anchors take focus, show a visible ring, land on the right section (keyboard) | passed | 2026-07-28: owner Tab-tested live — rings visible, targets correct; machine half: universal :focus-visible ring rule applies, focus() + targets verified (scripted focus cannot trigger Chrome's focus-visible heuristic, which is why the eye half is the owner's) |
 
 > **Launch precondition (NOT a close row):** after the first deploy and before the first
 > share, the owner runs the OG-debugger check per the `## Launch checklist` FR-1 adds to
