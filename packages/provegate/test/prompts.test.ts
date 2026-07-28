@@ -288,7 +288,7 @@ function filledConfig(dir = '.provegate') {
   const packageDir = promptsPackageDir();
   const rows = parseRegistryFromPackage(packageDir);
   const values: Record<string, string> = {};
-  for (const row of rows) values[row.token] = `v-${row.token}`;
+  for (const row of rows) values[row.token] = row.enumerated?.[0] ?? `v-${row.token}`;
   return {
     ...DEFAULT_CONFIG,
     prompts: { ...DEFAULT_CONFIG.prompts, enabled: true, dir, values },

@@ -89,9 +89,7 @@ this class — the parent task must mirror that emphasis.
    > "High-level implementation plan ready. Type **Go** to generate detailed sub-tasks
    > with file paths."
 
-4. **STOP** — Do not continue until the user says "Go". Exception: in
-   autonomous-execution mode, document the skipped approval gate in the task file's
-   **Deferrals & Decisions** before proceeding.
+4. **STOP** — Do not continue until the user says "Go". {{AUTONOMY_MODE}}
 
 ### Phase B: Sub-Tasks & Relevant Files
 

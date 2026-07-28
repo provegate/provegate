@@ -34,6 +34,14 @@ merge    → runner: operator-acceptance guard, no-ff merge to LOCAL {{BASE_BRAN
 handoff  → runner prints the card + metrics path; HUMAN runs git push
 ```
 
+## The proceed rule (Phases 4–7)
+
+During Phases 4–7 the only legitimate stops are the enumerated stop-and-ask checkpoints
+and a failed gate. Every other decision is the agent's to take and to record in the task
+file's **Deferrals & Decisions**, never to escalate: asking permission for in-scope,
+reversible work is not caution, it is a manufactured gate — the mirror image of skipping
+a real one.
+
 Resume after a gate failure: `gate run --from-phase=N {{ID_PREFIX}}-XXX` (4–7) or
 `gate land {{ID_PREFIX}}-XXX` when gates already passed and only the merge remains.
 The operator-acceptance gate is never skipped, in any resume mode.

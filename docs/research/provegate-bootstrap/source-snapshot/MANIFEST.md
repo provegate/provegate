@@ -58,6 +58,7 @@ yazılır (paket içeriğinin kaynağıdır; §4).
 | Dosya | Tarih | Onay | Kapsam |
 | ----- | ----- | ---- | ------ |
 | `addenda/agent-memory-closed-loop-2026-07-25.md` | 2026-07-25 | owner | Kapalı döngü agent hafızası: PRD memory input/output grameri, watch ve weakening semantiği, `_brain` ↔ ürün dokümanı sınırı, deterministik yerel geri çağırma kısıtları, offline/sıfır-bağımlılık/insan-push invaryantları. Kaynak: PRD-017/018/019 |
+| `addenda/autonomy-mode-and-proceed-rule-2026-07-27.md` | 2026-07-28 | owner | Otonomi modu ve Phase 4–7 proceed kuralı: Phase 3 istisnası konfigüre edilen bir değerdir (`AUTONOMY_MODE`, iki legal değer, öz-değerlendirme asla), entrypoint stop kurallarının yanında açık proceed kuralı taşır. Kaynak: PRD-031 |
 
 ## Kullanım kuralları (yeni repo agent'ı için)
 
