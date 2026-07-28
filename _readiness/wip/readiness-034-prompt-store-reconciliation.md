@@ -1,6 +1,6 @@
 # Readiness Assessment: PRD-034 — Prompt Store Reconciliation
 
-Three of iteration 3’s five missing pieces are genuinely closed. The bounded-walk and canonical-spelling remediations remain open because code-valid configurations contradict their new guarantees.
+**ITERATE — 7.5/10.** Both iteration-4 counterexamples are repaired in their owning FRs, but neither fifth-pass closure survives the full-document and migration sweep intact.
 
 ## Quick Meta
 
@@ -8,143 +8,138 @@ Three of iteration 3’s five missing pieces are genuinely closed. The bounded-w
 | --- | --- |
 | PRD | `_prds/wip/prd-034-prompt-store-reconciliation.md` |
 | PRD Class | `infra` |
-| Score | 7.6/10 |
+| Score | 7.5/10 |
 | Verdict | ITERATE |
-| Iteration | 4 |
+| Iteration | 5 |
 | Model Tier (Execution) | none |
 | Model Tier (Audit) | none |
 | Scored by | GPT-5 via Codex — fresh independent Phase 2 re-score |
 | Self-scored | no |
 | Date | 2026-07-28 |
 | State Record | pending |
-| PRD Lint | WAIVED for this review. `node packages/provegate/dist/cli.js check PRD-034` failed at the documented sandbox write with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.28984.tmp'`. The exact read-only `lintPrd` equivalent currently reports only an unrelated dirty-worktree memory-corpus error: `indexed record 'ADR-0004-method-rule-vs-repo-rule' does not validate`; an isolated PRD-content run with memory disabled returns `{ "ok": true, "issues": [] }`. Per the review instruction, command-level evidence relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
+| Analysis Mode | read-only; no files changed |
+| PRD Lint | WAIVED at the command surface. `node packages/provegate/dist/cli.js check PRD-034` reached the documented sandbox write and failed with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.32036.tmp'`. The exact read-only `lintPrd(config, manifest, content, root, 34)` equivalent returned `{ "ok": true, "issues": [] }`. Per instruction, command-level evidence relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
 
 ## Model Tier Recommendation
 
-No implementation or audit tier is assigned while the verdict is ITERATE. A future PASS in the 8.0–8.9 band should use **high/high**.
+No tier is assigned while the verdict is ITERATE. A future PASS in the 8.0–8.9 band should use **high/high** for execution and audit.
 
-## Iteration 4 — Closure Review
+## Iteration 5 — Seam Review
 
-### 1. T5 adapter consequence and T6 production guidance — GENUINELY CLOSED
+### 1. Unconditional fixed adapter roots — PAPERED OVER
 
-FR-3 now owns the T6 guidance as real CLI output rather than unnamed adopter prose:
+The original iteration-4 counterexample is closed in FR-1. The scan roots no longer disappear when an adapter leaves live configuration:
 
-> “`prompts.enabled` false → exit 0 with a note whose text is a **named production surface, tested verbatim**” (§4, lines 202–204)
+> “the walk visits the dirname set of `generatedPaths()`'s members PLUS, unconditionally, the two fixed adapter roots `.claude/commands/` and `.cursor/rules/`” (§4, lines 144–146)
 
-> “clear `templates.prd` in the same change that removes the block, and the generated files remain on disk, readable by agents, until a human deletes them” (§4, lines 205–207)
+> “deriving them from the live config would silently drop a REMOVED adapter's root and make T4's central orphan … undiscoverable” (§4, lines 146–150)
 
-FR-6 binds the expected text to the real command:
+That is faithful to Revision 2’s T4 requirement:
 
-> “asserting the disabled note’s **exact production text** … against the CLI’s real output, never against fixture-local prose” (§4, lines 264–267)
+> “Removing one from the config removes it from the plan, and does nothing on disk. The previous file stays” (state model, lines 192–195)
 
-Section 6 separately preserves both model consequences and the T5 adapter result:
+> “The disagreement is discoverable … by recognising the generated banner in a file the current plan does not produce” (state model, lines 202–205)
 
-> “the existing Claude/Cursor adapters report as diverged, because their content embeds the old store path” (§6, lines 322–324)
+The store-side bound is also preserved:
 
-> “its note carries the exact T6 text — the unexercised search and both adopter consequences — asserted verbatim against the CLI output” (§6, lines 325–327)
+> “the bound survives `prompts.dir: "."` because the store-side dirname set under `.` is still only the planned directories, never the repository” (§4, lines 151–153)
 
-The shorter disabled-note criterion at lines 337–340 and the §11 command-row summary omit the consequences, but neither weakens or contradicts the stronger acceptance criterion above. The production surface, required content, and production-shaped test are now bound.
+The replacement domain nevertheless leaves a new operational seam. Enabled configurations may legally declare no external adapters: the current suite explicitly asserts that `prompts.adapters: []` loads successfully (`config.test.ts`, lines 185–188). Such a repository may have neither fixed directory. The PRD says the roots are visited unconditionally and that:
 
-### 2. Exact orphan-walk domain — OPEN
+> “an unreadable entry is a named failure rather than a skip” (§4, lines 154–157)
 
-The new traversal rule is precise and genuinely bounds `prompts.dir: "."`:
+It never decides whether an absent fixed root is an empty scan, an unreadable-root failure, or something else. The live repository demonstrates the shape: `.claude/commands/` is absent, while `.cursor/rules/` exists for unrelated agent configuration. Walking a never-enabled adapter root also expands reads into user-owned files; because banner discovery requires reading candidates, an unreadable unrelated command could fail reconciliation unless the contract scopes that failure deliberately.
 
-> “the walk visits precisely the directories that contain at least one planned path … and lists each one’s immediate entries; it descends nowhere else” (§4, lines 141–144)
+Two stale restatements preserve the previous domain:
 
-> “the bound survives `prompts.dir: "."` because the dirname set under `.` is still only the planned directories, never the repository” (§4, lines 145–146)
+> “the path domain always computed from `generatedPaths()`” (§4 FR-6, lines 271–273)
 
-The scoped universal claim is also internally understandable: an orphan is claimed only among bannered immediate entries of those directories. The defect is that the chosen domain cannot satisfy the PRD’s still-active T4 removed-adapter claim.
+> “orphan discovery is a separate, deliberately bounded banner-search over three declared roots” (Memory Inputs, lines 488–493)
 
-`generatedPaths()` emits adapters only from `config.prompts.adapters` (`prompts.ts`, lines 788–831 and 842–847). Removing `claude-code` removes every planned member beneath `.claude/commands`; removing `cursor` similarly removes `.cursor/rules`. Consequently neither directory belongs to the dirname set from which its orphan must be discovered.
+Neither describes “planned dirnames plus two unconditional constants.” The first directly excludes the new constants; the second collapses a multi-directory store-side set into an obsolete three-root model.
 
-A built-code probe with `adapters: ['cursor', 'codex']` produced these dirnames:
+The removed-adapter case is now discoverable, but the new domain is not implementable without choosing missing-root and unrelated-entry behavior, and the document still gives implementers incompatible domain definitions.
 
-> `.provegate/prompts`, `.provegate/templates`, `.cursor/rules`, `.provegate`
+### 2. Backslash rejection at config load — PAPERED OVER
 
-There was no `.claude/commands` root. This contradicts:
+The technical contradiction from iteration 4 is closed at the right boundary. FR-1 now conditions canonical report spelling on load-time rejection:
 
-> “the dirname set … spans the store’s subdirectories and the two adapter roots by construction” (§4, lines 142–144)
+> “no backslash can survive in it, because `prompts.dir` itself refuses backslashes at load from this PRD on” (§4, lines 118–119)
 
-and the acceptance criterion:
+FR-2 names the strictness as a behavior change to exactly the existing key involved:
 
-> “Given an adapter removed from `config.prompts.adapters` with its file on disk … the file reports `orphaned` via its banner” (§6, lines 309–310)
+> “`prompts.dir` itself gains the backslash rejection at config load” (§4, lines 188–190)
 
-The Memory Input still calls the mechanism a search over “three declared roots” (§Memory Inputs, lines 465–470), which is neither the new exact dirname-set definition nor true when an external adapter is removed.
+The production-shaped fixture reaches that seam:
 
-The walk is bounded and `.`-safe, but it is not total for the orphan behavior the same PRD promises. This is a new fourth-pass defect.
+> “a config whose `prompts.dir` contains a backslash asserts the load refusal naming the key” (§4, lines 291–294)
 
-### 3. Canonical report spelling and exception matching — OPEN
+This is correctly scoped. Current code accepts an internal backslash through `unsafeRelPath()` because it splits on both separators only to inspect segments (`validate.ts`, lines 467–481); a read-only built-code probe confirmed `validateResolvedConfig` returns no issue for `foo\bar`. A dedicated `prompts.dir` validation clause can reject it without tightening every path that shares `unsafeRelPath()`.
 
-The architectural split is sound in principle. Normalizing a finding’s report spelling does not canonicalize or transform an exception entry, so it does not inherently breach FR-2’s “rejection, not canonicalization” rule. For forward-slash spellings containing repeated separators, `.` segments, or a leading `./`, the canonical report path still identifies the same destination that native resolution writes.
+The migration is not complete, however. The sole procedure is:
 
-The implementation contract nevertheless remains contradictory for a reachable legal spelling:
+> “the changeset carries the migration line (rename the directory, update the value …)” (§4, lines 196–198)
 
-> “the primitive normalizes each joined `dir + '/' + rel` with POSIX rules — collapse repeated separators, drop a leading `./`” (§4, lines 114–117)
+Changing the spelling does more than relocate the store on POSIX. The renderer embeds `prompts.dir` in the Claude, Cursor, and Codex adapter contents (`prompts.ts`, lines 785, 793, 815 and 828). Revision 2 makes that consequence explicit:
 
-> “the canonical report spelling … by construction contains no backslash” (§4, lines 168–170)
+> “the adapters embed store paths in their content” (state model, lines 225–229)
 
-Current validation rejects leading backslashes and `..`, but permits internal backslashes: `unsafeRelPath()` splits on `/` or `\` only to inspect segments and does not reject the separator (`validate.ts`, lines 467–481). A built-code call confirmed `validateConfig({ prompts: { dir: 'foo\\bar' } })` returns no issue.
+After “rename the directory, update the value,” those generated files still contain the old spelling. Additive-only `init` skips them. The migration must therefore include regeneration of the affected generated unit, with ordering that remains executable once the new package refuses the old config. The current two-step line leaves an adopter with `modified` adapters/snippet and no complete transition to current bytes.
 
-POSIX normalization does not convert `\` into `/`. For the legal generated path `foo\bar/prompts/phase-1-x.md`, both `posix.normalize()` and the report spelling retain the backslash. FR-2 must reject the matching exception entry:
+The evidence for an empty blast radius is also overstated:
 
-> “a backslash anywhere refuses the entry” (§4, lines 161–165)
+> “no shipped default or fixture uses a backslash, so the practical blast radius is empty” (§4, lines 197–198)
 
-Thus the report is not “by construction” compatible with every legal `prompts.dir`.
+The shipped default is forward-slashed, and no accepted in-repository fixture exercises a legal internal-backslash directory. That measures the repository corpus, not external adopters. Moreover, `config.test.ts` already contains a backslash `prompts.dir` fixture (`C:\evil`, lines 196–203), although it is independently invalid as drive-anchored. The honest claim is “no known accepted in-repository configuration,” with external usage unknown—not an empty adopter blast radius.
 
-The installer mismatch has two branches:
-
-- If “POSIX rules” means actual `path.posix.normalize`, the report still names the literal backslash-containing path written on POSIX, but no exception can match it.
-- If implementation additionally converts backslashes to slashes to satisfy FR-2, the report names `foo/bar/...` while the POSIX installer’s native `resolve(root, rawPath)` writes beneath a literal `foo\bar` directory. The report then no longer names what was written.
-
-Nothing on disk is moved, but the “every legal spelling” and “no adopter migration” claims are false until the backslash case is decided explicitly. The changelog repeats the false universal closure at line 621.
-
-### 4. Exact-file pack manifest scope — GENUINELY CLOSED
-
-FR-5 now owns the exact update:
-
-> “the packed file also joins `packages/provegate/test/pack-manifest.json` — the exact-file manifest the pack test enforces, where an unlisted new file fails deliberately” (§4, lines 239–241)
-
-The file appears in FR-5’s Targets (§4, line 249), Implementation Scope:
-
-> “`packages/provegate/test/pack-manifest.json` (the exact-file manifest gains the new packed path or the pack test fails deliberately)” (§8, lines 432–435)
-
-and the Conflict Surface (§10, line 544).
-
-Repository behavior matches the claim: `pack.test.ts` compares the dry-run tarball and manifest for both extra and missing files (lines 35–45). The implementation no longer needs an undeclared exact-file edit.
-
-### 5. T7 memory attribution — GENUINELY CLOSED
-
-Memory Outputs now says:
-
-> “This design keeps no stored hash and no receipt (the model’s T7); the only recorded provenance is the banner’s **version**, and that is what does the one job recomputation cannot — splitting a package-caused difference (`stale`) from a same-version one (`modified`)” (lines 511–518)
-
-Durable Artifacts repeats:
-
-> “the banner version (the only stored provenance — no hash, no receipt) does the attribution job recomputation cannot” (lines 561–564)
-
-This is faithful to Revision 2: the reporter recomputes expected bytes, no receipt exists, and banner version supplies attribution only. The two deliberately unbannered paths remain `unattributable` elsewhere in the PRD, so these statements do not invent attribution for them.
+The migration is absent from the section that owns existing-adopter migration (§7, lines 389–408), which discusses only practices-pack wiring. Rollback and ordering (§7, lines 410–434) likewise cover exceptions and wiring but not the new directory-spelling transition. Finally, §11 says its rows scope each FR to its own test, yet FR-2’s row names only the `exception` cases (§11, lines 596–605); the backslash-dir load refusal appears only under the whole FR-6 matrix. The fixture exists in prose, but the owning strictness requirement lacks a focused verification mapping.
 
 ## Derivation Fidelity
 
-The load-bearing boundaries remain intact:
+The state-model boundaries remain intact:
 
-- **T3 no-write:** FR-1 says the primitive writes nothing (§4, lines 151–153), while FR-2 says an exception never authorizes a write (§4, lines 181–186).
-- **T7 no-receipt:** expected state is recomputed from the installed package and current config, with no stored state (§4, lines 109–113).
-- **Constraint 1 — no adopter-config write:** exception entries are adopter-owned input; no command receives authority to edit `workflow.config.json`.
-- **Constraint 2 — no adopter-file deletion:** FR-3 prints the human deletion and reinstall remedy, and §12 explicitly forbids command deletion.
-- No runtime dependency, network call, or remote-push path is introduced.
+- **T3 no-write:** FR-1 returns findings and writes nothing (§4, lines 159–160); FR-2 says an exception never authorizes a write (§4, lines 201–206).
+- **T7 no-receipt:** expected bytes are recomputed from the installed package and current config, with no stored state (§4, lines 109–113). Memory Outputs correctly limits stored provenance to the banner version (lines 534–543).
+- **Constraint 1:** nothing edits the adopter’s activation/config record.
+- **Constraint 2:** deletion remains a human action; the check only reports remedies.
+- No runtime dependency, network access, or remote-push path is introduced.
+- The two unbannered planned paths remain byte-detectable but version-unattributable, faithful to Revision 2.
+- The bounded search honestly declines renamed-away-tree discovery outside its declared domain.
 
-The two open defects do not relax those boundaries. They make promised reporting behavior incomplete for reachable configurations.
+The fifth-pass changes do not violate T3, T7, or constraints 1–2. Their defects concern domain totality, migration completeness, and contradictory restatements.
 
-## Cross-Section Consistency Sweep
+## Whole-Document Consistency Sweep
 
-Sections 1–3 retain the Revision 2 detection/attribution split and introduce no stale receipt or write authority.
+One additional contradiction remains outside the two named seams. User Story 2 promises:
 
-Sections 4 and 6 disagree internally on orphan discovery: the exact current-plan dirname set excludes external adapter roots precisely when those adapters become unplanned, while both sections still promise their discovery. Memory Inputs preserves an older “three declared roots” description.
+> “I want that edit to survive upgrades and still be visible as a decision” (§3, lines 89–91)
 
-Sections 4, 6, and the changelog overstate canonical compatibility. No explicit test case covers an internal-backslash `prompts.dir`; the “non-normalized path” fixture concerns exception-entry rejection, not the legal generated-path spelling that causes the contradiction.
+But an exception suppresses only `modified`; after a package upgrade, a bannered edited file at the old version becomes `stale`, which is explicitly never exceptable:
 
-Sections 7–8 are consistent on additive migration, complete-key rollback, exact manifest scope, and ordering. Sections 9–10 contain no new open question or scope omission. Section 11’s shortened notes are incomplete summaries but do not contradict their parent FRs. Section 12 continues to preserve the no-dependency, no-push, no-delete, and no-unconfigured-repository behavior constraints.
+> “It suppresses nothing else: `stale`, `missing`, `orphaned` and `unattributable` are never exceptable” (§4, lines 201–204)
+
+The entry then becomes stale because its path is not currently `modified` and fails the run (§4, lines 205–206), while FR-3 prints T2’s delete-and-reinstall remedy. This preserves no-write fidelity and makes the decision visible, but it does not make the edit survive an applied upgrade. The document must either narrow the user story to “never silently overwritten; owner rebases or spares it manually” or specify the manual preservation/rebase transition without granting write authority.
+
+Other prior closures remain sound:
+
+- T5 adapter staleness and T6 production guidance are bound to production-shaped CLI tests.
+- The exact pack manifest is targeted in FR-5, Implementation Scope, and Conflict Surface.
+- T7 attribution wording consistently says banner version, no hash and no receipt.
+- Sections 8 and 10 enumerate the implementation and conflict surfaces completely.
+- Section 12 preserves the no-dependency, no-push, no-delete, and config-omission boundaries.
+
+## Code Verification
+
+Read-only source inspection confirmed:
+
+- `renderAdapters()` emits external adapters only for current membership (`prompts.ts`, lines 788–831), validating why fixed roots must be independent of live membership.
+- `generatedPaths()` contains only rendered store members and currently configured adapters (`prompts.ts`, lines 837–848).
+- Empty adapter membership is a supported configuration (`config.test.ts`, lines 185–188).
+- The default prompt block is disabled and uses forward-slash `.provegate` (`defaults.ts`, lines 110–120).
+- Current lexical validation accepts internal backslashes while rejecting leading, drive-anchored, home-relative and `..` forms (`validate.ts`, lines 467–481).
+- Config resolution performs structural validation before merged semantic validation (`load.ts`, lines 290–323), so a dedicated load-time `prompts.dir` refusal is feasible.
+- Store and adapter destinations use native path resolution during installation, while rendered adapter bytes embed the raw configured directory spelling.
+- The current repository has no `.claude/commands/` directory and has an unrelated `.cursor/rules/brain.mdc`, demonstrating both missing-root and shared-root shapes.
 
 ## Hard Caps and Clarity Gate
 
@@ -154,9 +149,9 @@ No readiness hard cap is triggered:
 - No network or remote-push path is introduced.
 - No method-content file is changed.
 - T3 no-write, T7 no-receipt, and constraints 1–2 remain explicit.
-- The CLI lint write failure is the documented sandbox `EPERM`; the current read-only corpus failure names an unrelated uncommitted ADR rather than PRD-034.
+- The CLI lint failure is the documented sandbox write `EPERM`; the read-only lint is green.
 
-Clarity is capped at 7.0. Two central mechanisms make universal claims disproved by code-valid states: removing an external adapter removes its scan root, and a legal internal-backslash `prompts.dir` cannot produce the exception-compatible report spelling the PRD claims.
+Clarity is capped at 7.0. The orphan domain is restated incompatibly in FR-1, FR-6, and Memory Inputs; missing fixed-root behavior is undecided; and User Story 2’s upgrade-survival promise is stronger than the exception semantics. These are central behavior contracts, not editorial defects.
 
 ## Scorecard
 
@@ -164,17 +159,21 @@ Clarity is capped at 7.0. Two central mechanisms make universal claims disproved
 | --- | ---: | ---: | ---: |
 | Clarity | 15% | 7.0 | 1.05 |
 | Completeness | 20% | 7.5 | 1.50 |
-| Technical Depth | 20% | 7.0 | 1.40 |
+| Technical Depth | 20% | 8.0 | 1.60 |
 | MT&S — repository critical rules | 10% | 9.5 | 0.95 |
-| Scope & Testability | 15% | 6.5 | 0.98 |
-| Migration & Rollback | 20% | 8.5 | 1.70 |
-| **Total** | **100%** |  | **7.58 → 7.6** |
+| Scope & Testability | 15% | 7.0 | 1.05 |
+| Migration & Rollback | 20% | 6.5 | 1.30 |
+| **Total** | **100%** |  | **7.45 → 7.5** |
 
 ## Missing Pieces
 
-1. Reconcile the bounded traversal domain with T4. The domain must retain the directories needed to discover removed external adapters independently of current adapter membership, or the PRD must explicitly retract and derive the corresponding orphan claims. Preserve the immediate-entry bound and the `prompts.dir: "."` guarantee.
+1. Define the unconditional fixed-root behavior completely: nonexistent root, unreadable root, unrelated readable/unreadable immediate entries, and directory symlinks. State whether an absent root is an empty scan and whether never-enabled adapter directories intentionally enter the read/failure domain. Add a fixture with `prompts.adapters: []`, neither fixed root present, and a current store.
 
-2. Resolve internal backslashes in legal `prompts.dir` values. Either tighten that existing config surface with an explicit adopter migration, define a report spelling that still names the actual cross-platform disk destination and remains exception-compatible, or change the exception contract. Add a fixture using a legal backslash-containing `prompts.dir`; an exception-path rejection fixture alone cannot prove this seam.
+2. Replace every stale traversal restatement. FR-6 must say the orphan domain is planned dirnames plus the two fixed constants, and Memory Inputs must describe that exact set rather than “three declared roots.”
+
+3. Complete the backslash migration. Specify an executable order for editing the config, relocating the POSIX store where necessary, and regenerating every generated file whose bytes embed the old directory spelling. Put the procedure in §7 and the changeset contract, scope blast-radius evidence to known repository configurations, and map the load-refusal fixture to FR-2’s focused §11 verification.
+
+4. Reconcile User Story 2 with the stale-only-on-upgrade behavior. Either narrow “survive upgrades” to the actual no-silent-write/manual-rebase guarantee or define how an owner preserves/rebases an excepted edit during T2 without letting the exception authorize a write.
 
 ## Iteration History
 
@@ -184,20 +183,22 @@ Clarity is capped at 7.0. Two central mechanisms make universal claims disproved
 | 2026-07-28 | 2 | 7.3 | ITERATE |
 | 2026-07-28 | 3 | 7.4 | ITERATE |
 | 2026-07-28 | 4 | 7.6 | ITERATE |
+| 2026-07-28 | 5 | 7.5 | ITERATE |
 
 ## Verdict
 
-ITERATE. The T5/T6 production contract, exact pack-manifest scope, and T7 attribution wording are now genuinely closed. The PRD still cannot pass while its bounded walk excludes removed external adapters that it promises to report and its canonical spelling remains incompatible with a legal `prompts.dir` spelling.
+ITERATE. The original removed-adapter and canonical-backslash counterexamples are repaired at their owning mechanisms, and the state-model boundaries remain faithful. The replacement orphan domain still lacks missing/shared-root semantics and survives in two contradictory restatements; the new backslash behavior change lacks a complete generated-content migration and overstates its measured blast radius; and the upgrade-survival user story remains stronger than the exception behavior.
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 4 transcribed
-> verbatim from a fresh independent Codex session. Trajectory 5.1 → 7.3 → 7.4 → 7.6;
-> three of five pieces confirmed genuinely closed (T5/T6 production contract,
-> pack-manifest scope, T7 attribution). The two open pieces are both real seams the
-> remediation's own guarantees created: the planned-dirname walk domain silently drops a
-> REMOVED adapter's root (breaking the T4 orphan promise), and a legal
-> backslash-containing `prompts.dir` defeats the "canonical spelling has no backslash"
-> claim. Lint EPERM is the documented sandbox artifact; out-of-sandbox green the same
-> day. Remediation by the non-scorer session follows.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 5 transcribed
+> verbatim from a fresh independent Codex session. Trajectory 5.1 → 7.3 → 7.4 → 7.6 →
+> 7.5: flat-to-oscillating across three consecutive rounds inside the iterate band,
+> with every round's findings landing in the same layer — the orphan-discovery walk and
+> path/exception micro-semantics. Per `scope-out-the-layer-the-rounds-keep-hitting` and
+> `score-band-prescribes-the-action` (and the PRD-025 precedent), this is a scope error
+> reporting itself as a run of design errors, and the next action is an OWNER structural
+> decision — narrow the layer out or keep clause-patching — not another unilateral
+> wording round. The decision request is on the board. Lint EPERM is the documented
+> sandbox artifact; out-of-sandbox green the same day.
