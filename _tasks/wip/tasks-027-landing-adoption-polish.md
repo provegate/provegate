@@ -230,12 +230,12 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
 | Gate | Command / Check | Scope | Result | Evidence | Notes |
 | ---- | --------------- | ----- | ------ | -------- | ----- |
 | FR-1 | `pnpm --filter web build` | web | passed | fresh build 2026-07-28 | fresh build precedes emitted reads |
-| FR-1/8 | `pnpm --filter web test test/metadata.test.ts` | web | passed | 11 tests green on the fresh build | coherence triple + emitted card + alt split; absent file fails |
+| FR-1/8 | `pnpm --filter web test test/metadata.test.ts` | web | passed | 8 passed (8), fresh build | coherence triple + emitted card + exact alt title/description; absent file fails |
 | FR-1 | `node scripts/check-static-egress.mjs` | root | passed | [egress] clean | zero external origins |
-| FR-2/4/5/6/9 | `pnpm --filter web test test/landing.test.tsx` | web | passed | 67/67 incl. sequential-callback scrollspy + anchor closure | |
-| FR-3/7 | `pnpm --filter web test test/content-web.test.ts` | web | passed | 41 exports, zero orphans; app-wide install census clean | word-anchored census |
-| FR-6 | `pnpm --filter web test test/a11y.test.ts` | web | passed | wrapper class inside the 900px block via the shared constant | |
-| FR-9 | `pnpm --filter @provegate/design test` | design | passed | 52/52 incl. built-directive + five-output coexistence | button/type/directive/coexistence set |
+| FR-2/4/5/6/9 | `pnpm --filter web test test/landing.test.tsx` | web | passed | 37 passed (37) — web suite total 67/67 across four files | sequential-callback scrollspy, anchor closure, four clicked payloads |
+| FR-3/7 | `pnpm --filter web test test/content-web.test.ts` | web | passed | 13 passed (13); 41 exports, zero orphans; unrecognized export forms fail loudly | word-anchored census |
+| FR-6 | `pnpm --filter web test test/a11y.test.ts` | web | passed | 9 passed (9) | wrapper class inside the 900px block via the shared constant |
+| FR-9 | `pnpm --filter @provegate/design test` | design | passed | 53 passed (53) incl. built-directive, five-output coexistence, and both type-level deny tests (copyable AND headerControl) | button/type/directive/coexistence set |
 | metrics | the four §2 commands, post-change | web | passed | M1 15/7/0 · M2 client-button true, server-span false · M3 41 [] · M4 false true | targets vs 0.3 baselines |
 | types | `pnpm check-types` | monorepo | passed | 0 errors | |
 | lint | `pnpm lint` | monorepo | passed | 0 warnings | |
@@ -254,6 +254,10 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   MDX consumer passes nothing and renders identically.
 - 2.2 — `client.ts` became `client.tsx` (the component is JSX); the shipped entry path
   `dist/react/client.js` is unchanged, which is the contract.
+- 2.1 (Codex round 1 [P1]) — the header slot moved off the public surface: `CodeBlockBase`
+  (internal, carries `headerControl`) is not barrel-exported, the public `CodeBlock` has
+  no slot, and a type-level deny test holds it — a public node slot would have been the
+  handlerless-affordance path back in.
 - 0.4 — the hero baseline (1562 px) was captured through the sanctioned Claude-in-Chrome +
   same-origin-iframe method against the pre-change main tree served locally; the owner's
   close acceptance covers it per the PRD-013 precedent.

@@ -126,6 +126,13 @@ describe('FR-7 — no landing content export is unreferenced', () => {
     const names = [...decl.matchAll(/^export (?:const|function|type|interface) (\w+)/gm)].map(
       (m) => m[1] as string,
     );
+    // an export form the scanner does not recognize must fail loudly, never
+    // silently escape the census (Codex round-1 [P2])
+    const allExports = decl.match(/^export .*/gm) ?? [];
+    const unrecognized = allExports.filter(
+      (l) => !/^export (?:const|function|type|interface) \w+/.test(l),
+    );
+    expect(unrecognized, `unrecognized export forms: ${unrecognized.join(' | ')}`).toEqual([]);
     expect(names.length).toBeGreaterThanOrEqual(38); // the measured floor (PROOF deleted, three constants added)
     const others = FILES.filter((f) => f !== CONTENT).map((f) =>
       stripComments(readFileSync(f, 'utf8')),

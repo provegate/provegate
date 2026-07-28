@@ -5,9 +5,14 @@ export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
   filename?: string;
   lang?: string;
   prompt?: boolean;
-  /** Server-safe header slot for a trailing control (the client wrapper's
-   * copy button lands here). A node, never a handler — this component stays
-   * importable from server contexts. */
+}
+
+/** INTERNAL. The header slot exists only for `CopyableCodeBlock` (the client
+ * entry), which is the one consumer allowed to put a control there — a PUBLIC
+ * slot would let any caller render a handlerless "copy" affordance, which is
+ * exactly the defect FR-9 deletes. Not re-exported from the barrel; the
+ * type-level deny test holds the public surface closed. */
+export interface InternalCodeBlockProps extends CodeBlockProps {
   headerControl?: React.ReactNode;
 }
 
@@ -18,7 +23,7 @@ export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
  * `@provegate/design/react/client` (`CopyableCodeBlock`) — this component
  * deliberately has no `copyable` prop, so a copy affordance can never render
  * without the handler behind it (PRD-027 FR-9). */
-export function CodeBlock({
+export function CodeBlockBase({
   children,
   filename,
   lang,
@@ -27,7 +32,7 @@ export function CodeBlock({
   className = '',
   style = {},
   ...rest
-}: CodeBlockProps): React.JSX.Element {
+}: InternalCodeBlockProps): React.JSX.Element {
   return (
     <div
       className={`pg-codeblock ${className}`}
@@ -75,4 +80,9 @@ export function CodeBlock({
       </pre>
     </div>
   );
+}
+
+/** The public server-safe renderer: no copy affordance, no header slot. */
+export function CodeBlock(props: CodeBlockProps): React.JSX.Element {
+  return <CodeBlockBase {...props} />;
 }

@@ -209,6 +209,15 @@ describe('CopyableCodeBlock (FR-9)', () => {
     const bad = <DS.CodeBlock copyable>x</DS.CodeBlock>;
     expect(bad).toBeTruthy(); // the assertion is the @ts-expect-error above
   });
+
+  it('the public surface carries no headerControl slot either — Codex round-1 [P1]', () => {
+    // @ts-expect-error — the slot is internal to the client wrapper; a public
+    // slot would let any caller render a handlerless copy affordance.
+    const bad = <DS.CodeBlock headerControl={<span>copy</span>}>x</DS.CodeBlock>;
+    expect(bad).toBeTruthy();
+    // and the barrel does not export the internal base
+    expect('CodeBlockBase' in DS).toBe(false);
+  });
 });
 
 describe('FR-9 delivery — built output and coexistence', () => {

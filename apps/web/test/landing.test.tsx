@@ -400,9 +400,35 @@ describe('FR-9 — every advertised copy control is real', () => {
     expect(count(idx) + count(tabs)).toBe(4);
   });
 
-  it('the payloads are the constants the blocks render', () => {
-    const { getAllByLabelText, container } = render(<S.InstallTabs />);
-    expect(getAllByLabelText(/copy/i).length).toBeGreaterThanOrEqual(1);
-    expect(container.textContent).toContain(C.INSTALLERS[0].code.split('\n')[0]);
+  it('all four production controls write their exact payloads — clicked, with a clipboard mock', async () => {
+    const { vi } = await import('vitest');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const controls = (el: HTMLElement): HTMLButtonElement[] =>
+      Array.from(el.querySelectorAll('button[aria-label="Copy command"]'));
+    try {
+      // InstallTabs (npm tab active by default) → INSTALLERS[0].code
+      const tabs = render(<S.InstallTabs />);
+      const tabButtons = controls(tabs.container);
+      expect(tabButtons).toHaveLength(1);
+      tabButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.INSTALLERS[0].code);
+      // CIIntegration (first snippet active) → CI_SNIPPETS[0].code
+      const ci = render(<S.CIIntegration />);
+      const ciButtons = controls(ci.container);
+      expect(ciButtons).toHaveLength(1);
+      ciButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.CI_SNIPPETS[0].code);
+      // Install section carries the two remaining blocks → HERO.install, MANIFEST_SEED
+      const install = render(<S.Install />);
+      const installButtons = controls(install.container);
+      expect(installButtons).toHaveLength(2);
+      installButtons[0]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.HERO.install);
+      installButtons[1]!.click();
+      expect(writeText).toHaveBeenLastCalledWith(C.MANIFEST_SEED);
+    } finally {
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    }
   });
 });

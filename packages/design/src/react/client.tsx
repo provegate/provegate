@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CodeBlock, type CodeBlockProps } from './CodeBlock.js';
+import { CodeBlockBase, type CodeBlockProps } from './CodeBlock.js';
 
 export interface CopyableCodeBlockProps extends CodeBlockProps {
   /** Explicit clipboard payload; falls back to `children` when that is a
@@ -53,8 +53,8 @@ export function CopyableCodeBlock({
     );
 
   return (
-    <CodeBlock {...rest} headerControl={control}>
+    <CodeBlockBase {...rest} headerControl={control}>
       {children}
-    </CodeBlock>
+    </CodeBlockBase>
   );
 }

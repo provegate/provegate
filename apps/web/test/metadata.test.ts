@@ -63,9 +63,15 @@ describe('FR-1 emitted level — the built product page', () => {
 });
 
 describe('FR-8 — /alt stops competing, in search and in unfurls', () => {
-  it('alt.html emits the pinned concept title and its own description', () => {
+  it('alt.html emits the pinned concept title in <title>, og:title and its own description', () => {
     const html = built('alt.html');
-    expect(html).toContain('ProveGate — alternative landing concept');
+    const PINNED = 'ProveGate — alternative landing concept';
+    const title = /<title>([^<]*)<\/title>/.exec(html);
+    expect(title?.[1]).toBe(PINNED);
+    expect(html).toMatch(new RegExp(`property="og:title"[^>]*content="${PINNED}"|content="${PINNED}"[^>]*property="og:title"`));
+    expect(html).toContain('internal comparison');
+    // and the product description does NOT leak onto the concept page
+    expect(html).not.toContain('is not evidence. Seven phases');
   });
 
   it('alt.html emits NO og:image, NO twitter:image, and a summary card', () => {
