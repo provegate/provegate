@@ -13,8 +13,11 @@ The section body now accepts exactly four raw-line forms: blank, `- (none)`,
 `- Deferred to [PRD-NNN](<path>)`, and one terminal `---`. Everything else fails by
 name. A deferral's referent is resolved through the state layer — configured id width,
 containment in the artifact root, the state builder's own basename parser, existence,
-a configured wip/deferred-role state directory, lstat-regular (symlinks refused),
-realpath containment and distinctness from the declaring PRD, and the target's own
+a configured wip/deferred-role state directory, lstat-regular with exactly one hard
+link (symlinks and hardlink aliases refused), realpath containment with the canonical
+state segment equal to the lexical one (directory aliases refused), on-disk basename
+byte-equality against the directory listing (case aliases refused), no `#`, `?`, `%`,
+`\` or `:` in the path (characters two readers disagree on), and the target's own
 `# PRD-NNN:` H1 — so every variable character of both forms is either fixed syntax or
 verified against a real, distinct, unfinished, filed work item. Exactly one Open
 Questions section and exactly one Functional Requirements section are required;

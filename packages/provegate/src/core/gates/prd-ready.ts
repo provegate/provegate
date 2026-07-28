@@ -192,13 +192,14 @@ function deferralIssue(
     return 'deferral unverifiable — the lint received no declaring PRD number';
   }
   const prd = config.dirs.artifacts.prd;
-  // Round 2: the path is a REPOSITORY-RELATIVE state-layer coordinate, and it
-  // must read the same to the lint, the filesystem, and a renderer. `#` opens
-  // a fragment, `\` is a separator on one platform and a name character on
-  // another, `:` opens a URL scheme — each makes two readers disagree about
-  // the referent, so all three are refused outright.
-  if (/[#\\:]/.test(target)) {
-    return 'the target path carries a character the link and the filesystem read differently (`#`, `\\`, `:`)';
+  // Rounds 2-3: the path is a REPOSITORY-RELATIVE state-layer coordinate, and
+  // it must read the same to the lint, the filesystem, and a renderer. `#`
+  // opens a fragment, `?` a query, `%` percent-decodes, `\` is a separator on
+  // one platform and a name character on another, `:` opens a URL scheme —
+  // each makes two readers disagree about the referent, so all five are
+  // refused outright.
+  if (/[#\\:?%]/.test(target)) {
+    return 'the target path carries a character the link and the filesystem read differently (`#`, `?`, `%`, `\\`, `:`)';
   }
   // Rule 2 — containment inside the configured artifact root, path-boundary
   // safe (never a string prefix), and repository-relative to begin with.
@@ -366,9 +367,15 @@ function openQuestionsIssues(
       separatorSeen = true;
       continue;
     }
-    // Round 2: a line that trims to nothing (an NBSP-only line is not blank to
-    // this grammar) must still show WHAT was refused — codepoints, not "".
-    const shown = line.trim().length > 0 ? `"${line.trim()}"` : JSON.stringify(line);
+    // Rounds 2-3: a line that trims to nothing (an NBSP-only line is not
+    // blank to this grammar) must still show WHAT was refused — explicit
+    // codepoints, because JSON.stringify prints U+00A0 as itself: invisibly.
+    const shown =
+      line.trim().length > 0
+        ? `"${line.trim()}"`
+        : [...line]
+            .map((c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`)
+            .join(' ');
     issues.push(`Open Questions: ${lineShape(line)} is not in the closed grammar: ${shown}`);
   }
   return issues;
@@ -488,9 +495,11 @@ export function lintPrd(
       // grammar uses answers this, so the two cannot disagree about which
       // headings are on the page.
       //
-      // The HARD CAP engine above still reads the raw content deliberately: it
-      // runs in memory-disabled repositories too, and changing what it sees
-      // would fire caps a previous release did not.
+      // The HARD CAP engine above reads the same executable FR view since
+      // round 2 (a fenced target is an example, not a declaration) — a
+      // DECLARED behavior change, recorded in the PRD-028 changelog, that
+      // finally makes the target reader agree with the evidence reader
+      // (`contractView`) about what is on the page.
       const executable = contractView(content);
       issues.push(
         ...lintMemoryContract(

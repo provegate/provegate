@@ -199,8 +199,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
         byte-equal to the linked one** (the state layer's own directory listing is the
         authority), because a case-insensitive filesystem otherwise resolves a
         deferral to an item the state builder refuses (round 2); and the path carries
-        no `#`, `\` or `:`, each of which makes the link and the filesystem disagree
-        about the referent (round 2);
+        no `#`, `?`, `%`, `\` or `:`, each of which makes the link and the
+        filesystem disagree about the referent (rounds 2-3);
      8. the target is a **recognized record, not a stub**: its first heading is the H1
         the template ships — the configured prefix, the target's own number and a
         colon (`# PRD-NNN: …`) — so a parser-valid file holding only a smuggled
@@ -218,7 +218,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    completed-role target fails. A basename the artifact parser rejects fails. A
    wrong-width label fails. A symlink fails. A hardlinked target fails. A state
    directory that is an alias fails. An on-disk name that differs from the link
-   fails. A `#`, `\` or `:` in the path fails. A stub without its own H1 fails. A
+   fails. A `#`, `?`, `%`, `\` or `:` in the path fails. A stub without its own H1 fails. A
    deferral linted without the declaring number fails. There is no field left in
    either form where an author can type a question, and no way to satisfy the form
    without a **real, distinct, unfinished, filed work item** on the other end — the snapshot
@@ -235,8 +235,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    **Matching is exact, not normalized.** No case folding on the fixed syntax, no
    whitespace collapsing, no trailing punctuation, no alternate separators. The previous
    revision's tolerance paragraph is gone: tolerance is surface area, and this document's
-   history is what surface area costs. (The lower-casing in rule 3 maps the label to the
-   filename convention; it is a derivation, not a tolerance.)
+   history is what surface area costs. (Rule 3's correspondence between label and
+   basename is the parser's — the configured prefix and number equality — a
+   derivation from config, not a tolerance.)
 
    **The deny matrix is the requirement: sixteen rows.** One fixture per history row in
    §1's table (nine — row 6's fixture is the number-level self-link, row 7's the
@@ -404,7 +405,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   a Deferred entry linted **without the declaring number**, **Then** each fails — the
   resolution rejections. *(history row 7 covers the alias)*
 - **Given** a **hardlinked** target, a **symlinked state directory**, an on-disk name
-  that differs from the link by case, or a path carrying `#`, `\` or `:`, **Then**
+  that differs from the link by case, or a path carrying `#`, `?`, `%`, `\` or `:`, **Then**
   each fails — the Phase 6 canonical-identity extensions, deny-tested with positive
   controls.
 - **Given** a Functional Requirements entry written **inside a fence**, **Then** the
@@ -725,6 +726,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, Phase 6 round 3 (Codex, independent) | **The remaining [P1] closed and every disclosure gap taken.** `?` and `%` join the refused charset (a query suffix and percent-decoding are the same two-readers split as a fragment). The case-identity fixture asserts the MECHANISM (`on-disk name differs`) wherever the filesystem can reproduce the bypass, with the existence refusal as the declared case-sensitive fallback. The hard-cap engine's move to the executable FR view is now a **declared** behavior change: the stale raw-content comment is corrected, a regression pins fenced-target-does-not-fire / live-target-fires, and the argument recorded — the target reader finally agrees with the evidence reader (`contractView`) about what is on the page. The changeset states the full resolution rule set. Refused invisible lines print explicit `U+NNNN` codepoints (JSON.stringify prints NBSP as itself), fixture pinned. The stale rule-3 lower-casing parenthetical corrected |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 2 (Codex, independent) | **Two of three [P1]s taken as defects; the third adjudicated to a rule tightening.** (1) Case-insensitive filesystems resolved a deferral to an item the state builder refuses — closed by on-disk byte-equality against the directory listing (the state layer's own name source), portable deny fixture asserting the verdict, not the platform-dependent reason. (2) A fenced FR entry read as a real requirement let a document with no live requirements pass — `frBlocks` now consumes the scanner's executable lines; deny fixture added. (3) The render/lint referent disagreement (doc-relative links, `#` fragments) is not a fail-open — every non-repo-relative form fails closed — so the path stays a repository-relative state-layer coordinate and the charset that makes two readers disagree (`#`, `\`, `:`) is refused; adjudication recorded. [P2]s: these rules written into FR-1/FR-2/§6 normatively (this row's edit), template guidance names the configured width, corpus test derives the declaring number through `parseArtifactName`. [P3]: refused lines that trim to nothing are shown as codepoints |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 1 (Codex, independent) | **Two [P1] canonical-identity bypasses closed as FR-1 rule extensions.** Rule 6 extends: a target with **multiple hard links** is refused (realpath canonicalizes names, not identity — a finished artifact hardlinked into a wip role passed every path-level rule). Rule 7 extends: the **canonical state segment must equal the lexical one** (a symlinked state DIRECTORY — `deferred` → `completed` — relabeled finished work as unfinished while every file-level check passed). Both carry deny fixtures with positive controls; the wrong-width and parser-rejected rows gained otherwise-valid existing targets so each rule is its row's only failing cause ([P2]). The two live "active" restatements corrected to "unfinished" and the two historical changelog count claims marked superseded ([P2]/[P3]) |
 | 2026-07-28 | Claude Fable 5 (rewrite author, non-scorer), iteration-4 remediation | **Canonical resolution replaces basename resolution; both iteration-4 [P1]s and both [P2]s closed.** The eighth hiding place — a wip symlink alias passing every basename-level check while canonically self-linking — dies at three added rules: lstat-regular (symlinks refused outright), realpath containment under the realpath'd artifact root, and realpath distinctness against the declaring PRD's own artifact; the H1-recognition rule closes the deferred-stub path, and the absent fifth argument now **fails closed** as unverifiable when a Deferred entry is present. History row 7 records the alias; the counts are nine history rows and sixteen deny fixtures, swept by grep this time — the §8 seven-row survivor iteration 4 caught is fixed, and the `a-rule-corrected…` disposition now names its own failure instead of claiming a clean sweep. Config-role [P2]: `wip`/`deferred` literals replaced by `dirs.stateRoles` names with the prefix from config, and "active" corrected to "unfinished" against `query.ts:58-69`. The `turbo-cache…` disposition flips to applied (024's inputs did not cover the store). Dependencies' one-line claim corrected to FR-3's measured comments-and-continuations shape. **Value re-declared 3.45 (4/4/2/3/4) at the scorer's supportable derivation** — MF 4 held deliberately after two broken re-earn claims; MF 5 waits for a round the mechanism survives |

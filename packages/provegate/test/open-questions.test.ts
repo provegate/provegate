@@ -1,4 +1,5 @@
 import {
+  existsSync,
   linkSync,
   mkdirSync,
   mkdtempSync,
@@ -324,8 +325,11 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
   it('[R2-P1-1] a target carrying `#`, `\\` or `:` is refused — two readers, one referent', () => {
     const root = workspace();
     writeFileSync(join(root, '_prds/wip/prd-133-a#b.md'), '# PRD-133: Fragmented\n');
+    writeFileSync(join(root, '_prds/wip/prd-133-a?x.md'), '# PRD-133: Queried\n');
     for (const target of [
       '_prds/wip/prd-133-a#b.md',
+      '_prds/wip/prd-133-a?x.md',
+      '_prds/wip/prd-123-follow%75p.md',
       '_prds\\wip\\prd-123-followup.md',
       'file:_prds/wip/prd-123-followup.md',
     ]) {
@@ -344,7 +348,17 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     writeFileSync(join(root, '_prds/wip/PRD-132-CASE.md'), '# PRD-132: Case\n');
     const denied = oq(doc(['- Deferred to [PRD-132](_prds/wip/prd-132-case.md)']), root);
     expect(denied.length).toBeGreaterThan(0);
-    expect(denied.join('; ')).toMatch(/on-disk name differs|does not exist/);
+    // Round 3: where the filesystem CAN reproduce the bypass (the lowercase
+    // spelling opens the uppercase file), the MECHANISM must be what denies it
+    // — a generic does-not-exist pass here would go green with the on-disk
+    // byte-equality check deleted. Case-sensitive platforms fall back to the
+    // existence refusal, which is the correct verdict there.
+    const caseInsensitive = existsSync(join(root, '_prds/wip/prd-132-case.md'));
+    if (caseInsensitive) {
+      expect(denied.join('; ')).toContain('on-disk name differs');
+    } else {
+      expect(denied.join('; ')).toContain('does not exist');
+    }
   });
 
   it('the exact form tolerates nothing: case, spacing, punctuation', () => {
@@ -380,6 +394,11 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
     );
     expect(oq(doc(['<div>', 'who owns auth?', '</div>']), root()).join('; ')).toContain('raw HTML');
     expect(oq(doc(['- [ ] none.']), root()).join('; ')).toContain('a checkbox bullet');
+  });
+
+  it('[R3-P3] an NBSP-only line is refused and shown as a codepoint, not as nothing', () => {
+    const issues = oq(doc(['- (none)', '\u00a0']), root());
+    expect(issues.join('; ')).toContain('U+00A0');
   });
 
   it('one terminal `---` is furniture; a second, or a non-terminal one, fails', () => {
@@ -428,6 +447,42 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
     );
     expect(lintPrd(cfg, manifest, fenced, workspace(), 42).issues.join('; ')).toContain(
       'no functional requirements found',
+    );
+  });
+
+  it('[R3-P2] a fenced target does not fire a hard cap; a live one does — declared semantics', () => {
+    // Before round 2 the cap engine read raw section text, so a fenced example
+    // could FIRE a cap; the executable view makes the target reader agree with
+    // the evidence reader about what is on the page. The change is declared in
+    // the PRD-028 changelog and pinned here.
+    const capped = {
+      ...manifest,
+      hardCaps: [
+        {
+          id: 'cap',
+          when: { targetsMatch: ['packages/capped/**'] },
+          requireLine: 'Deny test: `[^`]+`',
+          message: 'targets matched',
+        },
+      ],
+    };
+    const fencedTarget = doc(['- (none)']).replace(
+      '## 9. Open Questions',
+      [
+        '```markdown',
+        '2. **FR-2**: an example.',
+        '   - **Targets:** `packages/capped/src/x.ts`',
+        '```',
+        '',
+        '## 9. Open Questions',
+      ].join('\n'),
+    );
+    expect(lintPrd(cfg, capped, fencedTarget, workspace(), 42).issues.join('; ')).not.toContain(
+      'hard cap cap',
+    );
+    const liveTarget = doc(['- (none)']).replace('packages/x/src/a.ts', 'packages/capped/src/x.ts');
+    expect(lintPrd(cfg, capped, liveTarget, workspace(), 42).issues.join('; ')).toContain(
+      'hard cap cap',
     );
   });
 
