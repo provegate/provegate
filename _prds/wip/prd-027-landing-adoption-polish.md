@@ -108,13 +108,13 @@ conflated the two kinds of command; this table exists to prevent both.
 | Copy affordances for the install command in the hero | 0 — `grep -cw termButton apps/web/app/sections/hero-terminal.tsx` → 0 | 1 — `test/landing.test.tsx` |
 | TrustStrip claims rendered as links | 0 of 3 — `sed -n '136,153p' apps/web/app/sections/index.tsx \| grep -c '<a'` → 0 | 3 of 3 — `test/landing.test.tsx` |
 | Anchor targets that exist for a TrustStrip claim | 2 of 3 — `grep -c 'id="refusal"' apps/web/app/sections/index.tsx` → 0; `#ledger` and `#proof` render | 3 of 3 — `test/landing.test.tsx` |
-| Orphaned anchors in built HTML — `href="#…"` with no matching id | **0 orphans across 12 anchor occurrences over 6 unique targets** — `grep -o 'href="#[^"]*"' apps/web/.next/server/app/index.html \| sort -u` diffed against the emitted `id=` set | 0, asserted for every anchor by the closure test (FR-4) |
-| Rendered `copyable` affordances that actually copy | **0 of 4** — `grep -rn copyable apps/web/app --include='*.tsx'` → 4 call sites; the rendered control is `<span aria-hidden="true">` with no handler (`CodeBlock.tsx:52-56`) | 4 of 4 — design `props.test.tsx` + `test/landing.test.tsx` (FR-9) |
-| Exports of `sections/content.ts` with no reference outside the declaration file | 1 of 38 — `grep -cE '^export ' apps/web/app/sections/content.ts` → 38; `grep -rnw PROOF apps/web/app --include='*.ts*' \| grep -v sections/content.ts` → 0 hits | 0, asserted — `test/content-web.test.ts` |
-| Routes emitting product-page metadata | 2 — `diff` of the sorted `<meta…>` sets of `index.html` and `alt.html` → 0 lines, and `alt.html` has no `robots` meta | 1 — `test/metadata.test.ts` (new) |
+| Orphaned anchors in built HTML — `href="#…"` with no matching id | **0 orphans across 12 occurrences over 6 unique targets — one command emits all three numbers**: `node -e "const f=require('fs').readFileSync('apps/web/.next/server/app/index.html','utf8');const occ=[...f.matchAll(/href=\"#([^\"]+)\"/g)].map(m=>m[1]);const ids=new Set([...f.matchAll(/id=\"([^\"]+)\"/g)].map(m=>m[1]));const u=[...new Set(occ)];console.log(occ.length,u.length,u.filter(t=>!ids.has(t)).length)"` → `12 6 0` | 0, asserted for every anchor by the closure test (FR-4) |
+| `copyable` call sites whose rendered control carries a handler | **4 call sites, 0 with a control — the source renders an `aria-hidden` span and no `<button>`**: `node -e "const cp=require('child_process').execSync;const n=cp('grep -rn copyable apps/web/app --include=*.tsx',{encoding:'utf8'}).trim().split('\n').length;const s=require('fs').readFileSync('packages/design/src/react/CodeBlock.tsx','utf8');console.log(n,/<button/.test(s),/aria-hidden/.test(s))"` → `4 false true` | 4 of 4, delivered through the client entry — design `props.test.tsx` + built-output directive assertion + `test/landing.test.tsx` (FR-9) |
+| Exports of `sections/content.ts` with no reference outside the declaration file | **1 of 38 — one command emits the census and the unreferenced list**: `node -e "const f=require('fs').readFileSync('apps/web/app/sections/content.ts','utf8');const N=[...f.matchAll(/^export (?:const\|function) (\w+)/gm)].map(m=>m[1]);const cp=require('child_process').execSync;let u=[];for(const n of N){try{cp('grep -rlw '+n+' apps/web/app --include=*.ts --include=*.tsx',{encoding:'utf8'}).trim().split('\n').filter(p=>p!=='apps/web/app/sections/content.ts').length\|\|u.push(n)}catch(e){u.push(n)}};console.log(N.length,JSON.stringify(u))"` → `38 ["PROOF"]` | 0, asserted — `test/content-web.test.ts` |
+| Routes emitting product-page metadata | **2 — one command compares the emitted meta sets and checks robots**: `node -e "const r=p=>require('fs').readFileSync(p,'utf8');const M=f=>[...f.matchAll(/<meta [^>]*>/g)].map(m=>m[0]).sort();const a=M(r('apps/web/.next/server/app/index.html'));const b=M(r('apps/web/.next/server/app/alt.html'));console.log(JSON.stringify(a)===JSON.stringify(b),b.some(x=>/name=\"robots\"/.test(x)))"` → `true false` (sets identical, no robots) | 1 — `test/metadata.test.ts` (new) |
 | External origins fetched by the built apps | 0 — `node scripts/check-static-egress.mjs` → `[egress] clean`; note the script scans **both** built apps when present, so this row is cross-cutting rather than FR-1-specific | 0, unchanged; the OG card must not regress it — same script, in the cross-cutting floor |
-| `HandoffCard` rendered in the mobile hero at ≤900px | 1 — `grep -c '<HandoffCard' apps/web/app/sections/index.tsx` → 1, inside the collapsed grid's second item | 0, with no second copy anywhere in the document — `test/landing.test.tsx` + `test/a11y.test.ts` |
-| Mobile hero block height at 375px | not yet measured — the operator records it **before Phase 4 starts**, per the capture step in §11 | measurably shorter by the card's height — operator row, real browser, compared against the recorded value |
+| `HandoffCard` **source occurrences** in the hero grid (rendered mobile absence is the operator row's claim, not this cell's) | 1 — `grep -c '<HandoffCard' apps/web/app/sections/index.tsx` → 1, inside the collapsed grid's second item | 0 source occurrences in the hero, no second copy anywhere — `test/landing.test.tsx` + `test/a11y.test.ts`; rendered 375px behaviour held by the operator row |
+| Mobile hero block height at 375px | not yet measured — the operator records it in the **task artifact's Operator Handoff table** (created at Phase 3, before implementation) per §11; a Phase-6 artifact cannot hold a pre-Phase-4 value | measurably shorter by the card's height — operator row, real browser, compared against the value recorded in the task artifact |
 
 The CTAs are deliberately absent from this table. FR-6 cannot lift them above the fold and
 says why; see the Non-Goal.
@@ -237,7 +237,8 @@ Each FR carries the exact target paths the implementing agent will touch.
      `apps/web/app/sections/content.ts::SITE_TITLE`,
      `apps/web/app/sections/content.ts::PRODUCT_NAME`,
      `apps/web/app/sections/content.ts::PRODUCT_NAME_PARTS`,
-     `apps/web/app/sections/ui.tsx::Wordmark`, `apps/web/test/metadata.test.ts`
+     `apps/web/app/sections/ui.tsx::Wordmark`, `apps/web/test/metadata.test.ts`,
+     `_docs/launch/announcement-draft.md` (the `## Launch checklist` section — §11)
 2. **FR-2**: The hero carries one copy control for the install command. Its accessible name
    matches `/copy/i`, its payload is the install string from `sections/content.ts` (never a
    second literal), and it is operable before the typing animation settles and when
@@ -417,7 +418,7 @@ Each FR carries the exact target paths the implementing agent will touch.
    name matches `/copy/i`, in the same header slot the span occupies today. Its payload is a
    new optional `copyText` prop when provided, else `children` when `children` is a plain
    string — which covers all four current call sites (`current.code`, `C.HERO.install`,
-   `C.MANIFEST_SEED` are all strings), so **no consumer changes**. When neither yields a
+   `C.MANIFEST_SEED` are all strings). When neither yields a
    string, the control does not render: an affordance with no payload is the defect this FR
    deletes, and silently rendering it anyway would reintroduce it. The handler guards
    `navigator.clipboard` exactly as FR-2 does — absent (jsdom, insecure context) means
@@ -426,12 +427,38 @@ Each FR carries the exact target paths the implementing agent will touch.
    promised consumer wiring must be rewritten to state the new contract, or the comment
    becomes the next stale promise.
 
-   **Scope consequence, stated.** This FR touches `packages/design`, which the rest of the
-   PRD does not. `@provegate/design` is `private: true`, so changesets skips it — no
-   changeset, no version bump, no `.changeset/` write (that directory is another active
-   PRD's claimed surface, and this FR must not enter it). The Conflict Surface below claims
-   the two design files by name, and `gate queue` was re-run before claiming: no active
-   claim overlaps them.
+   **Delivery architecture — decided, iteration 5 [P1] Q.** A handler in `CodeBlock.tsx`
+   is not a browser feature until the built package entry carries a client boundary: the
+   design package ships a bundled barrel (`src/react/index.ts` → `dist/react/index.js`),
+   and a `"use client"` directive placed only in the component source is dropped by the
+   bundle (proven by the iteration-5 esbuild probe). Two of the four call sites are
+   rendered from the server component `sections/index.tsx`, so handler-only wiring never
+   reaches their DOM. The chosen architecture is a **dedicated client subpath entry**,
+   not a client-marked barrel — marking the whole barrel `"use client"` would pull every
+   section primitive of a deliberately static landing into the hydration bundle to fix
+   two blocks:
+   - `packages/design/src/react/client.ts` (new) re-exports `CodeBlock`;
+   - `tsup.config.ts` gains a second config for that entry with
+     `banner: { js: '"use client";' }`, so the directive survives the build **at the
+     entry the consumer imports**;
+   - `packages/design/package.json` `exports` gains `./react/client` (dist path);
+   - the two server-rendered call sites in `apps/web/app/sections/index.tsx` switch
+     their `CodeBlock` import to `@provegate/design/react/client`. The earlier "no
+     consumer changes" promise is withdrawn — it was the [P1]'s root: a contract that
+     stopped one layer before delivery. The two `tabs.tsx` call sites already sit
+     inside a client boundary and keep the barrel import.
+   Delivery is asserted where it exists: a design test reads the **built**
+   `dist/react/client.js` and asserts the leading `"use client"` directive, and a web
+   test asserts the two server sections import from the client subpath — a jsdom render
+   cannot see an RSC boundary, so the directive and the import path are the evidence.
+
+   **Scope consequence, stated.** This FR touches `packages/design`, which the rest of
+   the PRD does not. Both touched packages are unpublished (`private: true`) and the
+   repository's deliberate policy is to version only published packages, so no changeset
+   is added — that is a policy statement, not tool behavior (see the DO NOT), and no
+   `.changeset/` write happens (that directory is another active PRD's claimed surface).
+   The Conflict Surface below claims the design files by name, and `gate queue` was
+   re-run before claiming: no active claim overlaps them.
 
    **Tests, both layers.** Design (`props.test.tsx`): the button renders with the
    accessible name; activating it writes the payload (clipboard mocked); a missing
@@ -440,6 +467,8 @@ Each FR carries the exact target paths the implementing agent will touch.
    whose payload equals the constant it renders. The hero terminal's control is FR-2's and
    is asserted there — this FR adds no affordance to output blocks.
    - **Targets:** `packages/design/src/react/CodeBlock.tsx`,
+     `packages/design/src/react/client.ts`, `packages/design/tsup.config.ts`,
+     `packages/design/package.json`, `apps/web/app/sections/index.tsx`,
      `packages/design/test/props.test.tsx`, `apps/web/test/landing.test.tsx`
 
 ---
@@ -478,17 +507,26 @@ configured `sharedAppendOnly` set), so neither alone is enough.
 - **`apps/docs`.** Its OG route already exists and is untouched; this PRD reads it as the
   pattern to follow.
 - **A published release.** `web` and `@provegate/design` are both `private: true`
-  (`apps/web/package.json`, `packages/design/package.json`), so changesets skips every
-  package this PRD touches; no changeset, no version bump, and no write into `.changeset/`
-  — which is also an active claim of PRD-025's Conflict Surface.
+  (`apps/web/package.json`, `packages/design/package.json`), which prevents
+  **publication** — it does not make changesets skip them: the repository's
+  `.changeset/config.json` omits `privatePackages`, whose effective default is
+  `{version: true, tag: false}` (iteration 5 resolved the installed config to prove
+  it). The no-changeset decision here is **repository policy** — unpublished packages
+  take no changeset because a version plan for something never published records
+  nothing — stated as policy, not as tool behavior. No write into `.changeset/`, which
+  is also an active claim of PRD-025's Conflict Surface.
 
 ---
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** a link to `https://provegate.dev/`, **When** it is unfurled by a client that
-  honours `twitter:card`, **Then** a 1200×630 card renders, and no metadata field promises a
-  card type without an image behind it.
+- **Given** a freshly built `/`, **When** its emitted metadata is read, **Then** every
+  field an unfurl client consumes is present and consistent — `og:image` absolute,
+  1200×630 dimensions, `twitter:image`, and no field promising a card type without an
+  image behind it. **Emitted tags are this PRD's complete acceptance contract for the
+  card** (iteration-5 W25): what a live client renders after a deploy is the launch
+  checklist's item (§11), owned by the owner, ordered before the first share — not a
+  criterion this close can test, because no deploy exists to unfurl.
 - **Given** `layout.tsx`, **When** its exported `metadata` is inspected, **Then** neither
   `openGraph` nor `twitter` declares an `images` key — because declaring one suppresses the
   file-convention card (`resolve-metadata.js:137-157`) — and a comment in place says so.
@@ -690,9 +728,19 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
   rows fail explicitly on an absent build file — and, because absence is only half of it, also
   require a fresh build so a stale tree cannot certify either.
 - applied: `gate-wire-or-delete` — FR-7 is this record applied to the landing's content
-  layer: the unreferenced `PROOF` export is deleted, and the rule is added as a test so an
-  export cannot outlive its render again. FR-4's anchor-closure test is the same record
-  applied to anchors — a declared link with no target is an unwired surface.
+  layer: the unreferenced `PROOF` export is deleted, and the rule is added as a test so
+  an export cannot outlive its **last external reference** — deliberately the weaker
+  claim FR-7 itself makes ("referenced, not rendered"), not a render guarantee; the
+  iteration-5 review caught this disposition overclaiming the stronger one. FR-4's
+  anchor-closure test is the same record applied to anchors — a declared link with no
+  target is an unwired surface.
+- reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`, and its
+  shape is this PRD's own trajectory: five rounds with Scope & Testability flat near
+  5.5 while the rest measured exact — a sign the item kept specifying against unwritten
+  ground truth. The iteration-5 work order wrote the ground truth by execution (the
+  esbuild bundle probe behind FR-9's architecture, the resolved changesets config), and
+  this remediation binds the FRs to those measured facts instead of another wording
+  round.
 - applied: `score-must-equal-weighted-sum` — the declared 3.40 equals the arithmetic shown
   under the header. The candidate lands exactly on the threshold and was deliberately not
   rounded up; the header comment says what to do if the owner scores a dimension lower.
@@ -736,6 +784,8 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 - `apps/web/app/**`
 - `apps/web/test/**`
 - `packages/design/src/react/CodeBlock.tsx`
+- `packages/design/src/react/client.ts`
+- `packages/design/tsup.config.ts`
 - `packages/design/test/props.test.tsx`
 - `_brain/learnings/metadata-declares-what-it-cannot-provide.md`
 - `_brain/INDEX.md`
@@ -778,8 +828,12 @@ memory-producing PRD declares the same path.
 - Index pointer: `_brain/INDEX.md` — the one-line hook for the learning above. Named here as
   well as in the Conflict Surface because `_brain/PROTOCOL.md:219-224` makes indexing part of
   capture, so a close whose diff lacks this line captured nothing
-- Decision: `none` — no architectural decision is taken. Every FR either wires something the
-  page already declared or ports a pattern already decided in `apps/docs`.
+- Launch surface: `_docs/launch/announcement-draft.md` — the `## Launch checklist`
+  section FR-1 adds; the live-unfurl precondition's durable, owner-owned home (§11)
+- Decision: `none` — no architectural decision is taken beyond FR-9's client-entry
+  choice, which is recorded in the FR itself and reversible with it. Every other FR
+  either wires something the page already declared or ports a pattern already decided
+  in `apps/docs`.
 
 ---
 
@@ -831,12 +885,15 @@ Operator-owned (real browser, recorded as `operator` rows — `skipped` is illeg
 
 - The install command actually reaches the system clipboard, in both themes — from the hero
   control (FR-2) and from the install tab's block (FR-9).
-- **Baseline capture, before Phase 4 starts:** at 375×667 against the pre-change tree, the
-  operator measures the hero block's rendered height and **records the pixel value in the
-  review artifact** (`_docs/reviews/review-027-landing-adoption-polish.md`, first operator
-  row) — that artifact is a declared Durable Artifact, so the number survives to the moment
-  it is compared. A comparison whose before-value has no recorded home is not a
-  measurement.
+- **Baseline capture, after Phase 3 and before Phase 4 starts:** at 375×667 against the
+  pre-change tree, the operator measures the hero block's rendered height and **records
+  the pixel value in the task artifact's Operator Handoff table**
+  (`_tasks/wip/tasks-027-landing-adoption-polish.md` — created at Phase 3, so it exists
+  before implementation; the Phase 3 generator seeds the row). Iteration 5 correctly
+  refused the earlier home: the independent Phase-6 review artifact is created after
+  implementation by an independent author and has no operator rows — it cannot hold a
+  pre-Phase-4 value. The task artifact is workflow state that survives to the close,
+  which is all the comparison needs.
 - At 375×667 after the change: confirm the hero shrank against the recorded value, that no
   `HandoffCard` renders in the hero, and that there is no horizontal scroll. The CTAs are
   not part of this row — FR-6 cannot lift them and the PRD does not claim it does.
@@ -848,11 +905,15 @@ Operator-owned (real browser, recorded as `operator` rows — `skipped` is illeg
 
 **Launch precondition — deliberately not an operator row of this PRD**, because it cannot
 execute before a deploy exists and a row that cannot run is not a gate (§7 → Rollback,
-measured against the repo's workflows). Before either URL is shared anywhere, the owner
-runs an OG debugger against the **deployed** origin: `/` renders the 1200×630 card, `/alt`
-unfurls title-only with no image. Unfurl consumers cache what they fetch, so this check
-precedes the first share, on whatever PRD or owner action performs the deploy — the launch
-checklist around `_docs/launch/announcement-draft.md` is its home.
+measured against the repo's workflows). Iteration 5 found the previous version of this
+note pointed at a checklist that did not exist, so FR-1 now **creates it**: a
+`## Launch checklist` section in `_docs/launch/announcement-draft.md` (an FR-1 Target and
+a Durable Artifact — the close diff must carry it) with one tracked item: *owner, before
+the first share of either URL and after the first deploy, runs an OG debugger against the
+deployed origin; `/` renders the 1200×630 card, `/alt` unfurls title-only with no image;
+unfurl consumers cache what they fetch, so this precedes every share.* The requirement
+therefore survives the close in a durable, owner-owned surface instead of vanishing into
+prose.
 
 Before Phase 2 PASS, run: `gate check PRD-027`
 
@@ -914,9 +975,12 @@ Before Phase 2 PASS, run: `gate check PRD-027`
 - DO NOT render a copy affordance whose payload cannot be derived, and DO NOT keep the
   aria-hidden span as a fallback. A visible "copy" with no handler is the defect FR-9
   deletes; reintroducing it quietly for an edge case is the same defect with a rationale.
-- DO NOT write anything into `.changeset/`. Both touched packages are `private: true`, so
-  changesets skips them — and that directory is PRD-025's claimed surface; entering it
-  creates the path collision the queue gate exists to prevent.
+- DO NOT write anything into `.changeset/`. Both touched packages are unpublished and
+  the repository's policy is no changeset for them (`private: true` blocks publication;
+  it does NOT make changesets skip version planning — the effective config versions
+  private packages, so this is a policy line, not a tool guarantee) — and that
+  directory is PRD-025's claimed surface; entering it creates the path collision the
+  queue gate exists to prevent.
 - DO NOT add an `inputs` key to any task in `turbo.json` — `scripts/verify/verify-turbo-inputs.mjs`
   refuses it as a blanket rule (exceptions file is empty), and narrowing the `test` task's key
   is precisely what would create the stale-green defect that currently cannot happen here.
@@ -930,4 +994,5 @@ Before Phase 2 PASS, run: `gate check PRD-027`
 | ---- | ------ | ------- |
 | 2026-07-27 | Claude Opus 5 | Initial draft — six verified items from the independent landing review, two defects found while verifying it, two items rejected with evidence |
 | 2026-07-28 | Claude Fable 5 | **Iteration-4 remediation, every finding re-verified against source before editing.** **[P1] H closed as FR-9**: the rejection of the copy-button review item is deleted and replaced with the corrected finding — `copyable` renders `<span aria-hidden="true">copy</span>` with no handler (`CodeBlock.tsx:52-56` re-read; all four call sites re-measured passing plain-string children), so FR-9 wires it in the component: a real button, `copyText`-or-string-children payload, no-payload renders no control, clipboard guarded, doc comment rewritten. Scope consequence stated in the FR and the Conflict Surface: two `packages/design` files claimed by name; both touched packages measured `private: true`, so no `.changeset/` write — that directory is PRD-025's claim and a new DO NOT names the avoidance. **[P1] I closed by rebinding the constraint**: the two BLOCKING real-unfurl operator rows could not execute pre-merge (no deploy or preview workflow — `ci.yml`/`release.yml` re-checked), so the close is held by the emitted-tag assertions and the real-unfurl check is restated as a launch precondition bound to the first deploy/share, pointed at the launch checklist. **[P2]s J, K, L, M closed**: FR-3 goes app-wide — the fourth authoring at `alt/page.tsx:202` re-measured, `/alt` becomes a named consumer, the census excludes only the declaration file; FR-1 gains `PRODUCT_NAME_PARTS` with `Wordmark` (`ui.tsx:157`) as a named consumer so the split JSX cannot survive beside the constant, and FR-8's title is pinned verbatim from the route's own self-description; the Success Metrics table now separates the read-only command that produced each current value (every one re-run this session: 0 og:image, 0/4 working copy affordances, 38 exports/1 orphan, 12 anchor occurrences over 6 targets, 0-line metadata diff between routes) from the acceptance test that will hold the target; the mobile-height baseline gets a capture point (before Phase 4) and a durable home (the review artifact's first operator row). **[P3]s N, O, P closed**: occurrences vs targets stated everywhere the count appears; the egress row marked cross-cutting and repeated in the floor; the duplicated metrics header removed and the stale `conflicts.ts:63` citation corrected to `:67-68` at both sites |
+| 2026-07-28 | orchestrating session (non-scorer), on owner direction | **Iteration-5 work order W24–W29 applied.** W24: FR-9 gains its delivery architecture — a dedicated client subpath entry (`react/client` + tsup banner `"use client"`), chosen over a client-marked barrel to keep the static landing unhydrated; the "no consumer changes" promise withdrawn, two server call sites re-import from the client entry, delivery asserted on the BUILT entry's directive plus import-path assertions; Targets/Conflict Surface widened accordingly. W25: emitted tags declared the complete close contract; the live-unfurl §6 criterion replaced; FR-1 now CREATES the `## Launch checklist` in `_docs/launch/announcement-draft.md` (Target + Durable Artifact) so the precondition survives close in an owner-owned surface. W26: four metric cells rewritten to single verified commands each emitting every claimed number (all four re-run this session: 12/6/0, 4+span, 38+PROOF, identical+no-robots); HandoffCard cell narrowed to source occurrences. W27: the mobile baseline moved from the temporally impossible Phase-6 review artifact to the task artifact's Operator Handoff. W28: the false "changesets skips private packages" premise corrected everywhere to repository policy (effective `privatePackages.version=true` acknowledged). W29: the `gate-wire-or-delete` disposition narrowed to FR-7's actual claim and `state-model-before-mechanism` dispositioned against this PRD's own flat-dimension trajectory. |
 | 2026-07-27 | Claude Opus 5 | **Rebuilt after loss.** A concurrent session committed this PRD mid-round (`b63f5d6`, capturing the 484-line draft) and the PRD-021 land/merge commits then overwrote the uncommitted W1–W15 remediations; no stash and no dangling blob carried them (`4a16dfd`, `d4b1900`, `8ef533d` all hold one Changelog row). This row rebuilds all fifteen **and** closes Codex's iteration-3 findings in one pass, from `_readiness/wip/readiness-027-landing-adoption-polish.md`, which survived because it had been committed. **FR-1:** the `images` declaration is forbidden with the resolver cited (`resolve-metadata.js:137-157`), asserted at two levels — a source coherence triple plus the emitted `og:image` in built HTML — with absence *and* staleness failing the row, and the card's content pinned to new `SITE_TITLE` / `PRODUCT_NAME` constants because the wordmark is split JSX and the title a nested metadata property, so neither was reusable. **FR-3/FR-15:** install baseline corrected to three (`content.ts:18,35,350`), asserted as value derivation not character count. **FR-5:** `aria-current="location"`, and the algorithm rewritten — an `IntersectionObserver` callback is not a snapshot, so a retained per-target ratio map with declared thresholds replaces "greatest ratio in this callback", tested with sequential callbacks; `aria-current` belongs to the desktop strip alone, since `Nav` maps `NAV_LINKS` twice. **FR-6:** the fold claim withdrawn everywhere including the operator row, the grid geometry stated, and the assertion joined through the wrapper class so a CSS rule and a card count can no longer both pass while the card stays visible. **FR-7:** the census excludes the declaration file and matches word-anchored tokens, because `PROOF` is a prefix of `PROOF_EVIDENCE`; `grep-token-anchors-real-impl` declared as a Memory Input, alongside `false-green-on-missing-file`. **FR-8:** `/alt` drops the inherited card by declaration (`:182-190` replaces wholesale), takes `card: 'summary'`, and is asserted on emitted metadata — measured before-state: `alt.html` emits metadata byte-identical to `/` with no robots meta, though the files differ in size. **§7:** Rollback added, with FR-1+FR-8 as one ordered unit and the unfurl-cache asymmetry making the real-unfurl operator rows a precondition to sharing either URL. **Scope/Conflict Surface/Durable Artifacts:** `_brain/INDEX.md` declared in all three, with the two limits on that reasoning stated as Non-Goals. Every Success Metric now carries the command that produced its current value |
