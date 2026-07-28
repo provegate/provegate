@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CodeBlock } from '@provegate/design/react';
+import { CopyableCodeBlock } from '@provegate/design/react/client';
 import { Reveal } from './reveal';
 import { SectionHead, section, shell } from './ui';
 import * as C from './content';
@@ -90,9 +90,9 @@ export function InstallTabs(): React.JSX.Element {
             id={`install-panel-${current.id}`}
             aria-labelledby={`install-tab-${current.id}`}
           >
-            <CodeBlock filename={current.file} prompt copyable>
+            <CopyableCodeBlock filename={current.file} prompt>
               {current.code}
-            </CodeBlock>
+            </CopyableCodeBlock>
           </div>
         </Reveal>
       </div>
@@ -118,9 +118,9 @@ export function CIIntegration(): React.JSX.Element {
         <Reveal>
           <Tabs tabs={C.CI_SNIPPETS} value={tab} onChange={setTab} idPrefix="ci" />
           <div role="tabpanel" id={`ci-panel-${current.id}`} aria-labelledby={`ci-tab-${current.id}`}>
-            <CodeBlock filename={current.file} copyable>
+            <CopyableCodeBlock filename={current.file}>
               {current.code}
-            </CodeBlock>
+            </CopyableCodeBlock>
           </div>
         </Reveal>
       </div>

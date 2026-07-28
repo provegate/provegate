@@ -84,3 +84,61 @@ describe('tokens only — no hardcoded colour in the app', () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-027 — FR-3 (one install source, app-wide) + FR-7 (no dead exports).
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { HERO, HERO_TERMINAL, INSTALLERS } from '../app/sections/content';
+
+const CONTENT = resolve(APP, 'sections/content.ts');
+
+/** Comment-stripped view: a doc comment quoting a command or an export name
+ * must neither fail the census nor keep an export alive. */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+}
+
+describe('FR-3 — the install command is authored once, app-wide', () => {
+  it('the four consumers derive from one declaration (values, not equal strings)', () => {
+    expect(INSTALLERS[0].code).toBe(HERO.install);
+    expect(HERO_TERMINAL.steps.slice(0, 2)).toEqual(HERO.install.split('\n'));
+    // /alt consumes the constant's first line — asserted at source level below
+  });
+
+  it('no source outside content.ts authors the install literal', () => {
+    const offenders = FILES.filter((f) => f !== CONTENT)
+      .filter((f) => /npm install -D provegate/.test(stripComments(readFileSync(f, 'utf8'))));
+    expect(offenders.map((f) => f.split('/app/')[1] ?? f)).toEqual([]);
+  });
+
+  it('/alt renders the constant, not a literal', () => {
+    const src = stripComments(readFileSync(resolve(APP, 'alt/page.tsx'), 'utf8'));
+    expect(src).toContain("HERO.install.split('\\n')[0]");
+  });
+});
+
+describe('FR-7 — no landing content export is unreferenced', () => {
+  it('every export of content.ts is word-anchored-referenced by another app source', () => {
+    const decl = readFileSync(CONTENT, 'utf8');
+    // enumerate the export forms the scanner recognizes — a new form must not
+    // silently escape the census
+    const names = [...decl.matchAll(/^export (?:const|function|type|interface) (\w+)/gm)].map(
+      (m) => m[1] as string,
+    );
+    expect(names.length).toBeGreaterThanOrEqual(38); // the measured floor (PROOF deleted, three constants added)
+    const others = FILES.filter((f) => f !== CONTENT).map((f) =>
+      stripComments(readFileSync(f, 'utf8')),
+    );
+    const orphans = names.filter(
+      (n) => !others.some((src) => new RegExp(`\\b${n}\\b`).test(src)),
+    );
+    expect(orphans, `unreferenced exports: ${orphans.join(', ')}`).toEqual([]);
+  });
+
+  it('PROOF is gone, and PROOF_EVIDENCE did not keep it alive by prefix', () => {
+    const decl = readFileSync(CONTENT, 'utf8');
+    expect(/^export const PROOF\b(?!_)/m.test(decl)).toBe(false);
+    expect(decl).toContain('export const PROOF_EVIDENCE');
+  });
+});

@@ -5,19 +5,25 @@ export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
   filename?: string;
   lang?: string;
   prompt?: boolean;
-  copyable?: boolean;
+  /** Server-safe header slot for a trailing control (the client wrapper's
+   * copy button lands here). A node, never a handler — this component stays
+   * importable from server contexts. */
+  headerControl?: React.ReactNode;
 }
 
 /** Always-dark terminal code/command block — the terminal surface is its own
- * panel regardless of theme. Evidence is monospace. `copyable` renders a copy
- * affordance; the actual clipboard wiring is the consumer's (kept dependency-
- * and side-effect-free here). */
+ * panel regardless of theme. Evidence is monospace. This is the SERVER-SAFE
+ * renderer: no hooks, no handlers, importable from server components and
+ * Fumadocs' MDX pipeline. A copy control is a client capability and lives in
+ * `@provegate/design/react/client` (`CopyableCodeBlock`) — this component
+ * deliberately has no `copyable` prop, so a copy affordance can never render
+ * without the handler behind it (PRD-027 FR-9). */
 export function CodeBlock({
   children,
   filename,
   lang,
   prompt = false,
-  copyable = false,
+  headerControl,
   className = '',
   style = {},
   ...rest
@@ -35,7 +41,7 @@ export function CodeBlock({
       }}
       {...rest}
     >
-      {filename || copyable ? (
+      {filename || headerControl ? (
         <div
           style={{
             display: 'flex',
@@ -49,11 +55,7 @@ export function CodeBlock({
           }}
         >
           <span>{filename}</span>
-          {copyable ? (
-            <span aria-hidden="true" style={{ color: 'var(--pg-term-dim)' }}>
-              copy
-            </span>
-          ) : null}
+          {headerControl ?? null}
         </div>
       ) : null}
       <pre

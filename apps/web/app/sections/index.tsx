@@ -2,13 +2,13 @@ import * as React from 'react';
 import {
   Admonition,
   Button,
-  CodeBlock,
   EvidenceTable,
   HandoffCard,
   Icon,
   PhasePipeline,
   VerdictBadge,
 } from '@provegate/design/react';
+import { CopyableCodeBlock } from '@provegate/design/react/client';
 import { Reveal } from './reveal';
 import { HeroTerminal } from './hero-terminal';
 import { GateRun } from './gate-run';
@@ -107,14 +107,20 @@ export function Hero(): React.JSX.Element {
           {C.PRINCIPLES}
         </div>
       </div>
-      <Reveal>
-        <HandoffCard
-          variant="handoff"
-          title="HANDOFF CARD"
-          lines={C.HANDOFF_LINES}
-          style={{ boxShadow: 'var(--pg-shadow-lg)' }}
-        />
-      </Reveal>
+      {/* PRD-027 FR-6: at ≤900px this wrapper is display:none (globals.css) —
+          the hero terminal's closing lines carry the handoff beat for mobile
+          and screen readers; no second DOM copy exists anywhere. The class
+          name is the joining term the two test halves share. */}
+      <div className={C.HERO_HANDOFF_CLASS}>
+        <Reveal>
+          <HandoffCard
+            variant="handoff"
+            title="HANDOFF CARD"
+            lines={C.HANDOFF_LINES}
+            style={{ boxShadow: 'var(--pg-shadow-lg)' }}
+          />
+        </Reveal>
+      </div>
     </header>
   );
 }
@@ -133,9 +139,10 @@ export function TrustStrip(): React.JSX.Element {
           justifyContent: 'center',
         }}
       >
-        {C.TRUST_STRIP.map((t) => (
-          <span
+        {C.TRUST_STRIP.map(([t, href]) => (
+          <a
             key={t}
+            href={href}
             style={{
               ...mono,
               fontSize: 'var(--pg-text-sm)',
@@ -149,7 +156,7 @@ export function TrustStrip(): React.JSX.Element {
               ✓
             </span>
             {t}
-          </span>
+          </a>
         ))}
       </div>
     </div>
@@ -423,7 +430,7 @@ export function OperatorFlow(): React.JSX.Element {
 
 export function Refusal(): React.JSX.Element {
   return (
-    <section style={{ ...prose, margin: '84px auto' }}>
+    <section id="refusal" style={{ ...prose, margin: '84px auto' }}>
       <Reveal>
         <div
           style={{
@@ -791,12 +798,12 @@ export function Install(): React.JSX.Element {
         </div>
         <Reveal>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <CodeBlock filename="terminal" prompt copyable>
+            <CopyableCodeBlock filename="terminal" prompt>
               {C.HERO.install}
-            </CodeBlock>
-            <CodeBlock filename="gates.manifest.json" lang="json" copyable>
+            </CopyableCodeBlock>
+            <CopyableCodeBlock filename="gates.manifest.json" lang="json">
               {C.MANIFEST_SEED}
-            </CodeBlock>
+            </CopyableCodeBlock>
           </div>
         </Reveal>
       </div>

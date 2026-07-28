@@ -148,6 +148,11 @@ a:hover {
   .pg-nav-cta {
     display: none !important;
   }
+  /* PRD-027 FR-6: the mobile hero drops the HandoffCard — the terminal's
+     closing lines carry the beat below 900px. Full card returns at ≥901px. */
+  .pg-hero-handoff {
+    display: none !important;
+  }
   .pg-navtoggle {
     display: inline-flex;
   }

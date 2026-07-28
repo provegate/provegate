@@ -102,3 +102,13 @@ component authors a raw hex or a font stack (a test enforces it).
 `src/tokens/colors.css` and `src/cli/theme.ts` carry a generated-file banner and
 are excluded from lint. Edit `src/tokens.ts` and regenerate. The emit logic is in
 `scripts/emit.ts` (side-effect free, so the byte-identity test imports it).
+
+## Import contract (PRD-027 FR-9)
+
+- `@provegate/design/react` — server-safe components only: no hooks, no
+  handlers, importable from server components and MDX pipelines. `CodeBlock`
+  here carries **no copy affordance**.
+- `@provegate/design/react/client` — client components; the built entry opens
+  with `"use client"`. `CopyableCodeBlock` lives here: a real copy button whose
+  payload is `copyText` or plain-string children, and which renders no control
+  when neither yields a string.

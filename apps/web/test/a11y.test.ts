@@ -76,3 +76,22 @@ describe('responsive layout', () => {
     expect(globals).toContain('.pg-visually-hidden');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-027 FR-6 — the stylesheet half. The DOM half lives in landing.test.tsx
+// (jsdom pragma); both halves read HERO_HANDOFF_CLASS from content.ts, so the
+// joining term cannot drift while both stay green.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { HERO_HANDOFF_CLASS } from '../app/sections/content';
+
+describe('FR-6 — the hero HandoffCard hides at ≤900px', () => {
+  it('the wrapper class is display:none inside the 900px block', () => {
+    const start = globals.indexOf('@media (max-width: 900px)');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const block = globals.slice(start, globals.indexOf('@media', start + 10));
+    expect(block).toContain(`.${HERO_HANDOFF_CLASS}`);
+    const rule = block.slice(block.indexOf(`.${HERO_HANDOFF_CLASS}`));
+    expect(rule).toMatch(/display:\s*none/);
+  });
+});
