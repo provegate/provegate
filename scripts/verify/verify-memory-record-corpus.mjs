@@ -12,8 +12,13 @@
 // The runner also carries the formatter smoke: prettier writes exactly one blank
 // line after each heading, which the pre-PRD-035 anchor read as an empty section.
 // The corpus's blank-line case, formatted by the repository's own prettier, must
-// still validate — proving `pnpm format` output legal without touching the live
-// ADR store.
+// still validate — proving prettier's BODY formatting legal without touching the
+// live ADR store. That claim is deliberately body-scoped: prettier ALSO reflows a
+// frontmatter inline list past its print width into an indented block form the
+// documented subset rejects, so a `pnpm format` sweep over `_brain/adr/**` is
+// STILL unsafe with the anchor fixed. The second smoke below pins that recorded
+// limitation as the current behavior — a future fix must flip the assertion
+// consciously, not discover it by surprise.
 //
 // A root script on purpose: `provegate#test` is turbo-cached over package inputs,
 // and a package test reading a repository path replays stale green
@@ -93,6 +98,29 @@ if (!smoke) {
       `formatter smoke: prettier output failed validation: ${issues
         .map((i) => `${i.field} — ${i.message}`)
         .join('; ')}`,
+    );
+  }
+
+  // Pinned limitation (PRD-035 phase 6 round 1): prettier reflows a frontmatter
+  // inline list past its print width into an indented block form the subset
+  // rejects, so formatting a links-bearing record still breaks validation.
+  // Assert the refusal on prettier's own output so the limitation is a named,
+  // executing fact rather than a silent one.
+  const linkedSrc = smoke.content.replace(
+    'type: decision',
+    'links: [two-parsers-wrong-together, adr-section-blank-line-reads-empty, false-green-on-missing-file]\ntype: decision',
+  );
+  const linkedFormatted = await prettier.format(linkedSrc, { parser: 'markdown' });
+  const reflowedIssues = validateMemoryRecord(linkedFormatted, {
+    slug: smoke.slug,
+    isAdr: smoke.isAdr,
+  }).issues;
+  if (!reflowedIssues.some((i) => i.field === 'links' || i.field === 'structure')) {
+    r.fail(
+      'pinned limitation moved: prettier-formatted long frontmatter links now ' +
+        'validate — if the subset or prettier config changed deliberately, retire ' +
+        'this pin together with the format-sweep warning in ' +
+        'adr-section-blank-line-reads-empty',
     );
   }
 }

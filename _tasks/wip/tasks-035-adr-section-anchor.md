@@ -215,7 +215,9 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- (none yet)
+- 6.1 — [P1] formatter claim narrowed to body scope; prettier's frontmatter list reflow pinned as an executing limitation in the runner; the learning keeps the live format-sweep warning instead of retiring fully.
+- 6.1 — [P1] learning's history corrected: corpus asserted correctness but had a coverage hole and a never-executed repo copy; "agreement-only" claim removed.
+- 6.1 — [P2] workflow ledger note restored to prior rationale + appended the new divergence, instead of overwriting.
 
 ## Progress Log
 

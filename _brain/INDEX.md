@@ -21,7 +21,7 @@
 - [notes column runs commands](learnings/notes-column-runs-commands.md) — a per-FR parser reading the whole row runs backtick commands in Notes too; scope to the Command column
 - [known-red ledger must expire](learnings/known-red-ledger-must-expire.md) — an acknowledged-failure allowlist must fail on stale/unknown entries or it becomes a permanent bypass
 - [unparseable command must fail loudly](learnings/unparseable-command-must-fail-loudly.md) — a runner must never silently drop a command it can't classify as runnable; report or fail
-- [adr section blank line reads empty](learnings/adr-section-blank-line-reads-empty.md) — retired by PRD-035; lessons kept: `$` under `/m` is not end-of-input; agreement corpora miss all-wrong-together
+- [adr section blank line reads empty](learnings/adr-section-blank-line-reads-empty.md) — anchor fixed by PRD-035; live hazard: `pnpm format` still breaks ADR frontmatter (reflowed lists)
 - [narrow the grammar not the parser](learnings/narrow-the-grammar-not-the-parser.md) — a hand-rolled Markdown reader never reaches renderer parity; restrict what the document may contain instead
 - [free-text field is the unread drift ledger](learnings/free-text-field-is-the-unread-drift-ledger.md) — a rule only documentation enforces drifts into the unenumerated field beside it, where nobody can read it
 - [state model before mechanism](learnings/state-model-before-mechanism.md) — flat readiness trajectory: cut the scope or write the state model; remediating again just resamples it

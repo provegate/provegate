@@ -67,17 +67,26 @@ Converted to a work item on 2026-07-28 under the deferral cap rule.
 2. Make all three implementations agree **and be right, under execution** — the
    package corpus test runs the typed parser and the shipped copy and proves only
    agreement; the repository copy is never run against the corpus at all today.
-3. Make `pnpm format` safe to run on `_brain/adr/**`.
+3. Make prettier's **body** formatting legal: a blank line after every heading no
+   longer reads as an empty section. *(Narrowed in Phase 6 round 1 from "make
+   `pnpm format` safe on `_brain/adr/**`": the reviewer measured that prettier
+   ALSO reflows a long frontmatter inline list into a block form the documented
+   subset rejects, so a full format sweep remains unsafe for a reason outside
+   this anchor. The FR-5 runner pins that limitation as an executing assertion;
+   the retired learning carries the live warning.)*
 
 ### Success Metrics
 
 - A record with a blank line after every section heading validates in all three
   implementations, each under execution: the package corpus test runs the typed
   parser and the shipped copy; the FR-5 runner runs the repository copy.
-- The formatter smoke in the FR-5 runner proves prettier's output legal: a valid
-  record formatted by the repository's own prettier still validates, with every
-  section body captured non-empty. (Sweeping the live store with `pnpm format`
-  stays a separate call — §5.)
+- The formatter smoke in the FR-5 runner proves prettier's **body** output legal:
+  a valid record formatted by the repository's own prettier still validates, with
+  every section body captured non-empty — and its second smoke pins the known
+  frontmatter limitation: prettier's reflow of a long `links` inline list is
+  REFUSED by the subset, asserted as current behavior so a future change retires
+  the pin consciously. (Sweeping the live store with `pnpm format` stays a
+  separate call — §5 — and stays unsafe while the pin stands.)
 - Mutation: restoring the `$` anchor in `parse.ts` or the shipped copy fails the
   new corpus case in the package test; restoring it in `scripts/verify/lib.mjs`
   fails the FR-5 runner. Each failure has the anchor as its cause, not a missing
@@ -95,9 +104,10 @@ bisection that a blank line is illegal.
 
 #### User Story 2
 
-**As** a maintainer of this repository, **I want** to run `pnpm format` without
-inspecting every ADR afterwards, **so that** formatting stops being a manual
-review step.
+**As** a maintainer of this repository, **I want** the validator to stop rejecting
+prettier-shaped section bodies, **so that** the formatter and the governance gate
+stop disagreeing about a blank line — knowing the frontmatter reflow limitation
+remains recorded and pinned until its own fix.
 
 ---
 
@@ -156,7 +166,10 @@ review step.
    keys, and this runner does not conflate the two. It then runs the formatter
    smoke: the FR-2 case's content is formatted with the repository's own
    prettier (markdown parser) and re-validated — the result must stay valid with
-   every section body captured non-empty. The runner exits non-zero, naming the
+   every section body captured non-empty — plus the pinned-limitation smoke: a
+   long `links` inline list formatted by prettier reflows into a block form the
+   subset rejects, and the runner asserts that refusal so the limitation is a
+   named executing fact (Phase 6 round 1). The runner exits non-zero, naming the
    path, on a missing or unparseable fixture — it never iterates zero cases into
    a pass. It is a root script on purpose: `provegate#test` is turbo-cached over
    package inputs, and a package test reading a repository path replays stale
@@ -413,5 +426,6 @@ Hard caps (when your gates manifest configures them):
 | Date       | Change                                                                                                                  |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-28 | PRD created (Phase 1). Converted from the `ADR section regex` deferral under the cap rule; defect re-reproduced first. |
+| 2026-07-28 | **Phase 6 round 1 (independent Codex review, GATE: FAIL — two [P1], one [P2], all closed).** [P1] the formatter smoke over-claimed: formatting a real ADR still fails validation because prettier reflows long frontmatter inline lists into a block form the subset rejects — goal 3, the metric, user story 2 and FR-5 narrowed to the body-scoped claim, and the runner gained a pinned-limitation smoke asserting the refusal on prettier's own output. [P1] the retired learning's history was wrong — the corpus asserted per-case correctness; the escape was a coverage hole plus a never-executed repository copy, and the learning now says so, keeping the format-sweep warning live. [P2] the workflow ledger note had overwritten the prior verify-pack-drift/verify-turbo-inputs rationale — restored and appended. |
 | 2026-07-28 | **Iteration 2 scored PASS 8.20** (fresh independent Codex session, zero remediation context). Its four watch-item prescriptions applied as post-PASS precision edits, quoted from the report: `pnpm verify:workflow` added as an FR-5 verification row (the direct command cannot prove CHECKS membership); FR-5's comparison contract stated as expected-validity + bare-field containment, never entry-keyed parity; FR-3 names both moved ledger pairs, the workflow pair as an intentional repository-only divergence with a ledger note; the two memory-input rationales corrected to stop claiming watch coverage the records do not declare (`assert-absent…` watches package test paths only, `false-green…` declares no watch). Verdict unchanged by these edits; owner may order a confirmation pass at Phase 3 approval. |
 | 2026-07-28 | Remediated after readiness iteration 1 (ITERATE 7.85, independent Codex scorer; remediation by the non-scorer orchestrating session). The three-implementation execution claim corrected to the measured topology — the package corpus test runs the typed parser and the shipped copy, the repository copy is hash-reconciled via `verify:pack-drift`. FR-5 added: a repository corpus runner (`verify:memory-corpus`, wired into `verify:workflow`) executes the third copy and carries the isolated prettier smoke that replaces the unsafe repo-wide `pnpm format` verification. FR-4 narrowed: no packed twin exists and none is created; `_brain/INDEX.md` added to its Targets. Migration paragraph states atomic land/revert for the added wiring. Memory inputs `false-green-on-missing-file` re-dispositioned to applied and `turbo-cache-masks-out-of-input-reads` added. |

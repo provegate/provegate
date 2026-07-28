@@ -141,7 +141,7 @@
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "7e5cfd4e9eafcee9",
       "repo": "4050e193f48865e3",
-      "note": "intentional repository-only divergence (PRD-035 FR-3): the repo CHECKS array carries verify-memory-record-corpus.mjs, which adopters do not receive — the corpus fixture and runner are repository-local; the packed workflow deliberately omits it"
+      "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit. PRD-035 adds a third repository-only member, verify-memory-record-corpus.mjs: the corpus fixture and runner are repository-local, so the packed workflow deliberately omits it"
     },
     "verify/gates-wired-exceptions.json": {
       "dest": "scripts/verify/gates-wired-exceptions.json",
