@@ -67,3 +67,4 @@
 - [ADR-0003 acceptance authorship](adr/ADR-0003-acceptance-authorship.md) — owner records who decided, authorship records who typed; a record, not an enforcement
 - [ADR-0002 agent protocol delivery](adr/ADR-0002-agent-protocol-delivery.md) — protocols reach agents as a one-way rendered store; pointer-only adapters; enumerated tokens, not a template language
 - [ADR-0001 closed-loop agent memory](adr/ADR-0001-closed-loop-agent-memory.md) — declared PRD inputs, watch-triggered review, base-ref weakening proof, Phase 7 capture
+- [exemption marker needs no prose](learnings/exemption-marker-needs-no-prose.md) — any author-typed field in a lint exemption is a hiding place; close the grammar, verify every character

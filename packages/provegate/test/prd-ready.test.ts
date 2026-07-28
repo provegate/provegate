@@ -20,7 +20,7 @@ const READY_CORE = [
   '',
   '## 9. Open Questions',
   '',
-  '- (none — resolved)',
+  '- (none)',
   '',
   '## 11. Verification Commands',
   '',
@@ -73,9 +73,9 @@ describe('lintPrd structural checks', () => {
       expect.stringContaining('missing DO NOT'),
     );
 
-    const openQ = READY_PRD.replace('- (none — resolved)', '- What about auth?');
+    const openQ = READY_PRD.replace('- (none)', '- What about auth?');
     expect(lintPrd(cfg, manifest, openQ).issues).toContainEqual(
-      expect.stringContaining('Open Questions not empty'),
+      expect.stringContaining('is not in the closed grammar'),
     );
 
     const tbd = READY_PRD.replace('does a thing.', 'does a thing. TBD later.');
@@ -444,7 +444,12 @@ describe('self-application (W4 dogfood)', () => {
     const prdPath = candidates.find((p) => existsSync(p));
     expect(prdPath, 'PRD-002 artifact not found in wip or completed').toBeDefined();
     const report = lintPrd(cfg, manifest, readFileSync(prdPath!, 'utf8'));
-    expect(report.issues).toEqual([]);
+    // PRD-028 FR-3, declared: the closed §9 grammar invalidates PRD-002's
+    // historical exemption — a `(none — …)` tail plus its continuation line.
+    // The completed artifact is history and stays untouched; everything else
+    // in the document still lints clean.
+    expect(report.issues).toHaveLength(2);
+    for (const issue of report.issues) expect(issue).toMatch(/^Open Questions: /);
   });
 });
 

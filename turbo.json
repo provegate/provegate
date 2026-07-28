@@ -17,6 +17,7 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/_prds/**",
+        "$TURBO_ROOT$/_brain/**",
         "$TURBO_ROOT$/workflow.config.json",
         "$TURBO_ROOT$/gates.manifest.json"
       ]
