@@ -1,7 +1,7 @@
 # Prompt Store State Model
 
-> **Owner**: owner · **Status**: awaiting owner approval · **Created**: 2026-07-28
-> **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/wip/prd-030-prompt-store-integrity.md)
+> **Owner**: owner · **Status**: owner-approved 2026-07-28 (`_state/acceptances.json`, PRD-030, items 4.1 T1–T7 and 4.3) · **Created**: 2026-07-28
+> **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/completed/prd-030-prompt-store-integrity.md)
 > **Consumed by**: PRD-034, whose functional requirements are written against this document
 > and are blocked until it is approved.
 

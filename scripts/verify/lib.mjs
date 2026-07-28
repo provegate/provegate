@@ -330,10 +330,13 @@ export function validateMemoryRecord(content, { slug, isAdr = false } = {}) {
     for (const heading of ['Context', 'Decision', 'Consequences', 'Alternatives']) {
       // Exact spelling, case-sensitive; only `Alternatives` may carry the
       // ` considered` suffix the template uses. The stop is `^## ` so a heading
-      // that follows with no blank line still ends the section.
+      // that follows with no blank line still ends the section. End-of-input is
+      // `(?![\s\S])`, not `$`: under /m, `$` matches at every line end — including
+      // the zero-length position on a blank line right after the heading, which
+      // read every prettier-formatted section as empty.
       const suffix = heading === 'Alternatives' ? '(?: considered)?' : '';
       const found = new RegExp(
-        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |$)`,
+        `^## ${heading}${suffix}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`,
         'm',
       ).exec(body);
       if (found === null) {

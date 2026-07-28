@@ -23,6 +23,7 @@ const CHECKS = [
   'verify-pack-drift.mjs',
   'verify-acceptance-rule.mjs',
   'verify-turbo-inputs.mjs',
+  'verify-memory-record-corpus.mjs',
 ];
 
 const root = targetRoot();

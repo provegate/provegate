@@ -1,8 +1,10 @@
 ---
 name: adr-section-blank-line-reads-empty
 description: >-
-  The ADR section check captures only the line right after the heading, so a blank line
-  there — what prettier writes — reports every section as empty.
+  Anchor defect fixed by PRD-035; two lessons and one live hazard remain: `$` under `/m`
+  is end-of-LINE, not end-of-input; a corpus only catches what a case exercises; and a
+  `pnpm format` sweep over `_brain/adr/**` is STILL unsafe — prettier reflows long
+  frontmatter inline lists into a block form the subset rejects.
 type: gotcha
 scope: workflow
 status: active
@@ -10,33 +12,45 @@ links: [two-parsers-wrong-together, durable-artifact-must-commit]
 watch: [_brain/adr/**, _brain/_templates/adr.md]
 ---
 
-Writing the repository's first ADR fails `verify:brain` with four identical errors —
-`the '## Context' section is empty` and the same for Decision, Consequences, and
-Alternatives — even when every section is full.
+**The anchor defect this record originally reported is fixed** (PRD-035, 2026-07-28):
+the ADR section capture now ends at `(?=^## |(?![\s\S]))` in all three implementations —
+the typed parser (`core/memory/parse.ts`), the repository validator
+(`scripts/verify/lib.mjs`), and the shipped copy (`practices/verify/lib.mjs`) — held by
+a corpus case asserting a blank-line-after-every-heading ADR is **valid**, and by
+`verify:memory-corpus`, which executes the repository copy the package corpus never
+runs. A prettier-formatted section **body** validates since that change.
 
-The section regex ends its lazy capture at `(?=^## |$)` with the `m` flag, and under `m`
-the `$` matches at the end of **any** line. So the capture stops at the first line
-boundary after the heading: with a blank line there it captures the empty string, and
-with content there it captures only that first line. The rule the code actually
-implements is "the line immediately after the heading must be non-empty", which nobody
-wrote down and which normal Markdown violates.
+**Lesson one — the anchor.** Under the `m` flag, `$` matches at the end of **every**
+line, including the zero-length position on a blank line right after a heading. A lazy
+capture stopping at `(?=^## |$)` therefore truncates at the first line boundary — the
+rule the code actually implemented was "the line immediately after the heading must be
+non-empty", which nobody wrote and normal Markdown violates. JavaScript has no `\z`;
+end-of-input is `(?![\s\S])`.
 
-Two things hide it. `_brain/_templates/adr.md` puts its placeholder on the line directly
-under each heading, so the template is the one shape that passes. And the repository had
-no ADR at all until now, so no fixture ever exercised the path — the shared conformance
-corpus proves the typed parser and the standalone validator agree, and here they agree on
-the same wrong answer (see [[two-parsers-wrong-together]]).
+**Lesson two — the coverage hole.** The conformance corpus asserted each case's
+expected verdict — correctness, not merely agreement — but no case exercised a blank
+line after a heading, so the assertion never ran against the defect. All three
+implementations shared the same wrong anchor, which means the typed-versus-shipped
+parity check could not surface a disagreement either, and the repository copy was not
+executed against the corpus at all until `verify:memory-corpus` (see
+[[two-parsers-wrong-together]]). A corpus catches exactly what its cases exercise: when
+a formatter's output is the input you must accept, a formatted document belongs in the
+corpus.
 
-`prettier` formats `.md` and inserts a blank line after a heading, so `pnpm format` turns
-a passing ADR into a failing one. `format:check` is not wired into any gate today, which
-is the only reason the two have not collided already.
+**The live hazard — a format sweep still breaks ADRs.** prettier also formats YAML
+frontmatter: an inline `links: [a, b, …]` list crossing the print width is reflowed
+into an indented block form, and the documented frontmatter subset rejects block lists
+by design. Formatting a real ADR therefore still produces `structure`/`links` failures
+— from the frontmatter now, not the body. `verify:memory-corpus` pins this as a named
+limitation: its second smoke asserts prettier's reflowed output is refused, so a future
+subset or prettier-config change must retire the pin and this warning together.
 
-**Why:** `$` under the `m` flag is an end-of-LINE anchor, not end-of-input; a lazy
-quantifier stopping at it truncates at the first newline instead of running to the next
-section. The same regex shape is duplicated in the typed parser and in the standalone
-validator, so both give the same wrong verdict and their shared corpus cannot expose it.
-**How to apply:** Until the anchor is fixed to end-of-input (`$(?![\s\S])`) in every copy,
-write ADR sections with the content on the line **immediately** after the heading, and do
-not run `pnpm format` over `_brain/adr/`. When fixing it, fix all copies plus the corpus
-in one change — a fix in one implementation alone re-creates the disagreement the corpus
-exists to prevent.
+**Why:** an end-of-line anchor in a multiline capture, a corpus case set missing the
+formatter's shape, and three copies sharing one mistake each hid the others; and fixing
+the body anchor does not make the formatter safe while the frontmatter subset and
+prettier disagree about list layout.
+**How to apply:** in any `/m` regex that must run to end-of-input, write `(?![\s\S])`,
+never `$`. Put the formatter's own output into the corpus of any format you validate.
+Execute every implementation against the corpus — a hash reconciliation
+(`verify:pack-drift`) proves two copies were compared, not that either is right. And do
+not run `pnpm format` over `_brain/adr/**` while the frontmatter pin stands.

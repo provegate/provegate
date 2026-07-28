@@ -725,6 +725,15 @@
       "note": "the lookahead needed a newline, so an adjacent heading was read as the section's content"
     },
     {
+      "id": "adr-blank-line-after-every-heading-valid",
+      "slug": "ADR-0001-a-decision",
+      "isAdr": true,
+      "valid": true,
+      "content": "---\nname: ADR-0001-a-decision\ndescription: a real one-line description\ntype: decision\nscope: workflow\nstatus: accepted\n---\n\n## Context\n\nc\n\n## Decision\n\nd\n\n## Consequences\n\nq\n\n## Alternatives considered\n\na\n",
+      "note": "prettier writes exactly one blank line after each heading; '$' under /m ended the lazy capture at the blank line's zero-length start, so every section read as empty. The case asserts the document IS valid, not that implementations agree.",
+      "matrix": []
+    },
+    {
       "id": "adr-heading-case",
       "slug": "ADR-0001-a-decision",
       "isAdr": true,
