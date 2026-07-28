@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T13:45:22.122Z",
+  "generatedAt": "2026-07-28T14:08:16.781Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1124,13 +1124,13 @@
         "prd": "_prds/wip/prd-031-autonomy-mode-method-policy.md",
         "readiness": "_readiness/wip/readiness-031-autonomy-mode-method-policy.md",
         "tasks": "_tasks/wip/tasks-031-autonomy-mode-method-policy.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-031-autonomy-mode-method-policy.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.88,
@@ -1139,9 +1139,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 41,
+        "status": "Ship Verified",
+        "checkedCount": 39,
+        "uncheckedCount": 2,
         "operatorHandoffCount": 2
       },
       "summary": {
@@ -1355,7 +1355,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.1,
+        "score": 6.28,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
