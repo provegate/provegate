@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T11:59:07.608Z",
+  "generatedAt": "2026-07-28T11:59:43.183Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1159,19 +1159,19 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-032-prompt-store-dogfood.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-032-prompt-store-dogfood.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 4,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },
