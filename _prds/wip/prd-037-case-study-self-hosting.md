@@ -27,16 +27,18 @@
 The shipped case study (`apps/docs/content/docs/case-study.mdx`, PRD-004) tells the
 **origin** story: ~390 gated work items on the platform the method was extracted from.
 It does not tell the story the roadmap names as the launch narrative (Faz E: *"bu araç
-kendi 7-fazlı süreciyle geliştirildi, işte PRD'leri"*): **this repository has now run
-30+ of its own PRDs through the same gates**, and unlike the origin figures — which the
-do-not-say lint guards as *externally sourced* claims — the self-hosting figures are
-**recomputable from the repository's own committed state** by anyone who clones it.
+kendi 7-fazlı süreciyle geliştirildi, işte PRD'leri"*): **this repository runs its own
+PRDs through the same gates** — how many is the derivation script's answer, never this
+document's — and unlike the origin figures, which the do-not-say lint guards as
+*externally sourced* claims, the self-hosting figures are **recomputable from the
+repository's own committed state** by anyone who clones it.
 
 That difference is the point. An adopter cannot audit the origin platform; they can run
-one script here and watch every number reproduce: PRDs shipped, readiness iterations per
-item, independent-scorer counts, ITERATE→PASS trajectories, review rounds, criticals
-found-and-closed, closes stopped by the gate chain and resumed. The section this PRD
-adds is evidence-by-execution — the product's own thesis applied to its marketing.
+one script here and watch every number reproduce — the contract table in FR-1 names
+exactly which figures, and the phenomena the artifacts cannot count (multi-scorer
+quorums, failing rounds, resumed stops) appear as unnumbered prose. The section this
+PRD adds is evidence-by-execution — the product's own thesis applied to its
+marketing.
 
 **The figures are never typed.** A derivation script computes every number from
 `_state/prds.json` and the committed readiness/review artifacts; the doc embeds the
@@ -104,12 +106,13 @@ so that the launch text links to evidence instead of asserting it.
    | -------- | ----- | ------------------ | ----------- | ----------------------- |
    | `shipVerified` | PRDs Ship Verified | `_state/prds.json` records with `status: "Ship Verified"` | count | unreadable/unparseable state → exit non-zero naming the path |
    | `closeModes` | operator-gated vs eligible closes | same records' `autonomousClose` field | count per value; unknown values listed, never folded | a record missing the field is listed by id, not guessed |
-   | `readinessIterations` | readiness iterations, total and per-item max | the Iteration History TABLES of `_readiness/completed/**` for Ship Verified PRDs only — the corpus choice is stated in the section: closed items, because wip histories still move; a Superseded PRD's artifact is excluded and the exclusion printed | row count per table; max over items; a file whose table cannot be parsed is a named failure, never a zero | absent artifact for a Ship Verified PRD → named failure |
-
-   Figures the iteration-1 probe found NOT reliably derivable are **cut, not
-   approximated** — distinct scorer sessions (free-text `Scored by` labels do not
-   deduplicate), review-round and criticals aggregates (narrative prose, no normalized
-   metadata), and resumed gate-chain stops (no committed event ledger). The section may
+   Figures the iteration-1 and iteration-2 probes found NOT reliably derivable are
+   **cut, not approximated** — distinct scorer sessions (free-text `Scored by` labels
+   do not deduplicate), review-round and criticals aggregates (narrative prose),
+   resumed gate-chain stops (no committed event ledger), **and readiness-iteration
+   counts** (iteration 2 measured the history-table grammar varying across the 29
+   Ship Verified artifacts, concurring rows like `9b` included; migrating 29
+   artifacts to one grammar is real work a marketing section does not justify). The section may
    NAME these phenomena in unnumbered prose ("multiple independent scorers per item;
    review rounds that failed before they passed") but no digit attaches to them.
    Normalizing artifacts to make them derivable is future work this PRD does not own.
@@ -118,13 +121,16 @@ so that the launch text links to evidence instead of asserting it.
    FR-3 is what keeps the projection honest — "no stored figure" was iteration 1's
    overclaim, corrected: the stored projection exists and is byte-checked).
    - **Targets:** `scripts/derive-self-hosting-figures.mjs`
-2. **FR-2**: The section, with the delivery mechanism DECIDED (iteration 1): the doc
-   carries a **committed generated region** delimited by unique sentinel comments
-   (`<!-- self-hosting-figures:start -->` / `:end`); the FR-1 script has two modes —
-   `--print` emits the region's content, `--check` compares the committed region
-   byte-for-byte against a fresh derivation and exits non-zero on drift naming the
-   first differing line. Regeneration rule stated beside the region: re-run `--print`
-   after any close that changes the counted state; FR-3's check is what catches a
+2. **FR-2**: The section, with the delivery mechanism DECIDED and its lifecycle
+   closed (iterations 1-2): the doc carries a **committed generated region**
+   delimited by exactly one ordered sentinel pair
+   (`<!-- self-hosting-figures:start -->` before `<!-- self-hosting-figures:end -->`);
+   a missing sentinel, a duplicate, or an inverted order is a named failure in every
+   mode. Three modes: default (no flag) = usage + exit 2, so a bare invocation never
+   silently prints or writes; `--print` emits the region CONTENT to stdout;
+   `--write` replaces the bytes between the pair in place and touches nothing
+   outside them. Regeneration rule stated beside the region: re-run `--write` after
+   any close that changes the counted state; FR-3's `--check` is what catches a
    forgotten regeneration. Around the region: prose that interprets WITHOUT adding
    numbers — no digit outside the sentinels. The origin section gains one framing line
    naming the two evidence classes. Stable heading id for deep links.
@@ -135,10 +141,12 @@ so that the launch text links to evidence instead of asserting it.
    failing by first differing line. Wiring unchanged: the lint is already a bundle
    member; only its coverage grows by this one call.
    - **Targets:** `scripts/verify/verify-doc-claims.mjs`
-4. **FR-4**: Honesty boundaries, stated in the section: iteration counts include the
-   rounds that FAILED (the 5.1s, the flat plateaus, the reverted claims — the ledger
-   cuts both ways or it is not a ledger); the origin ~390 stays externally sourced and
-   labeled; no competitor comparison (PRD-039's lane).
+4. **FR-4**: Honesty boundaries, stated in the section: the prose names the texture
+   without digits — items iterated many times before passing, rounds that failed,
+   claims that were caught and reverted (the ledger cuts both ways or it is not a
+   ledger; and per the no-digit rule, none of this carries a number outside the
+   generated region); the origin ~390 stays externally sourced and labeled; no
+   competitor comparison (PRD-039's lane).
    - **Targets:** `apps/docs/content/docs/case-study.mdx`
 
 ---
@@ -306,5 +314,6 @@ Before Phase 2 PASS, run: `gate check PRD-037`
 
 | Date       | Author | Changes                                                                                                            |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (author), second rework | **Iteration 2 (6.28) applied.** `readinessIterations` CUT — the probe measured the history-table grammar varying across all 29 Ship Verified artifacts (`9b` concurring rows included); migrating 29 artifacts is not a marketing section's business, so the derivable pair remains and the texture goes to unnumbered prose. The intro's own `30+` digit and stale figure list swept (the count is the script's answer, never this document's). The no-digit contradiction fixed — "the 5.1s" de-numbered in FR-4. The region lifecycle closed: exactly one ordered sentinel pair, named failures on missing/duplicate/inverted, three modes (default = usage + exit 2, `--print`, `--write` in place), regeneration by `--write`. |
 | 2026-07-28 | orchestrating session (author), Phase 1 rework | **Iteration 1 scored 5.30 ITERATE — the scorer's own derivation probe proved three promised figures underivable, and the band (4-5.9) prescribes Phase 1 rework, taken.** The figure set narrows to a per-figure contract table over what the artifacts support (Ship Verified count; close-mode split; readiness iterations from closed items' history tables, corpus and exclusions stated); scorer-session, review-aggregate and resumed-stop figures are CUT — nameable in unnumbered prose, never digits. The MDX mechanism is decided: a committed sentinel-delimited generated region with `--print`/`--check` modes, byte-compared by `verify:doc-claims`; "no stored figure" corrected to the honest form (a stored PROJECTION exists and is byte-checked). |
 | 2026-07-28 | orchestrating session, for owner review | Drafted as the first of three Faz E launch items (the 2026-07-28 portfolio review's outward-gap action): the roadmap's meta-story delivered as recomputable evidence — a derivation script, a derived section, and drift rows in the existing figure lint. |

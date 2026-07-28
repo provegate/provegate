@@ -1,78 +1,165 @@
 # Readiness Assessment: PRD-038 — Executable Quickstart
 
-> **Verdict: ITERATE — 4.95/10.** Return to Phase 1. The documented shell fences do not form one runnable scenario, and the proposed test deadlocks against the runner’s re-entry guard.
-
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
 | PRD | `_prds/wip/prd-038-executable-quickstart.md` |
-| Score | 4.95/10 |
+| Score | 6.10/10 |
 | Verdict | ITERATE |
-| Iteration | 1 |
-| Model Tier (Execution) | Do not assign — fix PRD first |
+| Iteration | 2 |
+| PRD Class | infra |
+| Model Tier (Execution) | Do not assign — return to Phase 1 |
 | Model Tier (Audit) | — |
-| Scored by | Codex (GPT-5), independent scorer |
+| Scored by | Codex (GPT-5), independent re-scorer |
 | Self-scored | no |
 | Date | 2026-07-28 |
-| PRD Lint | waived for sandbox write restriction — the exact CLI failed with `EPERM` writing `_state/prds.json.<pid>.tmp`; the read-only `lintPrd(config, manifest, content, root, 38)` equivalent returned `{ ok: true, issues: [] }`. Relied additionally on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
+| PRD Lint | Waived for the documented sandbox state-write restriction. `node packages/provegate/dist/cli.js check PRD-038` failed with `EPERM: operation not permitted, open '.../_state/prds.json.9042.tmp'`. The read-only production equivalent `lintPrd(config, manifest, content, root, 38)` returned `{ "ok": true, "issues": [] }`. Relied additionally on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
 | State Record | pending |
 
 ---
 
-## Model Tier Recommendation
+## Iteration 2 — Rework Review
 
-| Phase | Tier | Rationale |
-| --- | --- | --- |
-| Phase 1 remediation | high | The revision must define an executable state machine spanning Markdown selection, Git/worktree state, runner artifacts, Turbo, and repository verifier wiring. |
-| Phase 4 execution | Do not assign — fix PRD first | The present FRs cannot produce a passing implementation without making unrecorded design decisions. |
-| Phase 6 audit | — | Re-score independently after remediation. |
+### 1. Closed scenario grammar — PARTIAL
 
----
+The central grammar is now substantially specified:
 
-## Analysis
+> “one `<!-- qs:scenario -->` … `<!-- /qs:scenario -->` region,” with “one command per line,” joined backslash continuations, skipped comments/blanks, and retained doc line numbers (`_prds/wip/prd-038-executable-quickstart.md:106-116`).
 
-### 1. Technical Depth & Architecture
+Independent corpus measurement confirms the iteration-1 baseline:
 
-**[FINDING — Clarity]** FR-1 mistakes “shell fence” for “one executable scenario.” The package document has 11 fences: nine `sh`, one untagged handoff-output example, and one `json` example (`packages/provegate/QUICKSTART.md:9-173`). The language tags already distinguish commands from output, so the contemplated output-retagging at `_prds/wip/prd-038-executable-quickstart.md:101-107` is unnecessary. They do not distinguish canonical-flow commands from alternatives and later optional material. Extracting every `sh` fence yields 14 commands, including both a plain claim and a later worktree claim, followed after the close by `gate init --practices`, `gate doctor`, and `gate memory find` (`packages/provegate/QUICKSTART.md:37-69`, `:97-100`, `:142-173`). Those are not one ordered init→new→check→run program.
+- `packages/provegate/QUICKSTART.md`: 11 fences; nine `sh`, one untagged output fence, one `json`; 14 non-comment shell commands.
+- `apps/docs/content/docs/quickstart.mdx`: eight fences; six `sh`, one untagged output fence, one `json`; eight shell commands.
+- Minimum sequence edit distance: 7; exact ordered LCS: 7.
 
-**[FINDING — Completeness]** The printed sequence cannot advance from `gate new` to `gate check` without executing prose-defined human work that FR-2 never models. `gate new` instantiates placeholders, unresolved Open Questions, example targets, verification commands, Memory Outputs, and Conflict Surface entries (`packages/provegate/templates/prd-template.md:30-235`). `lintPrd` rejects missing/unrunnable FR verification, unresolved questions, placeholders, unsafe commands, and malformed durable declarations (`packages/provegate/src/core/gates/prd-ready.ts:109-179`). The harness therefore needs a specified transition that fills the generated PRD; merely running the next fence fails.
+However, the PRD’s claim that “the corpus’s existing output tags are already adequate” is false under its own grammar. The handoff output at `packages/provegate/QUICKSTART.md:108-110` is untagged, not a `text` fence, and neither current document contains a `text` fence.
 
-**[FINDING — Technical Depth]** A successful close needs substantially more state than the PRD provisions. `gate run` requires runnable §11 commands, a task file with a passing independent-review row, and durable artifacts present in the merge diff (`packages/provegate/src/core/run/chain.ts:468-555`). It then requires execution from a non-base, clean feature branch (`packages/provegate/src/core/run/merge.ts:163-182`). The quickstart’s worktree block creates such a checkout, but the next printed command remains in the original checkout; the runner explicitly refuses when the lease pins a different branch and tells the caller to run from the claimed worktree (`packages/provegate/src/cli.ts:1197-1208`). FR-2 does not specify task/readiness/review creation, commits, branch transition, worktree-output parsing, or `cwd` movement.
+The document also continues to promise broader coverage than FR-1 defines:
 
-**[FINDING — Scope & Testability]** The mutation criterion “reorder two commands” is not a defined mutation. Some reorderings are observationally harmless; others fail before the behavior under test. The PRD must name the exact pair, expected failing step, and expected diagnostic. Its current wording at `_prds/wip/prd-038-executable-quickstart.md:160-164` cannot prove that the committed document—not harness scaffolding—owns the ordering.
+> “all fenced commands in sequence” (`:63`)  
+> “every fenced command executes in order” (`:183-185`)
 
-### 2. Edge Cases & Failure Modes
+Those statements include the package-only commands that FR-1 explicitly puts outside the scenario. The contract must consistently say “every command fence inside the tagged scenario.”
 
-**[FINDING — Technical Depth]** The proposed §11 commands cannot verify a nested live close under `gate run`. Phase 5 executes §11 commands with `PROVEGATE_RUN_ACTIVE=1` (`packages/provegate/src/core/run/chain.ts:815-828`). The nested CLI explicitly refuses every non-dry `gate run` when that variable is set (`packages/provegate/src/cli.ts:1013-1024`). All three scoped test rows at `_prds/wip/prd-038-executable-quickstart.md:280-283` directly invoke the package test that is supposed to spawn the live close. This is the exact failure recorded by `_brain/learnings/runner-sentinel-blocks-cli-spawning-tests.md`, but that record is absent from Memory Inputs.
+### 2. Hermetic install mapping — PARTIAL
 
-**[FINDING — MT&S]** The no-network rule contradicts the selected command corpus. The first extracted command is `npm install -D provegate` (`packages/provegate/QUICKSTART.md:9-12`), while the PRD prohibits network access (`_prds/wip/prd-038-executable-quickstart.md:308`) and only defines substitution for CLI invocations (`:110-112`). It must decide whether installation is tested from a locally packed tarball, mapped hermetically, or excluded from this scenario with a separate package-install test. The current implementer must silently choose.
+The source-bound substitution is a real improvement:
 
-**[FINDING — MT&S]** “No remote after a full run” does not prove that the scratch repository never gained one, especially when an earlier step fails and final assertions are skipped. The critical promise appears at `_prds/wip/prd-038-executable-quickstart.md:117-118` and `:169-170`, but there is no per-step remote assertion, deny wrapper, or `finally` path. Likewise, “nothing outside the temp dir was written” is incompatible with ordinary npm/npx caches unless `HOME`, npm cache, XDG paths, and temporary paths are redirected under the scratch root.
+> “maps — by exact source-line match, with an assertion that no OTHER install line exists unmapped — to installing the locally packed tarball” (`:120-125`).
 
-**[FINDING — Migration & Rollback]** Cleanup is asserted only in prose. Section 7 says cleanup occurs on success and failure (`_prds/wip/prd-038-executable-quickstart.md:180-184`) but does not define ownership, `try/finally` ordering, how cleanup is verified, or what diagnostic state survives a failure. This is the primary rollback mechanism for an infra-class scratch harness and needs executable criteria.
+The actual package quickstart has exactly one install command, `npm install -D provegate` at line 10, so the proposed exhaustiveness check has a closed present-day corpus.
 
-### 3. Maintainability & DX
+Two contradictions remain:
 
-**[FINDING — Clarity]** FR-3 leaves the central architecture unresolved—derive during MDX build or compare in a root verifier—and says the implementer chooses (`_prds/wip/prd-038-executable-quickstart.md:120-138`). That is an implementation-shaping decision with different targets, wiring, cache behavior, and rollback. It triggers the Clarity ceiling of 7/10 even before the runnability defects.
+1. Setup explicitly runs `pnpm --filter provegate build` and `npm pack`, while §6 promises “nothing outside the temp dir was written” (`:195-196`). A package build writes under the repository’s package tree unless the PRD instead consumes an already-built artifact or explicitly scopes the claim to scratch-command writes. `npm pack` also needs an explicit destination inside the temp root.
 
-**[FINDING — Completeness]** The two documents are materially divergent today. Parsing their `sh` fences and ignoring comment-only lines produces 14 package commands versus 8 docs-site commands, with a minimum sequence edit distance of 7. Only seven commands are exact ordered matches. The first semantic difference occurs immediately: plain `gate init` in the package (`packages/provegate/QUICKSTART.md:9-12`) versus recommended `gate init --practices` in MDX (`apps/docs/content/docs/quickstart.mdx:12-15`). The package additionally contains the three-command worktree path and three late practices/memory commands that MDX lacks. Exact all-shell-block parity therefore cannot pass without a public content rewrite, contradicting the non-goal at `_prds/wip/prd-038-executable-quickstart.md:142-146`. The PRD needs a tagged canonical subset, not whole-document shell equality.
+2. “Registry … pointed at an unreachable local path” does not name a valid npm setting or URL. Specify the exact registry value and disable audit/fund/update-notifier behavior so registry contact produces a deterministic hard failure rather than a warning or retry.
 
-**[FINDING — Technical Depth]** The root-script option omits mandatory repository wiring. Every new `scripts/verify/verify-*.mjs` file must be present in `scripts/verify/script-classes.json`; otherwise `verify-script-classes.mjs` fails it as unclassified (`scripts/verify/verify-script-classes.mjs:88-105`). That ledger is also mechanically compared with ADR-0004’s Classification table (`scripts/verify/verify-script-classes.mjs:108-143`; `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md:35-62`). Neither file is a target, conflict claim, Memory Input, or Durable Artifact. The proposed root route would fail its own `pnpm verify:workflow`.
+The exact source mapping prevents silent substitution drift, but the full install setup is not yet hermetic under the PRD’s own external-write criterion.
 
-**[FINDING — Technical Depth]** FR-4 is otherwise correct about the Turbo boundary. `provegate#test` hashes `$TURBO_DEFAULT$`, so in-package `QUICKSTART.md` is covered, while the docs application is outside that package (`turbo.json:15-23`). The existing exception is narrowly documented for `_prds/**` and the root config/manifest (`scripts/verify/turbo-inputs-exceptions.json:1-3`); it should not be widened for MDX parity. A root verifier is the clean boundary if FR-3 chooses parity.
+### 3. Enumerated scratch state model — OPEN
 
-**[FINDING — Completeness]** The PRD-007 scratch helpers are not exported or reusable. `gitRoot`, `commitArtifacts`, and `prdWithSurface` are file-local functions in `packages/provegate/test/worktree.test.ts:30-69`; no shared helper module exists under `packages/provegate/test/`. The qualified wording “where exported” at `_prds/wip/prd-038-executable-quickstart.md:180-182` avoids a literal falsehood but gives the implementer nothing to reuse. The PRD must either scope a new helper module or explicitly permit a local fixture.
+The revised model enumerates initialization and one prose transition:
 
-**[FINDING — Completeness]** Memory selection misses three directly governing records: `runner-sentinel-blocks-cli-spawning-tests` for the nested runner, `gate-wire-or-delete` for the new root verifier, and accepted `ADR-0004-method-rule-vs-repo-rule` for its mandatory classification. Conversely, `docs-outlive-the-gate-they-promise` is stretched: that record concerns documentation describing an already-shipped gate as future work, not an unexecuted documentation example. Its general motivation is useful, but the current “founding record” rationale overstates fidelity.
+> “temp root; HOME, XDG dirs, npm userconfig and TMPDIR remapped … `git init -b main` … initial commit” (`:126-129`)  
+> “filling the generated PRD minimally and committing is setup” (`:130-134`).
 
-### 4. Migration & Rollback
+It does not enumerate the state required for the printed live close.
 
-**[FINDING — Migration & Rollback]** No fence-language migration is currently necessary: command fences are already `sh`, output is untagged, and the manifest example is `json`. If semantic scenario markers are added, the PRD should require HTML comments or another rendering-neutral marker and verify that both Markdown and MDX output remain compatible. “Possible fence tags; plain revert” at `_prds/wip/prd-038-executable-quickstart.md:184` does not cover the actual change needed.
+The shipped chain requires:
 
-**[FINDING — Migration & Rollback]** The root parity rollback is incomplete. Reverting it requires removing the package-script registration, bundle member, class-ledger row, and ADR-0004 classification row together; otherwise wire-or-delete, script classification, or the ledger/ADR comparison remains red. The PRD currently lists only the verifier, `package.json`, and bundle as conditional scope (`_prds/wip/prd-038-executable-quickstart.md:205-207`).
+- a task artifact containing a passed independent-review row (`packages/provegate/src/core/run/chain.ts:518-527`);
+- a referenced, schema-valid review artifact (`packages/provegate/src/core/gates/review.ts:177-200`);
+- every declared durable artifact to appear in the feature diff (`packages/provegate/src/core/run/chain.ts:534-555`);
+- a real, clean feature branch rather than `main` (`packages/provegate/src/core/run/merge.ts:163-182`).
 
-**[FINDING — Scope & Testability]** Conflict accounting is stale and internally incomplete. PRD-026 is now `Ship Verified`/closed (`_state/prds.json:931-965`), and the only live lock file is PRD-027 on disjoint web/design paths (`_state/locks/prd-027-landing-adoption-polish.json:1-43`). Nevertheless, PRD-038 still calls PRD-026 active (`_prds/wip/prd-038-executable-quickstart.md:186-189`). More importantly, its conditional root route targets `scripts/verify/verify-workflow.mjs` at `:135-138`, while Conflict Surface omits it at `:259-265`; PRD-026 previously claimed that exact file (`_prds/completed/prd-026-duplicate-consolidation.md:917-923`). The missing claim would have hidden the overlap when this draft was created.
+None of the task creation, review creation, durable declaration/evidence, feature-branch checkout, feature commit, or clean-tree transition is in the claimed state model.
+
+The commit rationale is also applied to the wrong printed claim mode. The committed-base requirement quoted by the PRD is specifically enforced for `gate open --worktree` (`packages/provegate/src/core/run/worktree.ts:559-570`), but FR-1 puts the worktree alternative outside the scenario; the canonical printed command is plain `npx gate open PRD-001`.
+
+Finally, `npm install` can leave `node_modules` and package/lock files as non-coordination dirt. The state model does not say which are committed, ignored, or removed before the clean-feature-branch precondition.
+
+This is not an implementation detail: different choices change what the purported adopter scenario proves.
+
+### 4. Root tagged-region parity — PARTIAL
+
+The architectural decision and measurement are closed:
+
+> “a root verifier over the tagged region only” (`:145-155`)  
+> “14 versus 8 commands, edit distance 7” (`:150-152`).
+
+The baseline was independently reproduced. A root verifier is the correct cache boundary because the docs-site file is outside `provegate#test`.
+
+But §11 reopens the rejected route:
+
+> `pnpm --filter provegate test test/quickstart-e2e.test.ts -t parity`  
+> “or the root-script row below, per the recorded FR-3/FR-4 choice” (`:331`).
+
+There is no direct root parity row below—only FR-4’s aggregate `pnpm verify:workflow`. A package parity test would need to read the docs-site file, directly violating:
+
+> “DO NOT read the docs-site file from inside `provegate#test`” (`:352`).
+
+Because every §11 command executes during `gate run`, the current FR-3 row must either name an actual in-package test that cannot prove FR-3 or violate the declared Turbo boundary. Replace it with the direct root script or assign `pnpm verify:workflow` explicitly to FR-3 as well.
+
+There is also a content-scope contradiction: convergence requires changing the docs twin’s current `npx gate init --practices` to match the package’s plain `npx gate init`, while the PRD says it will not rewrite teaching content or order (`:170-172`). That is a public recommendation change and must be explicitly authorized as the minimal convergence edit.
+
+### 5. Script classification and ADR amendment — CLOSED
+
+FR-4 now names the complete repository-governance surface:
+
+> `package.json`, `scripts/verify/verify-workflow.mjs`, `scripts/verify/script-classes.json`, and `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` (`:158-166`).
+
+The actual files can host the promised changes:
+
+- `verify-workflow.mjs` has a canonical `CHECKS` array.
+- `script-classes.json` has a per-script object ledger.
+- `verify-script-classes.mjs` rejects every unclassified on-disk verifier and mechanically compares the ledger with ADR-0004’s two-column Classification table (`scripts/verify/verify-script-classes.mjs:88-143`).
+- ADR-0004 defines repo class by what a verifier reads (`_brain/adr/ADR-0004-method-rule-vs-repo-rule.md:26-37`) and can accept a `verify-quickstart-parity.mjs | repo` row.
+
+The ADR path is present in Memory Outputs and Durable Artifacts, and all conditional root-route files are now in Conflict Surface.
+
+### 6. Memory inputs and runner sentinel — CLOSED
+
+All requested records are declared with dispositions:
+
+- `runner-sentinel-blocks-cli-spawning-tests`
+- `gate-wire-or-delete`
+- `ADR-0004-method-rule-vs-repo-rule`
+- `adr-section-blank-line-reads-empty`
+
+The sentinel name is exact. The runner exports `PROVEGATE_RUN_ACTIVE=1` into §11 commands (`packages/provegate/src/core/run/chain.ts:823-828`), and the CLI refuses a nested live run when it is truthy (`packages/provegate/src/cli.ts:1019-1024`). The learning explicitly permits a directly invoked CLI-spawning test to strip the sentinel from its child environment (`_brain/learnings/runner-sentinel-blocks-cli-spawning-tests.md:25-30`).
+
+The ADR-format hazard is also accurately applied: the body-capture defect is fixed, but broad formatting remains unsafe because frontmatter list reflow is still rejected.
+
+### 7. Scratch guarantees, cleanup, and diagnostics — PARTIAL
+
+The PRD now provides executable test obligations for:
+
+- `git remote` empty before and after each step;
+- cleanup in `finally`;
+- deletion verification on pass and planted failure;
+- diagnostic-tail capture before deletion (`:139-143`).
+
+Those close much of the iteration-1 rollback gap.
+
+The isolation claim remains stronger than the mechanism:
+
+- Remapping `HOME` does not disable system Git configuration or inherited `GIT_CONFIG_*` variables. A hermetic child should explicitly disable system config and sanitize Git config injection variables.
+- The explicit repository build/pack setup conflicts with the assertion that nothing outside the temp root is written.
+- The planted failure is still not named, so the required diagnostic and cleanup path is not tied to a deterministic failure point.
+- Assertions only before and after “steps” require the PRD to define whether deterministic setup transitions are steps too.
+
+### New and Persisting Defects
+
+1. The FR-3 §11 row contradicts the decided root architecture and the explicit Turbo-boundary prohibition.
+2. The live-close state machine remains incomplete: task/review artifacts, durable evidence, feature-branch creation, clean-tree handling, and commits are absent.
+3. “Every fenced command” contradicts the tagged-region scope.
+4. The existing-output-tag claim is factually wrong: the close output fence is untagged.
+5. The mutation remains generic—“reorder two commands”—with no exact pair, expected failing step, or diagnostic.
+6. “Reuse their helpers where exported” remains non-actionable; the relevant PRD-007 helpers are file-local.
+7. Rollback remains only “plain revert” despite the coordinated verifier, bundle, script ledger, ADR, two public docs, test, learning, index, and review-artifact changes.
+8. Sequencing remains stale: PRD-026 is `Ship Verified` and completed, not an active owner. Current PRD-027 and PRD-028 leases are disjoint from PRD-038’s declared surface.
 
 ---
 
@@ -80,39 +167,35 @@
 
 | # | Dimension | Weight | Score | Notes |
 | --- | --- | ---: | ---: | --- |
-| 1 | Clarity | 15% | 5.0/10 | Central scenario selection and FR-3 architecture are unresolved. Clarity ceiling applies. |
-| 2 | Completeness | 20% | 4.5/10 | Missing PRD filling, task/review artifacts, branch transitions, helper contract, and sentinel handling. |
-| 3 | Technical Depth | 20% | 5.0/10 | Turbo reasoning is sound, but the CLI state machine and root verifier governance were not traced. |
-| 4 | Multi-Tenancy & Security (MT&S) | 10% | 5.5/10 | No tenant surface; repository critical rules apply. Network, external writes, and never-remote proof are incomplete. |
-| 5 | Scope & Testability | 15% | 5.0/10 | Strong intent and mutation framing, but the selected commands and parity target are not executable as specified. |
-| 6 | Migration & Rollback | 20% | 5.0/10 | Rendering-neutral change and scratch cleanup are asserted, not designed; root-route rollback is incomplete. |
-| **Total** | **Weighted** | **100%** | **4.95/10** | **ITERATE** |
+| 1 | Clarity | 15% | 6.0/10 | The grammar and root architecture are named, but §11 reopens the rejected parity route and the scope alternates between tagged commands and all fences. Clarity ceiling applies. |
+| 2 | Completeness | 20% | 6.0/10 | Governance and isolation obligations improved; the mandatory close artifacts, branch transition, install dirt handling, and exact mutation remain absent. |
+| 3 | Technical Depth | 20% | 6.5/10 | Strong corpus measurement, sentinel tracing, Turbo reasoning, and verifier classification; the claimed state model does not match the shipped close chain. |
+| 4 | Multi-Tenancy & Security (MT&S) | 10% | 7.0/10 | No tenant surface. Network and remote intent are strong, but Git system/env isolation and external-write containment are incomplete. |
+| 5 | Scope & Testability | 15% | 6.0/10 | Tagged parity is testable, but the FR-3 command is self-contradictory, mutation is unspecified, and “all fences” overclaims coverage. |
+| 6 | Migration & Rollback | 20% | 5.5/10 | Failure cleanup is much better; coordinated repository rollback, public docs convergence, package/pack cleanup, and stale sequencing are not modeled. |
+| **Total** | **Weighted** | **100%** | **6.10/10** | **ITERATE** |
 
-Hard caps checked: no security, contract, runtime-dependency, push-path, or method-content cap is presently tripped. Lint cap is explicitly waived for the sandbox-only state-write `EPERM`; the read-only production `lintPrd` call passed. The Clarity ceiling is triggered by the unresolved FR-3 choice and non-runnable alternative verification paths.
+Hard caps checked: no runtime dependency, push path, method-content provenance, security-contract, or migration hard cap is tripped. The lint cap is waived only for the sandbox state-write `EPERM`; the read-only production lint passed. The Clarity ceiling is triggered because the verification route and executable close-state transitions still require implementation-shaping decisions.
 
 ---
 
 ## Missing Pieces
 
-1. Replace FR-1’s “all fenced shell blocks” rule with a closed executable-scenario grammar. Name rendering-neutral start/end or step markers, command splitting, comment handling, line-number retention, and the treatment of optional/alternative shell blocks. Record that today’s output tags are already adequate.
+1. Replace every “all/every fenced command” promise with the tagged-region contract, and either retag the existing untagged output fence as `text` or define untagged output as legal.
 
-2. Resolve the install contradiction explicitly. Specify a hermetic local-tarball mapping for `npm install -D provegate`—with an exhaustiveness assertion tying it to the exact source line—or remove installation from this harness and add a separately named packed-install test. No registry/network fallback may exist.
+2. Complete the scratch transition table through the real live close: installed-file disposition, minimal filled PRD, baseline commit, plain claim, lint, task creation, passed independent-review row, review artifact, durable declaration/evidence, feature-branch creation, feature commits, clean-tree assertion, dry run, live run, merged-base inspection, and cleanup. Distinguish which transitions are printed commands and which are harness scaffolding.
 
-3. Add an explicit scratch state model: `git init -b main`, repository-local identity, initial commit, generated-PRD fill, baseline commit, claim mode, feature/worktree transition, task and review artifact creation, durable artifact creation, feature commits, close, inspection, and cleanup. Identify which transitions are doc commands and which are deterministic harness setup.
+3. Replace FR-3’s package-test row with a direct root verifier command, or explicitly use `pnpm verify:workflow` for both FR-3 and FR-4. Remove the “or” language.
 
-4. Decide FR-3 in the PRD. Recommended: a root parity verifier comparing only the tagged canonical scenario, preserving the package-only optional worktree/practices sections. Record the current measured baseline—14 versus 8 commands, edit distance 7—and state the expected post-change sequence.
+4. Specify the exact mutation pair, expected failing step, expected retained doc line, and diagnostic. Name the planted cleanup failure as well.
 
-5. If the root verifier route is chosen, add concrete targets and conflict claims for `scripts/verify/verify-workflow.mjs`, `scripts/verify/script-classes.json`, and `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`; add the ADR update to Memory Outputs and Durable Artifacts. Keep `package.json` out of Conflict Surface because it is shared append-only, but retain it in scope.
+5. Make install containment executable: exact packed-tarball destination under the temp root, exact unreachable registry URL/configuration, audit/fund/update-notifier behavior, and a definition of whether the preparatory repository build is outside the “nothing outside temp” claim.
 
-6. Add Memory Inputs for `runner-sentinel-blocks-cli-spawning-tests`, `gate-wire-or-delete`, and `ADR-0004-method-rule-vs-repo-rule`. Specify either that the scratch CLI child receives an environment with `PROVEGATE_RUN_ACTIVE` removed, or route whole-suite verification through the root Turbo task as the sentinel record prescribes.
+6. Sanitize Git configuration beyond `HOME`: disable system config and inherited config-injection variables, then assert the effective remote set at every defined boundary.
 
-7. Make the scratch guarantees executable: mutable HOME/XDG/npm/TMP paths under the scratch root; no inherited Git global configuration capable of adding remotes; `git remote` asserted empty before and after every step; cleanup in `finally`; deletion verified after both passing and planted-failure cases. Define how diagnostics are retained before deletion.
+7. Acknowledge the docs twin’s `--practices` → plain-init convergence as an authorized public recommendation change, or choose a canonical sequence that avoids contradicting the non-goal.
 
-8. Replace the generic reorder mutation with one exact mutation and expected step/line diagnostic. Add separate deny fixtures for an unclassified shell block, an unsupported command transformation, a nested-run sentinel leak, a remote appearing between steps, parity divergence, and cleanup after failure.
-
-9. Either add `packages/provegate/test/helpers/scratch-repo.ts` with a named exported fixture API or state that the new test owns a local helper. Do not imply PRD-007 exported reusable helpers when its helpers remain file-local.
-
-10. Refresh sequencing: PRD-026 is closed and has no active lease; PRD-027’s current lease is disjoint. Add every conditional root-route file to Conflict Surface before the next queue check, especially `verify-workflow.mjs`, the class ledger, and ADR-0004.
+8. Replace the helper-reuse sentence with either an explicitly local fixture or a named shared-helper target, and document coordinated rollback across the verifier registration, bundle, class ledger, ADR row, docs, test, and durable artifacts.
 
 ---
 
@@ -120,20 +203,20 @@ Hard caps checked: no security, contract, runtime-dependency, push-path, or meth
 
 | # | Date | Score | Verdict | Key Changes |
 | --- | --- | ---: | --- | --- |
-| 1 | 2026-07-28 | 4.95 | ITERATE | Initial independent assessment. Measured 14-versus-8 command divergence; traced the printed sequence through lint, runner, merge, and worktree behavior; found the nested-run sentinel failure, missing verifier classification/ADR wiring, non-exported scratch helpers, and incomplete hermetic cleanup/no-remote proof. |
+| 1 | 2026-07-28 | 4.95 | ITERATE | Initial independent assessment. Measured 14-versus-8 command divergence; traced lint, runner, merge, and worktree behavior; found the nested-run sentinel failure, missing verifier classification/ADR wiring, non-exported scratch helpers, and incomplete hermetic cleanup/no-remote proof. |
+| 2 | 2026-07-28 | 6.10 | ITERATE | Confirmed the 14-versus-8/edit-distance-7 baseline and closed FR-4 governance plus sentinel-memory coverage. Found that the revised state model still omits the shipped close chain’s task/review/durable/feature-branch requirements, FR-3’s §11 row violates its decided root boundary, and install/output-tag/external-write claims remain contradictory. |
 
 ---
 
 ## Verdict
 
-**ITERATE — return to Phase 1.** The concept is valuable, and the Turbo boundary insight is correct, but the PRD currently treats a tutorial containing prose transitions, alternatives, and optional follow-ons as one shell program. Its own scoped verification would refuse under the runner sentinel, and its root parity alternative would fail the newly shipped verifier-classification gate. Define the executable scenario and scratch state machine, choose the parity architecture, wire repository governance, and then request a fresh independent score.
+**ITERATE — return to Phase 1.** The rework correctly chooses a tagged canonical scenario, a root parity verifier, complete class-ledger/ADR wiring, and the exact sentinel remedy. It still does not specify a runnable first close under the shipped CLI: the task/review/durable evidence and feature-branch transition are absent, while the only FR-3 verification row contradicts both the chosen root architecture and the explicit prohibition on an out-of-package test read. Close those executable-state and verification contradictions before Phase 2 PASS.
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 1 transcribed
-> verbatim from a fresh independent Codex session, which measured the real quickstart
-> corpus (14 vs 8 commands across the two docs, edit distance 7), found the unpublished-
-> package install contradiction, and surfaced the runner-sentinel record the draft had
-> missed. Band 4-5.9 = Phase 1 rework by the author, taken the same day. Lint EPERM is
-> the documented sandbox artifact; out-of-sandbox green the same day.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 2 transcribed
+> verbatim from a fresh independent Codex session; 4.95 → 6.10. The scorer traced the
+> real close path and demanded the full scratch transition table; the remaining pieces
+> are enumeration and leftover-language sweeps, applied by the author the same day.
+> Lint EPERM is the documented sandbox artifact; out-of-sandbox green the same day.
