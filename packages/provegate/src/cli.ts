@@ -66,6 +66,7 @@ import {
   type FromPhase,
 } from './core/run/index.js';
 import { handoffCard as buildHandoffCard } from './core/run/index.js';
+import { escapeRegExp } from './core/state/markdown.js';
 import { colorTier, paint, verdictSlot, statusLine } from './core/ui/theme.js';
 import { memoryDoctor, memoryFind } from './core/memory/index.js';
 
@@ -810,7 +811,7 @@ function runCheck(args: string[]): number {
       // auxiliary README in the wip directory is not a work item. The prefix
       // and width come from configuration like every other artifact reader.
       const prdName = new RegExp(
-        `^${config.dirs.artifacts.prd.prefix}-\\d{${config.idPattern.width}}-.*\\.md$`,
+        `^${escapeRegExp(config.dirs.artifacts.prd.prefix)}-\\d{${config.idPattern.width}}-.*\\.md$`,
       );
       for (const name of readdirSync(wipDir).sort()) {
         if (!prdName.test(name)) continue;
