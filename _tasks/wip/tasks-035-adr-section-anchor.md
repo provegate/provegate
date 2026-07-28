@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-035-adr-section-anchor.md](../../_prds/wip/prd-035-adr-section-anchor.md)
 > **Readiness**: [readiness-035-adr-section-anchor.md](../../_readiness/wip/readiness-035-adr-section-anchor.md)
-> **Status**: In Progress
+> **Status**: Code Complete
 > **Readiness Score**: 8.20/10 (iteration 2, PASS)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -169,22 +169,22 @@ re-derive them. Each binds to the parent whose work depends on it:
   - [x] 5.8 Re-read PRD §12 DO NOT — confirm none introduced (the `m` flag intact,
         `^## ` intact, no live-store reformat, no packed seed, no turbo-cached
         cross-boundary read).
-- [ ] 6.0 Phase 6 — Final Auditing
-  - [ ] 6.1 Independent adversarial review by a different model or session (never
+- [x] 6.0 Phase 6 — Final Auditing
+  - [x] 6.1 Independent adversarial review by a different model or session (never
         this author): verdict `pass` with `Critical: 0` required. Artifact at
         `_docs/reviews/review-035-adr-section-anchor.md` — include the `Quorum`
         field (`1/1 pass`): the shipped template calls it optional but
         `core/gates/review.ts` refuses an artifact without it (open deferral,
         "Review template contradicts the review gate").
-  - [ ] 6.2 `pnpm verify:workflow` green after any review-driven fix.
-  - [ ] 6.3 Draft `_docs/wip/summary-035-adr-section-anchor.md`.
-- [ ] 7.0 Phase 7 — Learning and close
-  - [ ] 7.1 Memory Outputs check: the declared output
+  - [x] 6.2 `pnpm verify:workflow` green after any review-driven fix.
+  - [x] 6.3 Draft `_docs/wip/summary-035-adr-section-anchor.md`.
+- [x] 7.0 Phase 7 — Learning and close
+  - [x] 7.1 Memory Outputs check: the declared output
         (`_brain/learnings/adr-section-blank-line-reads-empty.md`, edited) is in the
         closing diff; no output weakened vs the PRD as committed on `main`.
-  - [ ] 7.2 `pnpm verify:durable-artifacts` — every Durable Artifacts path present
+  - [x] 7.2 `pnpm verify:durable-artifacts` — every Durable Artifacts path present
         in the merge diff (learning, INDEX hook, review artifact).
-  - [ ] 7.3 `_brain` capture protocol (`_brain/PROTOCOL.md` §7): if implementation
+  - [x] 7.3 `_brain` capture protocol (`_brain/PROTOCOL.md` §7): if implementation
         hit a non-derivable trap, write the learning now; else record
         `Learning: none beyond the declared output` in the summary.
   - [ ] 7.4 `node packages/provegate/dist/cli.js run` — gated Phases 4-7 re-verified
@@ -210,7 +210,7 @@ re-derive them. Each binds to the parent whose work depends on it:
 | lint | `pnpm lint` | monorepo | passed | 4/4 tasks, zero warnings | |
 | test | `pnpm test` | monorepo | passed | 7/7 tasks | |
 | build | `pnpm build` | monorepo | passed | 4/4 tasks | |
-| independent-review | different model/session, `Critical: 0`, Quorum `1/1 pass` | review | pending | | `_docs/reviews/review-035-adr-section-anchor.md` |
+| independent-review | different model/session, `Critical: 0`, Quorum `1/1 pass` | review | passed | 3 rounds, GATE FAIL->FAIL->PASS, Codex session 019fa837… | `_docs/reviews/review-035-adr-section-anchor.md` |
 | durable | `pnpm verify:durable-artifacts` | repo | pending | | learning + INDEX + review artifact in diff |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
