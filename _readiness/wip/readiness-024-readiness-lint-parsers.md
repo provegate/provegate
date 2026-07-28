@@ -1,5 +1,15 @@
 # Readiness Assessment: PRD-024 — Readiness Lint Parsers
 
+> **Iteration 7 (Claude Fable 5, independent) — 7.33/10, ITERATE.** The document is
+> unchanged since iteration 6; this round re-verified every open finding against live
+> source and re-measured the corpus after PRD-021's close. The open [P1] stands — FR-2's
+> turbo strategy still fails the PRD's own floor — and the corpus finding grew: **four of
+> ten wip PRDs are red today, none of them for a §11 reason**, so "no corpus
+> prerequisite" is further from true than when it was written. The §11 substance holds
+> exactly: 70 FR rows, zero malformed, one canonical section per file.
+>
+> <details><summary>Iteration 4 (6.95 ITERATE)</summary>
+>
 > **Iteration 4 (Codex, independent) — 6.95/10, DOWN 0.45.** The round that falsified the
 > working hypothesis. Iteration 3 added **no new material** — every edit closed a finding —
 > and the score still fell. What predicts the score is not whether material is new but
@@ -39,21 +49,22 @@
 > </details>
 > </details>
 > </details>
+> </details>
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-024-readiness-lint-parsers.md`   |
-| Score                  | 7.34/10                                        |
-| Verdict                | ITERATE — three [P1] items. The cache-input fix is blocked by a wired gate, the missing-section proof does not prove what it claims, and the live corpus is red on an unrelated memory-contract drift |
-| Iteration              | 6                                              |
+| Score                  | 7.33/10                                        |
+| Verdict                | ITERATE — two [P1] items, both confirmed against live source: FR-2's turbo strategy fails the `verify:turbo-inputs` gate its own floor requires green, and the wip corpus is red in four of ten files today so FR-2's per-file expectation model cannot be written; plus the duplicate-section chain refusal has no named proof |
+| Iteration              | 7                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
-| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD** |
+| Scored by              | **Claude Fable 5 — independent session, did not write the PRD (author sessions were Claude Opus 5)** |
 | Self-scored            | **no**                                         |
-| Date                   | 2026-07-27                                     |
-| PRD Lint               | passed — `lintPrd` green by direct invocation with the real config, manifest, content **and root**. The CLI wrapper was not used: `findRecord` writes `_state/prds.json` (`cli.ts:483-492`), which the read-only sandbox refused |
+| Date                   | 2026-07-28                                     |
+| PRD Lint               | passed — `gate check PRD-024` exit 0, run live (no sandbox); the full wip corpus was also swept with `gate check` per file, which is the corpus measurement in the iteration-7 row |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -173,13 +184,25 @@ method-content caps each checked explicitly.
 
 ## Missing Pieces (watch items — binding on Phase 3 and Phase 6)
 
-- Scope both §11 readers through one tested Command-cell parser.
-- Define malformed-row error propagation through readiness **and** execution.
-- Replace FR-2 and FR-3's prose rules with closed, testable grammars.
-- Require the real `lintPrd(config, manifest, content, root)` call shape.
-- Wire root corpus paths into Turbo inputs, or provide a guaranteed uncached sweep; declare
-  `turbo-cache-masks-out-of-input-reads` as a Memory Input.
-- Declare the PRD-021 ordering dependency and document FR-1's effect on existing PRDs.
+Rewritten at iteration 7 — earlier lists are superseded where they conflict. (The first
+wording of this line began with the bare word "Updated" and the state builder's
+`getMetaValue` third pattern — `^Updated\s*:?\s*…`, colon optional — captured the rest of
+the sentence as the record's `lastUpdated` value. That is `lint-must-name-the-span-it-judges`,
+this PRD's own declared Memory Output, reproduced live by the state builder while it
+recorded this PRD's score. Deferral filed on the board.)
+
+- Rewrite FR-2's turbo strategy so it passes `verify:turbo-inputs`: `$TURBO_ROOT$/_prds/**`
+  plus `$TURBO_DEFAULT$` on the test task, an entry in
+  `scripts/verify/turbo-inputs-exceptions.json` with a written reason, and both files in
+  Targets and the Conflict Surface — or choose the uncached-command alternative and name
+  its command and manifest wiring.
+- Decide FR-2's expectation model against a red corpus: state the corpus-green
+  prerequisite it currently denies having, or scope the per-file assertion to the §11
+  issue class this PRD introduces.
+- Assign the duplicate-section chain refusal a named proof in the `chain.test.ts` §11 row.
+- Re-anchor §1's measurement table after PRD-021's archive (live hazard count is zero in
+  the wip corpus today); sweep "three existing fixtures" in the DO NOT and the
+  narrowing-history claim in Non-Goals and References.
 
 ---
 
@@ -187,6 +210,7 @@ method-content caps each checked explicitly.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 7   | 2026-07-28 | 7.33  | ITERATE | **Confirmation round on an unchanged document — every open finding re-verified against live source rather than carried on faith, and the corpus re-measured after PRD-021's close.** Dimension scores (infra weights): Clarity 8.0, Completeness 6.5, Tech Depth 7.0, Multi-Tenancy 9.0, Scope & Testability 7.5, Migration & Rollback 7.0 → 7.325. **(AE, CONFIRMED OPEN)** `verify-turbo-inputs.mjs:60-68` refuses any cached task carrying `inputs` unless named in `turbo-inputs-exceptions.json` — measured `{}` today — and that check runs inside the `verify:workflow` bundle FR-2's own floor requires green. The `$TURBO_ROOT$`/`$TURBO_DEFAULT$` forms and the exceptions entry are still absent from the text, and the exceptions file from every target list. The sanctioned path is the one the verifier's own header states — an exceptions entry with a written reason — and the FR should take it explicitly. **(corpus, WORSE)** `gate check` run across all ten wip PRDs: **four are red today** — PRD-026 (three missing memory dispositions), PRD-030 (one), PRD-031 (two), PRD-034 (no FR section) — while the §11 substance holds exactly: 70 FR rows, zero malformed, exactly one canonical verification section per file, re-measured by cell-splitting every row. So FR-1's relaxation claim survives and FR-2's expectation model does not: a per-file-outcome corpus test cannot be written green today, allowlisting is forbidden by the FR itself, and none of the four reds is anything FR-1 changes. The FR must either state the corpus-green prerequisite it currently denies having, or scope its per-file assertion to the §11 issue class this PRD introduces — which its own "report, never edit" paragraph almost says. **(AD residual, NARROWED)** `chain.test.ts:173-183`'s fixture contains a `## 11.` heading with an empty body, so it binds one-empty-section, not zero-sections, exactly as iteration 6 read it; the §11 chain row now claims the zero-section case, but the **duplicate-section chain refusal** — FR-1's own "two or more sections is a parser issue and the chain refuses" — is assigned to no chain test anywhere in §11; only the lint test covers duplicates. **(stale measurements, NEW)** PRD-021 closed 2026-07-27 and its archive removed §1's only allowlisted-command instance from the wip corpus: the live hazard count is now **zero** (PRD-027's `sections/content.ts` token is gone too; only PRD-026's inert `pack-manifest.json` remains), so "one live instance … is the whole case for this work" is a dated claim that should re-anchor on the archived measurement or on the class. Line anchors drifted the same way: the missing-root refusal now sits at `prd-ready.ts:181-185`, the whole-row scan at `:133-148` — PRD-021's fifth parameter moved them. P2s carried: the DO NOT still says "three existing fixtures" where FR-1 counts four; Non-Goals and References still say every blocking finding came from the §9 half where the introduction was corrected to "closed after round two" — `a-rule-corrected-survives-where-it-is-restated`, still live in the document that cites it. **Confirmed exact this round:** `chain.ts:491` and `:787-790`, `gates/index.ts:16`, `safety.test.ts:62/89/94/112`, the two-column fixtures in `prd-ready.test.ts`, `chain.test.ts:48` and `single-package.test.ts:100-119`, `markdown.ts:90` first-match and `:74` case-insensitive heading pattern, and the four-fixture two-cell census. |
 | 6   | 2026-07-27 | 7.34  | ITERATE | **Down 0.46 from the wave's high-water mark.** Two of the three [P1]s are the iteration-5 fixes failing at a level below where they were written. **(AE, OPEN)** the turbo remediation is wrong three ways: task `inputs` are **package-relative**, so a root corpus needs `$TURBO_ROOT$/_prds/**`; specifying `inputs` **replaces** the package defaults, so it needs `$TURBO_DEFAULT$`; and — the blocker — `scripts/verify/verify-turbo-inputs.mjs:61-68` **rejects any cached task carrying `inputs`** unless named in `turbo-inputs-exceptions.json`, which is `{}` today, and that check runs inside the `verify:workflow` bundle this PRD's own floor requires green. As specified, FR-2 fails its own verification, and the exceptions file is in no target list. **(AD, PARTIALLY CLOSED)** the zero-versus-duplicate split is coherent in prose and unproven in evidence: the cited `chain.test.ts:173-183` fixture **contains** a `## 11.` heading, so it binds *one empty section*, not zero sections, and the duplicate case is assigned to the lint test while the chain test covers only malformed rows. An implementation could get either case backwards and still satisfy the named proofs. **(new)** the live wip corpus is **red today** — PRD-026 fails readiness because it targets `_prds/README.md` while omitting a disposition for `a-rule-corrected-survives-where-it-is-restated`, an active record whose watch covers `_prds/**` — so this PRD's "no corpus prerequisite" is false as of this round and must be re-measured or recorded. P2s: the broader glob's cross-workspace invalidation cost is unstated — `turbo.json:15-17` is the generic `test` task, so every workspace pays; the DO NOT list still says "three existing fixtures" where FR-1 now correctly says four; and **the narrowing-history correction reached the introduction but not Non-Goals, References or the changelog**, which is `a-rule-corrected-survives-where-it-is-restated` demonstrated by the document that record was written about. |
 | 5   | 2026-07-27 | 7.80  | ITERATE | **First round against the narrowed PRD; not comparable to 1–4, which scored the combined document.** 7.80 is the highest score reached anywhere in this wave and 0.20 from PASS, which is the clearest evidence yet that the §9 half was the drag. Two [P1]s. **(AD)** the missing-section outcome contradicts itself: FR-1 makes zero verification sections a parser issue and `buildGateChain` refuses on any issue, while the acceptance criteria simultaneously require a missing section to keep today's required-empty Phase-5 path (`chain.ts:787-790`, bound by `chain.test.ts:173-183`). Those are different refusal mechanisms; one must give. **(AE)** the config-driven corpus and the static cache input can drift: FR-2 resolves the wip directory from config so a rename is followed, but turbo `inputs` is a static glob list (`schema.json:585-590`), so after a rename the test reads the new directory while caching still watches the old one. Name the exact glob and the rename invariant, or choose a broader input. P2s: the corpus count is stale at six — PRD-028 appeared between writing and scoring, making it seven — though all seven are green; the narrowing history overstates, since iterations 1 and 2 **did** raise §11 [P1]s and the accurate claim is that they were resolved after round two, not that they never existed; and the two-column fixture census names three files where `single-package.test.ts:100-119` is a fourth, though the aggregate count of fifteen rows is right. **Measurement verdicts: the three-token claim CONFIRMED exactly; the corpus claim WRONG on the count and confirmed on the substance — 73 rows, zero malformed, one canonical section each, no prerequisite.** |
 | 4   | 2026-07-27 | 6.95  | ITERATE | **Fourth independent round, and the one that falsified the working hypothesis.** Iteration 3 introduced no new requirements — every edit closed a reported finding — and the score still fell 0.45. The predictor is not novelty but **measurement of consequences**. Seven [P1]s. **(K, fourth level)** rationale was moved into an HTML comment and FR-3's grammar permits comments, so `- (none)` followed by `<!-- Who owns the authorization decision? -->` hides a question — and the PRD's own §9 now does exactly that. The fix created the hiding place it moved into. **(X)** requiring "exactly one section" counts matches of `.*Open Questions.*`, which is case-insensitive and substring-based (`markdown.ts:74`), so a document whose only heading is `## Resolved Open Questions` has exactly one match and passes — the precise trap the PRD warns about elsewhere. **(Y)** the cardinality fix covers §9 only; §11 and the FR block have the same first-match-only behavior (`safety.ts:45`, `prd-ready.ts:28,127`), so a malformed row in a second `## 11.` section stays invisible, contradicting the verification claim that the chain refuses when *any* row is malformed. **(Z)** the two-vs-three cell contradiction survives in the **Gherkin criterion**, which still says three where FR-1 and §11 say two; extra-cell behavior beyond four is also undefined. **(AA)** the exact exemption rejects `- (none — resolved)`, which `prd-ready.test.ts:23` uses and `:38-40` expects to pass — so "no existing readiness fixture changed meaning" is false, and that file is in neither Targets, Scope, nor Conflict Surface, as is `chain.test.ts`, which the PRD names as required proof. **(AB)** PRD-021 is not the only corpus blocker: PRD-023, PRD-025 and PRD-026 all carry `(none)` plus trailing prose, and PRD-027 uses a checkbox form — so remediating PRD-021 alone cannot green the corpus while allowlisting is forbidden. **(AC)** FR-4 still leaves the Turbo strategy as an either/or with materially different blast radii and names no command or manifest for the second. P2s: the deferral grammar does not define case, whitespace, or link syntax; the round count still says six in the introduction and four in the changelog. Confirmed: the two-cell threshold **is** the correct compatibility floor, measured across 15 literal fixture rows in five files — ten 2-cell, four 3-cell, one 4-cell; the export-preserving split is right; and the dynamic corpus definition genuinely removed the stale-count defect. |
@@ -198,10 +222,17 @@ method-content caps each checked explicitly.
 
 ## Verdict
 
-**ITERATE — 6.75/10, iteration 1, scored independently by Codex.**
+**ITERATE — 7.33/10, iteration 7, scored independently by Claude Fable 5.**
 
-The carry-over is faithful; the specification is not yet falsifiable. Three of the four FRs
-describe a rule in prose where the implementer needs a grammar, and two of the proposed
-proofs cannot fail for their stated reason. None of this is a scope problem — the split put
-the right three defects in one small document — so a remediation round here has a much
-narrower surface than any round PRD-023 ever had.
+The specification core is done: the row grammar, the two-reader analysis, the
+export-preserving split and the chain refusal all verified exact against source, and the
+§11 corpus substance (70 rows, zero malformed, one section each) holds under fresh
+measurement. What blocks PASS is operational, not conceptual — FR-2's turbo strategy
+fails the repository's own wired gate as specified, and its corpus test cannot be written
+against a corpus that is red in four files for reasons this PRD does not touch. Both have
+small, mechanical remediations (an exceptions entry with a reason; an expectation model
+scoped to the §11 issue class), plus one missing named proof and a stale-measurement
+sweep. One focused remediation round, re-scored independently, should clear this.
+
+*(Iteration 1 verdict, for history: ITERATE 6.75 — "the carry-over is faithful; the
+specification is not yet falsifiable." That diagnosis no longer describes the document.)*
