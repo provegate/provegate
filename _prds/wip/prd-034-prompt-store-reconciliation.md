@@ -63,7 +63,7 @@ statements the model exists to fix.
 
 | Metric                                       | Current | Target | Measurement                                                  |
 | ---------------------------------------------- | ------- | ------ | -------------------------------------------------------------- |
-| Store divergences detected                     | 0       | all    | a mutated-store fixture, per the model's transition set        |
+| Planned-path divergences detected              | 0       | all planned | mutated-store fixtures over the five planned-path classes; unplanned files are recorded limits, pinned as no-finding fixtures |
 | Registered checks with no executing surface    | n/a     | 0      | `gate check --wiring` green with the new member present        |
 | FRs specified before the state model is approved | 0 (held) | 0    | historical gate — held through both derivations; Revision 2 preceded the re-derivation |
 
@@ -104,8 +104,9 @@ upgrade reports it and I rebase it by hand, because no exception authorizes a wr
 **Re-derived 2026-07-28 (second pass) from the state model at Revision 2** (owner-approved
 the same day: two unbannered generated paths; the detection/attribution split) **and the
 iteration-1 readiness score's eleven missing pieces.** Detection compares **bytes, never
-versions**; the banner is attribution only; content discovery finds only bannered files
-inside declared roots.
+versions**; the banner is attribution only; and after the owner's iteration-5
+narrowing there is no content discovery at all — the check reads exactly the planned
+set.
 
 1. **FR-1**: The reconciliation primitive. `reconcilePrompts(config, root)` in
    `core/run/prompts.ts` recomputes the generated set — `generatedPaths()` from the
@@ -184,9 +185,10 @@ inside declared roots.
    find). The alternatives — a report spelling that renames a POSIX file containing a
    literal backslash, or an exception contract that admits backslashes — misreport
    the disk or reopen the ambiguity, so the config surface tightens instead: the
-   changeset carries the migration line (rename the directory, update the value; the
-   prompts feature shipped in PRD-029 this same week, no shipped default or fixture
-   uses a backslash, so the practical blast radius is empty) and
+   changeset carries the migration procedure (§7; no known accepted repository,
+   shipped default or fixture configuration uses an internal backslash, while
+   external adopter usage is unknowable — the procedure is stated rather than the
+   need denied) and
    `strictness-added-during-extraction-is-a-behavior-change` moves to `applied` for
    exactly this clause.
    A valid, unexpired entry suppresses the `modified` finding for its exact path and
@@ -342,8 +344,8 @@ inside declared roots.
   **When** the check runs, **Then** it reports `unattributable` through the planned
   set — and the same file, made unplanned, produces no finding (the limit-6 pin:
   no content discovery exists to see it).
-- **Given** a store renamed to a directory outside the walked domain with the config
-  updated, **When** the check runs, **Then** the new store reconciles, the abandoned
+- **Given** a store renamed with the config updated, **When** the check runs,
+  **Then** the new store reconciles, the abandoned
   tree produces no finding (the declared limit-5 restatement, asserted so a future
   wider search must flip it consciously) — **and the existing Claude/Cursor adapters
   report as diverged**, because their content embeds the old store path: T5's
@@ -362,9 +364,10 @@ inside declared roots.
   malformed date, or a non-normalized path, **When** the config loads or the check
   runs, **Then** the failure names the entry and the exact rule it broke.
 - **Given** `prompts.enabled` false, **When** the check runs, **Then** it exits 0 with
-  a note naming what was not exercised — reconciliation and the bannered-orphan search
-  — never a bare silence that implies nothing is discoverable (T6's capability
-  survives the config's removal).
+  a note naming what was not exercised — the planned-set reconciliation — and
+  carrying the T6 consequences; never a bare silence. (Any generated files left on
+  disk produce no finding in this configuration: the recorded limit, not an
+  oversight.)
 - **Given** `prompts.enabled` true and the store directory absent, **When** the check
   runs, **Then** it exits non-zero naming the directory.
 - **Given** the packed `verify-prompts.mjs` in an adopter repository, **When** it runs,
@@ -421,9 +424,14 @@ independently:
   name and, on POSIX where the old spelling is a literal filename, `git mv` the store
   directory to it (on Windows the same value already named the forward-slash-equivalent
   path — only the config spelling changes); (2) edit `prompts.dir` to the new value;
-  (3) delete the two generated adapter files and re-run `gate init --prompts`, because
-  their CONTENT embeds the old directory spelling and the additive installer will not
-  rewrite them in place. Blast-radius evidence is scoped to what is measurable: this
+  (3) delete every generated file whose CONTENT embeds `prompts.dir` and re-run
+  `gate init --prompts` — that set comes from `renderAdapters()`, not from memory:
+  every `.claude/commands/prd-<phase>.md` (one per phase; each embeds the store path
+  in its body), `.cursor/rules/prd-workflow.mdc` (the table), and the codex snippet
+  `<dir>/AGENTS.md.provegate.snippet` (the table again, and the file itself moves
+  with the directory) — the additive installer rewrites none of them in place. A
+  §11-mapped fixture proves the changeset carries this procedure verbatim and that
+  the migrated generated set reconciles clean afterwards. Blast-radius evidence is scoped to what is measurable: this
   repository's config and every shipped default and fixture are backslash-free; an
   adopter population cannot be enumerated, so the changeset states the procedure
   rather than asserting nobody needs it.
@@ -520,8 +528,9 @@ rationale.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
   `packages/provegate/src/core/run/**`, and FR-2's `prompts.dir` backslash rejection IS
   this record's subject: an existing key gets stricter, named as a behavior change with
-  its changeset migration line and an empty measured blast radius, never slipped in as
-  a bugfix. Also binding on whichever verb the upgrade path uses.
+  its changeset migration procedure and the measurable statement (no known accepted
+  repository/default/fixture configuration uses an internal backslash; external
+  adopter usage is unknowable), never slipped in as a bugfix. Also binding on whichever verb the upgrade path uses.
 - reviewed: `two-parsers-wrong-together` — the packed twin is a second implementation and must
   call the same primitive rather than reimplement the comparison.
 - reviewed: `turbo-cache-masks-out-of-input-reads` — a check reading paths outside the package
@@ -623,7 +632,7 @@ Phase 5 unable to report which requirement failed.
 | FR-4 | `pnpm verify:prompts -- --assert-ci-order`                                        | repo  | the script's second mode reads `ci.yml` and exits non-zero unless the provegate build step precedes the aggregate — the order is asserted by an allowlisted command, not by prose |
 | FR-5 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t packed`           | pkg   | packed twin executes as a module and consumes the exported primitive + evaluator — never a second implementation |
 | FR-5 | `pnpm verify:pack-drift`                                                          | repo  | one new pair (`verify-prompts.mjs`) + the changed workflow pair reconciled, notes updated  |
-| FR-6 | `pnpm --filter provegate test test/prompts-integrity.test.ts`                     | pkg   | the whole fixture matrix, incl. the migration scenario and both Revision-2 limit cases     |
+| FR-6 | `pnpm --filter provegate test test/prompts-integrity.test.ts`                     | pkg   | the whole fixture matrix: the migration scenarios (adopter three-step; backslash-dir procedure with the full renderAdapters()-derived delete set and a clean post-migration reconcile), the three limit pins, and both Revision-2 cases |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -658,6 +667,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (non-scorer), seventh pass | **Iteration-6 sweep pieces applied (7.6 — the narrowing accepted; findings moved from design to sweep completeness).** Five stale walk-era sentences replaced in live sections (§2 metric now planned-path-scoped with limits named; §4's derivation header; §6's walked-domain, bannered-orphan-search and disabled-tail wordings; §11's FR-3 note alignment). The backslash migration's delete set is now derived from `renderAdapters()` rather than remembered wrongly as "two adapters" — every claude phase file, the cursor rule and the codex snippet embed the dir — with a §11-mapped fixture proving the changeset text and a clean post-migration reconcile. Every empty-blast-radius phrase replaced by the measurable form: no known accepted config uses an internal backslash; external adopter usage is unknowable; the procedure is stated rather than the need denied. |
 | 2026-07-28 | owner decision + orchestrating session, sixth pass | **Narrowed radically after iteration 5 (7.5; trajectory flat at 7.4/7.6/7.5 with every round in the walk layer — the owner chose option (a) per `scope-out-the-layer-the-rounds-keep-hitting` and the PRD-025 precedent).** Orphan/content discovery is CUT: the primitive reads exactly the planned paths (one readFileSync per `generatedPaths()` member — no listing, no walk, no filesystem contract), the `orphaned` class is gone, and the model's limits 4-6 are pinned as fixtures asserting NO finding (T4 removed-adapter file, T5 renamed-away tree, unplanned stripped/bannered files). T5's adapter-staleness signal survives through the planned set. The two small iteration-5 pieces landed with it: the backslash-dir migration gains its executable three-step order in §7 and the changeset (git mv on POSIX, config edit, delete + re-init the two adapters whose content embeds the old spelling; blast-radius claims scoped to measurable configs), and User Story 2 narrows to the actual guarantee (never overwritten, reported on upgrade, rebased by hand). A future discovery item inherits the walk-contract questions with iterations 2-5 as design input (§5). |
 | 2026-07-28 | orchestrating session (non-scorer), fifth pass | **Iteration-4 seams closed (7.6 ITERATE; three pieces confirmed genuinely closed).** The walk domain now includes the two fixed adapter roots UNCONDITIONALLY — deriving them from live membership would have made T4's removed-adapter orphan undiscoverable exactly when it matters; the store side stays planned-dirname-derived so the `.` bound holds. And the backslash seam is closed at the config surface: `prompts.dir` refuses backslashes at load — this PRD's one strictness addition to an existing key, stated as a behavior change with its changeset migration line and an empty measured blast radius (the feature shipped this week), with `strictness-added-during-extraction-is-a-behavior-change` moved to `applied`; the canonical-spelling claim is now conditioned on it, and a backslash-dir fixture proves the refusal at the seam an entry fixture cannot reach. |
 | 2026-07-28 | orchestrating session (non-scorer), fourth pass | **Iteration-3 findings applied (7.4 ITERATE), with a confession the scorer forced:** two iteration-2 closures this changelog previously claimed were never applied — the remediation script died on a mismatch and the retry dropped the Memory Output T7 rewrite and the pack-manifest Scope/Surface sweep while the row still said "applied" (`a-rule-corrected-survives-where-it-is-restated`, operating on the remediation itself; every chunk in this pass wrote and verified per-edit). Now actually landed: the Memory Output and Durable Artifact reworded to banner-version attribution; `pack-manifest.json` in §8 and the Conflict Surface. New decisions closing iteration 3's real find: **findings report one canonical POSIX spelling** (primitive normalizes the joined path; report-format only, nothing on disk moves) so the rejection-only exception contract is provably compatible with every legal `prompts.dir` incl. `.`; the orphan **walk domain is exact** — the dirname set of `generatedPaths()` plus each directory's immediate entries, nothing else — and FR-1's orphan claim is scoped to it; T6's consequences bound to the FR-3 note as a verbatim-tested production surface, restated in §6 with the T5 adapter-staleness criterion. |
