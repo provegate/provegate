@@ -110,8 +110,14 @@ inside declared roots.
    `core/run/prompts.ts` recomputes the generated set — `generatedPaths()` from the
    **installed** package and the **current** config, the same pure function the installer
    uses — and compares bytes on disk. No stored state is read
-   (`recompute-beats-recorded-state`). The classification is **total** over every path it
-   examines:
+   (`recompute-beats-recorded-state`). **Findings name paths in one canonical
+   spelling** (iteration 3's contradiction, resolved at the source): the primitive
+   normalizes each joined `dir + '/' + rel` with POSIX rules — collapse repeated
+   separators, drop a leading `./` — so every legal `prompts.dir` spelling (`.`
+   included, which raw interpolation would render as `./prompts/…`) converges to one
+   clean repo-relative form. This defines only how the CHECK reports; no file on disk
+   moves, the installer's writes are untouched, and no adopter migrates anything. The
+   classification is **total** over every path it examines:
    - every **planned** path (a member of `generatedPaths()`) gets exactly one of:
      `missing` (absent on disk); `current` (bytes equal the fresh render); `stale`
      (bytes differ, banner parseable, banner version ≠ installed — T2's undelivered
@@ -123,19 +129,24 @@ inside declared roots.
      Per Revision 2: detection still works for the unattributable arm — the fresh
      render is the expected content (`PLACEHOLDERS.md`'s is its packaged source,
      verbatim) — only the stale-versus-modified split is lost;
-   - every **unplanned** file carrying the generated banner inside the scan roots —
-     `config.prompts.dir`, `.claude/commands/`, `.cursor/rules/` — is `orphaned`
-     (T4's removed adapter; T5's abandoned tree only when it sits inside those roots).
+   - every **unplanned** file carrying the generated banner inside the **walked
+     domain** — the planned-dirname set defined under the declared limits below,
+     spanning the store directories, `.claude/commands/` and `.cursor/rules/` — is
+     `orphaned` (T4's removed adapter; T5's abandoned tree only where it overlaps
+     that domain).
    **Declared limits, restated from the model rather than claimed away:** a tree
    renamed **outside** the scan roots is not discovered — limit 5's honest form is "no
    lookup, only a search", the search must be told where to look, and this check is
-   deliberately bounded to the roots above — and inside those roots the walk's own
-   contract is explicit: directory symlinks are not followed, every visited path must
-   stay inside the repository's canonical containment (realpath-compared against the
-   root), an unreadable entry is a named failure rather than a skip, and the walk
-   remains bounded even when `prompts.dir` is `.` because the two adapter roots are
-   fixed and the store root is walked only one level deep past its planned structure
-   (a repository-wide crawl is exactly what this bound refuses); and unbannered or
+   deliberately bounded — and the bound is an exact traversal domain, not a phrase:
+   **the walk visits precisely the directories that contain at least one planned
+   path** (the dirname set of `generatedPaths()`'s members, which spans the store's
+   subdirectories and the two adapter roots by construction) **and lists each one's
+   immediate entries; it descends nowhere else.** Orphan discovery covers exactly that
+   domain, and the bound survives `prompts.dir: "."` because the dirname set under `.`
+   is still only the planned directories, never the repository. Within the domain:
+   directory symlinks are not followed, every visited path must stay inside the
+   repository's canonical containment (realpath-compared against the root), and an
+   unreadable entry is a named failure rather than a skip; and unbannered or
    stripped files that are **unplanned** are invisible to content discovery (limit 6,
    Revision 2). The check therefore claims neither rename-discovery nor absence-scoped
    reporting. The primitive returns typed findings and writes **nothing** (T7; the T3
@@ -154,8 +165,11 @@ inside declared roots.
      separators) and a leading `./` are refused — rules this PRD defines for this
      field, enumerated in its own validator rather than attributed to the existing
      watch-glob rule; the match against findings is byte-exact and case-sensitive
-     (on a case-insensitive filesystem two spellings of one file are still two
-     strings — the entry must match the spelling `generatedPaths()` produces);
+     against the **canonical report spelling FR-1 defines** — which by construction
+     contains no backslash, no leading `./` and no empty segment, so the rejection
+     rules and the matchable set are provably compatible for every legal
+     `prompts.dir` (on a case-insensitive filesystem two spellings are still two
+     strings; the entry matches the report's spelling, nothing else);
      duplicates are compared byte-wise after no transformation and refused at load;
    - `reason` and `owner` must be non-empty after trimming; unknown fields are refused;
    - `expires` is a `YYYY-MM-DD` calendar date compared in UTC; the entry is valid
@@ -185,10 +199,13 @@ inside declared roots.
    section is the upgrade view: installed version vs banner version per file, and the
    model's T2 remedy printed verbatim — the adopter deletes the printed reinstall unit
    and re-runs `gate init --prompts`; the command performs neither step (constraint 2).
-   Fail-closed rules: `prompts.enabled` false → exit 0 with a note that names what was
-   **not** exercised — "prompts disabled; reconciliation and the bannered-orphan search
-   not run" — because T6's content-search capability still exists and a silent pass
-   must not imply nothing is discoverable; enabled with the store directory absent →
+   Fail-closed rules: `prompts.enabled` false → exit 0 with a note whose text is a
+   **named production surface, tested verbatim** (iteration 3): it names what was not
+   exercised — reconciliation and the bannered-orphan search — and carries T6's two
+   adopter consequences, one sentence each: clear `templates.prd` in the same change
+   that removes the block, and the generated files remain on disk, readable by
+   agents, until a human deletes them. T6's content-search capability still exists
+   and a silent pass must not imply nothing is discoverable; enabled with the store directory absent →
    non-zero naming the directory (`false-green-on-missing-file`; T6: absence under an
    enabled config is a finding, not not-configured).
    - **Targets:** `packages/provegate/src/cli.ts`
@@ -245,10 +262,9 @@ inside declared roots.
    assertion), **and the existing Claude/Cursor adapters report as diverged because
    their content embeds the old store path** — T5's adapter-staleness consequence,
    detectable without any search; a T6 fixture with the config block removed and
-   bannered files left, asserting the disabled note names the unexercised search and
-   the adopter guidance repeats T6's two consequences (clear `templates.prd` in the
-   same change; the generated files remain on disk, readable by agents, until a human
-   deletes them);
+   bannered files left, asserting the disabled note's **exact production text** — the
+   unexercised-search naming and both T6 consequences — against the CLI's real output,
+   never against fixture-local prose;
    exceptions — valid; expiry boundary (an entry expiring **today** passes, yesterday
    fails); duplicate path refused at load; malformed date refused; non-normalized path
    refused; stale entry fails the run;
@@ -300,10 +316,15 @@ inside declared roots.
   **When** the check runs, **Then** it reports `unattributable` through the planned
   set — and the same file, made unplanned, is absent from the orphan report (the
   Revision 2 limit, asserted as behaviour).
-- **Given** a store renamed to a directory outside the scan roots with the config
-  updated, **When** the check runs, **Then** the new store reconciles and the
-  abandoned tree produces no finding — the declared limit-5 restatement, asserted so
-  a future wider search must flip it consciously.
+- **Given** a store renamed to a directory outside the walked domain with the config
+  updated, **When** the check runs, **Then** the new store reconciles, the abandoned
+  tree produces no finding (the declared limit-5 restatement, asserted so a future
+  wider search must flip it consciously) — **and the existing Claude/Cursor adapters
+  report as diverged**, because their content embeds the old store path: T5's
+  adapter-staleness consequence, visible without any search.
+- **Given** `prompts.enabled` false with bannered files left on disk, **When** the
+  check runs, **Then** its note carries the exact T6 text — the unexercised search and
+  both adopter consequences — asserted verbatim against the CLI output.
 - **Given** a valid unexpired `prompts.exceptions[]` entry for a `modified` path,
   **When** the check runs, **Then** that path reports `excepted (expires <date>)` and
   does not fail the run — and a write is never performed on its behalf.
@@ -409,7 +430,9 @@ independently:
 - [ ] `scripts/verify/verify-prompts.mjs` + `package.json` + `scripts/verify/verify-workflow.mjs`
       + `.github/workflows/ci.yml` — layer-one wiring (FR-4)
 - [ ] `packages/provegate/practices/verify/verify-prompts.mjs` + packed `verify-workflow.mjs`
-      + `core/run/init.ts` PACK_MAP + `NEXT_STEPS.md` + the drift ledger — layer-two wiring (FR-5)
+      + `core/run/init.ts` PACK_MAP + `NEXT_STEPS.md` + the drift ledger +
+      `packages/provegate/test/pack-manifest.json` (the exact-file manifest gains the new
+      packed path or the pack test fails deliberately) — layer-two wiring (FR-5)
 - [ ] `packages/provegate/test/prompts-integrity.test.ts` — the fixture matrix (FR-6)
 
 ---
@@ -485,11 +508,14 @@ rationale.
 
 ## Memory Outputs
 
-- learning: `_brain/learnings/recompute-beats-recorded-state.md` — when an artifact is a pure
-  function of known inputs, a reconciliation check should recompute it rather than compare
-  against a stored hash; the stored hash is then free to do the one job recomputation cannot,
-  which is telling a package-caused difference from a human-caused one. Relocated from PRD-030
-  when that item narrowed to the state model: the insight belongs to the check that proves it.
+- learning: `_brain/learnings/recompute-beats-recorded-state.md` — when an artifact is a
+  pure function of known inputs, a reconciliation check recomputes it rather than trusting
+  recorded state. This design keeps no stored hash and no receipt (the model's T7); the
+  only recorded provenance is the banner's **version**, and that is what does the one job
+  recomputation cannot — splitting a package-caused difference (`stale`) from a
+  same-version one (`modified`). Relocated from PRD-030 when that item narrowed to the
+  state model; reworded at iterations 2–3, which caught the original stored-hash phrasing
+  contradicting the no-receipt decision the FRs implement.
 
 ---
 
@@ -515,6 +541,7 @@ execution-phase claims overlap.
 - `packages/provegate/practices/verify/verify-prompts.mjs`
 - `packages/provegate/practices/verify/verify-workflow.mjs`
 - `packages/provegate/practices/NEXT_STEPS.md`
+- `packages/provegate/test/pack-manifest.json`
 - `packages/provegate/test/prompts-integrity.test.ts`
 - `scripts/verify/verify-prompts.mjs`
 - `scripts/verify/verify-workflow.mjs`
@@ -533,7 +560,7 @@ PRD-026's future surface.
 
 ## Durable Artifacts
 
-- `_brain/learnings/recompute-beats-recorded-state.md` — recompute rather than trust a stored hash; let the hash do the attribution job instead
+- `_brain/learnings/recompute-beats-recorded-state.md` — recompute rather than trust recorded state; the banner version (the only stored provenance — no hash, no receipt) does the attribution job recomputation cannot
 - `_brain/INDEX.md` — one pointer line for the record above, per the memory protocol
 - `_docs/reviews/review-034-prompt-store-reconciliation.md` — the independent Phase 6 artifact
 
@@ -591,6 +618,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (non-scorer), fourth pass | **Iteration-3 findings applied (7.4 ITERATE), with a confession the scorer forced:** two iteration-2 closures this changelog previously claimed were never applied — the remediation script died on a mismatch and the retry dropped the Memory Output T7 rewrite and the pack-manifest Scope/Surface sweep while the row still said "applied" (`a-rule-corrected-survives-where-it-is-restated`, operating on the remediation itself; every chunk in this pass wrote and verified per-edit). Now actually landed: the Memory Output and Durable Artifact reworded to banner-version attribution; `pack-manifest.json` in §8 and the Conflict Surface. New decisions closing iteration 3's real find: **findings report one canonical POSIX spelling** (primitive normalizes the joined path; report-format only, nothing on disk moves) so the rejection-only exception contract is provably compatible with every legal `prompts.dir` incl. `.`; the orphan **walk domain is exact** — the dirname set of `generatedPaths()` plus each directory's immediate entries, nothing else — and FR-1's orphan claim is scoped to it; T6's consequences bound to the FR-3 note as a verbatim-tested production surface, restated in §6 with the T5 adapter-staleness criterion. |
 | 2026-07-28 | orchestrating session (non-scorer), third pass | **Iteration-2 findings applied (7.3 ITERATE — six precision pieces, five prior closures confirmed).** T5 fixture now asserts the adapter-staleness consequence (embedded old store path reports diverged) and T6 guidance repeats the model's two consequences. The orphan walk gains its bounded contract (no symlink follow, canonical containment, unreadable-entry failure, `.`-safe bound). The exception path contract becomes rejection-only (backslash refuses; dot/empty segments enumerated in this PRD's own validator; byte-exact case-sensitive match against the spelling `generatedPaths()` produces). `pack-manifest.json` joins FR-5 everywhere it must. The migration instruction becomes three verbatim steps incl. `gate init --practices` as the file-creating action, proven by the fixture and the release-note assertion. Rollback: the whole `prompts.exceptions` key removed before downgrade, the fresh-adopter script entry named, atomicity restated over the sequence not a commit count, the CI-order assertion scoped to the hygiene job's own step list. The Memory Output reworded from stored-hash to banner-version attribution — iteration 2 caught the phrasing contradicting T7. |
 | 2026-07-28 | orchestrating session, on owner direction | **§4 re-derived (second pass) against state-model Revision 2 and the iteration-1 score's eleven missing pieces.** Classification made total (five arms; `unattributable` absorbs the two deliberately unbannered paths and stripped banners — detection by bytes survives, only attribution is lost, per Revision 2). T5/T6 claims replaced by asserted limits (rename fixture asserts NON-discovery; the disabled note names the unexercised search). FR-2 gains the full semantic contract (UTC calendar expiry through the named day, normalization, duplicates, non-empty fields) and its real targets (`types.ts`, `validate.ts`). FR-3's output contract decided: findings-only lines + one summary. FR-4 adds the CI build-before-aggregate step with a mechanical order check. FR-5 adds the shared evaluator (interpretation cannot drift), corrects the ledger claim to one-new-pair-plus-one-changed, and carries the changeset with the existing-adopter migration instruction — §7 gains the migration and rollback/ordering sections the infra class demands. Memory wording fixed (planned domain vs orphan search; calendar expiry as PRD-owned decision). Intro's "no FRs yet" block retired with the history stated. |
 | 2026-07-28 | orchestrating session, on owner direction | **§4 derived in one pass from the owner-approved state model** (acceptance PRD-030 items 4.1 T1–T7 + 4.3, recorded this morning) and its two derivation notes (byte-based detection; banner-stripped files share the codex-snippet hole). Six FRs: the recomputing primitive with a seven-class report, the `prompts.exceptions[]` config contract (T3's handed question answered: representation yes, in the adopter's config, suppression-only, expiring), `gate check --prompts` with the T2 upgrade view, and wiring in both layers with the pack twin calling the same primitive. §6 and §11 written with the FRs as the parent items required; §8 and the Conflict Surface fixed to the real paths (`schemas/` out, config pair + `init.ts` + both workflow bundles + ledger in); `gate-run-resume-after-archive` disposition added for the new `core/run/**` watch overlap. |
