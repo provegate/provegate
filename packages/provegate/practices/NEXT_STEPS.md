@@ -22,24 +22,30 @@ Then edit `commitlint.config.mjs`: replace the example SCOPES with your own.
 
 ## 3. Verify library — package.json scripts
 
-Add to your root package.json `scripts` (then SHRINK
-`scripts/verify/gates-wired-exceptions.json` — remove each entry as you wire it; the
-meta-gate enforces that the list only shrinks):
+Add to your root package.json `scripts` (wiring exceptions live in
+`gates.manifest.json` under `wiringExceptions`, each with a justification; the audit
+enforces that the set only shrinks):
 
 ```json
 "verify:brain": "node scripts/verify/verify-brain.mjs",
-"verify:review-artifact": "node scripts/verify/verify-review-artifact.mjs",
-"verify:durable-artifacts": "node scripts/verify/verify-durable-artifacts.mjs",
 "verify:deferred": "node scripts/verify/verify-deferred.mjs",
 "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
-"verify:gates-wired": "node scripts/verify/verify-gates-wired.mjs",
 "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
 "verify:workflow": "node scripts/verify/verify-workflow.mjs",
 "ship:pre": "node scripts/verify/verify-workflow.mjs"
 ```
 
-Wire CI: run `verify:workflow` + `verify:gates-wired` in a hygiene job;
-`verify:dependency-audit` needs registry access, so keep it CI-only.
+Wire CI: run `verify:workflow` in a hygiene job; `verify:dependency-audit` needs
+registry access, so keep it CI-only. The review-artifact, durable-artifacts and wiring
+rules run from the CLI you already installed, and they need an executing surface like
+any other check — `gate check PRD-NNN` covers only the closing PRD's readiness lint, so
+WIRE THE CORPUS FLAGS: add package-script aliases (for example
+`"check:review-artifacts": "node node_modules/provegate/dist/cli.js check
+--review-artifacts"`, and the same for `--durable-artifacts` and `--wiring`) and run
+them from CI or your gates manifest after a build. A rule nobody invokes is the
+wire-or-delete violation these flags exist to catch. Upgrading from a pack that shipped
+the old scripts? The release note for provegate 0.3 carries the five-step migration,
+including the exceptions conversion.
 
 ## 4. Agent entrypoint shims
 

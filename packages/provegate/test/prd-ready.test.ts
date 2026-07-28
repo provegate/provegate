@@ -10,7 +10,7 @@ import { lintPrd } from '../src/core/gates/prd-ready.js';
 const cfg = DEFAULT_CONFIG;
 const manifest = defaultManifest(cfg);
 
-const READY_PRD = [
+const READY_CORE = [
   '## 4. Functional Requirements',
   '',
   '1. **FR-1 — Thing**: does a thing.',
@@ -32,6 +32,17 @@ const READY_PRD = [
   '## 12. DO NOT (Anti-Patterns)',
   '',
   '- DO NOT do bad things.',
+].join('\n');
+
+// The declaration lint (PRD-026 FR-2) makes a Durable Artifacts section part of a
+// structurally ready PRD — production shape, which every real PRD already has.
+const READY_PRD = [
+  READY_CORE,
+  '',
+  '## Durable Artifacts',
+  '',
+  '- none — fixture: no durable output expected',
+  '',
 ].join('\n');
 
 describe('lintPrd structural checks', () => {
@@ -162,7 +173,7 @@ describe('FR-2 memory readiness gate', () => {
 
   const withMemory = (inputs: string[], outputs: string[], durable?: string[]): string =>
     [
-      READY_PRD,
+      READY_CORE,
       '',
       '## Memory Inputs',
       '',
@@ -453,6 +464,10 @@ describe('FR Targets are read as an entry, not as one line', () => {
     '## 9. Open Questions',
     '',
     '- (none)',
+    '',
+    '## Durable Artifacts',
+    '',
+    '- none — fixture',
     '',
     '## 11. Verification Commands',
     '',

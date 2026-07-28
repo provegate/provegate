@@ -3,7 +3,7 @@
 > Status: **docs only.** This repo runs a single agent; none of this is implemented here.
 > Adopt only if/when this repo runs multiple agents in parallel. When adopting, follow
 > `SPEC.md` and plug the checks into the existing verify:* wiring
-> (`scripts/verify/`, `verify:gates-wired`).
+> (`scripts/verify/`, audited by `gate check --wiring`).
 
 How multiple coding agents work concurrently on different work-items **without colliding**.
 The core idea: partition work into **disjoint source surfaces**, give each item its own git
@@ -33,7 +33,7 @@ handoff; adopt it last, and only the pieces you need.
 - `_brain/` (learnings deposit — wave 1).
 - The verify:* library (`scripts/verify/`) — the checks this wave would add
   (`path-conflicts`, `agent-locks`, `branch-isolation`, `status-sync`) plug into the same
-  wiring model and the `verify:gates-wired` meta-gate.
+  wiring model and the `gate check --wiring` meta-gate.
 - The lifecycle states (`_prds/README.md`) and the Autonomous-Close merge flow this
   orchestration serializes (already implemented by `gate run` / `gate land`).
 - The protected-branch commit flow (`scripts/base-branch-guard.mjs`) and the status board

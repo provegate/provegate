@@ -128,9 +128,10 @@ knowledge base — never duplicated per agent (it drifts).
 **Durable Artifacts rule (gated):** each PRD declares up front which durable paths its
 close must touch (a `_brain` learning or `Learning: none`, the review artifact, any ADR).
 The close is invalid if a declared path is absent from the merge diff, and that is
-enforced mechanically: `verify:durable-artifacts` is a wired `package.json` script, a
-member of the `verify:workflow` bundle, and a step in the CI hygiene job. The Phase 6
-review is a second reader, not the only one.
+enforced mechanically: the close chain checks the merge diff, `gate check PRD-NNN`
+lints the declaration at readiness, and `gate check --durable-artifacts` sweeps the wip
+corpus (a manifest phase-4 entry and a CI step). The Phase 6 review is a second reader,
+not the only one.
 
 ## Memory contract
 

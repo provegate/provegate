@@ -1,13 +1,13 @@
 # PRD-026: Duplicate Consolidation — Delete the Copies, Once Their Replacements Exist
 
-> **Status**: Draft
+> **Status**: Operator Verification
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-27
 > **Author**: Claude Opus 5, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `duplicate-consolidation`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Operator Verification)
 > **PRD Class**: infra
 > **Class Rationale**: Workflow tooling, but the surface is user-facing: two new public CLI
 > flags, three scripts removed from the published practices pack, and a documented manual
@@ -259,8 +259,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    draft's list was byte-identical to `gates.manifest.json:3-10` and therefore promised a
    no-op while User Story 3 promised the sweeps.** Phase 4 becomes: `pnpm check-types`,
    `pnpm lint`, `pnpm build`, `pnpm test`, `pnpm verify:workflow`, `pnpm check-egress`,
-   `pnpm check:review-artifacts`, `pnpm check:durable-artifacts` — today's set plus the
-   two sweeps, with `build` preceding them because the aliases run the built CLI. The
+   `pnpm check:review-artifacts`, `pnpm check:durable-artifacts`, `pnpm check:wiring` —
+   today's set plus the three sweeps, with `build` preceding them because the aliases run
+   the built CLI. The third alias was appended during Phase 4 on the round-1 review
+   finding that deleting `verify:gates-wired`'s CI step left the wiring audit with NO
+   executing surface — the migration's own step 4 tells adopters to wire all three
+   flags, and this repository owes itself the same instruction. The
    aliases are new `package.json` scripts — `check:review-artifacts` and
    `check:durable-artifacts`, each `node packages/provegate/dist/cli.js check --<flag>` —
    because `packageScriptOf` resolves only package-manager invocations and a bare `node`
@@ -855,6 +859,22 @@ failure. -->
 - reviewed: `two-parsers-wrong-together` — the two durable-artifact parsers agreeing on a
   corpus would not prove either correct, which is why FR-2 resolves each divergence
   deliberately instead of reconciling to whatever both happen to do.
+- not-applicable: `free-text-field-is-the-unread-drift-ledger` — its watch fires because
+  the closing diff refreshes the generated `_state/prds.json`; this PRD adds no free-text
+  field and the state change is the builder recording statuses. (Appended at close.)
+- reviewed: `state-model-before-mechanism` — its watch fires on this PRD's own file in
+  the closing diff (status-header advances and close-time appendices); the record's
+  subject shaped the wave's earlier structural exits and nothing here re-litigates it.
+  (Appended at close.)
+- applied: `docs-are-a-wiring-surface` — this PRD's own declared Memory Output, whose
+  watch covers the practices files this very diff rewrites and deletes: applied by
+  construction — FR-6 is the record's rule executed, and the record was born from
+  executing it. (Appended at close, when the newborn watch fired on the diff that
+  created it.)
+- applied: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`,
+  which FR-6 rewrites in the same change that retires the checks it described: the
+  documentation moves WITH the gate change rather than outliving it, which is this
+  record's rule applied in the direction it warns about. (Appended at close.)
 - reviewed: `strictness-added-during-extraction-is-a-behavior-change` — adopting the
   script's asterisk exclusion is added strictness reaching the package's existing callers;
   if an existing test must be edited to pass, the merge changed behavior — revert rather
@@ -1059,6 +1079,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, during Phase 4 | **Appended on the Phase-6 round-1 finding:** FR-4's enumeration gains `pnpm check:wiring` (alias + manifest entry + CI step) — the deletion of `verify:gates-wired`'s CI step had left PRD-025's surviving audit with no executing surface, precisely the wire-or-delete violation this wave exists to end, found by the independent reviewer reconstructing the deletion inventory. The migration note's step order also fixed (the exceptions file now outlives step 5's read), the ledger's stale rule covers method rows (method is never a resting place), reviewBy dates are calendar-validated, duplicate ADR rows are contradictory rather than last-wins, the STATUS boundary scans the Deferrals table's live columns, and NEXT_STEPS tells fresh adopters to WIRE the corpus flags |
 | 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-5 remediation — the next-residue sweep's own three.** ADR-0004's classification table is complete against the real scripts directory: `verify-dependency-audit.mjs` and `verify-workflow.mjs` (the bundle is itself a `verify-*.mjs` and therefore a ledger entry) join as `repo`, and FR-8's close-state prose lists all three pending records instead of two — an earlier listing would have tripped its own unclassified rule. The retired digit selector is now gone from its LAST restatement (the Memory Input rationale — the same site the iteration-4 pass claimed to fix and replaced only one copy of), swept with replace-all this time. The Gherkin conversion criteria state the four-step rule's actual outcome: already-wired survivors are DROPPED (all five here, converted store empty, audit-passed), and the deny case is the three-step conversion that KEEPS them. Implementation Scope carries `pack.test.ts`, `changeset-entry.test.ts` and `manifest.ts::validateManifest`; the rollback restores the six-command phase-4 list and removes both aliases — the manifest entry was never singular |
 | 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-4 remediation — three [P1]s, three [P2]s, again the sweeps' own residue.** ADR-0004 now EXISTS on the base branch: drafted as a transcription of the owner's recorded 2026-07-25/27 decisions, carrying the surviving set only per the born-agreeing rule, with ratification bound to the Phase-3 Go and the Dependencies wording honest about that state; Non-Goals' surviving "drops their rows" became by-construction language. FR-4's opening sentence now states the retain-plus-add transaction the enumeration always meant, so one manifest satisfies the FR. The Memory Input rationale citing the dead digit selector was the resurrection vector for both iteration-3 selector defects and now states select-then-bind. The live FR-8 row claims only live-repository evidence; the metric distinguishes seven raw hits from six in-boundary; `pack.test.ts` joins FR-5's Targets because its allowlist data shrinks with the pack |
 | 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-3 remediation — five [P1]s and two [P2]s, every one a sweep the iteration-2 pass left short, which is this repository's most-measured defect arriving in its own remediation.** The born-agreeing transaction now holds at every restatement: Implementation Scope reads the ADR as a baseline and removes nothing, the Conflict Surface deliberately does NOT claim it (with the reason in place), Durable Artifacts calls it this PRD's own precondition. FR-8 gains the §11 row its fixtures needed (`consolidation.test.ts` through `targetRoot()`), so the live-check row stops being the only evidence — this time actually. FR-6's boundary excludes the `_prds` STATE directories rather than the whole tree that contains its own declared target, and the acceptance criterion carries the enumerated-exclusions form plus the vacuity control. The five-count survived in three binding places (FR-4's prose, the Gherkin, the §11 FR-3 row) and is now nine everywhere. The review selector returns to the deleted script's two-rule form — `^review-.*\.md$` minus `.template.` — because digits alone select `review-026-copy.template.md`, and the no-identifier deny case is reachable again precisely because selection is broader than the id shape. The justification contract is decided (trimmed non-empty), `manifest.ts::validateManifest` joins Targets and the Conflict Surface, and the whitespace deny case is named. Line cites refreshed to `ci.yml:75-88` and `package.json:32,34,37` |

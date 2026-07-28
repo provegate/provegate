@@ -248,7 +248,9 @@ export function validateManifest(config: WorkflowConfig, value: unknown): Manife
   if (exceptions !== undefined) {
     if (
       !isPlainObject(exceptions) ||
-      Object.values(exceptions).some((v) => typeof v !== 'string' || v.length === 0)
+      // PRD-026 FR-5: TRIMMED non-empty — a whitespace-only justification is a
+      // stub that quietly defeats the shrink-only policy.
+      Object.values(exceptions).some((v) => typeof v !== 'string' || v.trim().length === 0)
     ) {
       issues.push({
         path: 'wiringExceptions',

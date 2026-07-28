@@ -78,6 +78,7 @@ commands on them through a safety filter. Know these before writing a row:
 
 Every PRD declares a `## Durable Artifacts` section: the paths its durable knowledge
 lands in (a `_brain` learning, an ADR, the review artifact), or `- none` as a deliberate
-declaration. `verify:durable-artifacts` lints the section on wip PRDs and, in `--close`
-mode, fails the close if a declared path is not in the merge diff. Placeholder paths
-containing `{`, `}`, or `*` are ignored until filled in.
+declaration. `gate check PRD-NNN` lints the section on wip PRDs
+(`gate check --durable-artifacts` sweeps the corpus), and the close chain fails the
+close if a declared path is not in the merge diff. Placeholder paths containing `{`,
+`}`, or `*` are ignored until filled in.
