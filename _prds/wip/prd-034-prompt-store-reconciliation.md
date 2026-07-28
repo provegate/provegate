@@ -129,8 +129,13 @@ inside declared roots.
    **Declared limits, restated from the model rather than claimed away:** a tree
    renamed **outside** the scan roots is not discovered — limit 5's honest form is "no
    lookup, only a search", the search must be told where to look, and this check is
-   deliberately bounded to the roots above (a repository-wide crawl would need a
-   symlink/cost/containment contract this PRD does not acquire); and unbannered or
+   deliberately bounded to the roots above — and inside those roots the walk's own
+   contract is explicit: directory symlinks are not followed, every visited path must
+   stay inside the repository's canonical containment (realpath-compared against the
+   root), an unreadable entry is a named failure rather than a skip, and the walk
+   remains bounded even when `prompts.dir` is `.` because the two adapter roots are
+   fixed and the store root is walked only one level deep past its planned structure
+   (a repository-wide crawl is exactly what this bound refuses); and unbannered or
    stripped files that are **unplanned** are invisible to content discovery (limit 6,
    Revision 2). The check therefore claims neither rename-discovery nor absence-scoped
    reporting. The primitive returns typed findings and writes **nothing** (T7; the T3
@@ -142,10 +147,16 @@ inside declared roots.
 2. **FR-2**: The recorded local exception — the model's one handed question, answered:
    representation yes, in the adopter's own config, `prompts.exceptions[]`, entries of
    exactly `{ path, reason, owner, expires }`, with the semantics nailed shut:
-   - `path` is repo-relative with forward slashes; backslashes are normalized before
-     comparison and the match is byte-exact after that; absolute, home-relative,
-     drive-anchored forms and `.`/`..` segments are refused with the config's existing
-     lexical-containment rule; a duplicate `path` across entries is refused at load;
+   - `path` is repo-relative, forward slashes only, and the contract is **rejection,
+     not canonicalization**: a backslash anywhere refuses the entry (one contract; no
+     normalize-then-compare ambiguity); absolute, home-relative and drive-anchored
+     forms, `.` or `..` as any segment, empty segments (repeated or trailing
+     separators) and a leading `./` are refused — rules this PRD defines for this
+     field, enumerated in its own validator rather than attributed to the existing
+     watch-glob rule; the match against findings is byte-exact and case-sensitive
+     (on a case-insensitive filesystem two spellings of one file are still two
+     strings — the entry must match the spelling `generatedPaths()` produces);
+     duplicates are compared byte-wise after no transformation and refused at load;
    - `reason` and `owner` must be non-empty after trimming; unknown fields are refused;
    - `expires` is a `YYYY-MM-DD` calendar date compared in UTC; the entry is valid
      **through** that date and expired when the run's UTC date is later; a malformed
@@ -188,9 +199,11 @@ inside declared roots.
    gains `pnpm --filter provegate build` before the aggregate step**, because that job
    installs without building today and a clean checkout would fail on a missing `dist`
    (the workflow's own comments already put built-CLI checks after a build). The order
-   is asserted mechanically by the script's own `--assert-ci-order` mode — it reads
-   `ci.yml` and fails unless the build step's index precedes the aggregate's — because
-   the §11 command grammar (rightly) refuses inline comparison operators. Runs outside turbo
+   is asserted mechanically by the script's own `--assert-ci-order` mode — it parses
+   `ci.yml`, isolates the **hygiene job's own step list** (never a whole-file index
+   search, which a build step in a different job would satisfy), and fails unless that
+   job runs the provegate build before its aggregate step — because the §11 command
+   grammar (rightly) refuses inline comparison operators. Runs outside turbo
    (`turbo-cache-masks-out-of-input-reads`). Until PRD-032 flips this repository's
    `prompts.enabled`, the check reports the FR-3 disabled note and passes — dormant
    here, live at fresh installs, and the CLI path live for every upgraded adopter
@@ -206,7 +219,9 @@ inside declared roots.
    (`shipped-content-needs-a-delivery-gate`), joins the **packed**
    `verify-workflow.mjs` CHECKS, gains a `NEXT_STEPS.md` row, and the drift ledger
    moves by **one new pair** (`verify/verify-prompts.mjs`) **plus reconciliation of
-   the changed existing workflow pair** with an updated note. A changeset (minor)
+   the changed existing workflow pair** with an updated note; the packed file also
+   joins `packages/provegate/test/pack-manifest.json` — the exact-file manifest the
+   pack test enforces, where an unlisted new file fails deliberately. A changeset (minor)
    carries the release note **including the existing-adopter migration instruction**
    (§7) — `.changeset/` is claimable now that PRD-025 has landed.
    - **Targets:** `packages/provegate/src/core/run/prompts.ts::evaluatePromptReconciliation`,
@@ -214,6 +229,7 @@ inside declared roots.
      `packages/provegate/practices/verify/verify-workflow.mjs`,
      `packages/provegate/src/core/run/init.ts`,
      `packages/provegate/practices/NEXT_STEPS.md`,
+     `packages/provegate/test/pack-manifest.json`,
      `scripts/verify/pack-drift-ledger.json`, `.changeset/prompt-store-reconciliation.md`
 6. **FR-6**: The conformance tests — one fixture per class, per exception outcome, and
    per declared limit, the path domain always computed from `generatedPaths()`
@@ -224,10 +240,15 @@ inside declared roots.
    stripped banner (both halves asserted: detected through the planned set, absent
    from the orphan scan); `unattributable` via an edited `PLACEHOLDERS.md`; the codex
    snippet edited (`unattributable`) and removed (`missing`);
-   limits — a T5 rename fixture with two trees, asserting the new store reports and
-   the renamed-away tree does **not** (the limit is the assertion); a T6 fixture with
-   the config block removed and bannered files left, asserting the disabled note names
-   the unexercised search;
+   limits — a T5 rename fixture with two trees, asserting three things: the new
+   store reconciles, the renamed-away tree produces no finding (the limit is the
+   assertion), **and the existing Claude/Cursor adapters report as diverged because
+   their content embeds the old store path** — T5's adapter-staleness consequence,
+   detectable without any search; a T6 fixture with the config block removed and
+   bannered files left, asserting the disabled note names the unexercised search and
+   the adopter guidance repeats T6's two consequences (clear `templates.prd` in the
+   same change; the generated files remain on disk, readable by agents, until a human
+   deletes them);
    exceptions — valid; expiry boundary (an entry expiring **today** passes, yesterday
    fails); duplicate path refused at load; malformed date refused; non-normalized path
    refused; stale entry fails the run;
@@ -332,12 +353,15 @@ honest consequences, both specified rather than hoped:
 - the **CLI path is live immediately on package upgrade** — `gate check --prompts`
   ships in the package, needs no practices file, and is the surface an existing
   adopter actually has on day one;
-- the **bundle wiring is manual for them**: the FR-5 changeset's release note carries
-  the one-line instruction (add `verify-prompts.mjs` to the CHECKS array of their
-  `verify-workflow.mjs` copy). The FR-6 migration fixture proves the exact scenario:
-  a pre-034 practices tree through the installer — new file created, existing files
-  untouched, instruction present in the changeset text. Nothing is overwritten,
-  nothing is deleted, and nothing pretends the bundle updated itself.
+- the **bundle wiring is manual for them, in three explicit steps the release note
+  carries verbatim**: (1) upgrade the package; (2) run `gate init --practices` — the
+  additive installer is what CREATES the new `verify-prompts.mjs` in their tree, since
+  upgrading a package alone writes nothing into a repository; (3) add
+  `verify-prompts.mjs` to the CHECKS array of their `verify-workflow.mjs` copy. The
+  FR-6 migration fixture proves the full sequence: a pre-034 practices tree, package
+  upgraded, installer run (new file created, existing files untouched), and the
+  changeset text asserted to contain all three steps. Nothing is overwritten, nothing
+  is deleted, and nothing pretends the bundle updated itself.
 
 ### Rollback and ordering
 
@@ -348,17 +372,21 @@ independently:
   pre-034 validator, so the package upgrade lands before any exception entry is
   written; an adopter who writes the entry first gets a config refusal naming the key.
 - **Un-except before downgrading:** symmetrically, a downgrade below this PRD's
-  version must be preceded by removing `prompts.exceptions` entries, or the old
-  validator refuses the config at load.
+  version must be preceded by removing the **entire `prompts.exceptions` key** — an
+  empty array is still an unknown key to the old validator, so entries-only removal
+  is not enough.
 - **Un-wire before downgrading:** a packed `verify-prompts.mjs` imports the exported
   primitive; downgrading the package below the export makes that check fail loudly at
-  import. The release note states the order: remove the CHECKS member and the packed
-  file before downgrading. Pack installation never deletes, so the cleanup is the
-  adopter's, named rather than implied.
-- **This repository:** reverting the implementation commit unwinds the runner, the
-  `verify:prompts` registration, the CHECKS membership, the CI build+step pair, and
-  both ledger movements together — one commit, no intermediate state (the PRD-035
-  pattern). The config here carries no exceptions until PRD-032, so no config
+  import. The release note states the order: remove the CHECKS member, the packed file,
+  and — for a repository whose fresh install also registered it — the
+  `verify:prompts` package-script entry, before downgrading. Pack installation never
+  deletes, so the cleanup is the adopter's, named rather than implied.
+- **This repository:** the implementation lands so that reverting it unwinds the
+  runner, the `verify:prompts` registration, the CHECKS membership, the CI build+step
+  pair, and both ledger movements together — whether one commit or a small stack, the
+  tree between adjacent commits never holds a registered check without its script or
+  a script without registration (the PRD-035 atomicity rule applied to the sequence,
+  not to an assumed commit count). The config here carries no exceptions until PRD-032, so no config
   ordering applies locally.
 
 ---
@@ -563,6 +591,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (non-scorer), third pass | **Iteration-2 findings applied (7.3 ITERATE — six precision pieces, five prior closures confirmed).** T5 fixture now asserts the adapter-staleness consequence (embedded old store path reports diverged) and T6 guidance repeats the model's two consequences. The orphan walk gains its bounded contract (no symlink follow, canonical containment, unreadable-entry failure, `.`-safe bound). The exception path contract becomes rejection-only (backslash refuses; dot/empty segments enumerated in this PRD's own validator; byte-exact case-sensitive match against the spelling `generatedPaths()` produces). `pack-manifest.json` joins FR-5 everywhere it must. The migration instruction becomes three verbatim steps incl. `gate init --practices` as the file-creating action, proven by the fixture and the release-note assertion. Rollback: the whole `prompts.exceptions` key removed before downgrade, the fresh-adopter script entry named, atomicity restated over the sequence not a commit count, the CI-order assertion scoped to the hygiene job's own step list. The Memory Output reworded from stored-hash to banner-version attribution — iteration 2 caught the phrasing contradicting T7. |
 | 2026-07-28 | orchestrating session, on owner direction | **§4 re-derived (second pass) against state-model Revision 2 and the iteration-1 score's eleven missing pieces.** Classification made total (five arms; `unattributable` absorbs the two deliberately unbannered paths and stripped banners — detection by bytes survives, only attribution is lost, per Revision 2). T5/T6 claims replaced by asserted limits (rename fixture asserts NON-discovery; the disabled note names the unexercised search). FR-2 gains the full semantic contract (UTC calendar expiry through the named day, normalization, duplicates, non-empty fields) and its real targets (`types.ts`, `validate.ts`). FR-3's output contract decided: findings-only lines + one summary. FR-4 adds the CI build-before-aggregate step with a mechanical order check. FR-5 adds the shared evaluator (interpretation cannot drift), corrects the ledger claim to one-new-pair-plus-one-changed, and carries the changeset with the existing-adopter migration instruction — §7 gains the migration and rollback/ordering sections the infra class demands. Memory wording fixed (planned domain vs orphan search; calendar expiry as PRD-owned decision). Intro's "no FRs yet" block retired with the history stated. |
 | 2026-07-28 | orchestrating session, on owner direction | **§4 derived in one pass from the owner-approved state model** (acceptance PRD-030 items 4.1 T1–T7 + 4.3, recorded this morning) and its two derivation notes (byte-based detection; banner-stripped files share the codex-snippet hole). Six FRs: the recomputing primitive with a seven-class report, the `prompts.exceptions[]` config contract (T3's handed question answered: representation yes, in the adopter's config, suppression-only, expiring), `gate check --prompts` with the T2 upgrade view, and wiring in both layers with the pack twin calling the same primitive. §6 and §11 written with the FRs as the parent items required; §8 and the Conflict Surface fixed to the real paths (`schemas/` out, config pair + `init.ts` + both workflow bundles + ledger in); `gate-run-resume-after-archive` disposition added for the new `core/run/**` watch overlap. |
 | 2026-07-28 | owner  | **Created by the narrowing of PRD-030** (readiness iteration 1, W1, owner option (a)). Carries the reconciliation check, its command surface and its wiring; PRD-030 keeps the state model those are written against. Goals and the conflict surface are carried over; every mechanism statement from the retracted design was deleted rather than inherited, and §4 is blocked on the model by construction. The Memory Output `recompute-beats-recorded-state` relocates here from PRD-030, and the two memory records whose watches cover `core/run/init.ts` and `core/run/prompts.ts` — undeclared in PRD-030 and the cause of its lint failure — are declared here as `applied`, where the code they watch is actually touched. |
