@@ -106,9 +106,12 @@ record. Every mechanism below is now closed, decided, and hermetic.
 1. **FR-1**: The extraction, under a **closed scenario grammar**. `QUICKSTART.md` gains
    rendering-neutral markers: one `<!-- qs:scenario -->` … `<!-- /qs:scenario -->`
    region delimits the canonical first-touch path; within it, every ` ```sh ` fence is
-   executable and every ` ```text ` fence is output illustration; the ONE currently
-   untagged output fence in the corpus is retagged `text` in the same change, after
-   which an untagged fence inside the region is a named failure, not a guess. Command splitting: one command per line;
+   executable and every ` ```text ` fence is output illustration; BOTH currently
+   untagged output fences in the corpus (the worktree claim transcript and the
+   handoff card) are retagged `text` in the same change, after which an untagged
+   fence inside the region is a named failure, not a guess. **The grammar is scoped
+   to `packages/provegate/QUICKSTART.md` alone**: the docs twin receives only the
+   region markers FR-3's parity needs, never the execution grammar. Command splitting: one command per line;
    backslash continuations joined; `#`-prefixed and blank lines skipped; every command
    retains its doc line number for failure naming. Package-only extras (worktree,
    practices) live OUTSIDE the region and are not part of the canonical scenario.
@@ -117,27 +120,52 @@ record. Every mechanism below is now closed, decided, and hermetic.
    - **Targets:** `packages/provegate/test/quickstart-e2e.test.ts`,
      `packages/provegate/QUICKSTART.md`
 2. **FR-2**: The execution — hermetic, with the scratch state model explicit.
-   - **Install mapping, exhaustive:** the doc's `npm install -D provegate` line maps —
-     by exact source-line match, with an assertion that no OTHER install line exists
-     unmapped — to installing the locally packed tarball (`pnpm --filter provegate
-     build` + `npm pack` in setup). The child npm's registry is pointed at an
-     unreachable local path, so any accidental registry fetch fails loudly: **no
-     network fallback can exist**.
-   - **Scratch state model, enumerated through the real live close** (iteration 2's
-     trace), as a doc-command [D] versus harness-scaffolding [H] table the test file
-     carries verbatim: [H] temp root; HOME/XDG/npm-userconfig/TMPDIR remapped;
-     `git init -b main`; repo-local identity; initial commit → [D] install (tarball
-     mapping) → [D] `gate init` → [H] config fill + installed-file disposition
-     recorded → [D] `gate new` (hotfix) → [H] fill the generated PRD minimally
-     (targets, §11 row, memory sections) → [H] baseline commit (the claim rules
-     demand committed control files — PRD-007) → [D] `gate check` (verdict asserted)
-     → [D/H per the doc's printed path] plain claim (`gate open`), task-file
-     creation, a passed independent-review row + review artifact, durable
-     declaration and its evidence, feature-branch creation and feature commits,
-     clean-tree assertion → [D] `gate run --dry-run` then the live `gate run` →
-     [H] merged-base inspection (the close's promised artifacts exist on the scratch
-     main) → [H] cleanup. Every [H] row exists only to satisfy a precondition the
-     CLI itself enforces, and the table says which precondition.
+   - **Install mapping, exhaustive and measured:** the doc's `npm install -D
+     provegate` line maps — by exact source-line match, with an assertion that no
+     OTHER install line exists unmapped — to the measured working form:
+     `npm install -D <scratch>/provegate-<v>.tgz --no-audit --no-fund
+     --registry http://127.0.0.1:9` (the tarball packed in setup by
+     `pnpm --filter provegate build` + `npm pack --pack-destination <scratch>`,
+     living under the scratch root; the unreachable registry PROVED harmless for the
+     zero-dependency package and fatal for any accidental fetch). npm's update
+     notifier and cache write inside the remapped HOME, so nothing escapes the
+     scratch root.
+   - **Scratch state model — MEASURED, not described** (iteration 3's prototype run,
+     2026-07-28, provegate-0.2.0 tarball, unreachable registry; the run reached the
+     handoff card, and this table is its transcript, carried verbatim in the test
+     file with the CLI's actual stop messages quoted):
+     [H] temp root; `git init -b main`; repo-local identity; initial commit →
+     [D] `npm install -D <tarball> --no-audit --no-fund --registry
+     http://127.0.0.1:9` (zero-dependency install proven offline) →
+     [D] `npx gate init` (measured: 31 created, 0 skipped) → [D] `npx gate status`
+     → [D] `npx gate new fix-login-timeout --class=hotfix` → [D] `npx gate open
+     PRD-001` — **measured: the claim SUCCEEDS on the raw template** (1 surface
+     glob), so claim-precedes-fill is the real order and the harness asserts it →
+     [H] minimal PRD fill: the two `{{CMD_TEST_SCOPED}}` rows become
+     `node -e "process.exit(0)"` (allowlisted) and `Autonomous Close` flips to
+     `eligible` → [D] `npx gate check PRD-001` (measured: green after only that
+     substitution) → [D] `npx gate run --dry-run PRD-001` → [D] `npx gate run
+     PRD-001` — measured STOP at phase 6: *"no tasks file — independent-review
+     ledger missing"* → [H] tasks file with a Verification Ledger carrying the
+     `independent-review` row → [D] `--from-phase=6` — measured STOP: *"missing
+     Base SHA"* (the template's symbolic ref is refused; a real sha is required) →
+     [H] review artifact per the shipped template: six metadata fields,
+     `Critical: 0`, `Quorum: 1/1 pass`, the real HEAD sha → [D] `--from-phase=6` —
+     phases 6, 7 and the merge gate all pass; measured STOP: *"current branch is
+     'main' — run from the feature branch"* → [H] feature branch;
+     `.gitignore` for `node_modules`; commit → [D] `--from-phase=merge` —
+     **the HANDOFF CARD**: no-ff merge, lease released, *"READY TO PUSH — the
+     runner never pushes"* → [H] merged-base inspection + cleanup.
+     The harness pre-seeds every [H] artifact BEFORE the first `gate run` so the
+     production path is single-pass; the measured stop-and-resume sequence above is
+     retained as three separate negative fixtures (each stop message asserted
+     verbatim).
+   - **Readiness and acceptance, measured rather than assumed:** the chain gates on
+     NO readiness artifact (Phases 2-3 are human phases; the prototype closed
+     without one) and, with `Autonomous Close: eligible` and zero operator rows, on
+     NO acceptance entry — both measured absences the harness asserts as such. The
+     doc's `operator-gated` default is the branch not taken, stated here so nobody
+     "fixes" the harness into fabricating an acceptance.
    - **Sentinel hygiene:** every spawned CLI child receives a sanitized environment
      with `PROVEGATE_RUN_ACTIVE` (and every runner sentinel) removed — the
      `runner-sentinel-blocks-cli-spawning-tests` record's prescription for a
@@ -187,19 +215,23 @@ record. Every mechanism below is now closed, decided, and hermetic.
 ## 6. Acceptance Criteria (Gherkin Style)
 
 - **Given** the committed `QUICKSTART.md`, **When** the harness runs, **Then** every
-  fenced command executes in order in a scratch repo and every per-step assertion
-  passes.
-- **Given** the mutation pair — a scratch copy of the doc with `gate init` and
-  `gate new` swapped — **When** the harness runs against the copy, **Then** the
-  expected failing step is the relocated `gate new` (no workspace to allocate in),
-  the failure names that step with its retained doc line from the COPY, and the
-  diagnostic carries the child's stderr tail — proving the doc is the source
+  command in the tagged `qs:scenario` region executes in order in a scratch repo,
+  pre-seeded per the measured [H] table, single-pass to the handoff card, and every
+  per-step assertion passes.
+- **Given** the mutation pair — a scratch copy of the doc with `gate new` and
+  `gate open` swapped — **When** the harness runs against the copy, **Then** the
+  expected failing step is the relocated `gate open PRD-001` (production refuses:
+  there is no PRD-001 to claim before `gate new` allocates it — a rejection the
+  prototype's real ordering confirms), the failure names that step with its
+  retained doc line from the COPY, and the diagnostic carries the child's stderr
+  tail — proving the doc is the source
   (`assert-absent-needs-an-independent-cause`: the cause is the doc change, not a
   harness edit).
-- **Given** the planted cleanup failure — a file made read-only inside the scratch
-  root before teardown — **When** the harness finishes, **Then** cleanup still
-  completes (permissions reset in `finally`), deletion is verified, and the
-  diagnostic tail was captured before it.
+- **Given** the planted cleanup failure — a subdirectory chmod 555 inside the
+  scratch root before teardown, so the FIRST removal attempt fails
+  deterministically — **When** the harness finishes, **Then** that initial failure
+  is asserted to have occurred, permissions are reset and removal retried in
+  `finally`, deletion is verified, and the diagnostic tail was captured before it.
 - **Given** a CLI change that breaks a quickstart outcome, **When** `pnpm test` runs,
   **Then** the harness fails before any adopter sees it.
 - **Given** the two quickstart docs, **When** the FR-3 mechanism runs, **Then** a
@@ -373,6 +405,7 @@ Before Phase 2 PASS, run: `gate check PRD-038`
 
 | Date       | Author | Changes                                                                                                    |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2026-07-28 | orchestrating session (author), third rework — PROTOTYPE-FIRST on owner decision (a) | **Iteration 3 (5.62, oscillating) stopped the wording rounds; the owner chose prototype-first.** The real scratch-close sequence was EXECUTED once (provegate-0.2.0 tarball, unreachable registry, temp repo) and reached the handoff card; the [D]/[H] table is now that run's transcript with the CLI's actual stop messages quoted. Measured facts replacing guesses: the claim SUCCEEDS on the raw template (claim-precedes-fill is the real order); `gate check` greens after only the §11 command substitution; the chain gates on NO readiness artifact and (eligible, zero rows) NO acceptance — measured absences the harness asserts; the three real stops (missing tasks/review ledger; symbolic Base SHA refused; run-from-main refused) become verbatim negative fixtures while the production path pre-seeds and runs single-pass. The install form measured working offline; the mutation pair replaced with one production actually rejects (new/open swap — nothing to claim); the cleanup plant made deterministic (chmod 555 subdir, initial failure asserted, reset+retry in finally); both untagged fences named; the grammar scoped to the package doc alone. |
 | 2026-07-28 | orchestrating session (author), second rework | **Iteration 2 (6.10) applied.** Every "all fenced commands" promise replaced by the tagged-region contract, and the one untagged output fence retagged so an untagged fence inside the region becomes a named failure. The scratch model enumerated THROUGH the real live close as a [D]/[H] table (installed-file disposition, minimal PRD fill, baseline commit, plain claim, task file, passed review row + artifact, durable evidence, feature branch/commits, clean-tree assertion, dry then live `gate run`, merged-base inspection, cleanup) — every [H] row tied to the CLI precondition it satisfies. §11's FR-3 "or" removed: `pnpm verify:quickstart-parity` directly. The mutation pair specified exactly (init/new swap; expected failing step, retained line, stderr-tail diagnostic) and the planted cleanup failure named (read-only file; permissions reset in finally). |
 | 2026-07-28 | orchestrating session (author), Phase 1 rework | **Iteration 1 scored 4.95 ITERATE; band prescribes Phase 1 rework, taken the same day.** The extraction gains a closed scenario grammar (`qs:scenario` region markers, per-line splitting rules, doc-line retention; the existing output tags recorded as adequate). The install contradiction resolved hermetically: the unpublished-package `npm install -D provegate` line maps by exact source match to a locally packed tarball with an unreachable registry — no network fallback can exist. The scratch state model enumerated (remapped HOME/XDG/npm/TMP, local git identity, the doc-command-vs-setup split incl. the committed-state preconditions PRD-007 demands). Sentinel hygiene added per `runner-sentinel-blocks-cli-spawning-tests`. FR-3 decided: a root parity verifier over the tagged region only, with the measured 14-vs-8/edit-distance-7 baseline recorded and the docs twin converging. FR-4 adds wiring + `script-classes.json` + the ADR-0004 repo-rule amendment (Memory Output + Durable). Remote-impossibility and cleanup made executable assertions. |
 | 2026-07-28 | orchestrating session, for owner review | Drafted as the second of three Faz E launch items (portfolio-review outward-gap action): the first-touch promise becomes an executed fixture — doc-sourced commands, scratch-repo e2e, both-direction drift gates, and a parity rule for the rendered twin. |
