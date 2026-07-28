@@ -1,5 +1,18 @@
 # Readiness Assessment: PRD-025 — Wiring Audit Completion
 
+> **Iteration 4 (Codex, independent) — 7.08/10, ITERATE, DOWN 0.15.** First round on the
+> remediated document, by a scorer who wrote neither it nor the remediation. Every
+> iteration-3 closure held — quoted-path, ledger remnants, containment seam, three paths,
+> FR-4's selector diagnosis, all CLOSED with citations — and the score still fell,
+> because the round went a layer deeper into the grammar and found three [P1]s there:
+> Layer 4 is finite but incoherent across its five interpreters (`deno run script.mjs`
+> is not recognized at all), Layer 0's wording disagrees with Layer 1's escape state on
+> three boundary cases, and the bundle's "top-level" is undefined over the surrounding
+> JavaScript. **The grammar has now produced new defects in four consecutive rounds** —
+> the shape `scope-out-the-layer-the-rounds-keep-hitting` names.
+>
+> <details><summary>Iteration 3 (7.23 ITERATE)</summary>
+>
 > **Iteration 3 (Claude Fable 5, independent) — 7.23/10, ITERATE.** The document is
 > unchanged since iteration 2; this round re-verified its three [P1]s against live source
 > and all three stand — the grammar is still missing its segmentation and arity layers,
@@ -26,21 +39,22 @@
 
 > </details>
 > </details>
+> </details>
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-025-wiring-audit-completion.md`  |
-| Score                  | 7.23/10                                        |
-| Verdict                | ITERATE — three [P1] items, all confirmed on the unchanged document: the grammar still lacks command segmentation and interpreter option arity, the §11 row still contradicts FR-3's quoted-path consequence, and the three ledger remnants still stand; plus the containment helper FR-2 needs is private in a file outside the Conflict Surface |
-| Iteration              | 3                                              |
+| Score                  | 7.08/10                                        |
+| Verdict                | ITERATE — three [P1] items, all in the command and bundle grammars: Layer 4 loses interpreter-specific semantics (deno's `run` form unrecognized, `ts-node -c` collision, one wrong flag name), Layer 0 and Layer 1 disagree on escape boundaries, and the bundle's "top-level" is undefined over the surrounding JavaScript |
+| Iteration              | 4                                              |
 | Model Tier (Execution) | do not assign — score < 8                      |
 | Model Tier (Audit)     | high (on a PASS)                               |
-| Scored by              | **Claude Fable 5 — independent session, did not write the PRD (author sessions were Claude Opus 5)** |
+| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family; wrote neither the PRD nor its 2026-07-28 remediation** |
 | Self-scored            | **no**                                         |
 | Date                   | 2026-07-28                                     |
-| PRD Lint               | passed — `gate check PRD-025` exit 0, run live (no sandbox) |
+| PRD Lint               | Codex did not run the CLI (read-only round; `gate check` writes `_state/`) and said so; the orchestrating session ran `gate check PRD-025` exit 0 on the same document earlier the same day |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -171,24 +185,30 @@ this ITERATE.
 
 ## Missing Pieces (watch items — binding on Phase 3 and Phase 6)
 
-Rewritten at iteration 3 — earlier lists are superseded where they conflict. (The ledger
-lifecycle items moved to PRD-026 with the ledger itself. This line deliberately does not
-begin with the word "Updated": the state builder's `getMetaValue` captures a bare
-`Updated …` line at column zero as the record's date — see the deferral filed 2026-07-28.)
+Rewritten at iteration 4 — earlier lists are superseded where they conflict. (This line
+deliberately does not begin with the word "Updated": the state builder's `getMetaValue`
+captures a bare `Updated …` line at column zero as the record's date — deferral filed
+2026-07-28.)
 
-- Add the two missing grammar layers: how a hook file or script body is segmented into
-  commands (production's quote-blind `split(/[\n;]|&&|\|\|/)` is the thing being
-  replaced, so the segmentation rule must be stated, not inherited), and interpreter
-  option arity (a `VALUE_FLAGS`-equivalent for interpreters, closed and in source).
-  Close the bundle grammar on escapes and multiple `CHECKS` declarations.
-- Resolve the quoted-path contradiction one way and make the §11 FR-3 row agree with
-  FR-3(b)'s stated consequence.
-- Sweep the three ledger remnants: Implementation Scope, Rollback, and the hard-caps deny
-  line.
-- Bring the containment seam into scope: export the `load.ts` helper and add the file to
-  Targets and the Conflict Surface, or specify the intended seam explicitly.
-- Sweep "two hardcoded paths" in Goals and FR-2 prose (the metric row's three is
-  correct); refresh the two obsolete PRD-021 contention notes.
+- **Owner decision first:** four consecutive rounds have found new grammar defects, each
+  one level deeper (enumerate → lexer → segmentation+arity → per-interpreter semantics).
+  Choose the structural exit before another wording round — radical narrowing (wrappers
+  + interpreter + bare-or-quoted path, `deno run` named explicitly, everything else
+  no-wiring, residual stated) or an owner-approved grammar design artifact the PRD binds
+  to, the PRD-030 state-model way.
+- If iterating in place: make Layer 4 per-interpreter (per-head flag semantics, or an
+  honest global-approximation statement with per-interpreter deny controls); recognize
+  `deno run`; fix the `-c` rationale for `ts-node` (`--cwdMode` executes); correct the
+  bun `--tsconfig` row (`--tsconfig-override`).
+- Reconcile Layer 0's wording with Layer 1's escape state on the three boundary cases
+  (`\\;`, backslash-newline, a quote legitimately spanning a newline) and add each to
+  the deny matrix with its positive control.
+- Define the bundle's outer lexical grammar — how the scanner treats strings, template
+  literals, regexes, comments, and nested blocks around `CHECKS` — and add impostor
+  fixtures (the declaration text inside a string or comment must not count).
+- P2 sweep: reframe the Layer-0 divergence example as the future-hybrid consequence
+  rather than current production behavior; make the introduction's "the audit and the
+  ledger must be complete" sentence self-marking about the ledger living in PRD-026.
 
 ---
 
@@ -196,6 +216,7 @@ begin with the word "Updated": the state builder's `getMetaValue` captures a bar
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 4   | 2026-07-28 | 7.08  | ITERATE | **First independent round on the remediated document (Codex; wrote neither the PRD nor the remediation): 6.28 → 7.00 → 7.23 → 7.08, down 0.15 — every iteration-3 closure HELD and the round still fell, because it went one layer deeper into the grammar.** Dimensions: Clarity 6.5, Completeness 6.5, Tech Depth 6.0, Multi-Tenancy 8.5, Scope & Testability 7.0, Migration & Rollback 8.5 → 7.075. The [P1]s, each re-verified in the PRD text by the orchestrating session before recording (the two external-doc claims accepted on the reviewer's citations): **(A) Layer 4 is finite but not coherent across the five heads its own Layer 3 accepts.** Two global tables applied per-head lose interpreter semantics: `deno run script.mjs` — deno's documented standard form — is unrecognized, because Layer 4 reads the first non-dash token and takes `run` as the script path; `-c` sits in the global non-executing list on a rationale naming node, deno and bun while `ts-node -c` (`--cwdMode`) executes its entrypoint and `ts-node` is on the head list; the arity table attributes `--tsconfig` to bun, whose runtime flag is `--tsconfig-override`; and a flag valid for one head is silently valid for every head (`node --config cfg path.mjs` can wire though node has no `--config`). The `node --require` defect itself is fixed with a valid positive control; the deny matrix has no per-interpreter controls able to expose the above. **(B) Layer 0 is not self-consistent with Layer 1's escape state**, on three boundary cases: `\\;` (the first backslash escapes the second, so the separator is unescaped under Layer 1 while "preceded by a backslash" under Layer 0's wording); backslash-newline (Layer 1 escapes it, Layer 0 cuts every newline unconditionally — the "unquoted" qualifier binds only to `;`/`&&`/`||`); and a quote legitimately spanning a newline (surface-level quote state terminated, yet the newline cut fragments it with no initial-state rule for either fragment). The deny matrix covers quoted `&&` and unterminated quotes, none of these. **(C) The bundle's two new refusal rules are explicit and "top-level" is still undefined over the surrounding JavaScript** — the real bundle carries imports, functions, strings and template literals around `CHECKS` (`verify-workflow.mjs:1-87`), and nothing specifies how a zero-dependency scanner distinguishes a declaration from the same text inside a string, template, regex, comment or nested block. **P2s:** the Layer-0 divergence example is framed as production's current behavior when it is the consequence of the future hybrid (today's audit reads manifest commands and CI `run:` text only — no hooks — `wiring.ts:214-223`); and the introduction's "the audit and the ledger must be complete" is the one non-history ledger mention that does not mark the ledger as elsewhere (clarified twenty lines later, so a wording item, not a scope leak). **CLOSED with citations:** the quoted-path rule at every restatement (FR-3(b), deny matrix, §6 Gherkin, §11); all three ledger remnants; the containment seam (`resolveContainedPaths` private at `load.ts:134`, `config/index.ts` named-list export, `containedPath`'s `dirname`-based write orientation at `init.ts:230-264`); the three-hardcoded-paths count at every normative site (`verify-gates-wired.mjs:36,40,60`); the PRD-021 contention refresh; and FR-4's selector diagnosis (`changeset-entry.test.ts:41-44` unsorted `readdirSync`, `COMPAT` at `:58`, three `.find`s at `:82,90,96`) with the discriminator requirement judged sufficient if implemented as specified. **Pattern, recorded for the owner rather than buried: the grammar has produced new defects in four consecutive rounds** — enumerate → lexer → segmentation+arity → per-interpreter semantics — each round's fix correct and each opening the next level. That is the shape `scope-out-the-layer-the-rounds-keep-hitting` and `state-model-before-mechanism` name. Before a fifth wording round, weigh two structural exits: narrow the accepted grammar radically (wrappers + interpreter + bare-or-quoted path, deno's subcommand named explicitly, everything else no-wiring — the residual honestly stated), or land the grammar as an owner-approved design artifact the way PRD-030's state model was, and let the PRD bind to it. |
 | 3   | 2026-07-28 | 7.23  | ITERATE | **Confirmation round on an unchanged document — the three [P1]s re-verified against live source rather than carried on faith; all three stand.** Dimension scores (infra weights): Clarity 6.5, Completeness 7.0, Tech Depth 7.5, Multi-Tenancy 8.0, Scope & Testability 7.0, Migration & Rollback 7.5 → 7.225. **(A, CONFIRMED OPEN, both halves)** Command segmentation: production still splits every surface on `/[\n;]|&&|\|\|/` **including inside quotes** (`wiring.ts:231`), and FR-3's four layers begin at tokenizing *a command* — nothing says how a hook file or a script body becomes commands in the first place. Option arity: layer 4 still consumes a value only in the `--flag=value` form, so `node --require verify-foo.mjs app.mjs` falsely wires `verify-foo.mjs` as the first non-dash token — and `VALUE_FLAGS` (`wiring.ts:109-118`) is the in-package precedent proving arity handling is real, cited by iteration 2 and still unanswered. The bundle grammar is still silent on string escapes and on multiple `CHECKS` declarations. **(M, CONFIRMED)** FR-3(b) states the consequence plainly — `node "scripts/verify/verify-foo.mjs"` **does** wire, because the lexer strips quotes — while the §11 FR-3 row requires "the echo, syntax-check, eval, and quoted-string forms" **not** to wire. Opposite expectations for the implementer and the test author, in the same document, and the §11 row is the one the runner executes. **(N, CONFIRMED, all three sites)** Implementation Scope still assigns `auditWiring` "ledger check, decision-record comparison"; Rollback still says "delete the ledger file"; the hard-caps deny line still demands "an unclassified script" fixture — three normative remnants of a ledger this PRD relocated to PRD-026. **(P2, upgraded toward blocking)** the containment helper FR-2's symlink rule needs is **private in `config/load.ts`** — measured: not among that module's exports — and `load.ts` is in neither Targets nor the Conflict Surface, so as written the FR forces either an out-of-surface edit its own DO NOT forbids or a second copy of the containment logic, which is `two-parsers-wrong-together` waiting to happen. Export the helper and claim the file, or name the seam. **(P2)** "two hardcoded paths" survives in Goals and FR-2 prose where the Success Metrics row correctly says three — `a-rule-corrected-survives-where-it-is-restated`, in the document that does not cite it. **(environment, POSITIVE)** PRD-021 is Ship Verified as of 2026-07-27: `test/changeset-entry.test.ts` exists on main, so FR-4 extends an existing file rather than creating one, and both "serialize behind PRD-021" notes are obsolete — `gate queue` re-run this round shows no active conflict (PRD-030 is in-flight on a disjoint surface). **Citation drift, cosmetic:** the unknown-key refusal now sits at `validate.ts:193`, the lexical-containment comment at `:454` — PRD-021's `valueScoring` block moved them. **Confirmed exact this round:** `types.ts:107`, `wiring.ts:130-133` and `:229-236`, `verify-gates-wired.mjs:49-52` substring rule and its registration `.includes`, the capability table in §1, and the zero-current-impact claim — no `.githooks` file references a verify script today. |
 | 2   | 2026-07-27 | 7.00  | ITERATE | **Second independent round, on the iteration-1 remediation plus the owner's ledger relocation. Largest single-round gain in this wave: +0.72.** B, D, F, G **CLOSED**; C, E, H, I **PARTIALLY CLOSED**; A **OPEN**. **(A, still open)** the four-layer grammar defines a lexer but not the layer *above* it: nothing says how a hook file or script body is **segmented into commands**, which production currently does with `text.split(/[\n;]|&&|\|\|/)` — including separators inside quotes (`wiring.ts:229`). Interpreter **option arity** is also missing, and the package-manager parser already demonstrates why it is needed via `VALUE_FLAGS` (`wiring.ts:108,157`): `node --require verify-foo.mjs app.mjs` would falsely wire `verify-foo`. The bundle grammar permits string literals and comments without defining escapes, comment placement, or multiple `CHECKS` declarations. **(M) the PRD contradicts itself on its own headline case**: the grammar states that a quoted script path **does** wire, and FR-3's verification row requires quoted-string forms **not** to wire — opposite expectations for the implementer and the test author, in the same edit. **(N) the ledger did not fully leave**: Implementation Scope still assigns `auditWiring` the ledger check and decision-record comparison, Rollback still says to delete the ledger file, and the deny-test requirement still demands an unclassified-script fixture. Left as-is, adopter-facing ledger enforcement returns to `auditWiring`. P2s: the symlink containment helper that would actually work is private in `config/load.ts`, which is outside Targets and the Conflict Surface, while the exported `containedPath` is write-oriented and checks the parent rather than a final symlink; and "two hardcoded paths" survives in Goals and FR-2 prose where the corrected metric says three. |
 | 1   | 2026-07-27 | 6.28  | ITERATE | **First independent round on the split-out PRD, and the lowest of the three.** Seven [P1]s. Two are design errors the split created rather than carried: **(C)** the repository-local ledger and decision record became hard requirements of `auditWiring`, which `gate check --wiring` runs for every adopter, so a fresh adopter fails as unclassified or missing-record and `gate init --practices` installs neither file; **(D)** the `method-pending` classification the split forced is contradicted by the state machine — `gate check --wiring` already exists, so the replacement is not pending — and PRD-026's forward targets contain neither the ledger nor the ADR, so the gate goes red after the deletion regardless. **(A)** the "closed grammar" written to answer iteration-6 finding U is enumerated but not lexically closed: no tokenization, quoting, escaping, or option arity, and the bundle rule says "parse structurally" without saying what it accepts. **(B)** `verifyScriptPattern` is a regex over script *names* and cannot select an unregistered *filename*, so the on-disk direction has no falsifiable predicate. **(E)** every ledger deny fixture can be red because ADR-0002 is simply absent. **(F)** FR-6 targets a test the Conflict Surface omits and PRD-021 claims. **(G)** the released-config rollback would break an adopter's config load, because validation rejects unknown keys. Confirmed: the three-surface delta, the zero-current-impact claim, the CI narrowing, the config keys, and that finding T was carried to the correct successor — this PRD's floor command survives it. |
@@ -204,15 +225,17 @@ begin with the word "Updated": the state builder's `getMetaValue` captures a bar
 
 ## Verdict
 
-**ITERATE — 7.23/10, iteration 3, scored independently by Claude Fable 5.**
+**ITERATE — 7.08/10, iteration 4, scored independently by Codex.**
 
-The design questions are settled — the ledger has a home (PRD-026), the surface-versus-
-predicate distinction is understood, and the four-layer grammar is the right shape. What
-remains is finishing the grammar (segmentation and arity are exactly the two layers the
-in-package `packageScriptOf` already demonstrates the need for), resolving one internal
-contradiction, and sweeping three remnants plus one scope omission. All of it is
-specification work with a known answer; nothing awaits an owner decision. One focused
-remediation round, re-scored independently, should clear this.
+Every closure from the remediation held; the score fell anyway because the round went a
+layer deeper and the grammar produced new defects for the fourth consecutive round. That
+trajectory — enumerate, then lexer, then segmentation and arity, then per-interpreter
+semantics — is the measured signature of a scope error being reported as a sequence of
+specification errors (`scope-out-the-layer-the-rounds-keep-hitting`). Iteration 3's "one
+focused remediation round should clear this" was wrong, and the honest correction is
+structural, not another wording pass: the owner should either narrow the accepted
+grammar radically or extract it into an approved design artifact before this PRD is
+re-scored. Everything outside the grammar is done.
 
 *(Iteration 1 verdict, for history: ITERATE 6.28 — the ledger-ownership design error.
 Resolved by the owner's relocation decision; no longer describes the document.)*
