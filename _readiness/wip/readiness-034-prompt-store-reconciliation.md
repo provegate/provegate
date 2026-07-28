@@ -2,16 +2,19 @@
 
 ## Quick Meta
 
-- PRD path: `_prds/wip/prd-034-prompt-store-reconciliation.md`
-- Score: 5.1/10
-- Verdict: ITERATE
-- Iteration: 1
-- Model Tier: Execution none; Audit none
-- Scored by: GPT-5 via codex-cli — fresh independent session
-- Self-scored: no
-- Date: 2026-07-28
-- PRD Lint result: PASS with written waiver. The requested CLI failed only because the read-only sandbox refused `_state/prds.json.<pid>.tmp` with `EPERM`. Direct invocation of the built `lintPrd` against the same resolved config, manifest, PRD contents, and PRD number returned `{ "ok": true, "issues": [] }`. The orchestrating session’s out-of-sandbox green run dated 2026-07-28 is relied upon as command-level evidence.
-- State Record: pending
+| Field                  | Value |
+| ---------------------- | ----- |
+| PRD                    | `_prds/wip/prd-034-prompt-store-reconciliation.md` |
+| Score                  | 5.1/10 |
+| Verdict                | ITERATE |
+| Iteration              | 1 |
+| Model Tier (Execution) | none |
+| Model Tier (Audit)     | none |
+| Scored by              | GPT-5 via codex-cli — fresh independent session |
+| Self-scored            | no |
+| Date                   | 2026-07-28 |
+| State Record           | pending |
+| PRD Lint               | PASS with written waiver. The requested CLI failed only because the read-only sandbox refused `_state/prds.json.<pid>.tmp` with `EPERM`. Direct invocation of the built `lintPrd` against the same resolved config, manifest, PRD contents, and PRD number returned `{ "ok": true, "issues": [] }`. The orchestrating session’s out-of-sandbox green run dated 2026-07-28 is relied upon as command-level evidence. |
 
 ## Model Tier Recommendation
 
