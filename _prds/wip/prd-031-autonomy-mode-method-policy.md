@@ -9,14 +9,21 @@
 > canonical value is the contract (workflow.config statusVocab.canonical). -->
 >
 > **Created**: 2026-07-27
-> **Updated**: 2026-07-27
+> **Updated**: 2026-07-28
 > **Author**: owner
 > **Audience**: Implementing Agent
 > **Slug**: `autonomy-mode-method-policy`
 > **Cycle Phase**: 1 (PRD Generation)
 > **PRD Class**: infra
 > **Class Rationale**: method content and the agent entrypoint — no code path changes; the deliverable is prompt and bootstrap text plus the provenance record that authorizes it.
-> **Value**: 3.95 (MF/UI/TL/AR/RM: 5/5/2/4/3)
+> **Value**: 3.55 (MF/UI/TL/AR/RM: 5/4/2/3/3)
+
+<!-- 0.25*5 + 0.25*4 + 0.20*2 + 0.15*3 + 0.15*3
+     = 1.25 + 1.00 + 0.40 + 0.45 + 0.45 = 3.55
+     Re-scored at iteration 1's derivation: UI 5 and AR 4 claimed reach this PRD does
+     not have — existing stores and bootstraps are explicitly not migrated (one-way
+     install), so the clause reaches fresh installs and next-init renders only. 3.55
+     clears the 3.40 threshold without the overstatement. -->
 > **Autonomous Close**: operator-gated
 
 <!-- Autonomous Close declares whether the gated close may run without a human stop:
@@ -136,8 +143,21 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    that the entrypoint carries an explicit proceed rule for Phases 4–7. Add its row to the
    `addenda/` table in `source-snapshot/MANIFEST.md`. The addendum is authored **by the
    owner**; an agent may draft it, and the approval is the owner's recorded act.
+
+   **The verification is a new named assertion, because the existing one is green
+   without the addendum** (iteration 1): `content-prompts.test.ts` deliberately
+   excludes `MANIFEST.md` and all of `addenda/**` from the frozen-snapshot digest
+   (`content-prompts.test.ts:449,472`) and hardcodes only Addendum A1 (`:460`) — so
+   no current row can fail when FR-1 has not happened. The test gains an assertion
+   that reads the addendum file directly (never through the digest): exact path
+   exists; the status line carries owner approval and the date; the scope names
+   PRD-031; the unchanged-snapshot statement is present; the manifest's addenda table
+   carries its row; and the two authorized policy clauses (configured Phase 3
+   exception, explicit 4–7 proceed rule) appear. Absent any part, the FR-1 row fails —
+   which is what makes the ordering provable rather than asserted.
    - **Targets:** `docs/research/provegate-bootstrap/source-snapshot/addenda/autonomy-mode-and-proceed-rule-2026-07-27.md`,
-     `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`
+     `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`,
+     `packages/provegate/test/content-prompts.test.ts`
 
 2. **FR-2**: `prompts/phase-3-task-generator.md` replaces the self-granted exception with
    `{{AUTONOMY_MODE}}`, declared **enumerated** in the registry with legal values
@@ -158,7 +178,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - **Targets:** `packages/provegate/prompts/phase-3-task-generator.md`,
      `packages/provegate/prompts/_fragments/AUTONOMY_MODE.human-gated.md`,
      `packages/provegate/prompts/_fragments/AUTONOMY_MODE.autonomous.md`,
-     `packages/provegate/prompts/PLACEHOLDERS.md`
+     `packages/provegate/prompts/PLACEHOLDERS.md`,
+     `packages/provegate/test/content-placeholders.test.ts`
 
 3. **FR-3**: The shipped copy of the Phase 3 protocol is reconciled with the snapshot on the
    one point where it already silently diverges: our copy drops the snapshot's parenthetical
@@ -188,18 +209,36 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 6. **FR-6**: `{{AUTONOMY_MODE}}` is registered in `PLACEHOLDERS.md` using the enumerated
    column PRD-029 FR-4 adds: its meaning, its two legal values, and no `workflow.config`
-   field mapping, because the value is supplied through `prompts.values` as a key. The
-   registry's own rule — a token not in the table must not appear in any shipped prompt — is
-   enforced by `test/content-placeholders.test.ts`, and PRD-029 FR-4 additionally fails a **package test and
-   the render** — never "at build time", since the package's `build` is one `tsup` invocation —
-   when a declared enumerated value has no fragment file; this FR must leave both green.
-   Because PRD-029 derives the required-value set from the **rendered corpus**, adding this
-   token makes it required for every adopter **the next time they run `gate init --prompts`** —
-   not from the moment this PRD lands, which was true only while an upgrade path existed and is
-   false under the one-way install. The conclusion is unchanged: PRD-032 must derive its own
-   value set rather than hardcoding a count, because the set it needs depends on the package
-   version installed when it runs.
-   - **Targets:** `packages/provegate/prompts/PLACEHOLDERS.md`
+   field mapping, because the value is supplied through `prompts.values` as a key.
+
+   **The corpus-test surface moves with it, and the exact moves are specified here**
+   (iteration 1's decisive finding — the first enumerated token in the registry cannot
+   leave these expectations standing):
+
+   - `content-placeholders.test.ts:96` — the registry-row count moves 20 → 21;
+   - `:103` — the zero-enumerations assertion becomes: exactly one enumerated token,
+     `AUTONOMY_MODE`, with legal values `human-gated` and `autonomous`;
+   - `:107` — the required-value census follows the rendered corpus (the count moves
+     with the token's arrival in a rendered consumer);
+   - `:158` — the clean-render fixture supplies a **legal** enumerated value
+     (`human-gated`) for this token instead of the generic `x` the renderer rejects
+     for an enumeration (`prompts.ts:595`).
+
+   **Enumeration coverage is mutation-checked, not asserted once** (iteration 1 found
+   the claimed missing-fragment package test does not exist — the live corpus asserts
+   zero enumerations): the corpus test gains assertions that every declared legal value
+   has its exact fragment file; both legal modes render and their outputs carry the
+   mode's fragment text; an illegal key is refused at render (`prompts.ts:605` is the
+   renderer half — the test half is new); and a missing-fragment case is exercised
+   against a temp copy of the corpus with one fragment removed, proving the failure
+   fires rather than trusting that it would. Fragment terminality stays green.
+
+   Because PRD-029 derives the required-value set from the **rendered corpus**, adding
+   this token makes it required for every adopter **the next time they run
+   `gate init --prompts`** — not from the moment this PRD lands. The consequence for
+   PRD-032 stands: it must derive its own value set rather than hardcoding a count.
+   - **Targets:** `packages/provegate/prompts/PLACEHOLDERS.md`,
+     `packages/provegate/test/content-placeholders.test.ts`
 
 ---
 
@@ -212,9 +251,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   the self-issued exception; it does not add enforcement.
 - **Changing the stop-and-ask checkpoint list.** The ten entries stay as they are. The
   asymmetry is fixed by adding the proceed rule, not by removing stops.
-- **Any code path.** No TypeScript file is targeted. If an FR here appears to need one, the
-  design is wrong: `{{AUTONOMY_MODE}}` was deliberately made a `prompts.values` entry rather
-  than a config key so this PRD stays text-only.
+- **Any production code path.** No file under `packages/provegate/src/**` is targeted —
+  `{{AUTONOMY_MODE}}` travels through `prompts.values` precisely so no config key or
+  renderer change is needed. **Test files are not exempt and never were honestly:**
+  the corpus tests hardcode the registry's shape (20 rows, zero enumerations, nine
+  required values, an `x`-for-every-token fixture — `content-placeholders.test.ts:96,
+  103,107,158`), so the first enumerated token necessarily moves them. Iteration 1
+  caught the earlier absolute wording as a self-contradiction; the boundary is
+  production code, and the test-side changes are specified in FR-6 rather than
+  forbidden by a rule the FRs cannot satisfy.
 - **Migrating adopters who already have an `AGENT_BOOTSTRAP.md`.** `gate init` never
   overwrites, so FR-5's clause reaches fresh installs only. Stated rather than discovered.
 - **Auditing the rest of the shipped corpus against the snapshot.** FR-3 fixes the one
@@ -239,8 +284,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   which mode it is in.
 - **Given** the two `AGENT_BOOTSTRAP` copies, **When** the test suite runs, **Then** it
   fails if the proceed rule is absent from either or worded differently between them.
-- **Given** `{{AUTONOMY_MODE}}`, **When** `content-placeholders.test.ts` runs, **Then** the
-  token is found in the registry and the test stays green.
+- **Given** `{{AUTONOMY_MODE}}`, **When** `content-placeholders.test.ts` runs, **Then**
+  the registry census is 21 rows with exactly one enumeration, the clean-render fixture
+  supplies a legal mode value, both legal fragments exist and render, an illegal key is
+  refused, and a temp-copy missing-fragment mutation fails — each as its own assertion.
+- **Given** a tree with no FR-1 addendum, **When** the FR-1 row runs, **Then** it
+  **fails** — the assertion reads the addendum directly, because the digest excludes
+  `addenda/**` and was green without it.
 
 ---
 
@@ -272,20 +322,40 @@ repository's records say plainly what happens next if nothing holds them togethe
 divergence FR-3 repairs is an existing instance of it between the shipped prompt and its
 own snapshot.
 
-**Prerequisite and parallelism.** PRD-029 must be Ship Verified: until the store exists, an
-edited protocol still reaches no agent, and the `{{AUTONOMY_MODE}}` token would render
-nowhere. Once it lands, **this PRD and PRD-030 are disjoint** — 030 owns
-`core/run/prompts.ts`, `cli.ts` and the verify surface; this one owns method content,
-`AGENT_BOOTSTRAP.md` and the snapshot addenda — so they may run in parallel. `gate check`'s
-Targets-versus-watch machinery and `gate queue` should both be re-run before Phase 3 rather
-than trusting this paragraph.
+**The chain, as shipped (re-founded 2026-07-28 — the earlier narrative predated the
+day's landings).** PRD-029 (the one-way store install and the enumerated-token
+mechanism this PRD rides) is **Ship Verified** — the hard prerequisite is met. PRD-030
+shipped as the **state model only** and handed the reconciliation mechanism to
+PRD-034, which is Draft; PRD-032 (activation/dogfood) sits at 4.00 ITERATE, parked
+behind PRD-034. **None of that blocks this PRD**: its deliverable is package content
+plus corpus tests, and the token's effects reach adopters at their next
+`gate init --prompts` whether or not this repository has enabled its own store (it has
+not — no `.provegate/`, no `prompts` block in `workflow.config.json`).
 
 ### Dependencies
 
-- **PRD-029 Ship Verified.** Hard prerequisite.
-- **An owner-approved addendum.** Hard precondition, and it is FR-1 rather than an
+- **PRD-029 Ship Verified** — met (`2026-07-27`).
+- **An owner-approved addendum** — hard precondition, and it is FR-1 rather than an
   assumption.
-- No new runtime dependency; no code path added; nothing reaches the network.
+- **Serialization, declared rather than discovered** (iteration 1 found these
+  collisions undeclared): **PRD-026** claims
+  `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md` (an FR-5
+  target); **PRD-032** claims `AGENT_BOOTSTRAP.md` (the other FR-5 target). Neither
+  path is `sharedAppendOnly`. This PRD serializes with each on those files — re-run
+  `gate queue` at claim, and expect to wait on whichever is in execution phase.
+- No new runtime dependency; no production code path; nothing reaches the network.
+
+### Rollback
+
+Everything here is text plus corpus-test expectations, and the revert is one
+`git revert`: the fragments, the registry row, the protocol block, the bootstrap
+clauses and the test expectations disappear together, restoring the prior corpus
+exactly. Consequences, stated: an adopter who ran `gate init --prompts` while this was
+live keeps their rendered store (one-way install — nothing rewrites it), and the
+`AUTONOMY_MODE` key in their config becomes an unknown-key render diagnostic only at
+their next install; the addendum and its manifest row **stay** — a dated,
+owner-approved record of an extension later reverted is provenance history, and
+deleting it would falsify the record the cap exists to keep.
 
 ---
 
@@ -298,7 +368,10 @@ than trusting this paragraph.
 - [ ] `packages/provegate/prompts/orchestration-runner.md` — the proceed rule for 4–7
 - [ ] `packages/provegate/prompts/PLACEHOLDERS.md` — the token row
 - [ ] `AGENT_BOOTSTRAP.md` and its shipped template — the proceed rule
-- [ ] `packages/provegate/test/content-prompts.test.ts` — the two-copy and mode assertions
+- [ ] `packages/provegate/test/content-prompts.test.ts` — the two-copy, mode, and
+      direct-read addendum assertions
+- [ ] `packages/provegate/test/content-placeholders.test.ts` — registry count,
+      enumeration coverage, legal-value fixture, missing-fragment mutation check
 
 ---
 
@@ -345,16 +418,24 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   renderer actually consumes — registering a key no consumer renders (or a value no
   fragment carries) is exactly the catalogue-shaped demand the record forbids.
 - applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers `_prds/**`.
-  FR-5 edits one rule in two files and FR-4 states a related rule in a third, which is
-  precisely the shape this record describes; the test in FR-5 exists because of it, and FR-3
-  repairs an existing instance between the shipped prompt and its own snapshot.
-- applied: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`,
-  which FR-5 edits. The entrypoint currently describes an autonomy boundary that its own
-  rule list contradicts, which is this record's failure mode in the entrypoint itself.
-- applied: `evidence-pattern-satisfied-by-the-template` — the template and the live
-  `AGENT_BOOTSTRAP.md` are the two copies FR-5 must keep identical, and a test that only
-  greps the live copy would pass while the shipped one stays stale. The assertion covers
-  both.
+  FR-5 edits one rule in two files and FR-4 states a related rule in a third — the
+  record's shape — and the FR-5 test exists because of it. **The record also fired on
+  this document itself**: iteration 1 found the stale PRD-030 narrative and the old
+  test-count assumptions surviving under an `applied` disposition; this revision's
+  chain rewrite and count updates were swept by grep over the whole document, and the
+  Phase 6 reviewer is briefed to sweep.
+- reviewed: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`,
+  which FR-5 edits, so the disposition is required; the record's specific failure mode
+  (a shipped check still described as future work, with the stale direction inverted)
+  is not this PRD's defect. Considered for FR-5's wording: the proceed rule references
+  the stop list as it ships today, never as planned work, so this record's trap is not
+  reintroduced.
+- applied: `evidence-pattern-satisfied-by-the-template` — the record's rule (a
+  required-pattern check satisfied by scaffold text) shapes FR-5's assertion design:
+  the test asserts **identity between the two copies**, never the presence of a
+  pattern in each — a pattern-grep would be satisfied by the template's own text while
+  the live copy stayed stale, which is this record's failure mode arriving through the
+  checker.
 - applied: `assert-absent-needs-an-independent-cause` — its watch covers
   `packages/provegate/test/**`, and FR-3 and FR-5 target `content-prompts.test.ts`. FR-2's
   central assertion is a negative — the human-gated rendering carries no exception and no
@@ -414,6 +495,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/prompts/PLACEHOLDERS.md`
 - `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`
 - `packages/provegate/test/content-prompts.test.ts`
+- `packages/provegate/test/content-placeholders.test.ts`
 - `AGENT_BOOTSTRAP.md`
 - `docs/research/provegate-bootstrap/source-snapshot/addenda/**`
 - `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`
@@ -449,7 +531,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-4 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | the orchestration protocol states the proceed rule and its wording traces to the addendum                      |
 | FR-5 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | both bootstrap copies carry the proceed rule and carry it identically; either one missing fails                 |
 | FR-6 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg | the token is registered and no shipped prompt carries an unregistered one                                       |
-| FR-6 | `pnpm verify:workflow`                                        | repo  | the frozen-snapshot digest and the method-content checks stay green with the addendum in place                 |
+| FR-6 | `pnpm verify:workflow`                                        | repo  | the repo bundle stays green with the addendum in place — workflow-script checks only; the digest and the addendum proof live in the package-test rows above, which the bundle never runs |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -485,8 +567,13 @@ rationalize.
 - DO NOT reintroduce a self-assessable exception in any wording. "In autonomous mode",
   "where appropriate", "unless the session is unattended" are all the same defect: the gated
   party evaluating its own exemption.
-- DO NOT add a config key or touch any TypeScript file. The value travels through
-  `prompts.values`, and that choice is what keeps this PRD parallel to PRD-030.
+- DO NOT add a config key or touch any file under `packages/provegate/src/**`. The
+  value travels through `prompts.values`; the renderer already knows enumerations.
+  The two corpus-test files are declared targets — the earlier absolute no-TypeScript
+  rule was iteration 1's decisive self-contradiction and is deliberately gone.
+- DO NOT satisfy the missing-fragment requirement with an assertion that the renderer
+  *would* fail. The mutation check runs the failure — a deny case that is never
+  executed is not evidence.
 - DO NOT edit `AGENT_BOOTSTRAP.md` without editing the shipped template in the same change,
   or the reverse. They are one rule in two files and the test will say so.
 - DO NOT remove or reword any of the ten stop-and-ask checkpoints. The asymmetry is fixed
@@ -502,6 +589,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                 |
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | Claude Fable 5 (non-scorer session), iteration-1 rework | **All seven missing pieces applied; the self-contradiction is resolved by admitting the corpus-test surface.** **(1)** The absolute no-TypeScript rule was impossible against the shipped corpus tests (`content-placeholders.test.ts:96,103,107,158` hardcode 20 rows, zero enumerations, nine values, and an `x` fixture the renderer rejects for an enumeration) — the boundary narrows to production code (`src/**`), and both corpus-test files become declared targets with their exact expectation moves specified in FR-6. **(2)** Enumeration coverage is mutation-checked: both legal fragments, illegal-key refusal, and a temp-copy missing-fragment case that runs the failure. **(3)** FR-1's verification reads the addendum directly with a named assertion — the digest deliberately excludes `addenda/**` (`content-prompts.test.ts:449,472`), which is why the old row was green without the addendum. **(4)** Serialization declared: PRD-026 on the bootstrap template, PRD-032 on the root bootstrap. **(5)** The chain narrative re-founded on shipped state: 029 Ship Verified (prerequisite met), 030 state-model-only with the mechanism at Draft 034, 032 parked at 4.00; none of it blocks this text-plus-tests item. **(6)** The `verify:workflow` note describes what the bundle runs; the three flagged dispositions corrected (`docs-outlive…` honestly to reviewed; `evidence-pattern…` re-grounded on identity-not-pattern; `a-rule-corrected…` names its own iteration-1 firing). **(7)** Value re-declared 3.55 (5/4/2/3/3) at the scorer's derivation — no migration of existing stores means no current-adopter reach — and a Rollback section lands: one revert restores the corpus, the adopter's stale key degrades to a render diagnostic at next install, and the addendum stays as dated provenance history. Awaits an independent re-score |
 | 2026-07-27 | owner  | **Two carried items closed.** The claim that adding `{{AUTONOMY_MODE}}` makes it required "from the moment this PRD lands" was true only while an upgrade path existed; under the one-way install nothing re-renders an existing store, so it becomes required at the adopter's next `gate init --prompts`. And `_brain/INDEX.md` is a Durable Artifact here and in PRD-030, declared by neither — the conflict gate could not see a collision the two would have while claiming parallelism. Carried since readiness iteration 5. |
 | 2026-07-27 | owner  | **Swept against PRD-029's cut.** The enumerated-token mechanism moved from PRD-029 FR-6 to FR-4 when that document was renumbered, so three references here pointed at the adapters FR. And the "fails at build time" claim survived readiness iteration 5's sweep because it is split across a line break, which `grep` misses; PRD-029 FR-4 now states the opposite explicitly and this FR matches it. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** PRD-029's iteration 2 falsified the `prompts.values` design: scalar substitution cannot select a text block, and putting the block text in an adopter's config moves method prose out of the package. Owner decision: an **enumerated token** whose fragments ship at `prompts/_fragments/`, with the config carrying only the key. FR-2 now targets the two fragments; the target list still contains no TypeScript file, so this item stays parallel to PRD-030. FR-6 records the consequence for PRD-032: adding a token to the rendered corpus changes every adopter's required set, so PRD-032 must derive its values rather than hardcode a count. |
