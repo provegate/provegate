@@ -159,7 +159,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 - **PRD-024 is Ship Verified (2026-07-28)** — the `inputs` array and the reasoned
   exception entry FR-1 extends are on `main`, so the former hard ordering is met.
-  PRD-026 declares nearby paths (`package.json`, CI); re-run `gate queue` before
+- **PRD-028 (iteration-4 revision) also extends the same `inputs` array and the same
+  exception entry** — its FR-3 adds the `_brain` store glob. Serialize on `turbo.json`
+  and `scripts/verify/turbo-inputs-exceptions.json` with whichever of the two claims
+  first. PRD-026 declares nearby paths (`package.json`, CI); re-run `gate queue` before
   claiming rather than trusting this paragraph.
 
 ---

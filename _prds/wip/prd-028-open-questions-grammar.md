@@ -16,17 +16,18 @@
 > set moving is what makes the measured corpus procedure a requirement rather than a
 > courtesy.
 > **Autonomous Close**: operator-gated
-> **Value**: 3.70 (MF/UI/TL/AR/RM: 5/4/2/3/4)
+> **Value**: 3.45 (MF/UI/TL/AR/RM: 4/4/2/3/4)
 
-<!-- 0.25*5 + 0.25*4 + 0.20*2 + 0.15*3 + 0.15*4
-     = 1.25 + 1.00 + 0.40 + 0.45 + 0.60 = 3.70
+<!-- 0.25*4 + 0.25*4 + 0.20*2 + 0.15*3 + 0.15*4
+     = 1.00 + 1.00 + 0.40 + 0.45 + 0.60 = 3.45
 
-     One recorded expansion under the expand-don't-delete rule (iteration 2 found the
-     previous 3.55 rested on a disproved MF premise; at MF 4 it computed 3.30, below the
-     3.40 threshold): FR-4 now ships the exact closed forms into the PRD template's §9
-     guidance, which is where an adopter first meets the rule — AR rises 2→3 on that
-     delivery, and MF 5 is re-earned rather than assumed, because the existence check FR-1
-     adds is what makes "deferred to a follow-up PRD" provable instead of asserted. -->
+     MF is 4, not 5, at the iteration-4 scorer's derivation and deliberately kept there:
+     two consecutive revisions claimed the follow-up guarantee was re-earned and two
+     consecutive rounds broke it (a self-link, then a symlink alias). MF 5 is available
+     to a future round only after the canonical-resolution mechanism survives one
+     unbroken. AR 3 stands on FR-4's corrected template delivery — the one recorded
+     expansion under expand-don't-delete. 3.45 clears the 3.40 threshold without the
+     contested point. -->
 
 ---
 
@@ -40,12 +41,13 @@ none — and tripped the method-content traceability hard cap on it.
 
 ### The record this document is built on
 
-Seven successive exemption rules produced eight hiding places, each created by the
-previous fix — the seventh (a self-link) found by iteration 3 inside this document's own
-first narrowing. The eighth rule is not a better exemption grammar; it is the owner's
-decision to **close the grammar entirely**, with the one field previous rules left to
-the author — the deferral referent — **resolved through the state layer** to a distinct,
-registered, active work item.
+Eight successive exemption rules produced nine hiding places, each created by the
+previous fix — the seventh (a number-level self-link) and eighth (a symlink alias) found
+by iterations 3 and 4 inside this document's own narrowings. The ninth rule is not a
+better exemption grammar; it is the owner's decision to **close the grammar entirely**,
+with the referent **canonically resolved** — regular file, realpath containment,
+realpath distinctness, configured role, recognized H1 — to a distinct, unfinished,
+filed work item.
 
 | # | Rule at the time | Where the question moved |
 | - | ---------------- | ------------------------ |
@@ -57,10 +59,11 @@ registered, active work item.
 | 4 | no free text; `Deferred: [text](target)` | the link **label**: `Deferred: [Who owns authorization?](background.md)` |
 | 5 | label is an id; target basename starts with it | the target basename **suffix**: `Deferred to [PRD-123](_prds/wip/prd-123-who-owns-authorization.md)`, target existence deliberately unchecked |
 | 6 | target must exist with the label's number | the **referent**: `Deferred to [PRD-028](…prd-028-….md)` — a self-link; a completed PRD or a parser-rejected look-alike passes the same shape test |
+| 7 | referent resolved by basename, number, state and existence | the **alias**: a wip symlink named `prd-123-followup.md` pointing at the declaring PRD — every basename-level check passes while the canonical referent is self; the absent fifth argument fails open; a stub passes unread |
 
-**Eight history rows, one deny fixture per row; twelve deny fixtures in the full matrix
-(the four extra resolution rejections are FR-1's). Eight and twelve are the two counts
-this document uses everywhere.**
+**Nine history rows, one deny fixture per row is the floor; sixteen deny fixtures in the
+full matrix (the seven extra resolution rejections are FR-1's). Nine and sixteen are the
+two counts this document uses everywhere.**
 
 ### Why resolution replaces existence, and why that closes the hard cap
 
@@ -91,10 +94,10 @@ PRD with a link"* — wanted all along.
 ### Primary Goals
 
 - [ ] Close the §9 grammar to two exact forms with no author-typed field anywhere — the
-      eighth rule is a closed set resolved through the state layer, not a better
-      predicate.
+      ninth rule is a closed set canonically resolved through the state layer, not a
+      better predicate.
 - [ ] Make an unresolved question fail the lint regardless of the shape it is written in,
-      including every one of the eight historical shapes.
+      including every one of the nine historical shapes.
 - [ ] Prove — not assume — that a deferral resolves to a distinct, registered, active
       follow-up, which is what the snapshot's rule states and what closes the
       traceability cap.
@@ -107,7 +110,7 @@ PRD with a link"* — wanted all along.
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | Author-typed fields in the exempt forms | 1 (the link target's basename suffix, unverified) | 0 — every character of both forms is either fixed syntax or verified against a real work item | FR-1 fixtures |
-| Places an unresolved question can hide in §9 | 8, measured across seven successive rules plus the original | 0 | the FR-1 deny matrix, twelve rows |
+| Places an unresolved question can hide in §9 | 9, measured across eight successive rules plus the original | 0 | the FR-1 deny matrix, sixteen rows |
 | Unresolved questions hidden by paragraph, fence, HTML or comment form | unbounded — a prose §9 reports 0 whatever it contains | 0 — any line outside the closed grammar fails | FR-2 fixtures |
 | §9 sections a document may declare | unbounded; only the first is read | exactly 1 | FR-2 fixture |
 | Deferrals resolving to a distinct, registered, active follow-up | not checked — shape and existence only, which iteration 3 broke with a self-link | all | FR-1 fixtures |
@@ -173,15 +176,38 @@ Each FR carries the exact target paths the implementing agent will touch. Use
         accept the basename, and the parsed number must equal the label's — a
         look-alike the parser rejects is not a work item;
      4. the file **exists** at that path, resolved against the repository root;
-     5. the referenced item is a **distinct, active follow-up**: its number differs
-        from the declaring PRD's own (the lint's fifth argument — the production caller
-        always passes it; a programmatic caller omitting it skips only the self check,
-        stated here rather than discovered), and the state directory is `wip` or
-        `deferred` — a `completed` target is finished work, not a follow-up.
+     5. the referenced item is a **distinct, unfinished follow-up**: its number differs
+        from the declaring PRD's own, and its state directory is the **configured**
+        `dirs.stateRoles.wip` or `dirs.stateRoles.deferred` name (never the literal
+        strings — roles are config, `config/types.ts:23-31`; and "unfinished" rather
+        than "active", because the state query's active set excludes deferred records,
+        `state/query.ts:58-69`) — a completed-role target is finished work, not a
+        follow-up;
+     6. the target is a **regular file**: `lstat`, never `stat` — a symlink is refused
+        outright, because iteration 4 built the eighth hiding place from one
+        (`_prds/wip/prd-123-followup.md` → the declaring PRD passes every
+        basename-level check while canonically self-linking);
+     7. identity is **canonical**: the realpath of the target must remain under the
+        realpath of the artifact root, and must differ from the realpath of the
+        declaring PRD's own artifact — the alias comparison rule 5's number check
+        cannot see;
+     8. the target is a **recognized record, not a stub**: its first heading is the H1
+        the template ships — the configured prefix, the target's own number and a
+        colon (`# PRD-NNN: …`) — so a parser-valid file holding only a smuggled
+        question does not resolve; a document that carries the work item's own H1 has
+        been filed as that work item.
+
+   **The absent fifth argument fails closed.** When the declaring PRD's number is not
+   supplied and the section contains any Deferred entry, the lint reports the deferral
+   as unverifiable instead of skipping the self check — the production caller always
+   passes the number, and a fixture that omits it is
+   `fixture-must-reach-production-shape` violated, not a laxer mode.
 
    A label/target number mismatch fails. A missing file fails. A path outside the
-   artifact root fails. A self-reference fails. A completed target fails. A basename the
-   artifact parser rejects fails. A wrong-width label fails. There is no field left in
+   artifact root fails. A self-reference fails — by number or by canonical alias. A
+   completed-role target fails. A basename the artifact parser rejects fails. A
+   wrong-width label fails. A symlink fails. A stub without its own H1 fails. A
+   deferral linted without the declaring number fails. There is no field left in
    either form where an author can type a question, and no way to satisfy the form
    without a **real, distinct, active, filed work item** on the other end — the snapshot
    line (`source-snapshot/prompts/phase-2-readiness-scorer.md:210`) made
@@ -200,14 +226,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    history is what surface area costs. (The lower-casing in rule 3 maps the label to the
    filename convention; it is a derivation, not a tolerance.)
 
-   **The deny matrix is the requirement: twelve rows.** One fixture per history row in
-   §1's table (eight — row 6's fixture is the self-link), plus the four remaining
-   resolution rejections (completed target, wrong-width label, parser-rejected basename,
-   label/target number mismatch) — each paired with a positive control on the same shape
-   (the exact form, against a distinct fixture work item in a `wip` state directory). A
+   **The deny matrix is the requirement: sixteen rows.** One fixture per history row in
+   §1's table (nine — row 6's fixture is the number-level self-link, row 7's the
+   symlink alias), plus the seven remaining resolution rejections: completed-role
+   target, wrong-width label, parser-rejected basename, label/target number mismatch,
+   symlink alias to a *different* PRD, H1-less stub, and a Deferred entry linted
+   without the declaring number — each paired with a positive control on the same shape
+   (the exact form, against a distinct fixture work item in a wip-role directory). A
    deny fixture whose input would fail anyway is not evidence
    (`assert-absent-needs-an-independent-cause`), and this is the PRD where that matters
-   most: seven previous rules each passed their own tests.
+   most: eight previous rules each passed their own tests.
    - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
      `packages/provegate/test/open-questions.test.ts` (new)
 2. **FR-2 — Exactly one §9 section, holding only the closed grammar, judged on raw
@@ -323,10 +351,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Removing the §9 exemption or routing deferrals to the status board.** Proposed and
   rejected 2026-07-27: the source snapshot states the exemption; removing it fabricates
   method content in the opposite direction.
-- **An exemption grammar with any author-typed field, or a referent matched as a
-  shape.** Seven rules produced eight holes. The owner's 2026-07-28 decision closes the
-  grammar and this revision resolves the referent; loosening either is a new owner
-  decision, not a remediation.
+- **An exemption grammar with any author-typed field, or a referent resolved below the
+  canonical level.** Eight rules produced nine holes. The owner's 2026-07-28 decision
+  closes the grammar and this revision resolves the referent canonically; loosening
+  either is a new owner decision, not a remediation.
 - **Editing another PRD's §9.** FR-3 reports; the failures are their authors'.
 - **Rewriting completed PRDs** to satisfy the closed grammar. Historical artifacts stand
   and are outside the sweep — except that `prd-ready.test.ts` lints one as a fixture,
@@ -355,12 +383,14 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   number. *(5)*
 - **Given** a deferral whose target is the declaring PRD itself, **Then** it fails — a
   follow-up is a different work item. *(6)*
-- **Given** a target in the `completed` state directory, a wrong-width label, a basename
-  the artifact parser rejects, or a label and target naming **different** numbers,
-  **Then** each fails — the four remaining resolution rejections.
+- **Given** a completed-role target, a wrong-width label, a basename the artifact
+  parser rejects, a label and target naming **different** numbers, a **symlink** target
+  (alias to self or anything — non-regular is refused outright), an **H1-less stub**, or
+  a Deferred entry linted **without the declaring number**, **Then** each fails — the
+  resolution rejections. *(history row 7 covers the alias)*
 - **Given** `- (none)` alone, or `- Deferred to [PRD-NNN](<path>)` resolving to a
   distinct registered work item in a `wip` or `deferred` state directory, **Then** each
-  is exempt — the positive controls, paired per deny shape, twelve in all.
+  is exempt — the positive controls, paired per deny shape, sixteen in all.
 - **Given** a §9 written as bold paragraphs containing an unresolved question, **Then**
   the lint fails — the reviewer's injected case, which returns clean today.
 - **Given** a fenced code block, raw HTML, or a checkbox bullet inside §9, **Then** the
@@ -411,8 +441,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   remains.
 - **PRD-026 and this PRD both claim `prd-ready.ts`** — serialize; re-run `gate queue`
   before claiming rather than trusting this paragraph.
-- **Every wip PRD failing the closed grammar** — a one-line §9 edit each, by that PRD's
-  author, before Phase 4 starts here.
+- **Every wip PRD failing the closed grammar** — comment and continuation deletions,
+  several lines in places (FR-3's measured shape), by each PRD's author, before Phase 4
+  starts here.
 - No new runtime dependencies; `packages/provegate` stays at zero.
 
 ### Rollback
@@ -437,9 +468,9 @@ artifact.
       identity
 - [ ] `packages/provegate/src/core/gates/prd-ready.ts::frBlocks` — the same cardinality
       rule
-- [ ] `packages/provegate/test/open-questions.test.ts` (new) — the seven-row deny matrix
-      with paired positive controls, the grammar fixtures, the wip corpus pass with the
-      five-argument call, the turbo-inputs presence assertion
+- [ ] `packages/provegate/test/open-questions.test.ts` (new) — the sixteen-row deny
+      matrix with paired positive controls, the grammar fixtures, the wip corpus pass
+      with the five-argument call, the four-input turbo assertion
 - [ ] `packages/provegate/test/prd-ready.test.ts` — two fixtures the closed grammar
       necessarily invalidates, declared here
 - [ ] `packages/provegate/templates/prd-template.md` — §9 guidance immediately before
@@ -483,7 +514,7 @@ artifact.
   surface (a link) is worthless without the predicate that resolves it, and iteration 3
   proved a shape predicate is "the same defect in a stricter costume" — the resolution
   predicate (parser + width + state + distinctness) is the ported half the record
-  demands, and the twelve-row deny matrix is the proof it actually reads.
+  demands, and the sixteen-row deny matrix is the proof it actually reads.
 - applied: `lint-must-name-the-span-it-judges` — the §9 reader answers about a span it
   does not read (bullet-start lines of the first substring-matched section); FR-2 names
   the span — one heading-identified section, every raw line — and reads exactly it.
@@ -503,13 +534,16 @@ artifact.
   invalidated `prd-ready.test.ts` fixtures are the allowed half (a rule changed on
   purpose, declared, with a corpus pass); the forbidden half — a guard reaching callers
   nobody warned — is what FR-3's report-never-edit rule prevents.
-- applied: `a-rule-corrected-survives-where-it-is-restated` — the fixture count, the
-  argument count, and the existence decision each changed in this revision, and each was
-  swept at every restatement: the history table, the metrics, FR-1, the Gherkin rows,
-  §11 and the DO NOT list all say seven, five, and checked.
-- reviewed: `turbo-cache-masks-out-of-input-reads` — the corpus test's reads are inside
-  the inputs PRD-024 shipped; FR-3 asserts their presence instead of declaring new ones,
-  and `turbo.json` left this PRD's surface on that measurement.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — **and this document is the
+  record's live demonstration**: iteration 4 caught the iteration-3 sweep claiming
+  every restatement had been updated while Implementation Scope still ordered a
+  seven-row matrix. This revision's counts (nine history rows, sixteen deny rows,
+  canonical resolution) were swept by grep over the whole document rather than by
+  memory, and the Phase 6 reviewer is briefed to sweep, not to hunt.
+- applied: `turbo-cache-masks-out-of-input-reads` — iteration 3 proved PRD-024's inputs
+  did NOT cover everything the lint reads: the `_brain` store was outside every cache
+  key. FR-3 adds it and asserts all four root inputs; `turbo.json` and the exceptions
+  file are back on this surface for exactly that write.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — FR-4 writes the exact forms
   into the shipped template, which is precisely the surface this record warns can satisfy
   a required-line check vacuously; the §9 lint judges real documents' sections, never the
@@ -583,7 +617,7 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR   | Command / Check                                              | Scope | Notes |
 | ---- | ------------------------------------------------------------ | ----- | ----- |
-| FR-1 | `pnpm --filter provegate test test/open-questions.test.ts`    | pkg   | the twelve-row deny matrix, one fixture per history row plus the four remaining resolution rejections, each paired with its positive control; self, completed, wrong-width, parser-rejected, mismatched, missing and out-of-root targets all fail |
+| FR-1 | `pnpm --filter provegate test test/open-questions.test.ts`    | pkg   | the sixteen-row deny matrix, one fixture per history row plus the seven remaining resolution rejections, each paired with its positive control; self by number or canonical alias, symlink, stub, completed-role, wrong-width, parser-rejected, mismatched, missing, out-of-root and unverifiable-without-number targets all fail |
 | FR-2 | `pnpm --filter provegate test test/open-questions.test.ts`    | pkg   | a paragraph section fails; fenced, raw-HTML, comment and checkbox lines fail; one trailing separator is ignored and a second fails; zero and duplicate sections fail; a longer heading is not the section; duplicate requirement sections fail the same way |
 | FR-3 | `pnpm --filter provegate test test/open-questions.test.ts`    | pkg   | the corpus pass: every PRD in the configured wip directory through the lint with all five production arguments, oracle zero closed-grammar failures with offenders named, never compared to the Phase-3 record, no allowlist; plus the assertion that all four root inputs are declared, including the brain store this PRD adds |
 | FR-3 | `pnpm test`                                                   | repo  | the whole suite via turbo with the two declared fixture edits and no others — the direct package invocation cannot run under the runner, per the runner-sentinel learning PRD-024 recorded |
@@ -599,12 +633,12 @@ Cross-cutting floor (run before Code Complete):
 
 Hard caps (when your gates manifest configures them):
 
-- Deny test: `packages/provegate/test/open-questions.test.ts` — all twelve deny rows
-  (the eight history rows including the self-link, plus completed, wrong-width,
-  parser-rejected and mismatched targets), the paragraph section, the fenced and comment
-  cases, and the duplicate and missing sections must each **fail**. A grammar that only
-  passes on good input is not evidence, and this is the PRD where that matters most:
-  seven previous rules each passed their own tests.
+- Deny test: `packages/provegate/test/open-questions.test.ts` — all sixteen deny rows
+  (the nine history rows including the self-link and the symlink alias, plus the
+  resolution rejections), the paragraph section, the fenced and comment cases, and the
+  duplicate and missing sections must each **fail**. A grammar that only passes on good
+  input is not evidence, and this is the PRD where that matters most: eight previous
+  rules each passed their own tests.
 - Contract test: n/a — no client-to-server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-028`
@@ -618,9 +652,14 @@ rationalize.
 
 - DO NOT introduce `any`; use `unknown` plus narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
-- DO NOT design a ninth exemption rule. Seven predicates produced eight holes; the
-  eighth is a closed set resolved through the state layer, by owner decision, and
-  loosening it is a new owner decision.
+- DO NOT design a tenth exemption rule. Eight predicates produced nine holes; the ninth
+  is a closed set canonically resolved, by owner decision, and loosening it is a new
+  owner decision.
+- DO NOT resolve the referent below the canonical level: lstat-regular, realpath
+  containment, realpath distinctness, the recognized H1. Basename-level resolution was
+  the eighth hiding place.
+- DO NOT let an absent fifth argument skip the self check. With a Deferred entry
+  present it fails closed as unverifiable.
 - DO NOT leave any author-typed field in either exempt form. Every variable character is
   either fixed syntax or verified against a real work item on disk.
 - DO NOT weaken the resolution to a shape check. Shape-plus-existence was the seventh
@@ -662,6 +701,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5 (rewrite author, non-scorer), iteration-4 remediation | **Canonical resolution replaces basename resolution; both iteration-4 [P1]s and both [P2]s closed.** The eighth hiding place — a wip symlink alias passing every basename-level check while canonically self-linking — dies at three added rules: lstat-regular (symlinks refused outright), realpath containment under the realpath'd artifact root, and realpath distinctness against the declaring PRD's own artifact; the H1-recognition rule closes the deferred-stub path, and the absent fifth argument now **fails closed** as unverifiable when a Deferred entry is present. History row 7 records the alias; the counts are nine history rows and sixteen deny fixtures, swept by grep this time — the §8 seven-row survivor iteration 4 caught is fixed, and the `a-rule-corrected…` disposition now names its own failure instead of claiming a clean sweep. Config-role [P2]: `wip`/`deferred` literals replaced by `dirs.stateRoles` names with the prefix from config, and "active" corrected to "unfinished" against `query.ts:58-69`. The `turbo-cache…` disposition flips to applied (024's inputs did not cover the store). Dependencies' one-line claim corrected to FR-3's measured comments-and-continuations shape. **Value re-declared 3.45 (4/4/2/3/4) at the scorer's supportable derivation** — MF 4 held deliberately after two broken re-earn claims; MF 5 waits for a round the mechanism survives |
 | 2026-07-28 | Claude Fable 5 (rewrite author, non-scorer), iteration-3 remediation | **All three iteration-3 [P1]s closed and the cross-item [P2] taken; the referent is now resolved, not matched.** **(H)** FR-1's link rule rewrites from shape-plus-existence to **state-layer resolution**: label at the configured width (`defaults.ts:26-29`), basename accepted by `parseArtifactName` (`state/artifacts.ts:33-47`) with the parsed number equal to the label's, file existing under the artifact root, and the referent a **distinct, active** item — not the declaring PRD (the lint's fifth argument names it) and not `completed`. The self-link, completed-target, look-alike and wrong-width cases each gain a deny fixture; history row 6 records the seventh hiding place and the deny matrix is twelve rows (eight history + four resolution rejections), swept at every count. **(I)** FR-4's guidance moves outside the judged body — immediately before the §9 heading — after the first version put it in a comment FR-2 itself refuses; the round-trip now asserts the instantiated document lints green, the self-application that would have caught it. **(J)** FR-3's Phase-3 record is discovery output only; the corpus oracle is zero closed-grammar failures with offenders named. **(K)** `$TURBO_ROOT$/_brain/**` joins the test task inputs with the exceptions reason extended — `lintPrd` reads the store (`prd-ready.ts:212`) and nobody's cache key knew, landed PRD-024's corpus test included; `turbo.json` and the exceptions file return to the surface, serializing with PRD-036's FR-1. Value stays 3.70: MF 5 now rests on resolution rather than the disproved shape premise, AR 3 on the corrected template delivery — re-derivation recorded here as iteration 3's missing piece 6 asked |
 | 2026-07-28 | Claude Fable 5, on owner decision (in-session) | **Radical narrowing — the owner's structural decision, following the PRD-025 precedent: stop designing exemption predicates, close the grammar.** Iteration 2 (Codex, 6.55 ITERATE) found the sixth hiding place inside the form adopted because it was supposed to have none — the link target's basename suffix, with existence deliberately unchecked — and tripped the **method-content traceability hard cap** on exactly that waiver: nothing proved the link pointed at a follow-up PRD. The design answer reverses the waiver rather than adding a seventh predicate: **the target must exist under the configured artifact root and carry the label's number** — existence is the proof the snapshot's rule (*deferred to a follow-up PRD with a link*) always implied, the suffix stops being free text because it is the real slug of a real filed work item, and an author who files a PRD to "hide" a question has filed the question, which is the system working. **The grammar closes**: two exact single-line forms, blank lines, one optional terminal `---`, everything else refused by name — no continuation clause, no comment clause, no tolerance normalization (each was a previous hiding place). **FR-2 drops the line-kind approach** iteration 2 proved unfollowable (comments are not a `LineKind`) for raw-line judgment within scanner-located bounds. **The history is corrected to seven deny rows** (0 original substring + six fix-created moves, 3a/3b split per the record), and seven is the count everywhere. **The five-argument production call** replaces four at every mention (the fifth arms value enforcement — this wave's twice-found defect). **Turbo resolved by measurement**: PRD-024 landed (`fc610f9`) with the inputs and the coverage assertion; FR-3 asserts presence, `turbo.json` leaves the surface. **FR-4 added as the recorded expansion** under expand-don't-delete (iteration 2 showed the old 3.55 rested on a disproved MF premise and computed 3.30 at MF 4): the shipped template's §9 guidance states the two exact forms, with the traceability argument written — the same snapshot rule made precise, not new method content. Value re-declared **3.70 (5/4/2/3/4)** with the expansion recorded in the header comment. Conflict Surface re-measured: 021 closed and 024 landed release `prd-ready.ts` and `turbo.json`; live contention is PRD-026 only. Fixture-count, argument-count and existence corrections swept at every restatement per `a-rule-corrected-survives-where-it-is-restated`, now a declared input |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Re-founded after iteration 1 (6.18) falsified the previous approach, and after reading the source snapshot.** The owner's decision was to remove the exemption entirely and route deferrals to the status board. **Measurement blocked it**: `source-snapshot/prompts/phase-2-readiness-scorer.md:210` states the exemption as method law — *empty, or every entry deferred to a follow-up PRD with a link* — so removing it would fabricate method content in the opposite direction from the defect. FR-1 therefore implemented the snapshot's rule — `(none)` or `Deferred to [<id>](<path>)` with the label and target bound to the same work item — rather than designing a sixth grammar. [Superseded where it conflicts with the 2026-07-28 narrowing: the existence waiver this row's revision carried became the sixth hiding place, the five-count became seven, and the four-argument call became five] |
