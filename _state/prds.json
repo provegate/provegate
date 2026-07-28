@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T14:55:16.940Z",
+  "generatedAt": "2026-07-28T14:55:52.369Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1005,21 +1005,21 @@
       "prd": "PRD-028",
       "number": 28,
       "slug": "open-questions-grammar",
-      "status": "Operator Verification",
-      "cyclePhase": "7 (Operator Verification)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-028-open-questions-grammar.md",
-        "readiness": "_readiness/wip/readiness-028-open-questions-grammar.md",
-        "tasks": "_tasks/wip/tasks-028-open-questions-grammar.md",
-        "summary": "_docs/wip/summary-028-open-questions-grammar.md"
+        "prd": "_prds/completed/prd-028-open-questions-grammar.md",
+        "readiness": "_readiness/completed/readiness-028-open-questions-grammar.md",
+        "tasks": "_tasks/completed/tasks-028-open-questions-grammar.md",
+        "summary": "_docs/completed/summary-028-open-questions-grammar.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.7,
@@ -1028,9 +1028,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Operator Verification",
-        "checkedCount": 37,
-        "uncheckedCount": 1,
+        "status": "Ship Verified",
+        "checkedCount": 38,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 1
       },
       "summary": {

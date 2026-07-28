@@ -1,13 +1,13 @@
 # PRD-028: Open Questions Grammar — Implement the Rule the Method Already States
 
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28
 > **Author**: Claude Opus 5 (original), Claude Fable 5 (narrowing rewrite), for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `open-questions-grammar`
-> **Cycle Phase**: 7 (Operator Verification)
+> **Cycle Phase**: 7 (Closed)
 > **PRD Class**: infra
 > **Class Rationale**: A method-fidelity defect in the readiness lint's §9 reader, plus the
 > section cardinality it needs, plus the template line that teaches the form. No new flag,

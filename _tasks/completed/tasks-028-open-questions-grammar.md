@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-028-open-questions-grammar.md](../../_prds/wip/prd-028-open-questions-grammar.md)
 > **Readiness**: [readiness-028-open-questions-grammar.md](../../_readiness/wip/readiness-028-open-questions-grammar.md)
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 > **Readiness Score**: 8.70/10 PASS (iteration 5, Codex; traceability cap clear)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -176,7 +176,7 @@ that PRD's author — report, never edit, never allowlist.
         `_brain/INDEX.md` pointer line.
   - [x] 8.2 Durable artifacts in the merge diff (`verify:durable-artifacts`); Memory
         Outputs vs the PRD as committed on main.
-  - [ ] 8.3 Summary artifact; archive; board close; `gate status`. Push stays with the
+  - [x] 8.3 Summary artifact; archive; board close; `gate status`. Push stays with the
         owner.
 
 ---
@@ -265,4 +265,4 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category | Owner | Required Check | Status | Notes |
 | ---- | -------- | ----- | -------------- | ------ | ----- |
-| 8.3  | manual-qa | owner | operator-gated close acceptance + `git push` | pending | push is always the human's call |
+| 8.3  | manual-qa | owner | operator-gated close acceptance + `git push` | resolved | owner approved in-session 2026-07-28 ("kabul"); acceptance agent-transcribed; push remains the owner's |
