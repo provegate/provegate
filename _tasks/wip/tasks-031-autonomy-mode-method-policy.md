@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-031-autonomy-mode-method-policy.md](../../_prds/wip/prd-031-autonomy-mode-method-policy.md)
 > **Readiness**: [readiness-031-autonomy-mode-method-policy.md](../../_readiness/wip/readiness-031-autonomy-mode-method-policy.md)
-> **Status**: Code Complete (pending Phase 6 review + close)
+> **Status**: Ship Verified (pending owner acceptance + merge)
 > **Readiness Score**: 8.88/10 PASS (iteration 3, Codex; every cap clear)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -160,21 +160,21 @@ re-derive them. Each gets a re-open task (0.1).
         (`prompts.ts:621-650`); the addendum stays as provenance history on any revert.
 - [x] 8.0 Phase 5 — Testing
   - [x] 8.1 Every §11 command into the Verification Ledger with evidence; floor green.
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review (different model/session):
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review (different model/session):
         `_docs/reviews/review-031-autonomy-mode-method-policy.md`, Quorum row, `pass`
         with `Critical: 0`.
-  - [ ] 9.2 **Readiness W2**: inspect the committed PRD-031 acceptance entry — `items`
+  - [x] 9.2 **Readiness W2**: inspect the committed PRD-031 acceptance entry — `items`
         must contain the exact addendum path.
-  - [ ] 9.3 Vacuity checks by mutation: widen the human-gated fixture to carry the
+  - [x] 9.3 Vacuity checks by mutation: widen the human-gated fixture to carry the
         exception → the negative assertion goes red; remove a fragment in the temp
         copy → the missing-fragment case fires; revert both.
-  - [ ] 9.4 Sweep, don't hunt: the three proceed-rule homes, the two bootstrap copies,
+  - [x] 9.4 Sweep, don't hunt: the three proceed-rule homes, the two bootstrap copies,
         every count.
 - [ ] 10.0 Phase 7 — Learning & close
-  - [ ] 10.1 Write `_brain/learnings/a-rule-that-exempts-itself.md` + its
+  - [x] 10.1 Write `_brain/learnings/a-rule-that-exempts-itself.md` + its
         `_brain/INDEX.md` pointer line.
-  - [ ] 10.2 Durable artifacts in the merge diff (`verify:durable-artifacts`); Memory
+  - [x] 10.2 Durable artifacts in the merge diff (`verify:durable-artifacts`); Memory
         Outputs vs the PRD as committed on main.
   - [ ] 10.3 Summary artifact; archive; board close; `gate status`. Push stays with
         the owner.
@@ -199,7 +199,7 @@ re-derive them. Each gets a re-open task (0.1).
 | test               | `pnpm test`                                                      | repo  | passed  | 7/7 turbo tasks | whole suite via turbo |
 | build              | `pnpm build`                                                     | repo  | passed  | clean |       |
 | operator           | owner approval of the FR-1 addendum; acceptance names the path   | repo  | operator | approval given in-session 2026-07-28 ("ok 031 için onay") and sealed into A2's status line; the close acceptance must name the exact addendum path (W2, checked at Phase 6) | `skipped` is illegal |
-| independent-review | `_docs/reviews/review-031-autonomy-mode-method-policy.md`        | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-031-autonomy-mode-method-policy.md`        | repo  | passed  | Codex 3 rounds; round 3 'No findings … PASS' | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
