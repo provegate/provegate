@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { resolveContainedPaths } from '../config/load.js';
@@ -280,16 +280,21 @@ export function interpreterInvokedFile(tokens: string[]): string | null {
  * call a string or template literal — declares NO membership: absence,
  * unparseability and ambiguity are the same verdict, fail closed, never an
  * error, never a fallback to text search. The worst an impostor achieves is
- * removing this surface (visible in `WiringReport.surfaces`), never adding a
- * member.
+ * removing this surface (visible by its absence from `WiringReport.surfaces`),
+ * never adding a member.
+ *
+ * Returns `null` when there is no readable declaration (absent, unparseable,
+ * ambiguous) and an array — possibly empty — when there is one: a valid empty
+ * declaration IS a surface that declares nothing, while a refused file is not
+ * a surface at all, and the report must not claim it was read.
  */
-export function bundleMembers(content: string): string[] {
+export function bundleMembers(content: string): string[] | null {
   const lines = content.split('\n');
   const openers: number[] = [];
   for (const [idx, line] of lines.entries()) {
     if (line.startsWith('const CHECKS = [')) openers.push(idx);
   }
-  if (openers.length !== 1) return [];
+  if (openers.length !== 1) return null;
   const members: string[] = [];
   for (let i = openers[0]! + 1; i < lines.length; i += 1) {
     const line = lines[i]!;
@@ -297,13 +302,13 @@ export function bundleMembers(content: string): string[] {
     if (line.trim() === '') continue;
     if (/^\s*\/\//.test(line)) continue;
     const m = /^\s*(['"])(.*)\1\s*(?:,\s*(?:\/\/.*)?)?$/.exec(line);
-    if (m === null) return [];
+    if (m === null) return null;
     const quote = m[1]!;
     const body = m[2]!;
-    if (body.includes('\\') || body.includes(quote)) return [];
+    if (body.includes('\\') || body.includes(quote)) return null;
     members.push(body);
   }
-  return []; // never closed — unparseable, no membership
+  return null; // never closed — unparseable, no membership
 }
 
 /** Manager subcommands that are NOT package.json script invocations. */
@@ -499,7 +504,13 @@ export function auditWiring(
   // a lexical path against a realpath'd base is the exact mismatch
   // `absolute-in-repo-symlink-refused` records, so like is compared with like.
   const scriptsDirPath = readPath('wiring.scriptsDir');
-  const scriptsDirPrefix = config.wiring.scriptsDir.replace(/[/\\]+$/, '') + '/';
+  // Both sides normalized the same lexical way (leading `./` stripped, no
+  // trailing separator), and a path carrying ANY `.`/`..` segment after that
+  // is refused outright — `scripts/verify/../outside/verify-foo.mjs` must not
+  // pass a prefix test whose claim is "under scriptsDir". Fail closed: a
+  // traversal is no key, never a resolved one.
+  const normLexical = (p: string): string => p.replace(/^(\.\/)+/, '').replace(/[/\\]+$/, '');
+  const scriptsDirPrefix = normLexical(config.wiring.scriptsDir) + '/';
   const keyOf = new Map<string, string>();
   for (const [name, body] of Object.entries(scripts)) {
     if (!pattern.test(name)) continue;
@@ -508,10 +519,12 @@ export function auditWiring(
     for (const tokens of cmds) {
       const file = interpreterInvokedFile(tokens);
       if (file === null || !file.endsWith('.mjs')) continue;
-      if (!file.replace(/^\.\//, '').startsWith(scriptsDirPrefix)) {
+      const normalized = normLexical(file);
+      if (normalized.split(/[/\\]/).some((seg) => seg === '.' || seg === '..')) continue;
+      if (!normalized.startsWith(scriptsDirPrefix)) {
         continue; // invokes a file outside wiring.scriptsDir — not a key
       }
-      keyOf.set(name, baseOf(file));
+      keyOf.set(name, baseOf(normalized));
       break;
     }
   }
@@ -536,7 +549,12 @@ export function auditWiring(
     let hookFiles = 0;
     for (const name of readdirSync(hooksDirPath)) {
       const full = resolve(hooksDirPath, name);
-      if (!statSync(full).isFile()) continue;
+      // lstat, not stat: the DIRECTORY was containment-checked, each entry was
+      // not, and stat follows a symlink wherever it points — external content
+      // could silently wire a check. A symlinked hook is therefore skipped
+      // entirely (inside or outside the repo): the false-negative direction,
+      // and the remedy is a regular file, which is what a git hook is.
+      if (!lstatSync(full).isFile()) continue;
       hookFiles += 1;
       collectKeys(readFileSync(full, 'utf8'));
     }
@@ -554,8 +572,12 @@ export function auditWiring(
   const bundlePath = readPath('wiring.bundlePath');
   if (bundlePath !== null && existsSync(bundlePath)) {
     const members = bundleMembers(readFileSync(bundlePath, 'utf8'));
-    for (const member of members) wiredKeys.add(member);
-    surfaces.push(`bundle:${members.length}`);
+    // null = no readable declaration: NOT a surface, so it must not appear in
+    // the report as one — that absence is exactly what a maintainer watches.
+    if (members !== null) {
+      for (const member of members) wiredKeys.add(member);
+      surfaces.push(`bundle:${members.length}`);
+    }
   }
 
   const wiredIn = (script: string): boolean => {
@@ -586,6 +608,7 @@ export function auditWiring(
     const registeredFiles = new Set(keyOf.values());
     let onDisk = 0;
     for (const name of readdirSync(scriptsDirPath)) {
+      if (!statSync(resolve(scriptsDirPath, name)).isFile()) continue; // FR-1 selects FILES
       if (!/^verify-.*\.mjs$/.test(name)) continue;
       onDisk += 1;
       if (!registeredFiles.has(name)) {

@@ -1,6 +1,7 @@
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
@@ -326,21 +327,21 @@ describe('bundleMembers (line- and column-anchored, fail closed)', () => {
   });
 
   it('column anchor: an indented sole declaration is no declaration', () => {
-    expect(bundleMembers(' ' + DECL)).toEqual([]);
+    expect(bundleMembers(' ' + DECL)).toBeNull();
     expect(bundleMembers(DECL)).toEqual(['verify-foo.mjs', 'verify-bar.mjs']); // control
   });
 
   it('impostor inside a template literal: two opening lines, ambiguous, no membership', () => {
     const impostor = 'const T = `\nconst CHECKS = [\n];\n`;\n' + DECL;
-    expect(bundleMembers(impostor)).toEqual([]);
+    expect(bundleMembers(impostor)).toBeNull();
     // control: the impostor indented by one space — the real declaration is read
     const indentedImpostor = 'const T = `\n const CHECKS = [\n];\n`;\n' + DECL;
     expect(bundleMembers(indentedImpostor)).toEqual(['verify-foo.mjs', 'verify-bar.mjs']);
   });
 
   it('an escape or the own delimiting quote in a member kills the DECLARATION', () => {
-    expect(bundleMembers("const CHECKS = [\n  'a\\\\b.mjs',\n];\n")).toEqual([]);
-    expect(bundleMembers("const CHECKS = [\n  'it''s.mjs',\n];\n")).toEqual([]);
+    expect(bundleMembers("const CHECKS = [\n  'a\\\\b.mjs',\n];\n")).toBeNull();
+    expect(bundleMembers("const CHECKS = [\n  'it''s.mjs',\n];\n")).toBeNull();
     // the other quote inside is that literal's problem only when it is the delimiter
     expect(bundleMembers('const CHECKS = [\n  "verify-foo.mjs",\n];\n')).toEqual([
       'verify-foo.mjs',
@@ -348,17 +349,38 @@ describe('bundleMembers (line- and column-anchored, fail closed)', () => {
   });
 
   it('duplicate declarations in ordinary code: no membership from either', () => {
-    expect(bundleMembers(DECL + '\n' + DECL)).toEqual([]);
+    expect(bundleMembers(DECL + '\n' + DECL)).toBeNull();
+  });
+
+  it('a VALID empty declaration is a surface declaring nothing — distinct from refusal', () => {
+    expect(bundleMembers('const CHECKS = [\n];\n')).toEqual([]);
   });
 
   it('a non-conforming body line (expression, spread, two literals) kills the declaration', () => {
-    expect(bundleMembers("const CHECKS = [\n  ...extra,\n  'verify-foo.mjs',\n];\n")).toEqual([]);
-    expect(bundleMembers("const CHECKS = [\n  'a.mjs', 'b.mjs',\n];\n")).toEqual([]);
-    expect(bundleMembers('const CHECKS = [\n  name,\n];\n')).toEqual([]);
+    expect(bundleMembers("const CHECKS = [\n  ...extra,\n  'verify-foo.mjs',\n];\n")).toBeNull();
+    expect(bundleMembers("const CHECKS = [\n  'a.mjs', 'b.mjs',\n];\n")).toBeNull();
+    expect(bundleMembers('const CHECKS = [\n  name,\n];\n')).toBeNull();
   });
 
   it('a never-closed declaration is unparseable — no membership', () => {
-    expect(bundleMembers("const CHECKS = [\n  'verify-foo.mjs',\n")).toEqual([]);
+    expect(bundleMembers("const CHECKS = [\n  'verify-foo.mjs',\n")).toBeNull();
+  });
+
+  it('the SHIPPED bundle parses to exactly its declared members (grammar admits the corpus)', () => {
+    // The grammar was written against the one real bundle; this fixture is
+    // what notices the day the bundle stops satisfying it. NOTE: an
+    // out-of-package read — recorded in the task file's Deferrals and handed
+    // to PRD-036's input census (CI checks out fresh; the local cache gap is
+    // that PRD's subject).
+    const real = readFileSync(
+      fileURLToPath(new URL('../../../scripts/verify/verify-workflow.mjs', import.meta.url)),
+      'utf8',
+    );
+    const members = bundleMembers(real);
+    expect(members).not.toBeNull();
+    expect(members).toHaveLength(10);
+    expect(members).toContain('verify-gates-wired.mjs');
+    expect(members).toContain('verify-turbo-inputs.mjs');
   });
 });
 
@@ -447,7 +469,9 @@ describe('auditWiring surfaces (FR-2)', () => {
     });
     const report = auditWiring(cfg, defaultManifest(cfg), root);
     expect(report.ok).toBe(true);
-    expect(report.surfaces).toContain('bundle:0');
+    // an unparseable bundle is NOT a surface, and the report must not claim
+    // it was read — its absence from the list is the visible signal
+    expect(report.surfaces.some((s) => s.startsWith('bundle:'))).toBe(false);
     expect(report.surfaces.some((s) => s.startsWith('hooks:'))).toBe(false);
   });
 
@@ -477,6 +501,85 @@ describe('auditWiring surfaces (FR-2)', () => {
 });
 
 // ————————————— PRD-025 FR-1: on-disk → registered —————————————
+
+describe('auditWiring key derivation hardening (review round 1)', () => {
+  it('a traversal inside the invoked path is no key: the file is not "under scriptsDir"', () => {
+    const root = repo({
+      scripts: {
+        ...FLOOR,
+        'verify:foo': 'node scripts/verify/../../outside/verify-foo.mjs',
+      },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    // no key derived → the hook cannot wire it, and the on-disk file is unregistered
+    expect(fooWired(root)).toBe(false);
+    expect(auditWiring(cfg, defaultManifest(cfg), root).issues).toContainEqual(
+      expect.stringContaining('script on disk "verify-foo.mjs" is not registered'),
+    );
+  });
+
+  it('a ./-prefixed invocation still derives its key (both sides normalized alike)', () => {
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node ./scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    expect(fooWired(root)).toBe(true);
+  });
+
+  it('a hook entry that is a symlink is skipped — external content cannot wire a check', () => {
+    const outside = mkdtempSync(join(tmpdir(), 'provegate-hooklink-'));
+    roots.push(outside);
+    writeFileSync(join(outside, 'evil'), 'node scripts/verify/verify-foo.mjs\n');
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: {},
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    mkdirSync(resolve(root, '.githooks'), { recursive: true });
+    symlinkSync(join(outside, 'evil'), resolve(root, '.githooks', 'pre-commit'));
+    expect(fooWired(root)).toBe(false);
+    // control: the same body as a regular file wires
+    expect(fooWired(hookRepo('node scripts/verify/verify-foo.mjs\n'))).toBe(true);
+  });
+
+  it('a directory named like a verify script is not an on-disk candidate', () => {
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    mkdirSync(resolve(root, 'scripts/verify/verify-cache.mjs'), { recursive: true });
+    const report = auditWiring(cfg, defaultManifest(cfg), root);
+    expect(report.issues.some((i) => i.includes('verify-cache.mjs'))).toBe(false);
+  });
+
+  it('a YAML comment does not wire; the same text in run: position does (FR-2 pair)', () => {
+    const commented = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      ci: 'jobs:\n  a:\n    steps:\n      # pnpm verify:foo\n      - run: pnpm build\n',
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    expect(fooWired(commented)).toBe(false);
+    const run = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      ci: 'jobs:\n  a:\n    steps:\n      - run: pnpm verify:foo\n',
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    expect(fooWired(run)).toBe(true);
+  });
+
+  it('the eval and preload shapes stay unwired through the audit, each beside its control', () => {
+    expect(fooWired(hookRepo('node -e "import(\'scripts/verify/verify-foo.mjs\')"\n'))).toBe(
+      false,
+    );
+    expect(
+      fooWired(hookRepo('node --require ./setup.mjs scripts/verify/verify-foo.mjs\n')),
+    ).toBe(false);
+    expect(fooWired(hookRepo('node scripts/verify/verify-foo.mjs\n'))).toBe(true);
+  });
+});
 
 describe('auditWiring on-disk direction (FR-1)', () => {
   it('an unregistered on-disk verify script fails, naming the file', () => {
