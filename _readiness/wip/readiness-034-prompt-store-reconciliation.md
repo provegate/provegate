@@ -1,140 +1,307 @@
 # Readiness Assessment: PRD-034 — Prompt Store Reconciliation
 
+**ITERATE — 7.3/10.** Revision 2 is valid and most iteration-1 defects are closed, but new implementation-directing scope, derivation, migration, and rollback defects keep the PRD below the 8.0 gate.
+
 ## Quick Meta
 
-| Field                  | Value |
-| ---------------------- | ----- |
-| PRD                    | `_prds/wip/prd-034-prompt-store-reconciliation.md` |
-| Score                  | 5.1/10 |
-| Verdict                | ITERATE |
-| Iteration              | 1 |
+| Field | Value |
+| --- | --- |
+| PRD | `_prds/wip/prd-034-prompt-store-reconciliation.md` |
+| Score | 7.3/10 |
+| Verdict | ITERATE |
+| Iteration | 2 |
 | Model Tier (Execution) | none |
-| Model Tier (Audit)     | none |
-| Scored by              | GPT-5 via codex-cli — fresh independent session |
-| Self-scored            | no |
-| Date                   | 2026-07-28 |
-| State Record           | pending |
-| PRD Lint               | PASS with written waiver. The requested CLI failed only because the read-only sandbox refused `_state/prds.json.<pid>.tmp` with `EPERM`. Direct invocation of the built `lintPrd` against the same resolved config, manifest, PRD contents, and PRD number returned `{ "ok": true, "issues": [] }`. The orchestrating session’s out-of-sandbox green run dated 2026-07-28 is relied upon as command-level evidence. |
+| Model Tier (Audit) | none |
+| Scored by | GPT-5 via Codex — fresh independent Phase 2 re-score |
+| Self-scored | no |
+| Date | 2026-07-28 |
+| State Record | pending |
+| PRD Lint | PASS with written waiver. `node packages/provegate/dist/cli.js check PRD-034` reached only the known read-only-sandbox failure: `EPERM: operation not permitted, open '_state/prds.json.<pid>.tmp'`. The read-only equivalent invoked the built `lintPrd` with the resolved config, manifest, full PRD contents, repository root, and PRD number 34 and returned `{ "ok": true, "issues": [] }`. This assessment relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-28 for command-level evidence. |
 
 ## Model Tier Recommendation
 
-None while the verdict is ITERATE. The implementation should not be assigned until the T5/T6 derivation, classification taxonomy, package export surface, existing-adopter migration, CI build ordering, and rollback contract are corrected. These are architectural uncertainties, not execution details that a higher-tier implementer should decide ad hoc.
+Do not assign an implementation tier while the verdict is ITERATE. The remaining work changes the authorized scope and fixes derivation and migration contracts, so it belongs in the PRD rather than being delegated to an implementer.
+
+If the revised PRD reaches the 8.0–8.9 PASS band, use **high** for both implementation and audit.
+
+## Iteration 2 — Re-derivation Review
+
+### Revision 2 ground truth
+
+Revision 2 is owner-approved by the second PRD-030 entry in `_state/acceptances.json`, which names:
+
+> “two unbannered generated paths (the codex snippet and prompts/PLACEHOLDERS.md …); the detection/attribution split for unbannered planned paths”
+
+Its factual claims hold against the shipped code:
+
+- `prompts/PLACEHOLDERS.md` has the deliberate `verbatim` disposition at `core/run/prompts.ts:120-123`; `renderPrompts` copies its source without a banner or substitution at lines 656-661.
+- The codex adapter emits only `## Phase protocols` and its table at `core/run/prompts.ts:819-828`, with no generated banner.
+- `generatedPaths()` includes every `result.files` member and every rendered adapter at `core/run/prompts.ts:837-850`, so both unbannered paths remain planned and byte-comparable.
+- Claude and Cursor adapters include the versioned banner at `core/run/prompts.ts:773-817`.
+- `initWorkspace` uses `writeFileSync(..., { flag: 'wx' })` and treats `EEXIST` as skipped at `core/run/init.ts:330-345`; `planPrompts` performs no overwrite or deletion.
+- `core/run/index.ts:39-62` is an explicit named export list, confirming that new reconciliation symbols must be added deliberately.
+- `PromptsConfig`, `CONFIG_SPEC`, semantic validation, and defaults are split across `types.ts`, `validate.ts`, `load.ts`, and `defaults.ts` exactly as the revised FR-2 assumes.
+- The current hygiene job installs and immediately runs `pnpm verify:workflow` without building at `.github/workflows/ci.yml:48-64`.
+- The packed and repository `verify-workflow.mjs` files maintain separate `CHECKS` lists, and the drift ledger already contains the changed workflow pair at `scripts/verify/pack-drift-ledger.json:140-145`.
+
+### Eleven iteration-1 missing pieces
+
+1. **CLOSED — the model was superseded before re-derivation.**
+
+   The PRD states:
+
+   > “The functional requirements are derived from `_docs/design/prompt-store-state-model.md` at Revision 2”
+
+   and:
+
+   > “two unbannered generated paths; the detection/attribution split”
+
+   Revision 2 explicitly enumerates the five superseded statements, preserves constraints 1–4 and T3/T7, and has the required owner acceptance.
+
+2. **CLOSED — planned-path classification is total, including banner loss.**
+
+   FR-1 assigns every planned path exactly one of:
+
+   > “`missing` … `current` … `stale` … `modified` … `unattributable`”
+
+   The new arm is faithful to Revision 2:
+
+   > “bytes differ and no banner is parseable … detection still works … only the stale-versus-modified split is lost”
+
+   `orphaned` is separately limited to unplanned, bannered files inside the declared roots. Planned paths therefore have a complete and non-overlapping precedence.
+
+3. **CLOSED — T5/T6 discovery is honestly bounded rather than overclaimed.**
+
+   FR-1 now says:
+
+   > “a tree renamed outside the scan roots is not discovered”
+
+   and:
+
+   > “unbannered or stripped files that are unplanned are invisible to content discovery”
+
+   FR-3 also states that a disabled configuration does not exercise T6’s remaining capability:
+
+   > “prompts disabled; reconciliation and the bannered-orphan search not run”
+
+   This matches model limits 5 and 6: no durable lookup survives config removal, a content search remains possible only where run, and unbannered/stripped unplanned files remain undiscoverable.
+
+4. **PARTIAL — the requested fixture names are present, but the T5 transition proof is incomplete.**
+
+   FR-6 now names rename, config removal, codex removal, `PLACEHOLDERS.md`, stripped banners, duplicate paths, expiry boundaries, malformed dates, non-normalized paths, and stale exceptions.
+
+   However, its T5 assertion is only:
+
+   > “the new store reports and the renamed-away tree does not”
+
+   Revision 2’s underlying T5 answer also requires the existing adapters to be detected as divergent because they still embed the old directory:
+
+   > “re-rendering the adapters for the current config and comparing against disk shows the mismatch immediately”
+
+   The fixture can pass without proving that load-bearing half of T5.
+
+5. **PARTIAL — FR-2 has the correct files and most semantics, but its path contract contradicts itself and the shipped validator.**
+
+   The targets now correctly include:
+
+   > “`types.ts`, `validate.ts`, `load.ts`, `defaults.ts`”
+
+   It also defines non-empty fields, duplicates, UTC dates, inclusive expiry, unknown-field refusal, and suppression scope.
+
+   The remaining contradiction is:
+
+   > “path is repo-relative with forward slashes; backslashes are normalized before comparison”
+
+   while the acceptance matrix requires:
+
+   > “non-normalized path refused”
+
+   A backslash spelling is either accepted and normalized or refused as non-canonical; both cannot be true. FR-2 also says `.` segments are refused by the “existing lexical-containment rule,” but `unsafeRelPath` at `core/config/validate.ts:467-481` refuses `..` and does not refuse `.`. The implementer still lacks one canonical path rule.
+
+6. **CLOSED — the package export and drift-preventing evaluator are specified.**
+
+   FR-1 targets `core/run/index.ts` and requires:
+
+   > “an API-export test asserts `import { reconcilePrompts } from 'provegate'` resolves”
+
+   FR-5 adds:
+
+   > “`evaluatePromptReconciliation(findings)` returning the verdict and the report lines”
+
+   and requires both CLI and packed script to consume the same primitive and evaluator. The §11 API-export and packed-module tests bind both claims.
+
+7. **PARTIAL — build-before-aggregate is specified, but the mechanical assertion is not scoped tightly enough.**
+
+   FR-4 correctly requires:
+
+   > “the hygiene job gains `pnpm --filter provegate build` before the aggregate step”
+
+   and adds `--assert-ci-order`.
+
+   But its mechanical rule is only:
+
+   > “fails unless the build step’s index precedes the aggregate’s”
+
+   A global text-index comparison can pass when the build is in another job. The assertion must isolate the `workflow-hygiene` job and prove both commands occur there in order.
+
+8. **PARTIAL — additive migration behavior is understood, but the adopter instruction omits the command that installs the new file.**
+
+   The PRD correctly says existing `verify-workflow.mjs` and `NEXT_STEPS.md` remain untouched and requires a pre-034 migration fixture.
+
+   It also says:
+
+   > “an upgrade delivers the NEW packed `verify-prompts.mjs`”
+
+   That is false against shipped behavior. A package upgrade updates `node_modules`; repository files are installed only when the adopter runs `gate init --practices`. The changeset is required to tell them only to add a CHECKS member, not to rerun the additive installer first. Following the documented migration can therefore wire a file that does not exist.
+
+9. **PARTIAL — ordering and rollback exist, but two instructions are not operationally exact.**
+
+   Positive closure includes upgrade-before-config, un-wire-before-downgrade, human cleanup, and local CI/ledger rollback.
+
+   The downgrade instruction says:
+
+   > “removing `prompts.exceptions` entries”
+
+   An old validator rejects the `exceptions` key itself, including `exceptions: []`; the key must be removed entirely. Fresh adopters may also register `verify:prompts` in `package.json` from the new `NEXT_STEPS.md`, but rollback names only the CHECKS member and packed file.
+
+   Finally:
+
+   > “reverting the implementation commit … one commit”
+
+   assumes an atomic commit shape the PRD does not require. Rollback must name the full implementation commit set or explicitly require one atomic implementation commit.
+
+10. **PARTIAL — the requested ledger wording is corrected, but the declared memory output contradicts T7.**
+
+    The planned-domain/orphan-search split is now explicit, calendar expiry is correctly called a PRD-owned decision, and the ledger says:
+
+    > “one new pair … plus reconciliation of the changed existing workflow pair”
+
+    However, the Memory Output and Durable Artifacts still say:
+
+    > “the stored hash is then free to do … attribution”
+
+    and:
+
+    > “let the hash do the attribution job instead”
+
+    The approved model has no stored hash or receipt. Attribution comes from the per-file banner version. This durable learning would encode a state mechanism the FRs explicitly reject.
+
+11. **CLOSED — the output contract is consistent.**
+
+    FR-3 chooses:
+
+    > “one line per finding that is not `current`, plus exactly one summary line”
+
+    The first acceptance criterion now agrees:
+
+    > “the summary line reports every planned path as `current`, no per-path line is printed”
+
+    The command verification row checks summary counts and findings-only per-path output.
+
+## Derivation Fidelity
+
+The load-bearing boundaries remain intact:
+
+- **T3 no-write boundary:** FR-1 says the primitive “writes nothing”; FR-2 says no exception “ever authorizes a write.”
+- **T7 no-receipt decision:** FR-1 reads no stored state and introduces no receipt.
+- **Constraint 1:** exceptions live in adopter-owned configuration, but the tool only reads them; no FR edits `workflow.config.json`.
+- **Constraint 2:** FR-3 prints deletion/reinstall instructions but performs neither, and the DO NOT section prohibits adopter-file deletion.
+
+The `unattributable` arm matches Revision 2 exactly: it is reached only after byte divergence when a parseable banner is absent, so unbannered planned files remain detectable and lose only stale-versus-modified attribution. It is correctly not exceptable because suppressing it could conceal an undelivered upgrade.
+
+The T5/T6 limit restatements do not weaken limits 5 or 6 and do not claim a search the PRD declines to implement. The remaining derivation defect is test coverage, not the classification itself: T5’s detectable stale adapters are not bound to the rename fixture. T6’s two adopter-facing consequences are also absent from the PRD’s guidance: clearing a `templates.prd` path that points into the removed store, and understanding that config removal leaves generated files active until a human deletes them.
+
+The bounded orphan search still needs a traversal contract. `config.prompts.dir` can legally be `.` under the current lexical validator, and nested symlinks can escape an otherwise contained root. Declaring three starting roots does not by itself define symlink following, unreadable-entry behavior, exclusions, or a cost bound.
 
 ## Analysis
 
 ### Technical Depth & Architecture
 
-**[FINDING — Technical Depth]** The scan design contradicts T5 and misstates recorded limit 5. T5 says an abandoned old store after a directory rename is discoverable only by a content search (`_docs/design/prompt-store-state-model.md:195-218`). FR-1 searches only the *current* `config.prompts.dir` plus the two fixed adapter roots (`_prds/wip/prd-034-prompt-store-reconciliation.md:121-125`). An old store renamed away from the current directory is therefore outside every declared scan root. Recorded limit 5 is actually “after config removal there is no durable pointer; a content search still works” (`_docs/design/prompt-store-state-model.md:282-289`), not “a renamed-away tree cannot be found.”
+The re-derivation is substantially stronger: it uses `generatedPaths()` as the planned domain, separates byte detection from banner attribution, gives every planned path one class, shares interpretation across CLI and pack, and targets the real config/export surfaces.
 
-**[FINDING — Technical Depth]** FR-3 incorrectly maps an enabled-but-absent directory to T6 (`_prds/wip/prd-034-prompt-store-reconciliation.md:157-161`). T6 is removal of the `prompts` config block: the merged default becomes disabled, generated files remain, and banner-based content search remains possible (`_docs/design/prompt-store-state-model.md:220-247`). FR-3 instead exits 0 immediately when disabled, with no search or findings. This is derivation drift from an explicitly owner-accepted transition.
-
-**[FINDING — Technical Depth]** The classification is not total for the approved banner-stripped case. `stale` requires a banner version different from the installed version, while `modified` requires equality (`_prds/wip/prd-034-prompt-store-reconciliation.md:114-130`). A planned file with no parseable banner satisfies neither predicate. FR-6 promises that exact case but does not define the expected class (`_prds/wip/prd-034-prompt-store-reconciliation.md:186-195`).
-
-**[FINDING — Completeness]** The approved model and PRD both overlook another unbannered generated path. `renderPrompts` copies `prompts/PLACEHOLDERS.md` verbatim without adding a banner (`packages/provegate/src/core/run/prompts.ts:653-661`), while `generatedPaths` includes it in the generated set (`packages/provegate/src/core/run/prompts.ts:837-848`). Thus the codex snippet is not the sole generated path lacking provenance. Because the approved model calls codex the unique banner gap (`_docs/design/prompt-store-state-model.md:46-52,259-264`), correcting this requires a superseding model revision before deriving revised FRs.
-
-**[FINDING — Completeness]** FR-2’s targets cannot implement the declared config field. `PromptsConfig` must gain the type in `packages/provegate/src/core/config/types.ts:130-149`, and structural validation must teach `CONFIG_SPEC` an array-of-record shape in `packages/provegate/src/core/config/validate.ts:44-99`. FR-2 targets only `defaults.ts` and `load.ts` (`_prds/wip/prd-034-prompt-store-reconciliation.md:134-149`). Under the current validator, `prompts.exceptions` is an unknown key.
-
-**[FINDING — Technical Depth]** FR-5 cannot import the new primitive from `provegate` within its declared scope. The package root reaches an explicit export list in `packages/provegate/src/core/run/index.ts:39-62`; adding a function to `prompts.ts` does not export it automatically. Neither FR-1 nor FR-5 targets that index. Current self-resolution confirms existing primitives are importable, but the proposed one will not be until this export surface changes.
-
-**Derivation Fidelity**
-
-- FR-1 correctly preserves T2’s recomputation from installed package plus current config, byte comparison, T3’s no-write boundary, and T7’s no-receipt decision. It drifts on T5/T6 discovery and lacks a total answer for banner removal.
-- FR-2 is a legitimate answer to the one question T3 explicitly handed to PRD-034. Suppression-only behavior respects T3, and keeping authorship in adopter-owned config respects constraint 1. Its implementation surface and date/path semantics are incomplete.
-- FR-3 correctly leaves deletion and reinstall to the adopter under T2 and constraint 2. Its T6 attribution is wrong, and its disabled short-circuit prevents the content search T6 says remains available.
-- FR-4 is wiring rather than a lifecycle transition and does not relax T3, T7, or constraint 1. Its CI ordering is not executable as written.
-- FR-5 correctly seeks one shared primitive and adds no receipt or repair authority. It omits the required package export and does not account for additive-only upgrades of previously installed pack files.
-- FR-6 captures byte-based same-version detection and the intended exception outcomes, but it omits the actual T5 rename and T6 config-removal scenarios and cannot resolve the undefined banner-stripped class.
-
-Against the six limits: limit 1 is respected but not plainly restated; limit 2 is partially represented by `missing`; limit 3 is intentionally answered through the model’s handed question; limit 4 is restated through `orphaned` plus human-only deletion; limit 5 is misstated; and limit 6 is only partially restated and is factually incomplete against the shipped unbannered `PLACEHOLDERS.md`. The critical no-write/no-receipt boundaries themselves remain intact.
+The principal remaining architecture gaps are the unspecified traversal policy, the contradictory exception canonicalization, and the missing T5 adapter assertion. These are implementation choices with correctness and containment consequences, not cosmetic wording.
 
 ### Edge Cases & Failure Modes
 
-**[FINDING — Completeness]** The exception contract leaves operational semantics undecided: whether `expires` is inclusive, which timezone controls expiration, whether `reason` and `owner` must be non-empty, how duplicate paths behave, and what canonical repo-relative path spelling is accepted. “Exact path” is insufficient across separators, normalization, and case-insensitive filesystems (`_prds/wip/prd-034-prompt-store-reconciliation.md:134-147`).
+The exception matrix is broad and correctly includes expiry boundaries, duplicates, malformed dates, stale entries, and independent-cause suppression tests. It does not yet define one canonical spelling for backslashes, dot segments, repeated separators, and trailing separators.
 
-**[FINDING — Scope & Testability]** The fixture matrix does not exercise the transitions most endangered by the scan design. It has an adapter-removal orphan but no store-directory rename, no removal of the config block with bannered files left behind, and no removed/unbannered codex case (`_prds/wip/prd-034-prompt-store-reconciliation.md:186-195`). Those omissions allow the T5/T6 derivation errors to remain green.
-
-**[FINDING — Clarity]** Acceptance criteria conflict with the command contract. FR-3 prints only non-`current` paths (`_prds/wip/prd-034-prompt-store-reconciliation.md:150-152`), while the first criterion says every current path “reports `current`” (`_prds/wip/prd-034-prompt-store-reconciliation.md:212-215`). A test cannot satisfy both interpretations without deciding which requirement to ignore.
-
-**[FINDING — Technical Depth]** Recursive content discovery has no declared filesystem boundary behavior: symlinks, unreadable directories, `.git`, dependency trees, worktrees, and scan-cost limits are unspecified. This matters if T5/T6 are corrected to search beyond the current configured directory. The existing installer is careful about containment and symlinked parents (`packages/provegate/src/core/run/init.ts:222-265`); the new read path needs an equally explicit contract.
+The CI-order check can false-green across jobs unless it extracts the hygiene-job span. The renamed-store fixture can likewise false-green while failing to compare the adapters that still point at the abandoned tree.
 
 ### Maintainability & Developer Experience
 
-**[FINDING — Maintainability]** Most memory dispositions are honest, including `shipped-content-needs-a-delivery-gate`, `gate-wire-or-delete`, `false-green-on-missing-file`, `fixture-must-reach-production-shape`, and the reviewed runner records. The `derive-the-requirement-from-the-consumer` rationale, however, says a directory walk is a prohibited wider-than-consumed domain (`_prds/wip/prd-034-prompt-store-reconciliation.md:306-309`) while FR-1 necessarily adds a banner-search walk. It should distinguish the planned domain derived from `generatedPaths()` from the separate orphan-discovery search.
+The explicit tarball manifest is a shipped invariant:
 
-**[FINDING — Maintainability]** `known-red-ledger-must-expire` requires stale, unknown, and malformed entries to fail; its text does not prescribe calendar expiry (`_brain/learnings/known-red-ledger-must-expire.md:13-22`). A required `expires` field can be a sound PRD-owned design choice, but attributing that exact mechanism “per” the record overstates the record. State it as an analogy plus a new decision.
+> “any add/remove/rename in the packed set is a conscious, reviewed diff”
 
-**[FINDING — Completeness]** FR-5 says “both new pack-drift ledger pairs” (`_prds/wip/prd-034-prompt-store-reconciliation.md:174-185`). The pack map would create one new pair for `verify-prompts.mjs`; `verify-workflow.mjs` is an existing pair already recorded at `scripts/verify/pack-drift-ledger.json:140-145`. The requirement should call for one new pair and reconciliation of the changed existing pair.
+at `packages/provegate/test/pack.test.ts:12-16`, and the equality test rejects every extra packed file at lines 39-45. FR-5 adds `packages/provegate/practices/verify/verify-prompts.mjs`, but `packages/provegate/test/pack-manifest.json` is absent from FR targets, Implementation Scope, Conflict Surface, and §11. The full `pnpm test` floor must therefore fail until the implementer edits an out-of-scope file, which repository rules require them to stop and escalate.
 
-**[FINDING — Multi-Tenancy & Security]** This infra PRD is judged against repository critical rules, not tenant boilerplate. It explicitly forbids runtime dependencies, remote/push paths, network behavior, adopter-file deletion, and method-content edits (`_prds/wip/prd-034-prompt-store-reconciliation.md:200-208,247-253,424-438`). `packages/provegate/package.json:60-67` currently has only development dependencies, and no method-content target is declared. No security hard cap is triggered.
+The memory-input dispositions are otherwise accurate and non-ceremonial. The planned-domain/orphan-domain correction is particularly good. The proposed durable learning must replace “stored hash” with the actual banner provenance mechanism before it can be captured honestly.
 
 ### Migration & Rollback
 
-**[FINDING — Migration & Rollback]** “Dormant here and live in the pack” is false for existing adopters. `PACK_MAP` is installed through additive-only `wx` writes (`packages/provegate/src/core/run/init.ts:146-186,267-349`). On upgrade, the new `verify-prompts.mjs` can be created, but an adopter’s existing `scripts/verify/verify-workflow.mjs` and `NEXT_STEPS.md` are skipped and therefore never gain the new member or wiring instruction. The PRD supplies no migration for repositories that installed PRD-029-era practices, even though those are precisely the repositories with prompt stores.
+This remains the weakest dimension. The PRD correctly understands `wx` and correctly refuses to promise updates to existing bundle files, but it skips the command that makes the new additive file appear. Its rollback wording leaves an empty-but-still-unknown config key possible and omits fresh-adopter package-script cleanup.
 
-**[FINDING — Migration & Rollback]** FR-4 places a built-CLI check in `verify:workflow`, then requires it in the CI hygiene job (`_prds/wip/prd-034-prompt-store-reconciliation.md:163-173`). That job installs but does not build (`.github/workflows/ci.yml:48-64`); the workflow explicitly records that built-CLI checks belong after the build in the other job (`.github/workflows/ci.yml:40-46`). A clean CI checkout would therefore fail on missing/stale `dist`.
+The “one implementation commit” rollback claim is also not guaranteed by any scope or verification rule. The rollback should be expressed against the landed commit set unless atomic implementation is itself made a requirement.
 
-**[FINDING — Migration & Rollback]** There is no implementation rollback section. A package downgrade after adding `prompts.exceptions` makes the old validator reject the adopter’s config as containing an unknown key. A previously wired packed check will also import a primitive absent from the downgraded package. Because pack installation never overwrites or deletes, downgrading the package does not unwind installed scripts or bundle edits. These ordering and cleanup steps must be explicit for an infra PRD weighted heavily on migration.
+## Hard Caps and Clarity Gate
+
+No readiness hard cap is triggered:
+
+- No protected route, endpoint, query path, tenant data, auth surface, or client→server payload is introduced.
+- No runtime dependency is added to `packages/provegate`.
+- No network or push path is introduced.
+- No method-content file under `packages/provegate/prompts/`, `templates/`, or `schemas/` is targeted.
+- The lint failure is waived narrowly for the documented sandbox `EPERM`; the read-only equivalent is green.
+
+The mechanical Clarity-cap checklist is present: every FR has targets, every FR has a runnable §11 row, the DO NOT section exists, Open Questions is empty, and there are no undecided markers. Clarity is nevertheless scored 7.0 because the target set is incomplete and the scan, path, migration, and rollback instructions still require implementation-time decisions.
 
 ## Scorecard
 
 | Dimension | Weight | Score | Weighted |
 | --- | ---: | ---: | ---: |
 | Clarity | 15% | 7.0 | 1.05 |
-| Completeness | 20% | 5.0 | 1.00 |
-| Technical Depth | 20% | 4.0 | 0.80 |
-| Multi-Tenancy & Security | 10% | 9.5 | 0.95 |
-| Scope & Testability | 15% | 6.0 | 0.90 |
-| Migration & Rollback | 20% | 2.0 | 0.40 |
-| **Total** | **100%** |  | **5.10** |
+| Completeness | 20% | 7.5 | 1.50 |
+| Technical Depth | 20% | 7.5 | 1.50 |
+| MT&S — repository critical rules | 10% | 9.5 | 0.95 |
+| Scope & Testability | 15% | 7.0 | 1.05 |
+| Migration & Rollback | 20% | 6.0 | 1.20 |
+| **Total** | **100%** |  | **7.25 → 7.3** |
 
 ## Missing Pieces
 
-1. Supersede `_docs/design/prompt-store-state-model.md` before changing the FRs to record that `prompts/PLACEHOLDERS.md`, not only the codex snippet, is emitted without a banner. Enumerate the resulting T4/T5/T6 and limit-6 consequences.
+1. Complete the T5/T6 derivation proof: the rename fixture must assert that existing Claude/Cursor adapters are divergent because they still embed the old store path; adopter guidance must preserve T6’s `templates.prd` and files-remain-active consequences.
 
-2. Rewrite FR-1’s classification precedence so every planned path receives exactly one class. Explicitly state the class for a planned banner-bearing file whose banner is absent or malformed, and separately define the treatment of intentionally unbannered generated paths.
+2. Define the bounded orphan-walk contract: do not follow directory symlinks, remain inside canonical repository containment, specify unreadable-entry failure behavior, and make the cost policy valid even when `prompts.dir` is `.`.
 
-3. Replace FR-1/FR-3’s T5/T6 text with the approved answers: define a bounded repository content-search algorithm capable of finding an abandoned old store and surviving config removal, including exclusions, symlink policy, unreadable-path behavior, and cost limits. If this capability is intentionally deferred, remove the T5/T6 coverage claims and restate the limits honestly.
+3. Choose one exception-path contract and test it exhaustively. Either reject backslashes or canonicalize them; do not claim both. Define dot segments, repeated/trailing separators, duplicate comparison, and case behavior without attributing `.` refusal to the existing validator.
 
-4. Add T5 directory-rename, T6 config-removal-with-files-left, removed codex, unbannered `PLACEHOLDERS.md`, malformed banner, duplicate exception, expiry-boundary, and path-normalization cases to FR-6 and its acceptance criteria.
+4. Add `packages/provegate/test/pack-manifest.json` to FR-5 targets, Implementation Scope, Conflict Surface, and verification. The new packed script must be consciously added to that exact-file manifest.
 
-5. Add `packages/provegate/src/core/config/types.ts`, `packages/provegate/src/core/config/validate.ts`, and the appropriate config-validation tests to FR-2’s targets and commands. Specify non-empty fields, date timezone/inclusivity, duplicate behavior, and canonical repo-relative exception paths.
+5. Make migration executable: the changeset must tell existing adopters to upgrade the package, run `gate init --practices` to create the new script, then add its CHECKS member. The migration fixture and release-note assertion must prove all three steps.
 
-6. Add `packages/provegate/src/core/run/index.ts` to FR-1/FR-5 targets, require an API-export assertion, and specify whether the shared primitive returns a final failing verdict or whether a second shared formatter/evaluator prevents CLI and packed-script interpretation from drifting.
-
-7. Amend FR-4 so the hygiene job builds `packages/provegate` before any aggregate member invokes `dist/`, or relocate the aggregate execution to a post-build job while preserving explicit wiring evidence. Add a clean-checkout CI-order test or equivalent verification.
-
-8. Add an existing-adopter migration section. The exact scenario must begin with the pre-034 packed `verify-workflow.mjs` and `NEXT_STEPS.md`, run the additive installer, and prove the adopter receives an explicit manual wiring instruction without any existing file being overwritten.
-
-9. Add rollback and ordering instructions: upgrade the package before accepting `prompts.exceptions`; remove exception entries before package downgrade; remove the packed check and workflow member before downgrading to a version without the exported primitive; and state how repository CI/root wiring is reverted.
-
-10. Correct the memory and drift wording: distinguish `generatedPaths()` as the planned domain from content search as orphan discovery; describe calendar expiry as a PRD-owned extension of the known-red lesson; and change “both new pairs” to “one new pair plus the changed existing workflow pair.”
-
-11. Resolve the output contradiction by choosing either silent-current output or one line per path, then align FR-3, the first acceptance criterion, and command tests.
+6. Tighten rollback and governance wording: remove the entire `prompts.exceptions` key before downgrade; remove any fresh-adopter `verify:prompts` package script as well as the packed file and CHECKS member; avoid assuming one implementation commit; scope the CI-order assertion to the `workflow-hygiene` job; and rewrite the Memory Output/Durable Artifact from nonexistent stored-hash attribution to banner-version attribution.
 
 ## Iteration History
 
 | Date | Iteration | Score | Verdict |
 | --- | ---: | ---: | --- |
 | 2026-07-28 | 1 | 5.1 | ITERATE |
+| 2026-07-28 | 2 | 7.3 | ITERATE |
 
 ## Verdict
 
-ITERATE. The PRD preserves the critical no-write, no-receipt, no-delete, zero-runtime-dependency, no-network, no-push, and no-method-content-change boundaries. It nevertheless fails its primary derivation-fidelity axis: T5 cannot work under the declared scan roots, T6 is misidentified and bypassed, banner removal has no total classification, and the shipped package contains another unbannered generated file that the approved model does not record. The packed wiring is also not live for existing adopters, the CI ordering lacks a build, and no rollback path exists. These are implementation-directing gaps below the 8.0 readiness threshold.
+ITERATE. Revision 2 is factually sound, owner-approved, and faithfully reflected in the total `unattributable` classification and the honest T5/T6 limit restatements. The no-write, no-receipt, no-config-write, no-delete, zero-runtime-dependency, no-network, and no-push boundaries all survive.
 
-VERDICT: ITERATE 5.1
+The PRD is not yet autonomous to implement. Its new packed file necessarily breaks an explicit manifest outside the declared scope; the T5 fixture omits the transition’s detectable stale adapters; scan and exception-path semantics remain underdetermined; existing-adopter instructions omit the installer invocation that creates the new file; and rollback can leave an unknown config key and registered scripts behind. Those are implementation-directing defects, so the binary gate remains ITERATE.
+
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 1 transcribed
-> verbatim from a fresh independent Codex session (codex-cli 0.145.0, read-only sandbox,
-> ~1.54M tokens). The scorer did not author the FRs (derived earlier today by the
-> orchestrating session from the owner-approved state model). Its central factual finding
-> was re-verified by the transcriber before landing this file: `renderPrompts` copies
-> `prompts/PLACEHOLDERS.md` verbatim with NO banner (`prompts.ts` `verbatim` disposition —
-> deliberate, the registry documents the tokens substitution would consume) while
-> `generatedPaths()` includes it in the generated set, so the approved model's claim that
-> the codex snippet is the unique unbannered path is wrong and **the model needs a
-> superseding revision (owner approval) before the FRs are re-derived** — Missing Piece 1
-> is the gate for the other ten. The lint EPERM is the documented sandbox artifact; the
-> out-of-sandbox `gate check PRD-034` was green the same day. Score band 4-5.9 prescribes
-> "return to Phase 1", and that is the action taken: FR rework, not a wording round.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 2 transcribed
+> verbatim from a fresh independent Codex session (codex-cli 0.145.0, read-only sandbox)
+> that scored neither iteration 1 nor authored either derivation. Trajectory 5.1 → 7.3:
+> the model supersession, total classification, honest T5/T6 limits, export surface,
+> shared evaluator and output contract all confirmed closed; six partial pieces remain,
+> every one precision-level. The lint EPERM is the documented sandbox artifact;
+> out-of-sandbox `gate check PRD-034` green the same day. Remediation by the non-scorer
+> session; one more iteration expected.
