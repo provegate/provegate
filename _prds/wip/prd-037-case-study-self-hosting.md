@@ -62,7 +62,7 @@ and PRD-004's figure-tracing lint already enforce.
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
 | Self-hosting figures in the case study | 0 | every figure in the new section | the section exists; each figure names its derivation |
-| Figures typed by hand | n/a | 0 | the doc embeds the script's output; `verify:doc-claims` fails on drift |
+| Figures typed by hand | n/a | 0 | the sentinel region is `--print` output; `--check` via `verify:doc-claims` fails byte-level drift |
 | Derivation commands a reader can run | 0 | 1 | `node scripts/derive-self-hosting-figures.mjs` runs read-only; output matches the doc |
 
 ---
@@ -97,28 +97,43 @@ so that the launch text links to evidence instead of asserting it.
 
 ## 4. Functional Requirements
 
-1. **FR-1**: The derivation script. `scripts/derive-self-hosting-figures.mjs` computes,
-   read-only, from `_state/prds.json` and the committed `_readiness/completed/**` and
-   `_docs/reviews/**` artifacts: PRDs Ship Verified; readiness iterations total and
-   per-item maximum; distinct independent scorer sessions recorded; review rounds total
-   and criticals closed; operator-gated versus eligible closes; gate-chain stops that
-   were resumed (from the artifacts that record them). It prints a stable JSON block
-   and a markdown table; it fails loudly on an unreadable state file
-   (`false-green-on-missing-file`) and computes rather than caches — no stored figure
-   exists anywhere, so none can go stale (the principle PRD-034's pending
-   recompute-beats-recorded-state record will name; see the Memory Inputs note).
+1. **FR-1**: The derivation script — **narrowed at iteration 1 to the figures the
+   committed artifacts reliably support**, each under a per-figure contract:
+
+   | JSON key | Label | Source + predicate | Computation | Missing/malformed input |
+   | -------- | ----- | ------------------ | ----------- | ----------------------- |
+   | `shipVerified` | PRDs Ship Verified | `_state/prds.json` records with `status: "Ship Verified"` | count | unreadable/unparseable state → exit non-zero naming the path |
+   | `closeModes` | operator-gated vs eligible closes | same records' `autonomousClose` field | count per value; unknown values listed, never folded | a record missing the field is listed by id, not guessed |
+   | `readinessIterations` | readiness iterations, total and per-item max | the Iteration History TABLES of `_readiness/completed/**` for Ship Verified PRDs only — the corpus choice is stated in the section: closed items, because wip histories still move; a Superseded PRD's artifact is excluded and the exclusion printed | row count per table; max over items; a file whose table cannot be parsed is a named failure, never a zero | absent artifact for a Ship Verified PRD → named failure |
+
+   Figures the iteration-1 probe found NOT reliably derivable are **cut, not
+   approximated** — distinct scorer sessions (free-text `Scored by` labels do not
+   deduplicate), review-round and criticals aggregates (narrative prose, no normalized
+   metadata), and resumed gate-chain stops (no committed event ledger). The section may
+   NAME these phenomena in unnumbered prose ("multiple independent scorers per item;
+   review rounds that failed before they passed") but no digit attaches to them.
+   Normalizing artifacts to make them derivable is future work this PRD does not own.
+   The script prints one JSON block and one markdown table; read-only; computes rather
+   than caches (the committed doc region in FR-2 is a PROJECTION of this output, and
+   FR-3 is what keeps the projection honest — "no stored figure" was iteration 1's
+   overclaim, corrected: the stored projection exists and is byte-checked).
    - **Targets:** `scripts/derive-self-hosting-figures.mjs`
-2. **FR-2**: The section. `apps/docs/content/docs/case-study.mdx` gains "Part two: the
-   tool's own ledger" — the derived table plus prose that interprets WITHOUT adding
-   numbers: every digit in the section comes from FR-1's output; interpretation
-   sentences carry no figure of their own. The origin section gains one framing line
-   naming the two evidence classes (externally sourced / locally recomputable). Stable
-   heading id for deep links.
-   - **Targets:** `apps/docs/content/docs/case-study.mdx`
-3. **FR-3**: The drift gate. `verify:doc-claims` (PRD-004's figure-tracing lint) gains
-   rows binding every FR-2 figure to a fresh FR-1 derivation — a doc figure that no
-   longer equals the recomputed value fails the lint by name. Wiring unchanged: the
-   lint is already a bundle member; only its coverage grows.
+2. **FR-2**: The section, with the delivery mechanism DECIDED (iteration 1): the doc
+   carries a **committed generated region** delimited by unique sentinel comments
+   (`<!-- self-hosting-figures:start -->` / `:end`); the FR-1 script has two modes —
+   `--print` emits the region's content, `--check` compares the committed region
+   byte-for-byte against a fresh derivation and exits non-zero on drift naming the
+   first differing line. Regeneration rule stated beside the region: re-run `--print`
+   after any close that changes the counted state; FR-3's check is what catches a
+   forgotten regeneration. Around the region: prose that interprets WITHOUT adding
+   numbers — no digit outside the sentinels. The origin section gains one framing line
+   naming the two evidence classes. Stable heading id for deep links.
+   - **Targets:** `apps/docs/content/docs/case-study.mdx`,
+     `scripts/derive-self-hosting-figures.mjs`
+3. **FR-3**: The drift gate. `verify:doc-claims` invokes the FR-1 script's `--check`
+   mode — the committed sentinel region must equal a fresh derivation byte-for-byte,
+   failing by first differing line. Wiring unchanged: the lint is already a bundle
+   member; only its coverage grows by this one call.
    - **Targets:** `scripts/verify/verify-doc-claims.mjs`
 4. **FR-4**: Honesty boundaries, stated in the section: iteration counts include the
    rounds that FAILED (the 5.1s, the flat plateaus, the reverted claims — the ledger
@@ -144,8 +159,12 @@ so that the launch text links to evidence instead of asserting it.
 - **Given** a fresh clone at `main`, **When**
   `node scripts/derive-self-hosting-figures.mjs` runs, **Then** it prints the figure
   set read-only and the numbers equal those rendered in the case study.
-- **Given** any figure in the new section edited by hand, **When**
-  `pnpm verify:doc-claims` runs, **Then** it fails naming that figure.
+- **Given** any byte of the sentinel region edited by hand, **When**
+  `pnpm verify:doc-claims` runs, **Then** the `--check` mode fails naming the first
+  differing line.
+- **Given** a figure the artifacts cannot reliably support (scorer sessions, review
+  aggregates, resumed stops), **When** the section is read, **Then** the phenomenon
+  appears only as unnumbered prose — no digit attaches to it.
 - **Given** the new section's prose, **When** scanned, **Then** no sentence outside the
   derived table carries a digit absent from FR-1's output.
 - **Given** the docs build, **When** the section renders, **Then** its heading id is
@@ -164,8 +183,11 @@ as FR-1's own rule instead; when 034 lands the record, appending it as an input 
 rationale is the correct (and allowed) move.
 
 **Derivation, not narration.** `_state/prds.json` is the generated SSOT (`gate status`
-rebuilds it); readiness artifacts carry iteration histories as tables the script parses.
-Any figure the artifacts cannot support is **omitted rather than estimated** — a smaller
+rebuilds it); readiness artifacts carry iteration histories as tables the script parses
+with a stated grammar (the `| date | iteration | score | verdict |` row shape the
+completed corpus actually uses — a table that does not parse is a named failure). Any
+figure the artifacts cannot support is **omitted rather than estimated** — iteration 1
+proved three promised figures underivable and they are cut, not normalized; a smaller
 true table beats a fuller approximate one.
 
 **Rollback.** Plain revert; no state, no schema, nothing installed anywhere.
@@ -284,4 +306,5 @@ Before Phase 2 PASS, run: `gate check PRD-037`
 
 | Date       | Author | Changes                                                                                                            |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session (author), Phase 1 rework | **Iteration 1 scored 5.30 ITERATE — the scorer's own derivation probe proved three promised figures underivable, and the band (4-5.9) prescribes Phase 1 rework, taken.** The figure set narrows to a per-figure contract table over what the artifacts support (Ship Verified count; close-mode split; readiness iterations from closed items' history tables, corpus and exclusions stated); scorer-session, review-aggregate and resumed-stop figures are CUT — nameable in unnumbered prose, never digits. The MDX mechanism is decided: a committed sentinel-delimited generated region with `--print`/`--check` modes, byte-compared by `verify:doc-claims`; "no stored figure" corrected to the honest form (a stored PROJECTION exists and is byte-checked). |
 | 2026-07-28 | orchestrating session, for owner review | Drafted as the first of three Faz E launch items (the 2026-07-28 portfolio review's outward-gap action): the roadmap's meta-story delivered as recomputable evidence — a derivation script, a derived section, and drift rows in the existing figure lint. |
