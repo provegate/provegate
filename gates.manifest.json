@@ -8,7 +8,8 @@
       "pnpm verify:workflow",
       "pnpm check-egress",
       "pnpm check:review-artifacts",
-      "pnpm check:durable-artifacts"
+      "pnpm check:durable-artifacts",
+      "pnpm check:wiring"
     ],
     "7": [
       "pnpm verify:brain"

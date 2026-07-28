@@ -37,11 +37,15 @@ enforces that the set only shrinks):
 
 Wire CI: run `verify:workflow` in a hygiene job; `verify:dependency-audit` needs
 registry access, so keep it CI-only. The review-artifact, durable-artifacts and wiring
-rules run from the CLI you already installed — `gate check --review-artifacts`,
-`gate check --durable-artifacts`, `gate check --wiring` — per PRD at `gate check
-PRD-NNN` and corpus-wide with those flags; there is no script to register for them.
-Upgrading from a pack that shipped those scripts? The release note for provegate 0.3
-carries the five-step migration, including the exceptions conversion.
+rules run from the CLI you already installed, and they need an executing surface like
+any other check — `gate check PRD-NNN` covers only the closing PRD's readiness lint, so
+WIRE THE CORPUS FLAGS: add package-script aliases (for example
+`"check:review-artifacts": "node node_modules/provegate/dist/cli.js check
+--review-artifacts"`, and the same for `--durable-artifacts` and `--wiring`) and run
+them from CI or your gates manifest after a build. A rule nobody invokes is the
+wire-or-delete violation these flags exist to catch. Upgrading from a pack that shipped
+the old scripts? The release note for provegate 0.3 carries the five-step migration,
+including the exceptions conversion.
 
 ## 4. Agent entrypoint shims
 

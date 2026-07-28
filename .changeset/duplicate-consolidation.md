@@ -13,8 +13,9 @@ none of these flags, so upgrade the CLI first, then migrate.
 you migrate BY HAND. The five steps — the fifth loses data if skipped:
 
 1. Delete `scripts/verify/verify-review-artifact.mjs`,
-   `scripts/verify/verify-durable-artifacts.mjs`, `scripts/verify/verify-gates-wired.mjs`
-   and `scripts/verify/gates-wired-exceptions.json`.
+   `scripts/verify/verify-durable-artifacts.mjs` and
+   `scripts/verify/verify-gates-wired.mjs` — but NOT the exceptions file yet: step 5
+   reads it, and deleting it first loses the data step 5 exists to preserve.
 2. Remove the three matching `package.json` script entries.
 3. Remove the three names from the `CHECKS` array in your installed
    `scripts/verify/verify-workflow.mjs`.
@@ -25,8 +26,8 @@ you migrate BY HAND. The five steps — the fifth loses data if skipped:
    survivor's filename to the `package.json` script that invokes it; DROP every survivor
    that is already wired (the audit refuses a wired exception as stale); record what
    remains in `gates.manifest.json` under `wiringExceptions` with a real, non-whitespace
-   justification — then delete the old `gates-wired-exceptions.json`. Skip this step only
-   when that file is absent or empty.
+   justification — and only THEN delete the old `gates-wired-exceptions.json`, as this
+   step's last act. Skip this step only when that file is absent or empty.
 
 Downgrading back: restore the four files from the pack of the previous release and
 reverse steps 2–5; nothing happens automatically in either direction, which is what makes

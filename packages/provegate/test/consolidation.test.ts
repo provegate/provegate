@@ -226,11 +226,19 @@ function liveMarkdown(root: string): string[] {
   return out;
 }
 
-/** STATUS.md: only the live sections — everything above `## Deferrals` plus the
- * Deferrals table headers; Recent activity and the Deferrals Note column are
- * historical by the board's own rule. */
+/** STATUS.md's live text: everything above `## Recent activity` (the historical
+ * log), with the Deferrals table's NOTE column stripped per row — the Note cell
+ * quotes history by the board's own rule, while Topic/Item/Owner are live. */
 function statusLiveText(content: string): string {
-  return content.split('## Deferrals')[0] ?? content;
+  const live = content.split('## Recent activity')[0] ?? content;
+  return live
+    .split('\n')
+    .map((line) => {
+      if (!/^\|/.test(line)) return line;
+      const cells = line.split('|');
+      return cells.length > 2 ? cells.slice(0, -2).join('|') : line; // drop the last (Note) cell
+    })
+    .join('\n');
 }
 
 describe('no live document names a deleted check (FR-6)', () => {
@@ -258,7 +266,26 @@ describe('no live document names a deleted check (FR-6)', () => {
     const status = readFileSync(resolve(repoRoot, 'STATUS.md'), 'utf8');
     const live = statusLiveText(status);
     expect(live).toContain('## Active Agents'); // the live part survives the boundary
+    expect(live).toContain('## Deferrals'); // the table's live columns stay scannable
     expect(liveMarkdown(repoRoot)).toContain('STATUS.md');
+  });
+
+  it('vacuity, board edition: a deleted-check instruction in a live Deferrals cell is seen', () => {
+    const planted = [
+      '# Status',
+      '## Deferrals',
+      '| Topic | Item | Owner | Due | Renewals | Note |',
+      '| --- | --- | --- | --- | --- | --- |',
+      '| fix wiring | run `pnpm verify:gates-wired` weekly | owner | 2026-09-01 | 0 | historical quote of `verify:gates-wired` is fine |',
+      '## Recent activity',
+      '- old entry naming verify:gates-wired stays invisible',
+    ].join('\n');
+    const live = statusLiveText(planted);
+    // the live Item cell is scanned…
+    expect(live).toContain('run `pnpm verify:gates-wired` weekly');
+    // …while the Note column and Recent activity are not
+    expect(live).not.toContain('historical quote');
+    expect(live).not.toContain('old entry');
   });
 });
 
@@ -365,6 +392,41 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
     ];
     const { output } = runLedger(ledgerRepo(ledger, adr, disk));
     expect(output).toContain('method-class script still exists');
+  });
+
+  it('a method row whose script is GONE is stale — method is never a resting place', () => {
+    const [, , ] = GREEN;
+    const ledger = {
+      'verify-a.mjs': { class: 'repo' },
+      'verify-gone.mjs': { class: 'method', supersededBy: 'gate check --gone' },
+    };
+    const adr: [string, string][] = [
+      ['verify-a.mjs', 'repo'],
+      ['verify-gone.mjs', 'method'],
+    ];
+    const { output } = runLedger(ledgerRepo(ledger, adr, ['verify-a.mjs']));
+    expect(output).toContain('verify-gone.mjs: ledger entry is stale');
+  });
+
+  it('a calendar-invalid reviewBy fails even when the shape matches', () => {
+    const [, adr, disk] = GREEN;
+    const bad = {
+      'verify-a.mjs': { class: 'repo' },
+      'verify-b.mjs': { class: 'method-pending', owner: 'owner', reviewBy: '2099-99-99' },
+    };
+    const { output } = runLedger(ledgerRepo(bad, adr, disk));
+    expect(output).toContain('a real YYYY-MM-DD date');
+  });
+
+  it('a script classified twice in the ADR table is contradictory, not last-wins', () => {
+    const [ledger, , disk] = GREEN;
+    const dup: [string, string][] = [
+      ['verify-a.mjs', 'method-pending'],
+      ['verify-a.mjs', 'repo'],
+      ['verify-b.mjs', 'method-pending'],
+    ];
+    const { output } = runLedger(ledgerRepo(ledger, dup, disk));
+    expect(output).toContain('verify-a.mjs classified twice');
   });
 
   it('table-versus-ledger disagreement fails in both directions', () => {

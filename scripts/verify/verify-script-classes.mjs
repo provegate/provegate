@@ -37,6 +37,11 @@ try {
 const CLASSES = new Set(['repo', 'method', 'method-pending']);
 const KEYS = new Set(['class', 'owner', 'reviewBy', 'supersededBy']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Shape is not calendar: 2099-99-99 matches the regex and is not a date. */
+const isRealDate = (v) => {
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
 const today = new Date().toISOString().slice(0, 10);
 
 // ── schema, per entry ──
@@ -57,8 +62,8 @@ for (const [name, entry] of Object.entries(ledger)) {
     if (typeof entry.owner !== 'string' || entry.owner.trim() === '') {
       r.fail(`${name}: method-pending requires an owner`);
     }
-    if (typeof entry.reviewBy !== 'string' || !DATE.test(entry.reviewBy)) {
-      r.fail(`${name}: method-pending requires reviewBy as YYYY-MM-DD`);
+    if (typeof entry.reviewBy !== 'string' || !DATE.test(entry.reviewBy) || !isRealDate(entry.reviewBy)) {
+      r.fail(`${name}: method-pending requires reviewBy as a real YYYY-MM-DD date`);
     } else if (entry.reviewBy < today) {
       r.fail(`${name}: method-pending expired on ${entry.reviewBy} — resolve it or re-decide with a new date`);
     }
@@ -90,7 +95,12 @@ for (const f of onDisk) {
   if (!(f in ledger)) r.fail(`${f}: unclassified — add it to script-classes.json`);
 }
 for (const name of Object.keys(ledger)) {
-  if (ledger[name]?.class !== 'method' && !onDisk.includes(name)) {
+  // EVERY entry naming a missing script is stale — method included: once the
+  // duplicate is deleted its row is REMOVED, so the ledger shrinks with the
+  // work. A method row is therefore red in both worlds (exists -> delete it;
+  // gone -> remove the row), which is the point: it names the state a new
+  // duplicate lands in, never a resting place.
+  if (!onDisk.includes(name)) {
     r.fail(`${name}: ledger entry is stale — the script no longer exists, remove the row`);
   }
 }
@@ -113,6 +123,9 @@ if (!existsSync(adrPath)) {
         break;
       }
       if (cells[0] === 'Script' && cells[1] === 'Class') continue; // header
+      if (rows.has(cells[0])) {
+        r.fail(`ADR-0004: ${cells[0]} classified twice — the table is contradictory`);
+      }
       rows.set(cells[0], cells[1]);
     }
     if (!parseOk) {
