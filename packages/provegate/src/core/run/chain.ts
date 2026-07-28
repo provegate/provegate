@@ -17,7 +17,7 @@ import {
 } from '../memory/artifacts.js';
 import {
   isSafeCommand,
-  parseVerificationCommands,
+  parseVerificationTable,
   type SafetyCheckedCommand,
 } from '../gates/safety.js';
 import { resolveClassGates, mergeGateCommands } from '../gates/classes.js';
@@ -488,10 +488,32 @@ export function buildGateChain(options: {
     manifest.phases['4'] ?? [],
     resolveClassGates(manifest, prdClass, changedFiles),
   );
-  const phase5 = parseVerificationCommands(config, prdContent);
+  const table = parseVerificationTable(config, prdContent);
+  const phase5 = table.commands;
+  // The §11 parser-issue guard (PRD-024 FR-1): a malformed row or a duplicate
+  // section means the parsed commands are a subset of the declared ones, so
+  // running the readable remainder would report success over an unknown gap.
+  // A MISSING section is deliberately exempt — that case keeps its existing
+  // required-empty Phase-5 failure below, and routing it through this guard
+  // would replace that path with a different refusal.
+  const parserIssues = table.issues.filter(
+    (issue) => !issue.startsWith('§11 verification section is missing'),
+  );
 
   const chain: ChainGate[] = [
     { phase: '4 Implementation', cmds: phase4.map(checked) },
+    ...(parserIssues.length > 0
+      ? [
+          {
+            phase: '5 Testing',
+            label: '§11 table readability',
+            fn: (): FnGateResult => ({
+              ok: false,
+              why: `§11 table is unreadable — gate coverage unknown, refusing to execute a partial set: ${parserIssues.join('; ')}`,
+            }),
+          },
+        ]
+      : []),
     { phase: '5 Testing', cmds: phase5, required: true },
     {
       phase: '6 Final Auditing',

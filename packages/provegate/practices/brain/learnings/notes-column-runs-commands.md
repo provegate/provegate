@@ -18,6 +18,12 @@ adds it to the gate.
 **Why:** the parser keys on "backtick span anywhere in the row" for simplicity, but a
 markdown table row has multiple cells and only one is the command.
 **How to apply:** Scope command extraction to the designated Command column (e.g. the 2nd
-cell), not the whole row. Until then, never put a backticked runnable command in the
-Notes/Scope column of an FR row. A naive parser leaves this hazard unguarded —
-fix it in the parser.
+cell), not the whole row.
+
+**Resolved (provegate ≥ 0.2.x):** the shipped parser is fixed — `parseVerificationTable`
+splits each `| FR-N` row into cells and reads commands from the Command cell only; both
+readers (the readiness lint and the gate chain) consume that one extraction, and a
+malformed row is reported, never skipped. The interim guidance ("never put a backticked
+runnable command in Notes/Scope") is retired: prose in Notes stays prose. The trap this
+record describes is what the fix removed — kept here so the trap and its resolution stay
+discoverable together.

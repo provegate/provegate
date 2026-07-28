@@ -13,7 +13,8 @@
     },
     "lint": {},
     "test": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/_prds/**"]
     },
     "dev": {
       "dependsOn": ["^build"],
