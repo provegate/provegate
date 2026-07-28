@@ -30,12 +30,15 @@ bytes, so the repository runs the old method while reporting a successful instal
 is deleted and absence reads as "not configured". This PRD owns the detection, the upgrade
 view, and the wiring that keeps them from being registered and never run.
 
-**This document deliberately carries no functional requirements yet, and that is its current
-correct state.** PRD-030 is producing `_docs/design/prompt-store-state-model.md` — the complete
-set of state transitions for a generated store and the actor performing each. Seven readiness
-rounds across PRD-029 and PRD-030 were spent repairing counterexamples inside a design whose
-transitions had never been written down; writing FRs here before the model is owner-approved
-would be the eighth. The FRs are derived from the model, in one pass, once it lands.
+**The functional requirements are derived from `_docs/design/prompt-store-state-model.md`
+at Revision 2** (owner-approved 2026-07-28 — the same day Revision 1 landed, superseded on
+PRD-034's own iteration-1 finding that a second generated path ships unbannered). The
+original discipline held: no FR was written before the model existed; the first derivation
+was scored 5.1 by an independent session whose findings forced both the model's Revision 2
+and this second derivation. Seven readiness rounds across PRD-029 and PRD-030 were spent
+repairing counterexamples inside a design whose transitions had never been written down —
+the model, and the score-band rule (4-5.9 returns to Phase 1, which is what happened), are
+why this document was rewritten rather than patched.
 
 What survives from the retracted design is the goal set below and nothing else. Every
 mechanism sentence — what recomputes, what the receipt claims, what a `sync` verb does, how an
@@ -62,7 +65,7 @@ statements the model exists to fix.
 | ---------------------------------------------- | ------- | ------ | -------------------------------------------------------------- |
 | Store divergences detected                     | 0       | all    | a mutated-store fixture, per the model's transition set        |
 | Registered checks with no executing surface    | n/a     | 0      | `gate check --wiring` green with the new member present        |
-| FRs specified before the state model is approved | n/a   | 0      | this section; the block below is the gate                      |
+| FRs specified before the state model is approved | 0 (held) | 0    | historical gate — held through both derivations; Revision 2 preceded the re-derivation |
 
 ---
 
@@ -78,7 +81,7 @@ so that a method upgrade does not leave my agents on the old protocol without te
 
 **Acceptance Criteria:**
 
-- [ ] Written with the FRs, from the state model's transition set.
+- [ ] The §6 criteria for classification, the upgrade view, and the summary line (FR-1/FR-3).
 
 #### User Story 2
 
@@ -90,112 +93,154 @@ so that my change is neither silently reverted nor silently forgotten.
 
 **Acceptance Criteria:**
 
-- [ ] Written with the FRs, from the state model's transitions 3 and 4.
+- [ ] The §6 criteria for the exception contract: suppression scoped to `modified`, expiry
+      boundary, stale-entry failure, and the no-write rule (FR-2).
 
 ---
 
 ## 4. Functional Requirements
 
-**Derived 2026-07-28 in one pass from the owner-approved state model**
-(`_docs/design/prompt-store-state-model.md`, acceptance entry PRD-030 items 4.1 T1–T7 and
-4.3) plus the two derivation notes recorded with the approval: detection must compare
-**bytes, not versions** (a `prompts.values` edit re-renders different bytes at the same
-version, so the banner cannot see it), and content-based discovery finds only files that
-are generated **and still bannered** (a banner-stripped edit falls into the same hole as
-the unbannered codex snippet).
+**Re-derived 2026-07-28 (second pass) from the state model at Revision 2** (owner-approved
+the same day: two unbannered generated paths; the detection/attribution split) **and the
+iteration-1 readiness score's eleven missing pieces.** Detection compares **bytes, never
+versions**; the banner is attribution only; content discovery finds only bannered files
+inside declared roots.
 
 1. **FR-1**: The reconciliation primitive. `reconcilePrompts(config, root)` in
    `core/run/prompts.ts` recomputes the generated set — `generatedPaths()` from the
    **installed** package and the **current** config, the same pure function the installer
-   uses — and compares bytes on disk, path by path. No stored state is read
-   (`recompute-beats-recorded-state`); the banner's version is read only for
-   **attribution**, never for detection. Every path in the union of (planned set ∪
-   bannered files under the scan roots) gets exactly one class:
-   - `current` — bytes equal the fresh render;
-   - `stale` — banner version ≠ installed version (T2: an upgrade `init` could not
-     deliver);
-   - `modified` — banner version = installed version, bytes differ (T3: a human edit
-     **or** a config-value change — the banner records version, not config, so the two
-     are indistinguishable; the report says so rather than guessing);
-   - `missing` — planned path absent on disk (T1 partial install, or T6 deletion);
-   - `orphaned` — a file carrying the generated banner that the current plan does not
-     produce (T4 removed adapter, T5 renamed dir — found by content within the scan
-     roots only: `config.prompts.dir`, `.claude/commands/`, `.cursor/rules/`; a tree
-     renamed **away** from those roots is not discoverable, which is the model's
-     recorded limit 5, restated here rather than papered over);
-   - `unknowable` — the `codex` snippet path when present: it carries no banner, so
-     content answers nothing about it (model limit 6). A banner-stripped edit of any
-     other file leaves the planned-set comparison (it is still planned, so it reports
-     `modified`/`stale` by bytes) but is invisible to the orphan scan — stated in the
-     primitive's doc comment as the boundary of content discovery.
-   The primitive returns typed findings; it writes **nothing** — not a receipt, not a
-   cache, not a repair (model T7 and the T3 boundary: a reporter writes nothing).
-   - **Targets:** `packages/provegate/src/core/run/prompts.ts::reconcilePrompts`
-2. **FR-2**: The recorded local exception — the one design question the model handed
-   this PRD, answered: an intentional edit **does** acquire representation, and its
-   home is the adopter's own config, `prompts.exceptions[]`, entries of exactly
-   `{ path, reason, owner, expires }`. The tool never writes the config (model
-   constraint 1), so authorship is the adopter's by construction, and an agent never
-   authors one (an owner decision, like an operator acceptance). Semantics: a valid,
-   unexpired entry suppresses the `modified` finding for that exact path and reports
-   it as `excepted (expires <date>)`; it suppresses nothing else — `stale`, `missing`,
-   `orphaned` and `unknowable` are never exceptable, and **no entry ever authorizes a
-   write** (the model's stated boundary). Per `known-red-ledger-must-expire`: an
-   expired entry is a failure naming its date; an entry whose path is not currently
-   `modified` is a stale entry and a failure; an entry with a missing field or an
-   unparseable date is refused at config load with the same semantic-validation
-   surface the rest of the config uses.
-   - **Targets:** `packages/provegate/src/core/config/defaults.ts`,
-     `packages/provegate/src/core/config/load.ts`
-3. **FR-3**: The command surface: `gate check --prompts` (the `--wiring` precedent).
-   Wraps FR-1 + FR-2, prints one line per non-`current` path with its class and
-   attribution, and exits non-zero if anything is not `current`/`excepted`. The
-   **upgrade view** is this report's `stale` section: it names banner version vs
-   installed version per file and prints the model's T2 remedy verbatim — the adopter
-   deletes the printed reinstall unit and re-runs `gate init --prompts`; the command
-   performs neither step (constraint 2: no command deletes an adopter's file).
-   Fail-closed rules: `prompts.enabled` false → note + exit 0 (behaviour unchanged for
-   a repository that never opted in — the enabled flag is the predicate, presence never
-   is, per `defaults.ts`); enabled with the store directory absent → non-zero naming
-   the directory (`false-green-on-missing-file`: absence is a finding, not
-   not-configured — T6 says exactly this).
+   uses — and compares bytes on disk. No stored state is read
+   (`recompute-beats-recorded-state`). The classification is **total** over every path it
+   examines:
+   - every **planned** path (a member of `generatedPaths()`) gets exactly one of:
+     `missing` (absent on disk); `current` (bytes equal the fresh render); `stale`
+     (bytes differ, banner parseable, banner version ≠ installed — T2's undelivered
+     upgrade); `modified` (bytes differ, banner parseable, banner version = installed —
+     a hand edit **or** a config-value change; indistinguishable, and the report says
+     so); `unattributable` (bytes differ and no banner is parseable — which includes
+     the two **deliberately unbannered** members, the codex snippet and
+     `prompts/PLACEHOLDERS.md`, and any file whose banner a human stripped or mangled).
+     Per Revision 2: detection still works for the unattributable arm — the fresh
+     render is the expected content (`PLACEHOLDERS.md`'s is its packaged source,
+     verbatim) — only the stale-versus-modified split is lost;
+   - every **unplanned** file carrying the generated banner inside the scan roots —
+     `config.prompts.dir`, `.claude/commands/`, `.cursor/rules/` — is `orphaned`
+     (T4's removed adapter; T5's abandoned tree only when it sits inside those roots).
+   **Declared limits, restated from the model rather than claimed away:** a tree
+   renamed **outside** the scan roots is not discovered — limit 5's honest form is "no
+   lookup, only a search", the search must be told where to look, and this check is
+   deliberately bounded to the roots above (a repository-wide crawl would need a
+   symlink/cost/containment contract this PRD does not acquire); and unbannered or
+   stripped files that are **unplanned** are invisible to content discovery (limit 6,
+   Revision 2). The check therefore claims neither rename-discovery nor absence-scoped
+   reporting. The primitive returns typed findings and writes **nothing** (T7; the T3
+   boundary). It is exported through the package's explicit export list — an API-export
+   test asserts `import { reconcilePrompts } from 'provegate'` resolves, because
+   `core/run/index.ts` re-exports by name and a new symbol does not travel for free.
+   - **Targets:** `packages/provegate/src/core/run/prompts.ts::reconcilePrompts`,
+     `packages/provegate/src/core/run/index.ts`
+2. **FR-2**: The recorded local exception — the model's one handed question, answered:
+   representation yes, in the adopter's own config, `prompts.exceptions[]`, entries of
+   exactly `{ path, reason, owner, expires }`, with the semantics nailed shut:
+   - `path` is repo-relative with forward slashes; backslashes are normalized before
+     comparison and the match is byte-exact after that; absolute, home-relative,
+     drive-anchored forms and `.`/`..` segments are refused with the config's existing
+     lexical-containment rule; a duplicate `path` across entries is refused at load;
+   - `reason` and `owner` must be non-empty after trimming; unknown fields are refused;
+   - `expires` is a `YYYY-MM-DD` calendar date compared in UTC; the entry is valid
+     **through** that date and expired when the run's UTC date is later; a malformed
+     date is refused at load. Calendar expiry is a **PRD-owned decision modeled on**
+     `known-red-ledger-must-expire`'s lesson (stale, unknown and malformed entries must
+     fail) — the record prescribes failure on staleness, not this mechanism; the
+     mechanism is this document's own choice, stated as such.
+   A valid, unexpired entry suppresses the `modified` finding for its exact path and
+   reports `excepted (expires <date>)`. It suppresses **nothing else**: `stale`,
+   `missing`, `orphaned` and `unattributable` are never exceptable — an unattributable
+   divergence might be an undelivered upgrade, and suppressing it would hide T2. An
+   entry whose path is not currently `modified` is a stale entry and fails the run. No
+   entry ever authorizes a write (the model's boundary). The config surface is typed in
+   `types.ts`, structurally validated in `validate.ts` (the spec learns an
+   array-of-record shape), and semantically validated in `load.ts` beside the config's
+   existing semantic checks.
+   - **Targets:** `packages/provegate/src/core/config/types.ts`,
+     `packages/provegate/src/core/config/validate.ts`,
+     `packages/provegate/src/core/config/load.ts`,
+     `packages/provegate/src/core/config/defaults.ts`
+3. **FR-3**: The command surface: `gate check --prompts` (the `--wiring` precedent),
+   wrapping FR-1 + FR-2 through the shared evaluator (FR-5). **Output contract,
+   decided:** one line per finding that is not `current`, plus exactly one summary line
+   naming every count (`N current, M excepted, K stale, …`); `current` paths are
+   otherwise silent; exit 0 iff nothing falls outside `current`/`excepted`. The `stale`
+   section is the upgrade view: installed version vs banner version per file, and the
+   model's T2 remedy printed verbatim — the adopter deletes the printed reinstall unit
+   and re-runs `gate init --prompts`; the command performs neither step (constraint 2).
+   Fail-closed rules: `prompts.enabled` false → exit 0 with a note that names what was
+   **not** exercised — "prompts disabled; reconciliation and the bannered-orphan search
+   not run" — because T6's content-search capability still exists and a silent pass
+   must not imply nothing is discoverable; enabled with the store directory absent →
+   non-zero naming the directory (`false-green-on-missing-file`; T6: absence under an
+   enabled config is a finding, not not-configured).
    - **Targets:** `packages/provegate/src/cli.ts`
 4. **FR-4**: Wiring, layer one — this repository. `scripts/verify/verify-prompts.mjs`
-   invokes the built CLI (`node packages/provegate/dist/cli.js check --prompts`) so the
-   executed code is the shipped code; registered as `verify:prompts` in root
-   `package.json`; a member of `verify:workflow`'s CHECKS; a step in the CI hygiene
-   job. It runs outside turbo by construction (root script;
-   `turbo-cache-masks-out-of-input-reads`). Until PRD-032 flips this repository's
-   `prompts.enabled`, the check reports the FR-3 disabled note and passes — the wiring
-   lands dormant here and live in the pack, and `gate-wire-or-delete` is satisfied in
-   both directions from day one.
+   invokes the built CLI (`node packages/provegate/dist/cli.js check --prompts`);
+   registered as `verify:prompts` in root `package.json`; a member of
+   `verify:workflow`'s CHECKS; a step in the CI hygiene job — **and the hygiene job
+   gains `pnpm --filter provegate build` before the aggregate step**, because that job
+   installs without building today and a clean checkout would fail on a missing `dist`
+   (the workflow's own comments already put built-CLI checks after a build). The order
+   is asserted mechanically by the script's own `--assert-ci-order` mode — it reads
+   `ci.yml` and fails unless the build step's index precedes the aggregate's — because
+   the §11 command grammar (rightly) refuses inline comparison operators. Runs outside turbo
+   (`turbo-cache-masks-out-of-input-reads`). Until PRD-032 flips this repository's
+   `prompts.enabled`, the check reports the FR-3 disabled note and passes — dormant
+   here, live at fresh installs, and the CLI path live for every upgraded adopter
+   (§7 → migration).
    - **Targets:** `scripts/verify/verify-prompts.mjs`, `package.json`,
      `scripts/verify/verify-workflow.mjs`, `.github/workflows/ci.yml`
-5. **FR-5**: Wiring, layer two — the pack. `practices/verify/verify-prompts.mjs` calls
-   the **same primitive** through the installed package (import from `provegate`) —
-   never a reimplementation (`two-parsers-wrong-together`); named in the installer's
-   `PACK_MAP` (`shipped-content-needs-a-delivery-gate`: shipped content with no map
-   entry never reaches an adopter); a member of the **packed** `verify-workflow.mjs`
-   CHECKS (adopters have stores; their bundle runs the check); a row in
-   `NEXT_STEPS.md`; both new pack-drift ledger pairs reconciled with notes stating any
-   intended repo/pack difference.
-   - **Targets:** `packages/provegate/practices/verify/verify-prompts.mjs`,
+5. **FR-5**: Wiring, layer two — the pack, drift-proofed. The package exports one
+   shared evaluator beside the primitive — `evaluatePromptReconciliation(findings)`
+   returning the verdict and the report lines — and **both** the CLI and the packed
+   `practices/verify/verify-prompts.mjs` consume it through the installed package
+   (`two-parsers-wrong-together`: the twin reimplements neither the comparison nor the
+   interpretation). The packed script is named in the installer's `PACK_MAP`
+   (`shipped-content-needs-a-delivery-gate`), joins the **packed**
+   `verify-workflow.mjs` CHECKS, gains a `NEXT_STEPS.md` row, and the drift ledger
+   moves by **one new pair** (`verify/verify-prompts.mjs`) **plus reconciliation of
+   the changed existing workflow pair** with an updated note. A changeset (minor)
+   carries the release note **including the existing-adopter migration instruction**
+   (§7) — `.changeset/` is claimable now that PRD-025 has landed.
+   - **Targets:** `packages/provegate/src/core/run/prompts.ts::evaluatePromptReconciliation`,
+     `packages/provegate/practices/verify/verify-prompts.mjs`,
      `packages/provegate/practices/verify/verify-workflow.mjs`,
      `packages/provegate/src/core/run/init.ts`,
-     `packages/provegate/practices/NEXT_STEPS.md`, `scripts/verify/pack-drift-ledger.json`
-6. **FR-6**: The conformance tests, one fixture per class and per exception outcome:
-   `current`, `stale` (banner rewritten to an older version), `modified` (byte edit at
-   the installed version), **`modified` via a `prompts.values` change at the same
-   version** (the first derivation note, pinned as its own case), `missing`,
-   `orphaned` (an adapter removed from config with its file left), `unknowable` (the
-   codex snippet present), banner-stripped edit (still detected via the planned set,
-   invisible to the orphan scan — both halves asserted), valid exception, expired
-   exception, stale exception entry, disabled config no-op, enabled-but-absent store
-   failure. The path domain in every fixture is computed from `generatedPaths()`
-   (`derive-the-requirement-from-the-consumer`), never from a hand-kept list.
+     `packages/provegate/practices/NEXT_STEPS.md`,
+     `scripts/verify/pack-drift-ledger.json`, `.changeset/prompt-store-reconciliation.md`
+6. **FR-6**: The conformance tests — one fixture per class, per exception outcome, and
+   per declared limit, the path domain always computed from `generatedPaths()`
+   (`derive-the-requirement-from-the-consumer`):
+   classes — `current`; `stale`; `modified` by byte edit; `modified` by a
+   `prompts.values` change at the same version (derivation note 1, its own case);
+   `missing`; `orphaned` via an adapter removed from config; `unattributable` via a
+   stripped banner (both halves asserted: detected through the planned set, absent
+   from the orphan scan); `unattributable` via an edited `PLACEHOLDERS.md`; the codex
+   snippet edited (`unattributable`) and removed (`missing`);
+   limits — a T5 rename fixture with two trees, asserting the new store reports and
+   the renamed-away tree does **not** (the limit is the assertion); a T6 fixture with
+   the config block removed and bannered files left, asserting the disabled note names
+   the unexercised search;
+   exceptions — valid; expiry boundary (an entry expiring **today** passes, yesterday
+   fails); duplicate path refused at load; malformed date refused; non-normalized path
+   refused; stale entry fails the run;
+   command — disabled no-op note; enabled-but-absent store failure; the FR-3 summary
+   line's counts; the API-export assertion (FR-1); the migration scenario (§7): a
+   PRD-029-era practices tree through the additive installer — the new packed check is
+   created, the adopter's existing `verify-workflow.mjs` and `NEXT_STEPS.md` are
+   untouched, and the changeset text carries the manual wiring line. FR-3's tests
+   invoke the real CLI entry on a real tree, and the packed-twin test executes the
+   `.mjs` as a module (`fixture-must-reach-production-shape`); every suppression
+   assertion first proves the underlying finding with the entry removed
+   (`assert-absent-needs-an-independent-cause`).
    - **Targets:** `packages/provegate/test/prompts-integrity.test.ts`
-
----
 
 ## 5. Non-Goals (Out of Scope)
 
@@ -212,7 +257,9 @@ the unbannered codex snippet).
 ## 6. Acceptance Criteria (Gherkin Style)
 
 - **Given** a store byte-identical to a fresh render, **When** `gate check --prompts`
-  runs, **Then** every path reports `current` and the exit code is 0.
+  runs, **Then** the summary line reports every planned path as `current`, no per-path
+  line is printed, and the exit code is 0 — per-path lines exist only for findings
+  outside `current`.
 - **Given** one store file edited by hand at the installed version, **When** the check
   runs, **Then** that path reports `modified`, the report says the cause may be a hand
   edit or a config change, and the exit code is non-zero.
@@ -224,16 +271,31 @@ the unbannered codex snippet).
   and the printed remedy is the model's T2 procedure — the command deletes nothing.
 - **Given** an adapter removed from `config.prompts.adapters` with its file on disk,
   **When** the check runs, **Then** the file reports `orphaned` via its banner.
-- **Given** the codex snippet present, **When** the check runs, **Then** it reports
-  `unknowable`, never `current`.
+- **Given** an edited codex snippet or an edited `prompts/PLACEHOLDERS.md`, **When**
+  the check runs, **Then** the path reports `unattributable` — detected by bytes
+  against the fresh render, with no stale-versus-modified claim; byte-identical copies
+  of both report `current`.
+- **Given** a planned file whose banner was stripped and whose bytes were edited,
+  **When** the check runs, **Then** it reports `unattributable` through the planned
+  set — and the same file, made unplanned, is absent from the orphan report (the
+  Revision 2 limit, asserted as behaviour).
+- **Given** a store renamed to a directory outside the scan roots with the config
+  updated, **When** the check runs, **Then** the new store reconciles and the
+  abandoned tree produces no finding — the declared limit-5 restatement, asserted so
+  a future wider search must flip it consciously.
 - **Given** a valid unexpired `prompts.exceptions[]` entry for a `modified` path,
   **When** the check runs, **Then** that path reports `excepted (expires <date>)` and
   does not fail the run — and a write is never performed on its behalf.
-- **Given** an expired entry, or an entry naming a path that is not `modified`, **When**
-  the check runs, **Then** the run fails naming the entry and the reason.
-- **Given** `prompts.enabled` false, **When** the check runs, **Then** it notes the
-  disabled state and exits 0 with no other output — behaviour unchanged for
-  non-adopters.
+- **Given** an entry whose `expires` is today's UTC date, **When** the check runs,
+  **Then** it still suppresses; **Given** yesterday's date, **Then** the run fails
+  naming the entry and its expiry.
+- **Given** an entry naming a path that is not `modified`, a duplicate path, a
+  malformed date, or a non-normalized path, **When** the config loads or the check
+  runs, **Then** the failure names the entry and the exact rule it broke.
+- **Given** `prompts.enabled` false, **When** the check runs, **Then** it exits 0 with
+  a note naming what was not exercised — reconciliation and the bannered-orphan search
+  — never a bare silence that implies nothing is discoverable (T6's capability
+  survives the config's removal).
 - **Given** `prompts.enabled` true and the store directory absent, **When** the check
   runs, **Then** it exits non-zero naming the directory.
 - **Given** the packed `verify-prompts.mjs` in an adopter repository, **When** it runs,
@@ -255,9 +317,49 @@ the unbannered codex snippet).
 ### Conflict and sequencing
 
 This PRD claims `core/run/prompts.ts` and `cli.ts`, which PRD-029 also claimed — sequential
-rather than concurrent, and PRD-029 has landed. PRD-030 claims only documents, so it does not
-serialize against this one; PRD-031 touches method content and is disjoint from both. Re-run
-`gate queue` before Phase 3 rather than trusting this paragraph.
+rather than concurrent, and PRD-029 has landed. PRD-025 has landed too, freeing
+`.changeset/`. PRD-030 claims only documents; PRD-031 touches method content and is
+disjoint. Re-run `gate queue` before Phase 3 rather than trusting this paragraph.
+
+### Existing-adopter migration
+
+The installer is additive-only (`wx`): an upgrade delivers the NEW packed
+`verify-prompts.mjs` (its path does not exist yet) but can never edit an adopter's
+existing `verify-workflow.mjs` or `NEXT_STEPS.md` — so for a repository that installed
+the PRD-029-era practices pack, the bundle membership does **not** propagate. Two
+honest consequences, both specified rather than hoped:
+
+- the **CLI path is live immediately on package upgrade** — `gate check --prompts`
+  ships in the package, needs no practices file, and is the surface an existing
+  adopter actually has on day one;
+- the **bundle wiring is manual for them**: the FR-5 changeset's release note carries
+  the one-line instruction (add `verify-prompts.mjs` to the CHECKS array of their
+  `verify-workflow.mjs` copy). The FR-6 migration fixture proves the exact scenario:
+  a pre-034 practices tree through the installer — new file created, existing files
+  untouched, instruction present in the changeset text. Nothing is overwritten,
+  nothing is deleted, and nothing pretends the bundle updated itself.
+
+### Rollback and ordering
+
+Ordering constraints, stated because the config and the package version move
+independently:
+
+- **Upgrade before excepting:** `prompts.exceptions` is an unknown key to every
+  pre-034 validator, so the package upgrade lands before any exception entry is
+  written; an adopter who writes the entry first gets a config refusal naming the key.
+- **Un-except before downgrading:** symmetrically, a downgrade below this PRD's
+  version must be preceded by removing `prompts.exceptions` entries, or the old
+  validator refuses the config at load.
+- **Un-wire before downgrading:** a packed `verify-prompts.mjs` imports the exported
+  primitive; downgrading the package below the export makes that check fail loudly at
+  import. The release note states the order: remove the CHECKS member and the packed
+  file before downgrading. Pack installation never deletes, so the cleanup is the
+  adopter's, named rather than implied.
+- **This repository:** reverting the implementation commit unwinds the runner, the
+  `verify:prompts` registration, the CHECKS membership, the CI build+step pair, and
+  both ledger movements together — one commit, no intermediate state (the PRD-035
+  pattern). The config here carries no exceptions until PRD-032, so no config
+  ordering applies locally.
 
 ---
 
@@ -265,10 +367,16 @@ serialize against this one; PRD-031 touches method content and is disjoint from 
 
 ### In Scope
 
-- [ ] `packages/provegate/src/core/run/prompts.ts` — `reconcilePrompts`, the primitive (FR-1)
-- [ ] `packages/provegate/src/core/config/defaults.ts` + `load.ts` — `prompts.exceptions[]`
-      shape and semantic validation (FR-2); the exception contract lives in the adopter's
-      config, so no new schema file is needed and `schemas/` leaves the scope
+- [ ] `packages/provegate/src/core/run/prompts.ts` — `reconcilePrompts` +
+      `evaluatePromptReconciliation` (FR-1, FR-5)
+- [ ] `packages/provegate/src/core/run/index.ts` — both symbols join the explicit
+      export list (FR-1)
+- [ ] `.changeset/prompt-store-reconciliation.md` — minor release note carrying the
+      existing-adopter migration instruction (FR-5)
+- [ ] `packages/provegate/src/core/config/defaults.ts` + `types.ts` + `validate.ts` +
+      `load.ts` — `prompts.exceptions[]` type, structural spec and semantic validation
+      (FR-2); the contract lives in the adopter's config, so no new schema file is
+      needed and `schemas/` stays out of scope
 - [ ] `packages/provegate/src/cli.ts` — `gate check --prompts` (FR-3)
 - [ ] `scripts/verify/verify-prompts.mjs` + `package.json` + `scripts/verify/verify-workflow.mjs`
       + `.github/workflows/ci.yml` — layer-one wiring (FR-4)
@@ -304,11 +412,17 @@ rationale.
   record's whole subject is a `PACK_MAP` that named no entry for shipped content, so the
   packed twin of this check must appear in the installer's map, not merely in the package.
 - applied: `derive-the-requirement-from-the-consumer` — its watch covers
-  `packages/provegate/src/core/run/prompts.ts`. The check's path domain must be computed from
-  what the consumer reads rather than from a catalogue; a directory walk and a declared token
-  list are both the wider-than-consumed shape this record names.
-- applied: `known-red-ledger-must-expire` — any recorded local exception is an acknowledged-
-  failure allowlist, and must fail on stale or unknown entries or it becomes a permanent bypass.
+  `packages/provegate/src/core/run/prompts.ts`. Two domains, kept distinct so the record
+  is applied precisely: the **planned** domain is computed from `generatedPaths()` — what
+  the consumer reads, never a catalogue or a walk; **orphan discovery** is a separate,
+  deliberately bounded banner-search over three declared roots, which is not the planned
+  domain widening but its own mechanism with its own declared limits (FR-1).
+- applied: `known-red-ledger-must-expire` — any recorded local exception is an
+  acknowledged-failure allowlist and must fail on stale, unknown or malformed entries, or
+  it becomes a permanent bypass. The record prescribes that failure; the **calendar
+  expiry mechanism** (`expires`, UTC date, valid through the named day) is this PRD's own
+  design decision modeled on the lesson, not something the record mandates (FR-2 states
+  it as such).
 - applied: `gate-wire-or-delete` — the wiring FR exists because of it: a registered check with
   no executing surface and an on-disk check with no registration fail the audit in opposite
   directions.
@@ -362,9 +476,13 @@ execution-phase claims overlap.
 > `workflow.config.json` `sharedAppendOnly`.
 
 - `packages/provegate/src/core/run/prompts.ts`
+- `packages/provegate/src/core/run/index.ts`
 - `packages/provegate/src/core/run/init.ts`
 - `packages/provegate/src/core/config/defaults.ts`
+- `packages/provegate/src/core/config/types.ts`
+- `packages/provegate/src/core/config/validate.ts`
 - `packages/provegate/src/core/config/load.ts`
+- `.changeset/prompt-store-reconciliation.md`
 - `packages/provegate/src/cli.ts`
 - `packages/provegate/practices/verify/verify-prompts.mjs`
 - `packages/provegate/practices/verify/verify-workflow.mjs`
@@ -401,14 +519,16 @@ Phase 5 unable to report which requirement failed.
 
 | FR   | Command / Check                                                                 | Scope | Notes                                                                                     |
 | ---- | -------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | one fixture per class; byte-based detection incl. the same-version values-change case      |
-| FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expired / stale-entry / malformed-at-load; suppression scoped to `modified` only   |
-| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | exit codes, disabled no-op, enabled-but-absent failure, T2 remedy text emitted             |
+| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | total five-class arm over planned paths + orphan roots; the same-version values-change case; the two limit fixtures (T5 rename, stripped-unplanned) |
+| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export`       | pkg   | `reconcilePrompts` and `evaluatePromptReconciliation` import from the package root         |
+| FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expiry-boundary / duplicate / malformed date / non-normalized path / stale entry; suppression scoped to `modified` only |
+| FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised search, enabled-but-absent failure, T2 remedy text |
 | FR-4 | `pnpm verify:prompts`                                                             | repo  | dormant note + exit 0 here until PRD-032 enables; executes the built CLI                   |
 | FR-4 | `pnpm verify:workflow`                                                            | repo  | the bundle executes the new member; wire-or-delete sees the surface                        |
-| FR-5 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t packed`           | pkg   | packed twin resolves and calls the exported primitive, never a second implementation       |
-| FR-5 | `pnpm verify:pack-drift`                                                          | repo  | both new ledger pairs reconciled with notes                                                |
-| FR-6 | `pnpm --filter provegate test test/prompts-integrity.test.ts`                     | pkg   | the whole fixture matrix, including the banner-stripped both-halves case                   |
+| FR-4 | `pnpm verify:prompts -- --assert-ci-order`                                        | repo  | the script's second mode reads `ci.yml` and exits non-zero unless the provegate build step precedes the aggregate — the order is asserted by an allowlisted command, not by prose |
+| FR-5 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t packed`           | pkg   | packed twin executes as a module and consumes the exported primitive + evaluator — never a second implementation |
+| FR-5 | `pnpm verify:pack-drift`                                                          | repo  | one new pair (`verify-prompts.mjs`) + the changed workflow pair reconciled, notes updated  |
+| FR-6 | `pnpm --filter provegate test test/prompts-integrity.test.ts`                     | pkg   | the whole fixture matrix, incl. the migration scenario and both Revision-2 limit cases     |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -443,5 +563,6 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | orchestrating session, on owner direction | **§4 re-derived (second pass) against state-model Revision 2 and the iteration-1 score's eleven missing pieces.** Classification made total (five arms; `unattributable` absorbs the two deliberately unbannered paths and stripped banners — detection by bytes survives, only attribution is lost, per Revision 2). T5/T6 claims replaced by asserted limits (rename fixture asserts NON-discovery; the disabled note names the unexercised search). FR-2 gains the full semantic contract (UTC calendar expiry through the named day, normalization, duplicates, non-empty fields) and its real targets (`types.ts`, `validate.ts`). FR-3's output contract decided: findings-only lines + one summary. FR-4 adds the CI build-before-aggregate step with a mechanical order check. FR-5 adds the shared evaluator (interpretation cannot drift), corrects the ledger claim to one-new-pair-plus-one-changed, and carries the changeset with the existing-adopter migration instruction — §7 gains the migration and rollback/ordering sections the infra class demands. Memory wording fixed (planned domain vs orphan search; calendar expiry as PRD-owned decision). Intro's "no FRs yet" block retired with the history stated. |
 | 2026-07-28 | orchestrating session, on owner direction | **§4 derived in one pass from the owner-approved state model** (acceptance PRD-030 items 4.1 T1–T7 + 4.3, recorded this morning) and its two derivation notes (byte-based detection; banner-stripped files share the codex-snippet hole). Six FRs: the recomputing primitive with a seven-class report, the `prompts.exceptions[]` config contract (T3's handed question answered: representation yes, in the adopter's config, suppression-only, expiring), `gate check --prompts` with the T2 upgrade view, and wiring in both layers with the pack twin calling the same primitive. §6 and §11 written with the FRs as the parent items required; §8 and the Conflict Surface fixed to the real paths (`schemas/` out, config pair + `init.ts` + both workflow bundles + ledger in); `gate-run-resume-after-archive` disposition added for the new `core/run/**` watch overlap. |
 | 2026-07-28 | owner  | **Created by the narrowing of PRD-030** (readiness iteration 1, W1, owner option (a)). Carries the reconciliation check, its command surface and its wiring; PRD-030 keeps the state model those are written against. Goals and the conflict surface are carried over; every mechanism statement from the retracted design was deleted rather than inherited, and §4 is blocked on the model by construction. The Memory Output `recompute-beats-recorded-state` relocates here from PRD-030, and the two memory records whose watches cover `core/run/init.ts` and `core/run/prompts.ts` — undeclared in PRD-030 and the cause of its lint failure — are declared here as `applied`, where the code they watch is actually touched. |
