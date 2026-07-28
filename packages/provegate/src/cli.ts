@@ -806,8 +806,14 @@ function runCheck(args: string[]): number {
     const wipDir = resolve(root, config.dirs.artifacts.prd.dir, config.dirs.stateRoles.wip);
     let failures = 0;
     if (existsSync(wipDir)) {
+      // Only PRD artifacts — the deleted script filtered on /prd-\d+/ and an
+      // auxiliary README in the wip directory is not a work item. The prefix
+      // and width come from configuration like every other artifact reader.
+      const prdName = new RegExp(
+        `^${config.dirs.artifacts.prd.prefix}-\\d{${config.idPattern.width}}-.*\\.md$`,
+      );
       for (const name of readdirSync(wipDir).sort()) {
-        if (!name.endsWith('.md')) continue;
+        if (!prdName.test(name)) continue;
         const issue = durableDeclarationIssue(readFileSync(resolve(wipDir, name), 'utf8'));
         if (issue !== null) {
           failures += 1;
