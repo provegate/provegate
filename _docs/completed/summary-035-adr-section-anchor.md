@@ -1,7 +1,7 @@
 # Summary: PRD-035 — ADR Section Anchor
 
 > **PRD**: [prd-035-adr-section-anchor.md](../../_prds/wip/prd-035-adr-section-anchor.md)
-> **Status**: Code Complete, pending gated close
+> **Status**: Ship Verified — landed on local main via gate run (78bf8e3); push stays the owner call
 > **Class**: hotfix · **Autonomous Close**: eligible
 > **Branch**: `prd-035-adr-section-anchor` (three commits: fdcbf27, ff38988, 0b3dbca)
 > **Date**: 2026-07-28

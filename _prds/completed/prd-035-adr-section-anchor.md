@@ -1,13 +1,13 @@
 # PRD-035: ADR Section Anchor — the Formatter Must Not Break Every ADR
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-28
 > **Updated**: 2026-07-28
 > **Author**: owner
 > **Audience**: Implementing Agent
 > **Slug**: `adr-section-anchor`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Closed)
 > **PRD Class**: hotfix
 > **Class Rationale**: a reproduced defect in shipped code with a bounded blast radius — one regex anchor in three copies, one corpus case, and one repository corpus runner that makes the third copy's conformance executable. Not `feature` (no capability), not `test-hardening` (`core/memory/parse.ts` is production code).
 > **Value**: 3.65 (MF/UI/TL/AR/RM: 4/4/3/3/4)

@@ -46,6 +46,7 @@
 
 ## Project gotchas
 
+- [gate run resume after archive](learnings/gate-run-resume-after-archive.md) — resuming a stopped close re-runs memory gates against archived paths; un-archive and resume from 7
 - [turbo cache masks out-of-input reads](learnings/turbo-cache-masks-out-of-input-reads.md) — a test reading paths outside its turbo inputs replays stale green from cache
 
 ## Conventions

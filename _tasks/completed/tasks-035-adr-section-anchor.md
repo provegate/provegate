@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-035-adr-section-anchor.md](../../_prds/wip/prd-035-adr-section-anchor.md)
 > **Readiness**: [readiness-035-adr-section-anchor.md](../../_readiness/wip/readiness-035-adr-section-anchor.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.20/10 (iteration 2, PASS)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -187,10 +187,10 @@ re-derive them. Each binds to the parent whose work depends on it:
   - [x] 7.3 `_brain` capture protocol (`_brain/PROTOCOL.md` §7): if implementation
         hit a non-derivable trap, write the learning now; else record
         `Learning: none beyond the declared output` in the summary.
-  - [ ] 7.4 `node packages/provegate/dist/cli.js run` — gated Phases 4-7 re-verified
+  - [x] 7.4 `node packages/provegate/dist/cli.js run` — gated Phases 4-7 re-verified
         by the chain + local merge (close is `eligible`; NO operator acceptance row
         needed; push stays the owner's).
-  - [ ] 7.5 `node packages/provegate/dist/cli.js release PRD-035`, remove the
+  - [x] 7.5 `node packages/provegate/dist/cli.js release PRD-035`, remove the
         STATUS.md Active Agents row, archive artifacts wip → completed per the
         chain's output.
 
@@ -211,7 +211,7 @@ re-derive them. Each binds to the parent whose work depends on it:
 | test | `pnpm test` | monorepo | passed | 7/7 tasks | |
 | build | `pnpm build` | monorepo | passed | 4/4 tasks | |
 | independent-review | different model/session, `Critical: 0`, Quorum `1/1 pass` | review | passed | 3 rounds, GATE FAIL->FAIL->PASS, Codex session 019fa837… | `_docs/reviews/review-035-adr-section-anchor.md` |
-| durable | `pnpm verify:durable-artifacts` | repo | pending | | learning + INDEX + review artifact in diff |
+| durable | `pnpm verify:durable-artifacts` | repo | passed | gate chain: all declared paths in merge diff |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

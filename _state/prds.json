@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:33:17.659Z",
+  "generatedAt": "2026-07-28T10:34:30.879Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1264,8 +1264,8 @@
       "prd": "PRD-035",
       "number": 35,
       "slug": "adr-section-anchor",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "eligible",
       "artifacts": {
@@ -1287,9 +1287,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 43,
-        "uncheckedCount": 2,
+        "status": "Ship Verified",
+        "checkedCount": 45,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 0
       },
       "summary": {
