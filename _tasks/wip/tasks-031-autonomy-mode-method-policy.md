@@ -235,5 +235,5 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category | Owner | Required Check | Status | Notes |
 | ---- | -------- | ----- | -------------- | ------ | ----- |
-| 1.2  | manual-qa | owner | approve the drafted FR-1 addendum (in-session); acceptance entry names the exact addendum path | pending | no method byte moves before this (readiness W3) |
+| 1.2  | manual-qa | owner | approve the drafted FR-1 addendum (in-session); acceptance entry names the exact addendum path | operator | approval GIVEN in-session 2026-07-28 ("ok 031 için onay") before any method byte moved (W3 held), sealed into A2's status line; the committed acceptance naming the exact path lands at the merge gate (W2 — the close is where the acceptance store is written, per the 024/027 pattern) |
 | 10.3 | manual-qa | owner | operator-gated close acceptance + `git push` | pending | push is always the human's call |

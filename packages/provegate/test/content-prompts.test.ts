@@ -611,7 +611,7 @@ describe('the configured exception (PRD-031 FR-2/FR-3)', () => {
     // FR-3: the snapshot's sentence, parenthetical included, byte-anchored to
     // the snapshot itself so an abridgement cannot recur unnoticed
     const snapshot = readFileSync(join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'), 'utf8').replace(/\s+/g, ' ');
-    const sentence = 'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate';
+    const sentence = 'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.';
     expect(snapshot).toContain(sentence);
     expect(auto.replace(/\s+/g, ' ')).toContain(sentence);
     // both fragments state the configured-statement rule

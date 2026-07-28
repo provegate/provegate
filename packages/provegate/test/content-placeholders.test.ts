@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -280,8 +280,10 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
       join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md'),
       'utf8',
     );
-    const m = /Exception: in autonomous-execution mode \(single-session test runs, agent-led sweeps\), document the skipped approval gate/.exec(snapshot);
-    expect(m, 'the snapshot sentence moved — re-anchor this test').not.toBeNull();
+    const m = snapshot.replace(/\s+/g, ' ').includes(
+      "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.",
+    );
+    expect(m, 'the snapshot sentence moved — re-anchor this test').toBe(true);
     const values = { ...baseValues(), AUTONOMY_MODE: 'autonomous' };
     const result = renderPrompts(packageDir, {
       ...DEFAULT_CONFIG,
@@ -289,7 +291,7 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
     });
     const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(/\n/g, ' ');
     expect(phase3).toContain(
-      'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate',
+      'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.',
     );
   });
 
@@ -315,6 +317,41 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
           prompts: { ...DEFAULT_CONFIG.prompts, values },
         }),
       ).toThrow(/does not exist in the package/);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('no rendering instructs mode self-assessment — denylist after stripping the sanctioned sentence', () => {
+    const SANCTIONED = new RegExp('an agent never assesses which mode its own session is in'.split(' ').join('\\s+'), 'g');
+    const DENY = /(decide|determine|infer|assess)[^.]{0,60}\b(mode|autonomous)/i;
+    for (const mode of ['human-gated', 'autonomous']) {
+      const values = { ...baseValues(), AUTONOMY_MODE: mode };
+      const result = renderPrompts(packageDir, {
+        ...DEFAULT_CONFIG,
+        prompts: { ...DEFAULT_CONFIG.prompts, values },
+      });
+      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '')
+        .replace(SANCTIONED, '');
+      expect(DENY.test(phase3), `${mode}: ${phase3.match(DENY)?.[0] ?? ''}`).toBe(false);
+    }
+  });
+
+  it('MUTATION: a doctored fragment carrying a self-assessment instruction fails the denylist', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'provegate-selfassess-'));
+    try {
+      cpSync(packageDir, tmp, { recursive: true });
+      const frag = join(tmp, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md');
+      writeFileSync(frag, readFileSync(frag, 'utf8') + '\nIf unsure, determine your own mode from the session.\n');
+      const values = { ...baseValues(), AUTONOMY_MODE: 'human-gated' };
+      const result = renderPrompts(tmp, {
+        ...DEFAULT_CONFIG,
+        prompts: { ...DEFAULT_CONFIG.prompts, values },
+      });
+      const SANCTIONED = new RegExp('an agent never assesses which mode its own session is in'.split(' ').join('\\s+'), 'g');
+      const DENY = /(decide|determine|infer|assess)[^.]{0,60}\b(mode|autonomous)/i;
+      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(SANCTIONED, '');
+      expect(DENY.test(phase3)).toBe(true); // the deny case CAN fail — not vacuous
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
