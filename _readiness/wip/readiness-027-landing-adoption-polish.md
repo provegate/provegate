@@ -1,25 +1,23 @@
 # Readiness Assessment: PRD-027 — Landing Adoption Polish
 
-> **Historical artifact note.** Iterations 2 and 3 assessed a subsequently lost revision. Iteration 4 assessed the rebuilt PRD. This iteration assesses the current 933-line remediation at commit `991d1dd`, independently and from disk.
-
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
 | PRD | `_prds/wip/prd-027-landing-adoption-polish.md` |
-| Score | 7.25/10 |
-| Verdict | ITERATE — FR-9 lacks a deliverable client boundary, and the rebinding of real-unfurl verification leaves a live acceptance criterion behind an untracked future launch note |
-| Iteration | 5 |
+| Score | 7.45/10 |
+| Verdict | ITERATE — the proposed client entry does not close the existing server-barrel contract, its two-config build leaves output cleaning undefined, and declared Targets still fall outside Implementation Scope and Conflict Surface |
+| Iteration | 6 |
 | Model Tier (Execution) | do not assign — score < 8 |
-| Model Tier (Audit) | high, after remediation reaches PASS |
-| Scored by | **GPT-5 (Codex via codex-cli 0.145.0) — fresh independent session; did not author the PRD or remediation** |
+| Model Tier (Audit) | — |
+| Scored by | **GPT-5 (Codex) — fresh independent session; did not score iteration 5 or author its remediation** |
 | Self-scored | **no** |
-| Artifact state | current PRD assessed at `991d1dd`; iterations 2–3 remain historical |
+| Artifact state | current PRD assessed at commit `adc7c5d` |
 | Date | 2026-07-28 |
-| PRD Lint | **waived command failure, content green.** The required CLI reached only `_state/prds.json.14157.tmp` and failed with `EPERM`, the documented read-only-sandbox artifact. Direct read-only `lintPrd(loadConfig, loadManifest, PRD content, root, 27)` returned `{"ok":true,"issues":[]}`. The orchestrating session’s writable post-remediation run was also green on 2026-07-28 |
+| PRD Lint | **waived CLI write failure; content green.** `node packages/provegate/dist/cli.js check PRD-027` failed only while opening `_state/prds.json.56958.tmp` with the documented sandbox `EPERM`. The read-only `lintPrd(loadConfig, loadManifest, PRD content, root, 27)` equivalent returned `{"ok":true,"issues":[]}`. Relies additionally on the orchestrating session’s out-of-sandbox green run on 2026-07-28 |
 | State Record | not modified — analysis-only review |
 
-<!-- Verdict values: PASS | ITERATE | REJECT. Keep Score and Verdict labels intact. -->
+<!-- Verdict values: PASS | ITERATE. Keep Score and Verdict labels intact. -->
 
 ---
 
@@ -27,145 +25,220 @@
 
 | Phase | Tier | Rationale |
 | --- | --- | --- |
-| Execution (Phase 4) | do not assign | FR-9’s client/bundle architecture and several evidence paths remain underspecified |
-| Audit (Phase 6) | high | the remaining defects cross package, bundler, workflow-phase and launch-boundary layers |
+| Execution (Phase 4) | do not assign | The client-export contract, deterministic build arrangement and conflict surface remain incomplete |
+| Audit (Phase 6) | — | Assign after the PRD reaches PASS; an 8–8.9 PASS requires high/high |
 
 ---
 
 ## Analysis
 
-The remediation genuinely closes the app-wide install source, brand constants, exact `/alt` title, anchor count wording, egress scope and stale citations. It also correctly identifies the inert `copyable` behavior.
+The remediation materially improves the document. All four rewritten Success Metrics commands emit every stated value. The live-unfurl condition is no longer a close criterion and now has a future durable home. The mobile baseline is assigned to an artifact that will exist before implementation. The changesets discussion is corrected in most normative sections, and FR-7 now claims external references rather than rendering.
 
-It does not reach PASS. The central new FR cannot be implemented within its declared surface: `CodeBlock` needs a client boundary, but `@provegate/design/react` is a bundled barrel and a directive added only to `CodeBlock.tsx` is dropped during bundling. Two affected uses are rendered from server `sections/index.tsx`. The PRD neither chooses a delivery architecture nor targets the barrel/build configuration required to make the handler reach the browser.
+The central W24 repair is nevertheless incomplete. A dedicated client subpath is a viable RSC mechanism for the two landing call sites, but `CodeBlock` remains exported from the unmarked `@provegate/design/react` barrel. `apps/docs/components/mdx.tsx:3-13` imports it through that barrel into a server MDX pipeline and explicitly documents every shared component as presentational and hook-free. FR-9 turns that same component into an event-handling component while declaring `apps/docs` a Non-Goal. Moving only the two landing server imports leaves the existing package contract internally contradictory.
 
-The real-unfurl rows were removed from the close, but the PRD still retains a live-client acceptance criterion. The proposed launch precondition exists only as prose pointing “around” an announcement draft that contains no such checklist. It has no tracked task, owner, due date, target or durable artifact.
+The proposed second `tsup` configuration also lacks deterministic output-cleaning semantics. The current configuration has `clean: true` (`packages/design/tsup.config.ts:6-18`). Installed `tsup@8.5.1` accepts an options array but executes its configurations through `Promise.all`; each configuration cleans its own shared output directory when `clean` is enabled. The PRD specifies a second configuration and shared `dist/react/*` output without stating how cleaning occurs safely or asserting that every pre-existing entry survives a clean build.
 
-The Success Metrics table is better formatted but still overclaims what its commands measure, and the mobile baseline is assigned to a Phase-6 review artifact that does not exist before Phase 4 and whose template contains no operator rows.
+Scope bookkeeping repeats the same boundary error. FR-9 targets `packages/design/package.json`, `client.ts`, `tsup.config.ts` and the web import change, while FR-1 targets the announcement draft. Implementation Scope omits the new client entry, build config, package export and launch draft; Conflict Surface omits `packages/design/package.json` and the launch draft. The text claims those surfaces were widened when they were not.
 
 ### Evidence re-executed
 
-The existing built HTML was timestamped 2026-07-28 13:42:57 +0300, after the PRD remediation commit. Read-only measurements produced:
+The four remediated metric commands produced exactly:
 
-- Root `og:image`: 0.
-- Hero `termButton`: 0.
-- TrustStrip links in the cited source span: 0.
-- `id="refusal"`: 0.
-- Anchor occurrences: 12; unique targets: 6; orphans: 0.
-- `copyable` call sites: 4.
-- `content.ts` exports: 38; externally unreferenced: only `PROOF`.
-- Root/alt metadata sets: identical; `/alt` has no robots tag.
-- Built file sizes: 233,709 B and 101,898 B.
-- Static egress: `[egress] clean`.
-- Source `HandoffCard` occurrence: 1.
+- Anchor occurrences, unique targets, orphans: `12 6 0`.
+- `copyable` call sites, button presence, inert-span presence: `4 false true`.
+- Export census and unreferenced list: `38 ["PROOF"]`.
+- Root/alt metadata equality and `/alt` robots presence: `true false`.
 
-The repository code also confirms:
+Additional read-only verification found:
 
-- Both `apps/web/package.json` and `packages/design/package.json` set `private: true`.
-- That does **not** make Changesets skip them under this configuration. `.changeset/config.json` omits `privatePackages`; the installed Changesets parser resolves it to `{"version":true,"tag":false}`. Private packages are not published, but they are not automatically excluded from version planning.
-- An in-memory esbuild probe with `"use client"` prepended only to `CodeBlock.tsx` produced a bundled `react/index.js` with no client directive. The current barrel is the package export consumed by Next.
-- `_docs/launch/announcement-draft.md` contains no OG-debugger or unfurl checklist.
-- The review template is created during Phase 6 and has no Operator Handoff section; operator rows belong in the task artifact.
-
-No hard cap is tripped: `packages/provegate` is untouched, no push path or shipped network/telemetry behavior is specified, and no method content is changed.
+- `_tasks/wip/tasks-027-landing-adoption-polish.md` does not exist. This is expected before Phase 3, and the PRD now states that timing honestly.
+- `_docs/launch/announcement-draft.md` currently has no `## Launch checklist`. This is also expected: FR-1 is written to create it during Phase 4, and §11 says the close diff must contain it.
+- `packages/design/tsup.config.ts` can syntactically become an options array, but its current `clean: true` cannot be carried into concurrent same-output configurations without an explicit cleaning design.
+- `apps/web/app/sections/index.tsx` is a server module and contains the two affected `CodeBlock` uses.
+- `apps/web/app/sections/tabs.tsx` begins with `'use client'`; its two uses already sit inside the client graph.
+- `apps/docs/components/mdx.tsx` is another server consumer of the barrel and remains unaccounted for.
+- Effective Changesets configuration is `{"version":true,"tag":false}` for private packages.
+- No readiness hard cap applies: no protected route or new client→server payload is introduced, and lint is green under the written sandbox waiver.
 
 ---
 
-## Iteration 5 — Remediation Review
+## Iteration 6 — Remediation Review
 
-### Latest-iteration findings
+### W24 — client delivery architecture
 
-| Finding | Status | Verification |
-| --- | --- | --- |
-| **[P1] H / W18 — inert `copyable`** | **PARTIALLY CLOSED** | The false rejection is honestly withdrawn: “that rejection was wrong” and “FR-9 wires it for real” (`PRD:61-69`). FR-9 specifies a button, payload and clipboard tests (`PRD:416-443`). But it omits the required client delivery boundary. The two server-component uses cannot receive browser event handling through the current bundled barrel, and neither `src/react/index.ts` nor `tsup.config.ts` is targeted. |
-| **[P1] I / W19 — unexecutable real-unfurl rows** | **COSMETICALLY PAPERED OVER** | The PRD correctly says the former row “could not execute” and binds close to fresh emitted-tag assertions (`PRD:606-618`). But §6 still requires a real live-client result: “Given a link to `https://provegate.dev/`, When it is unfurled … Then a 1200×630 card renders” (`PRD:489-491`). The replacement is only prose at `PRD:849-855`; its claimed launch-checklist home contains no checklist and is outside Scope, Targets and Durable Artifacts. |
-| **[P2] J / W20 — fourth install literal** | **CLOSED** | FR-3 explicitly measures all four authorings, names `/alt`, defines value derivation and scans app-wide excluding only the declaration file (`PRD:250-269`). |
-| **[P2] K / W20 — incomplete brand source and unpinned `/alt` title** | **CLOSED** | `PRODUCT_NAME_PARTS`, `PRODUCT_NAME`, `SITE_TITLE` and `Wordmark` are one structural source, with `ui.tsx::Wordmark` targeted (`PRD:220-240`). `/alt` is pinned to `ProveGate — alternative landing concept` (`PRD:372-379`). |
-| **[P2] L / W21 — acceptance tests presented as measurements** | **PARTIALLY CLOSED** | The table now separates “Current — measured by” from “Target — held by” (`PRD:98-106`). Several cells still do not contain commands producing the claimed value: the anchor command only lists six unique hrefs and neither counts 12 nor diffs ids; the copy command lists call sites but cannot establish “0 of 4 actually copy”; the export commands check only `PROOF`, not the full 38-export census; the metadata “diff” is described but not given as a runnable command; and the HandoffCard grep proves a source occurrence, not rendered mobile behavior (`PRD:111-116`). |
-| **[P2] M / W22 — mobile-height baseline has no home** | **OPEN UNDER A NEW TEMPORAL CONTRADICTION** | A capture point and path are now named (`PRD:117`, `PRD:834-839`), but the chosen path is the independent Phase-6 review artifact. That artifact is created after implementation and its template has no operator rows. It cannot hold a “first operator row” before Phase 4 without violating the workflow’s artifact ownership and phase order. |
-| **[P3] N / W23 — anchor occurrences conflated with targets** | **CLOSED** | The PRD consistently states “12 anchor occurrences over 6 unique targets” (`PRD:111`, `PRD:560-563`). Re-execution matched both values. |
-| **[P3] O / W23 — egress row cross-cutting scope** | **CLOSED** | The metric calls it cross-cutting (`PRD:115`), the FR row discloses both-app scanning (`PRD:794`), and the command repeats in the floor (`PRD:819-821`). |
-| **[P3] P / W23 — duplicated header and stale citation** | **CLOSED** | The metrics table has one header (`PRD:105-106`), and both conflict discussions cite `conflicts.ts:67-68` (`PRD:467-472`, `PRD:754-756`). |
+**Status: PAPERED OVER.**
+
+The architecture is finally selected:
+
+> “The chosen architecture is a **dedicated client subpath entry**” (`PRD:430-440`).
+
+The intended delivery checks are also named:
+
+> “a design test reads the **built** `dist/react/client.js` and asserts the leading `"use client"` directive, and a web test asserts the two server sections import from the client subpath” (`PRD:450-453`).
+
+That closes the original two landing call sites, and the RSC reasoning for `tabs.tsx` is correct:
+
+> “The two `tabs.tsx` call sites already sit inside a client boundary and keep the barrel import” (`PRD:445-449`).
+
+It does not close the package contract. `CodeBlock` remains exported from the non-client barrel consumed by the docs server-MDX map, whose comment says all shared components are server-presentational. The chosen architecture must either remove `CodeBlock` from that barrel, migrate every consumer to the client subpath, or define a separate non-interactive server component.
+
+The claimed surface widening also did not occur completely:
+
+> “The Conflict Surface below claims the design files by name” (`PRD:455-461`).
+
+But Conflict Surface omits `packages/design/package.json`, and Implementation Scope omits `client.ts`, `tsup.config.ts` and `package.json`. The build design additionally leaves concurrent output cleaning unspecified.
+
+### W25 — emitted-tags close contract and durable launch check
+
+**Status: GENUINELY CLOSED.**
+
+The live-client Gherkin criterion is gone and the close contract is explicit:
+
+> “**Emitted tags are this PRD’s complete acceptance contract for the card**” (`PRD:523-529`).
+
+The future live check has a target, durable path, owner and ordering:
+
+> “FR-1 now **creates it**: a `## Launch checklist` section in `_docs/launch/announcement-draft.md` (an FR-1 Target and a Durable Artifact — the close diff must carry it)” (`PRD:906-915`).
+
+FR-1 names the file as a Target (`PRD:236-241`), and Durable Artifacts repeats it (`PRD:831-832`). The file’s current lack of a checklist is therefore honest rather than stale tense: it is an implementation deliverable, not claimed current state.
+
+The path’s omission from Implementation Scope and Conflict Surface is a new scope defect, but the W25 acceptance/ownership repair itself is real.
+
+### W26 — claim-sized metric commands
+
+**Status: GENUINELY CLOSED.**
+
+Each of the four rewritten cells contains one command producing every stated datum:
+
+> “one command emits all three numbers” → `12 6 0` (`PRD:111`).
+
+> “4 call sites, 0 with a control” → `4 false true` (`PRD:112`).
+
+> “one command emits the census and the unreferenced list” → `38 ["PROOF"]` (`PRD:113`).
+
+> “one command compares the emitted meta sets and checks robots” → `true false` (`PRD:114`).
+
+All four outputs were reproduced exactly. The HandoffCard row is also honestly narrowed to a source-occurrence claim (`PRD:116`).
+
+### W27 — mobile baseline artifact
+
+**Status: GENUINELY CLOSED.**
+
+The Success Metric now names the task artifact and correct creation phase:
+
+> “the operator records it in the **task artifact’s Operator Handoff table** (created at Phase 3, before implementation)” (`PRD:117`).
+
+The operator instruction repeats both timing and durable location:
+
+> “**Baseline capture, after Phase 3 and before Phase 4 starts** … records the pixel value in the task artifact’s Operator Handoff table” (`PRD:888-896`).
+
+The task artifact does not exist yet, as expected before Phase 3. The repository task template contains an Operator Handoff table, and the Phase-3 protocol requires operator work to be carried there.
+
+### W28 — Changesets premise
+
+**Status: PAPERED OVER.**
+
+The Non-Goal and DO NOT sections now state the correct distinction:
+
+> “`private: true` … prevents **publication** — it does not make changesets skip them” (`PRD:509-516`).
+
+> “the effective config versions private packages, so this is a policy line, not a tool guarantee” (`PRD:978-983`).
+
+Execution confirmed `privatePackages = {"version":true,"tag":false}`.
+
+However, Rollback retains the exact false premise W28 claimed to remove:
+
+> “`web` and `@provegate/design` are both `private: true`, so changesets skips them” (`PRD:627-631`).
+
+The Changelog’s assertion that this was corrected “everywhere” (`PRD:997`) is therefore false. The no-changeset decision may remain repository policy, but the supply-chain rationale is not internally consistent.
+
+### W29 — Memory Input honesty
+
+**Status: PAPERED OVER.**
+
+The `gate-wire-or-delete` half is genuinely corrected:
+
+> “an export cannot outlive its **last external reference** — deliberately the weaker claim FR-7 itself makes (‘referenced, not rendered’)” (`PRD:730-736`).
+
+The `state-model-before-mechanism` record is now listed, but its disposition is ceremonial:
+
+> “The iteration-5 work order wrote the ground truth by execution (the esbuild bundle probe behind FR-9’s architecture, the resolved changesets config)” (`PRD:737-743`).
+
+Two probes do not constitute the record’s prescribed state model: no transitions, actors, reads, writes or interruption states are enumerated. Nor does the PRD explain that the record is inapplicable because this is a static-page delivery boundary rather than a state machine. The new barrel-consumer, build-cleaning and scope-restatement defects demonstrate that measured facts did not end the same-class trajectory.
+
+---
 
 ### New findings introduced or exposed by the remediation
 
-**[P1] Q — FR-9 has no client-component delivery architecture.**
+**[P1] V — the client subpath leaves the existing server-barrel contract broken.**
 
-`CodeBlock` currently lives behind the bundled `@provegate/design/react` entry. FR-9 says only:
+`packages/design/src/react/index.ts:12` continues exporting `CodeBlock` from the unmarked server-capable barrel. `apps/docs/components/mdx.tsx:3-13` imports that export into a server MDX pipeline and explicitly states that all shared components are presentational and have no client hooks. FR-9 adds browser event handling while declaring `apps/docs` untouched (`PRD:507-508`).
 
-> “`copyable` renders a real `<button type="button">`” and its handler uses `navigator.clipboard` (`PRD:416-424`).
+The fix must decide the complete export contract: remove `CodeBlock` from the server barrel and migrate all imports, route the docs map through the client subpath, or split the interactive wrapper from a server-safe renderer. A test should reject server-context imports through the wrong subpath.
 
-Its Targets are only:
+**[P1] W — the second `tsup` configuration has no safe clean/output model.**
 
-> `packages/design/src/react/CodeBlock.tsx`, `packages/design/test/props.test.tsx`, `apps/web/test/landing.test.tsx` (`PRD:442-443`).
+The current config has one shared `dist` output and `clean: true`. Installed tsup runs an options array concurrently. The PRD says only:
 
-Two advertising blocks are rendered from server `apps/web/app/sections/index.tsx`. A browser handler therefore needs a client boundary that survives the design build. The current `tsup` entry bundles every React component through `src/react/index.ts`; an in-memory build proved a directive placed only in `CodeBlock.tsx` is discarded. The viable choices expand scope:
+> “`tsup.config.ts` gains a second config for that entry with `banner: { js: '"use client";' }`” (`PRD:441-443`).
 
-- make the entire `react/index` entry a client module, also correcting the docs claim that all shared components render server-side;
-- preserve/split a component-level client entry through build and package exports; or
-- move the interactive wrapper into the web consumer, contradicting “no consumer changes.”
+It does not say which operation cleans the shared output, how races are prevented, or how stale client output is removed. The built-directive assertion can pass while another config’s outputs have been deleted. A clean-build test must assert `tokens`, `cli/index`, `react/index`, `react/client` and their declarations all coexist after one build.
 
-Until one is selected, FR-9 is not executable within its Targets.
+**[P2] X — Targets, Implementation Scope and Conflict Surface disagree.**
 
-**[P2] R — the Changesets exemption is false.**
+FR-9 targets `packages/design/src/react/client.ts`, `packages/design/tsup.config.ts` and `packages/design/package.json` (`PRD:469-472`), but Implementation Scope lists only `CodeBlock.tsx` and `props.test.tsx` for the design package (`PRD:684-685`). Conflict Surface omits `packages/design/package.json` (`PRD:784-790`).
 
-The PRD repeats:
+FR-1 targets the launch draft (`PRD:236-241`), and Durable Artifacts names it (`PRD:831-832`), but neither Implementation Scope nor Conflict Surface includes it. The queue therefore cannot protect all declared writes.
 
-> “`@provegate/design` is `private: true`, so changesets skips it” (`PRD:429-432`),
+**[P2] Y — Rollback preserves the false Changesets rule.**
 
-and:
+The normative Rollback text still says private packages are skipped (`PRD:627-631`) after Non-Goals and DO NOT correctly say the opposite. This is precisely the restatement failure the declared memory record warns about.
 
-> “both `private: true` … so changesets skips every package this PRD touches” (`PRD:480-483`).
+**[P3] Z — the iteration-5 Changelog overclaims its own consistency sweep.**
 
-The installed configuration resolves `privatePackages.version` to `true`. `private: true` prevents publication; it does not establish the claimed version-planning exemption. A no-changeset decision may still be intentional, but it must be justified as repository policy, not as behavior of Changesets. The categorical DO NOT at `PRD:917-919` presently rests on a false supply-chain premise.
+The Changelog says:
 
-**[P2] S — the live-unfurl condition has no durable owner or enforcement surface.**
+> “Targets/Conflict Surface widened accordingly” and “the false ‘changesets skips private packages’ premise corrected everywhere” (`PRD:997`).
 
-The launch note names “whatever PRD or owner action performs the deploy” (`PRD:614-618`) and says the announcement draft is its “home” (`PRD:849-855`). That file contains no corresponding checklist, and this PRD does not target it. The requirement therefore disappears from machine state at close while remaining in Acceptance Criteria. Either make emitted tags the complete acceptance contract and remove the live-client criterion, or create a tracked launch task/checklist with owner and ordering.
-
-**[P2] T — the mobile baseline is assigned to the wrong workflow artifact.**
-
-`PRD:834-839` requires an operator to write a pre-Phase-4 value into an independent Phase-6 review artifact. The workflow creates that artifact during Phase 6 from a schema whose author must be independent. The task artifact’s Operator Handoff table is the available pre-implementation durable surface. The current instruction cannot be followed honestly.
-
-**[P3] U — Memory Inputs overclaim the FR-7 result and omit the record most directly implicated by the trajectory.**
-
-FR-7 carefully limits itself to “referenced, not rendered” (`PRD:362-369`), but the `gate-wire-or-delete` disposition says its test ensures “an export cannot outlive its render again” (`PRD:692-695`). That is the stronger claim the FR explicitly disavows.
-
-The active `state-model-before-mechanism` record describes a flat multi-round readiness trajectory and says to stop repeatedly patching instances. PRD-027’s own report records four rounds with Scope & Testability stuck at 5.5, yet the remediation neither applies nor reviews that record. The new client-boundary and evidence-span failures are another instance of the same pattern.
+Both claims are contradicted by the current document. This is audit evidence that the remediation statement was written without a separate sweep.
 
 ---
 
-## Scorecard — iteration 5
+## Scorecard — iteration 6
 
 | # | Dimension | Weight | Score | Weighted |
 | --- | --- | --- | --- | --- |
 | 1 | Clarity | 15% | 7.0/10 | 1.05 |
-| 2 | Completeness | 20% | 7.0/10 | 1.40 |
+| 2 | Completeness | 20% | 7.5/10 | 1.50 |
 | 3 | Technical Depth | 25% | 7.0/10 | 1.75 |
 | 4 | Multi-Tenancy & Security | 20% | 9.0/10 | 1.80 |
-| 5 | Scope & Testability | 10% | 5.5/10 | 0.55 |
+| 5 | Scope & Testability | 10% | 6.5/10 | 0.65 |
 | 6 | Migration & Rollback | 10% | 7.0/10 | 0.70 |
-| **Total** | **Weighted** |  | **7.25/10** | **ITERATE** |
+| **Total** | **Weighted** |  | **7.45/10** | **ITERATE** |
 
-`1.05 + 1.40 + 1.75 + 1.80 + 0.55 + 0.70 = 7.25`.
+`1.05 + 1.50 + 1.75 + 1.80 + 0.65 + 0.70 = 7.45`.
 
-Clarity receives 7 despite complete formal sections because FR-9 omits its delivery boundary and live-client acceptance is split from its only evidence. No mechanical Clarity cap applies: every FR has Targets, §11 maps all FRs, DO NOT exists, Open Questions is empty, and no TBD marker appears.
+Clarity remains at 7 because the central delivery mechanism still needs a package-wide export decision and deterministic build-cleaning arrangement. The mechanical Clarity cap does not apply: every FR has a Targets line, every FR maps to a runnable command, DO NOT exists, Open Questions is empty, and no unresolved marker appears.
 
-Technical Depth retains credit for the verified Next metadata resolver, scrollspy retention model, app-wide derivation and emitted-tag assertions. It falls because the new central requirement stops at component source and misses the package build/React Server Component boundary.
+Completeness improves because W25–W27 are substantively closed and the metrics are executable. It remains below PASS quality because the existing docs consumer and several required write surfaces were not included.
 
-Multi-Tenancy & Security is judged on the repository’s actual critical rules rather than tenant boilerplate. This is a static marketing surface with no auth route, tenant, client→server payload or user input. No `packages/provegate` runtime dependency, push path, telemetry, shipped external fetch or method-content change is specified. It is below 10 because the supply-chain claim about private packages and Changesets is false.
+Technical Depth gets credit for correctly distinguishing server and client landing call sites and for asserting the built directive. It falls because the analysis stopped at those four uses, leaving the barrel’s wider server contract and concurrent build behavior unresolved.
 
-Scope & Testability remains the lowest dimension for a fifth round: incomplete measurement commands, an impossible baseline artifact, an untracked launch condition, and FR-9 tests that cannot compensate for a missing browser-delivery boundary.
+Multi-Tenancy & Security is judged against the actual static-page risk. There are no tenants, protected routes, auth decisions, server payloads or user-controlled network inputs. Clipboard writes are local and guarded; no dependency, telemetry, external fetch, push path or method-content change is introduced. It is below 10 because supply-chain wording remains contradictory and undeclared conflict-surface writes weaken coordination safety.
+
+Scope & Testability improves from iteration 5 through executable metrics and a legitimate baseline artifact. It remains weak because declared Targets do not agree with Scope/Conflict Surface, and the delivery test does not cover the barrel’s other server consumer or prove all build outputs survive cleaning.
+
+Migration & Rollback is bounded and mostly reversible, but its Changesets premise is still false and its client-entry migration omits an existing server consumer.
 
 ---
 
 ## Missing Pieces
 
-- **W24 — choose and target FR-9’s client delivery architecture.** Prove with built `@provegate/design/react` output that the browser receives the handler. Include every required barrel, export, build-config, docs-comment or consumer path in Targets, Scope and Conflict Surface.
-- **W25 — settle the real-unfurl contract honestly.** Either remove the live-client Gherkin criterion and define fresh emitted tags as the complete close contract, or add an actual tracked launch checklist/task with an owner and ordering.
-- **W26 — make every Success Metrics measurement executable and claim-sized.** Each cell must contain one complete read-only command that produces every number in the cell, including anchor occurrences/orphans, the full export census, metadata diff plus robots, and working-copy count.
-- **W27 — move the pre-Phase-4 mobile baseline to the task artifact’s Operator Handoff or another artifact that exists before implementation.** Do not prepopulate the independent Phase-6 review.
-- **W28 — correct the Changesets reasoning.** Verify the effective `privatePackages` configuration and state the repository’s deliberate versioning decision. Do not claim `private: true` automatically skips version planning.
-- **W29 — correct Memory Input honesty.** Change “render” to “external reference” for FR-7 and disposition `state-model-before-mechanism`.
+- **W30 — close the complete `CodeBlock` export contract.** Decide whether the server barrel drops `CodeBlock`, every consumer imports the client subpath, or an interactive wrapper is split from a server-safe renderer. Include `apps/docs/components/mdx.tsx` and both stale barrel/server-rendering comments when applicable.
+- **W31 — specify deterministic `tsup` output cleaning.** State how the two configurations share `dist` without concurrent deletion or stale client output, then assert every existing entry plus `react/client` and all declarations survive one clean build.
+- **W32 — synchronize every declared surface.** Add `packages/design/src/react/client.ts`, `packages/design/tsup.config.ts`, `packages/design/package.json` and `_docs/launch/announcement-draft.md` to Implementation Scope and Conflict Surface as appropriate; add any docs consumer selected by W30.
+- **W33 — remove the Rollback survivor.** Replace “changesets skips them” with the same repository-policy wording used in Non-Goals and DO NOT, then perform a separate whole-document sweep.
+- **W34 — disposition `state-model-before-mechanism` honestly.** Either explain why its state-machine remedy is not applicable to this static delivery problem, or supply the model the disposition claims exists. Do not equate two executed probes with a state model.
 
 ---
 
@@ -173,6 +246,7 @@ Scope & Testability remains the lowest dimension for a fifth round: incomplete m
 
 | # | Date | Score | Verdict | Key Changes |
 | --- | --- | --- | --- | --- |
+| 6 | 2026-07-28 | 7.45 | ITERATE | W25–W27 genuinely closed; W24, W28 and W29 papered over. All four metric commands reproduced exactly and lint content is green under the documented EPERM waiver. New P1s: the client entry leaves the docs server-barrel contract intact, and concurrent tsup cleaning is undefined. New P2s: Targets disagree with Scope/Conflict Surface and Rollback preserves the false Changesets premise |
 | 5 | 2026-07-28 | 7.25 | ITERATE | Independent remediation review. J/K/N/O/P closed; H/L partial; I papered over; M still open through a temporally impossible artifact choice. New P1: FR-9 lacks a client boundary that survives the design bundle. New P2s: false Changesets exemption, untracked launch acceptance, incomplete measurement commands, wrong-phase baseline storage. Read-only lint green under the documented CLI EPERM waiver |
 | 4 | 2026-07-27 | 7.55 | ITERATE | Rebuilt PRD largely held, but `copyable` was inert and the real-unfurl operator rows had no deployable target. Install/brand scope, metric provenance, mobile baseline, anchor terminology, egress scope and citation residue remained |
 | 3 | 2026-07-27 | 7.33 | ITERATE | CSS declaration was not bound to the hidden card; scrollspy treated observer callbacks as visibility snapshots; export census included declarations and substring-matched `PROOF_EVIDENCE`; stale-build and measurement-language gaps remained |
@@ -187,39 +261,41 @@ Scope & Testability remains the lowest dimension for a fifth round: incomplete m
 | --- | --- |
 | No runtime dependency in `packages/provegate` | **holds.** Package untouched |
 | No push-to-remote path | **holds.** No git execution |
-| No telemetry/network in shipped page code | **holds.** Clipboard is a local platform API; static egress baseline is clean |
+| No telemetry/network in shipped page code | **holds.** Clipboard is a guarded local platform API; static egress remains the declared floor |
 | Method content traceability | **not applicable.** No prompt, template or schema |
-| No new dependency beyond specification | **holds.** `next/og`, React and workspace design package already exist |
+| No new dependency beyond specification | **holds.** `next/og`, React and tsup already exist |
 | Static-page security | **holds.** No tenant, auth, protected route, server payload or user-controlled image input |
-| Supply-chain honesty | **fails in wording.** Private packages are not published, but effective Changesets config permits their versioning |
-| Memory Inputs | **mechanically valid, substantively partial.** FR-7’s disposition overclaims rendering and the flat-trajectory record is omitted |
-| Memory Outputs and Durable Artifacts | **paths agree.** Learning and INDEX repeat in scope/conflict/durable declarations |
-| Operator-row rebinding | **not yet legitimate.** Emitted-tag close evidence is valid, but a live-client acceptance criterion remains behind an untracked launch note |
+| Supply-chain honesty | **fails one normative restatement.** Effective private-package versioning is acknowledged except in Rollback |
+| Client delivery | **fails package-wide.** The landing imports are designed, but the docs server barrel remains an unaccounted consumer |
+| Build determinism | **not specified.** Two concurrent configs share an output directory whose current owner uses `clean: true` |
+| Conflict Surface | **incomplete.** Package export and launch-draft writes are not declared |
+| Memory Inputs | **mechanically valid, substantively partial.** `gate-wire-or-delete` is honest; the state-model disposition overclaims what execution probes established |
+| Memory Outputs and Durable Artifacts | **paths agree.** The learning and INDEX repeat correctly; launch draft is durable but absent from Conflict Surface |
+| Operator-row rebinding | **holds.** Task artifact timing is honest and the file is correctly absent before Phase 3 |
+| Launch-checklist tense | **holds.** The current file has no checklist; FR-1 explicitly creates it during implementation |
 | Value arithmetic | **holds.** 3.40 |
-| Lint | **passes under written waiver.** Direct `lintPrd` green; CLI failed solely on the known `_state` EPERM refresh |
+| Lint | **passes under written waiver.** Direct read-only `lintPrd` green; CLI failed solely on the known `_state` EPERM refresh |
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.25/10, iteration 5, independently scored by GPT-5 through codex-cli.**
+**ITERATE — 7.45/10, iteration 6, independently scored by GPT-5 Codex.**
 
-The remediation improved the document materially, but the resurrected central requirement stops one layer before delivery. A clipboard handler in `CodeBlock.tsx` is not a browser feature until the package’s built entry carries a client boundary, and the present Targets cannot produce that result.
+The remediation closes the evidence-command, launch-ownership and baseline-timing defects, but the central client-delivery repair still stops short of the package’s full consumer contract. Moving two landing imports does not make an interactive component safe while the same component remains exported through a server-documented barrel and registered in the docs server-MDX pipeline.
 
-The other decisive issue is evidence ownership. The PRD cannot retain live-client acceptance while moving its only real-client check to an untracked future action, nor can it store a pre-implementation measurement in an independent artifact created after implementation. Fresh emitted-tag assertions are legitimate close evidence; the surrounding claims must be narrowed to match them or placed on a real durable launch surface.
+The build mechanism is also not implementation-ready: a second same-output tsup configuration needs explicit cleaning semantics, and the clean-build assertion must prove that every existing export survives alongside the client entry. Finally, required writes must appear consistently in Targets, Implementation Scope and Conflict Surface, and the stale Changesets sentence must be removed.
 
-No hard cap forces the verdict. The weighted score itself remains below 8.0.
+No hard cap forces the verdict. The weighted score remains below the 8.0 PASS threshold.
+
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 5 transcribed
-> verbatim from a fresh independent Codex session (codex-cli 0.145.0, read-only sandbox,
-> ~3.45M tokens) that neither scored iteration 4 nor wrote the remediation, per the
-> board's re-score rule. The scorer verified by execution where possible — including an
-> in-memory esbuild probe proving a `"use client"` directive placed only in
-> `CodeBlock.tsx` is dropped by the bundled `react/index` barrel, and a changesets
-> config resolution showing `privatePackages.version` defaults to `true`. The lint
-> EPERM in Quick Meta is the documented read-only-sandbox artifact; the orchestrating
-> session's out-of-sandbox `gate check PRD-027` was green the same day. Six missing
-> pieces W24–W29 are the remediation work order; remediate by a non-scorer session,
-> re-score once.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 6 transcribed
+> verbatim from a fresh independent Codex session (codex-cli 0.145.0, read-only sandbox)
+> that neither scored iteration 5 nor wrote the W24-W29 remediation. All four metric
+> commands were re-executed by the scorer and reproduced exactly. The lint EPERM is the
+> documented sandbox artifact; the orchestrating session's out-of-sandbox `gate check
+> PRD-027` was green the same day. Iteration-6 findings V/W/X/Y/Z plus the W29 rewrite
+> are the next work order; the iteration-6 remediation was performed by the orchestrating
+> session (still a non-scorer), and iteration 7 requires another fresh scorer.
