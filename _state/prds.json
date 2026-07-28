@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:26:15.159Z",
+  "generatedAt": "2026-07-28T10:31:04.826Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1272,13 +1272,13 @@
         "prd": "_prds/wip/prd-035-adr-section-anchor.md",
         "readiness": "_readiness/wip/readiness-035-adr-section-anchor.md",
         "tasks": "_tasks/wip/tasks-035-adr-section-anchor.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-035-adr-section-anchor.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.2,
@@ -1287,9 +1287,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 35,
-        "uncheckedCount": 10,
+        "status": "Code Complete",
+        "checkedCount": 43,
+        "uncheckedCount": 2,
         "operatorHandoffCount": 0
       },
       "summary": {

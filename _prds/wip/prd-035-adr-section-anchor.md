@@ -317,6 +317,24 @@ None.
   the other way, widening what validates. Recorded because the reverse direction
   deserves the same scrutiny: FR-1 must not make an empty section legal, which is
   the acceptance criterion about a heading following with no blank line.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers
+  this PRD file, and Phase 6 round 2 demonstrated the record live: the corrected
+  corpus history landed in the learning while goal 2, §7, FR-2, the DO NOT
+  rationale and the task file still restated the old account. The round-2 fix
+  swept every restatement, which is exactly this record's prescription.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this
+  PRD file. Two Phase 6 rounds put their findings in one layer (the formatter
+  claim), and the response was the record's: the layer was scoped out — the claim
+  narrowed to body scope, the frontmatter reflow pinned as a recorded limitation
+  owned by a future item — rather than a third wording round.
+- reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`.
+  Not the failure shape here: this hotfix specifies a mechanism whose ground
+  truth is written and executable (a reproduced defect, a one-token fix, a
+  corpus), and its readiness trajectory converged in two rounds.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/**`, which the close touches only through the generated
+  `_state/prds.json`, rewritten mechanically by the state builder. This PRD adds
+  no documentation-enforced rule and no free-text field beside one.
 - applied: `assert-absent-needs-an-independent-cause` — its watch covers the
   package corpus paths (`packages/provegate/test/**`) this PRD edits; the root
   runner sits outside the watch and the record is applied there voluntarily.
