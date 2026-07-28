@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-026-duplicate-consolidation.md](../../_prds/wip/prd-026-duplicate-consolidation.md)
 > **Readiness**: [readiness-026-duplicate-consolidation.md](../../_readiness/wip/readiness-026-duplicate-consolidation.md)
-> **Status**: Code Complete
+> **Status**: Operator Verification
 > **Readiness Score**: 8.43/10 (PASS, iteration 6)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -211,20 +211,20 @@ parent are noted there.
   - [x] 9.3 Mutation checks: revert the asterisk exclusion, the template exclusion, and
         one ledger schema rule in isolation — each kills exactly its paired fixture.
   - [x] 9.4 Update the Verification Ledger with evidence per row.
-- [ ] 10.0 Phase 6 — Final Auditing
-  - [ ] 10.1 Independent review (different model/session; never this one): sweep-first
+- [x] 10.0 Phase 6 — Final Auditing
+  - [x] 10.1 Independent review (different model/session; never this one): sweep-first
         brief over the rules that changed; spec-vs-code walk of FR-1/2/8 predicates and
         the deletion inventory; `Critical: 0` required.
-  - [ ] 10.2 Write `_docs/reviews/review-026-duplicate-consolidation.md` (Quorum row
+  - [x] 10.2 Write `_docs/reviews/review-026-duplicate-consolidation.md` (Quorum row
         required).
-  - [ ] 10.3 Remediate; re-run 9.x after every fix until Critical: 0.
+  - [x] 10.3 Remediate; re-run 9.x after every fix until Critical: 0.
 - [ ] 11.0 Phase 7 — Learning & close
-  - [ ] 11.1 Write `_brain/learnings/docs-are-a-wiring-surface.md` + INDEX pointer
+  - [x] 11.1 Write `_brain/learnings/docs-are-a-wiring-surface.md` + INDEX pointer
         (hook ≤ 120 chars).
-  - [ ] 11.2 Durable Artifacts vs merge diff; Memory Outputs vs the PRD on main (no
+  - [x] 11.2 Durable Artifacts vs merge diff; Memory Outputs vs the PRD on main (no
         weakening).
-  - [ ] 11.3 `_brain` capture protocol for anything non-derivable hit in flight.
-  - [ ] 11.4 Summary `_docs/wip/summary-026-duplicate-consolidation.md`; Status headers;
+  - [x] 11.3 `_brain` capture protocol for anything non-derivable hit in flight.
+  - [x] 11.4 Summary `_docs/wip/summary-026-duplicate-consolidation.md`; Status headers;
         `gate status`.
   - [ ] 11.5 Operator acceptance: STOP and hand to the owner (transcription only on
         explicit in-session direction, ADR-0003 rules).
@@ -255,7 +255,7 @@ parent are noted there.
 | test               | `pnpm test`                                                 | repo  | passed  | 53 files / 1211 tests (baseline 1183 + 28) | fixture updates recorded in Deferrals |
 | build              | `pnpm build`                                                | repo  | passed  | clean |       |
 | bundle             | `pnpm verify:workflow`                                      | repo  | passed  | PASS | the remaining bundle green |
-| independent-review | `_docs/reviews/review-026-duplicate-consolidation.md`       | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-026-duplicate-consolidation.md`       | repo  | passed  | 4 Codex rounds; Critical: 0 in rounds 2-4 | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -284,6 +284,11 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   turbo inputs (AGENT_BOOTSTRAP.md, _docs/**, STATUS.md): recorded for PRD-036's input
   census, the same disposition its round-3 reviewer accepted for the bundle fixture; CI
   checks out fresh.
+- 10.x — round 1's sharpest finding: the deletion had left the wiring audit itself with
+  no executing surface — the wave violating its own rule; FR-4 gained `check:wiring`
+  with a changelog row recording the append. Rounds 2-4 were boundary/selector
+  adjacencies, each fixed with its fixture; the final metacharacter escape landed
+  post-round-4 mirroring the repository's own `escapeRegExp` pattern.
 - 6.x — `verify:script-classes` is intentionally RED between the replacements commit and
   the deletion commit (the trio exists, unclassified) and green from the deletion commit
   on — born-agreeing observed live, in the order the plan sequenced.

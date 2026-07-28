@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T12:50:41.276Z",
+  "generatedAt": "2026-07-28T13:06:08.344Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -931,21 +931,21 @@
       "prd": "PRD-026",
       "number": 26,
       "slug": "duplicate-consolidation",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Operator Verification",
+      "cyclePhase": "7 (Operator Verification)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-026-duplicate-consolidation.md",
         "readiness": "_readiness/wip/readiness-026-duplicate-consolidation.md",
         "tasks": "_tasks/wip/tasks-026-duplicate-consolidation.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-026-duplicate-consolidation.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.43,
@@ -954,9 +954,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 52,
-        "uncheckedCount": 11,
+        "status": "Operator Verification",
+        "checkedCount": 60,
+        "uncheckedCount": 3,
         "operatorHandoffCount": 1
       },
       "summary": {

@@ -1,13 +1,13 @@
 # PRD-026: Duplicate Consolidation — Delete the Copies, Once Their Replacements Exist
 
-> **Status**: Draft
+> **Status**: Operator Verification
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-27
 > **Author**: Claude Opus 5, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `duplicate-consolidation`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Operator Verification)
 > **PRD Class**: infra
 > **Class Rationale**: Workflow tooling, but the surface is user-facing: two new public CLI
 > flags, three scripts removed from the published practices pack, and a documented manual
