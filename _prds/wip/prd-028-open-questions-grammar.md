@@ -199,8 +199,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
         byte-equal to the linked one** (the state layer's own directory listing is the
         authority), because a case-insensitive filesystem otherwise resolves a
         deferral to an item the state builder refuses (round 2); and the path carries
-        no `#`, `?`, `%`, `\` or `:`, each of which makes the link and the
-        filesystem disagree about the referent (rounds 2-3);
+        no `#`, `?`, `%`, `&`, `\` or `:`, each of which makes the link and the
+        filesystem disagree about the referent (rounds 2-4 — `&` because
+        CommonMark decodes character references in link destinations);
      8. the target is a **recognized record, not a stub**: its first heading is the H1
         the template ships — the configured prefix, the target's own number and a
         colon (`# PRD-NNN: …`) — so a parser-valid file holding only a smuggled
@@ -218,7 +219,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    completed-role target fails. A basename the artifact parser rejects fails. A
    wrong-width label fails. A symlink fails. A hardlinked target fails. A state
    directory that is an alias fails. An on-disk name that differs from the link
-   fails. A `#`, `?`, `%`, `\` or `:` in the path fails. A stub without its own H1 fails. A
+   fails. A `#`, `?`, `%`, `&`, `\` or `:` in the path fails. A stub without its own H1 fails. A
    deferral linted without the declaring number fails. There is no field left in
    either form where an author can type a question, and no way to satisfy the form
    without a **real, distinct, unfinished, filed work item** on the other end — the snapshot
@@ -405,7 +406,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   a Deferred entry linted **without the declaring number**, **Then** each fails — the
   resolution rejections. *(history row 7 covers the alias)*
 - **Given** a **hardlinked** target, a **symlinked state directory**, an on-disk name
-  that differs from the link by case, or a path carrying `#`, `?`, `%`, `\` or `:`, **Then**
+  that differs from the link by case, or a path carrying `#`, `?`, `%`, `&`, `\` or `:`, **Then**
   each fails — the Phase 6 canonical-identity extensions, deny-tested with positive
   controls.
 - **Given** a Functional Requirements entry written **inside a fence**, **Then** the
@@ -726,6 +727,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, Phase 6 round 4 (Codex, independent) | **The entity bypass closed; the changeset completed.** `&` joins the refused charset — CommonMark decodes named references in link destinations, so `&quest;` rendered as `?` split the referent between readers exactly as the raw character would; deny fixture added against a real on-disk `&quest;` file. The changeset's resolution list gains the label/target number-equality rule the sweep found missing |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 3 (Codex, independent) | **The remaining [P1] closed and every disclosure gap taken.** `?` and `%` join the refused charset (a query suffix and percent-decoding are the same two-readers split as a fragment). The case-identity fixture asserts the MECHANISM (`on-disk name differs`) wherever the filesystem can reproduce the bypass, with the existence refusal as the declared case-sensitive fallback. The hard-cap engine's move to the executable FR view is now a **declared** behavior change: the stale raw-content comment is corrected, a regression pins fenced-target-does-not-fire / live-target-fires, and the argument recorded — the target reader finally agrees with the evidence reader (`contractView`) about what is on the page. The changeset states the full resolution rule set. Refused invisible lines print explicit `U+NNNN` codepoints (JSON.stringify prints NBSP as itself), fixture pinned. The stale rule-3 lower-casing parenthetical corrected |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 2 (Codex, independent) | **Two of three [P1]s taken as defects; the third adjudicated to a rule tightening.** (1) Case-insensitive filesystems resolved a deferral to an item the state builder refuses — closed by on-disk byte-equality against the directory listing (the state layer's own name source), portable deny fixture asserting the verdict, not the platform-dependent reason. (2) A fenced FR entry read as a real requirement let a document with no live requirements pass — `frBlocks` now consumes the scanner's executable lines; deny fixture added. (3) The render/lint referent disagreement (doc-relative links, `#` fragments) is not a fail-open — every non-repo-relative form fails closed — so the path stays a repository-relative state-layer coordinate and the charset that makes two readers disagree (`#`, `\`, `:`) is refused; adjudication recorded. [P2]s: these rules written into FR-1/FR-2/§6 normatively (this row's edit), template guidance names the configured width, corpus test derives the declaring number through `parseArtifactName`. [P3]: refused lines that trim to nothing are shown as codepoints |
 | 2026-07-28 | Claude Fable 5, Phase 6 round 1 (Codex, independent) | **Two [P1] canonical-identity bypasses closed as FR-1 rule extensions.** Rule 6 extends: a target with **multiple hard links** is refused (realpath canonicalizes names, not identity — a finished artifact hardlinked into a wip role passed every path-level rule). Rule 7 extends: the **canonical state segment must equal the lexical one** (a symlinked state DIRECTORY — `deferred` → `completed` — relabeled finished work as unfinished while every file-level check passed). Both carry deny fixtures with positive controls; the wrong-width and parser-rejected rows gained otherwise-valid existing targets so each rule is its row's only failing cause ([P2]). The two live "active" restatements corrected to "unfinished" and the two historical changelog count claims marked superseded ([P2]/[P3]) |

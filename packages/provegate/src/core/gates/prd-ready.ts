@@ -192,14 +192,15 @@ function deferralIssue(
     return 'deferral unverifiable — the lint received no declaring PRD number';
   }
   const prd = config.dirs.artifacts.prd;
-  // Rounds 2-3: the path is a REPOSITORY-RELATIVE state-layer coordinate, and
+  // Rounds 2-4: the path is a REPOSITORY-RELATIVE state-layer coordinate, and
   // it must read the same to the lint, the filesystem, and a renderer. `#`
-  // opens a fragment, `?` a query, `%` percent-decodes, `\` is a separator on
-  // one platform and a name character on another, `:` opens a URL scheme —
-  // each makes two readers disagree about the referent, so all five are
-  // refused outright.
-  if (/[#\\:?%]/.test(target)) {
-    return 'the target path carries a character the link and the filesystem read differently (`#`, `?`, `%`, `\\`, `:`)';
+  // opens a fragment, `?` a query, `%` percent-decodes, `&` opens a character
+  // reference CommonMark decodes in link destinations (`&quest;` → `?`), `\`
+  // is a separator on one platform and a name character on another, `:` opens
+  // a URL scheme — each makes two readers disagree about the referent, so all
+  // six are refused outright.
+  if (/[#\\:?%&]/.test(target)) {
+    return 'the target path carries a character the link and the filesystem read differently (`#`, `?`, `%`, `&`, `\\`, `:`)';
   }
   // Rule 2 — containment inside the configured artifact root, path-boundary
   // safe (never a string prefix), and repository-relative to begin with.

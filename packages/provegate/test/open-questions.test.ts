@@ -326,10 +326,12 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     const root = workspace();
     writeFileSync(join(root, '_prds/wip/prd-133-a#b.md'), '# PRD-133: Fragmented\n');
     writeFileSync(join(root, '_prds/wip/prd-133-a?x.md'), '# PRD-133: Queried\n');
+    writeFileSync(join(root, '_prds/wip/prd-133-a&quest;b.md'), '# PRD-133: Entity\n');
     for (const target of [
       '_prds/wip/prd-133-a#b.md',
       '_prds/wip/prd-133-a?x.md',
       '_prds/wip/prd-123-follow%75p.md',
+      '_prds/wip/prd-133-a&quest;b.md',
       '_prds\\wip\\prd-123-followup.md',
       'file:_prds/wip/prd-123-followup.md',
     ]) {
