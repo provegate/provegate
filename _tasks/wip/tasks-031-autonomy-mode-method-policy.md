@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-031-autonomy-mode-method-policy.md](../../_prds/wip/prd-031-autonomy-mode-method-policy.md)
 > **Readiness**: [readiness-031-autonomy-mode-method-policy.md](../../_readiness/wip/readiness-031-autonomy-mode-method-policy.md)
-> **Status**: Not Started
+> **Status**: Code Complete (pending Phase 6 review + close)
 > **Readiness Score**: 8.88/10 PASS (iteration 3, Codex; every cap clear)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -89,77 +89,77 @@ re-derive them. Each gets a re-open task (0.1).
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 Open each Memory Context record; confirm paths/commands still exist; record
+- [x] 0.0 Pre-flight
+  - [x] 0.1 Open each Memory Context record; confirm paths/commands still exist; record
         staleness in **Deferrals & Decisions**.
-  - [ ] 0.2 Claim: STATUS.md row, `gate open PRD-031 --worktree`; re-run `gate queue` —
+  - [x] 0.2 Claim: STATUS.md row, `gate open PRD-031 --worktree`; re-run `gate queue` —
         stop on any active overlap (026: bootstrap template; 032: root bootstrap).
-  - [ ] 0.3 Baseline green (`pnpm check-types && pnpm lint && pnpm test && pnpm build`);
+  - [x] 0.3 Baseline green (`pnpm check-types && pnpm lint && pnpm test && pnpm build`);
         `pnpm install` + in-tree build in the worktree.
-- [ ] 1.0 FR-1 — the addendum, approval-first (readiness W1/W3)
-  - [ ] 1.1 Draft `addenda/autonomy-mode-and-proceed-rule-2026-07-27.md` on Addendum
+- [x] 1.0 FR-1 — the addendum, approval-first (readiness W1/W3)
+  - [x] 1.1 Draft `addenda/autonomy-mode-and-proceed-rule-2026-07-27.md` on Addendum
         A1's shape: status line (owner approval + date), scope naming PRD-031, the
         unchanged-snapshot statement, and the two authorized clauses (configured
         Phase 3 exception; explicit 4–7 proceed rule).
-  - [ ] 1.2 **OPERATOR STOP — the owner approves the drafted addendum.** In-session
+  - [x] 1.2 **OPERATOR STOP — the owner approves the drafted addendum.** In-session
         approval recorded; the acceptance entry naming the exact addendum path may be
         transcribed now or at close, on explicit direction only
         (`authorship: "agent-transcribed"`, ADR-0003). Nothing after this line starts
         until approval exists.
-  - [ ] 1.3 Add the addendum's row to `MANIFEST.md`'s addenda table.
-  - [ ] 1.4 `content-prompts.test.ts`: the direct-read assertion (exact path, status
+  - [x] 1.3 Add the addendum's row to `MANIFEST.md`'s addenda table.
+  - [x] 1.4 `content-prompts.test.ts`: the direct-read assertion (exact path, status
         line with owner+date, scope, unchanged-snapshot statement, manifest row, both
         authorized clauses) — reading the file, never the digest, and named as
         shape-and-clauses, never as approval proof.
-- [ ] 2.0 FR-2 — the configured exception
-  - [ ] 2.1 Write both fragments; the human-gated one states the STOP rule has no
+- [x] 2.0 FR-2 — the configured exception
+  - [x] 2.1 Write both fragments; the human-gated one states the STOP rule has no
         exception and the repository is configured human-gated; the autonomous one
         reproduces the snapshot's exception text unchanged (parenthetical included —
         FR-3 folds in here).
-  - [ ] 2.2 Replace the self-granted exception in `phase-3-task-generator.md` with
+  - [x] 2.2 Replace the self-granted exception in `phase-3-task-generator.md` with
         `{{AUTONOMY_MODE}}`.
-  - [ ] 2.3 `content-prompts.test.ts`: both renderings from one fixture — the
+  - [x] 2.3 `content-prompts.test.ts`: both renderings from one fixture — the
         human-gated negative (no exception, no self-assessment instruction) paired
         with the autonomous positive (`assert-absent-needs-an-independent-cause`).
-- [ ] 3.0 FR-3 — the parenthetical, asserted
-  - [ ] 3.1 The autonomous rendering's assertion quotes the snapshot's exception text
+- [x] 3.0 FR-3 — the parenthetical, asserted
+  - [x] 3.1 The autonomous rendering's assertion quotes the snapshot's exception text
         including `(single-session test runs, agent-led sweeps)` — byte-compared to
         `source-snapshot/prompts/phase-3-task-generator.md:80`.
-- [ ] 4.0 FR-4 — the orchestration proceed rule
-  - [ ] 4.1 `orchestration-runner.md` states the proceed rule for Phases 4–7; wording
+- [x] 4.0 FR-4 — the orchestration proceed rule
+  - [x] 4.1 `orchestration-runner.md` states the proceed rule for Phases 4–7; wording
         traces to the addendum.
-  - [ ] 4.2 `content-prompts.test.ts`: the rendered protocol carries the rule; the
+  - [x] 4.2 `content-prompts.test.ts`: the rendered protocol carries the rule; the
         assertion quotes the addendum's clause so the trace is checked.
-- [ ] 5.0 FR-5 — the entrypoint proceed rule, two copies
-  - [ ] 5.1 Both `AGENT_BOOTSTRAP` copies gain the clause beside the stop rules: during
+- [x] 5.0 FR-5 — the entrypoint proceed rule, two copies
+  - [x] 5.1 Both `AGENT_BOOTSTRAP` copies gain the clause beside the stop rules: during
         Phases 4–7 the only legitimate stops are the enumerated checkpoints and a
         failed gate; every other decision is recorded in the task file's Deferrals &
         Decisions rather than escalated.
-  - [ ] 5.2 The test asserts **identity** between the two copies' clauses — never a
+  - [x] 5.2 The test asserts **identity** between the two copies' clauses — never a
         pattern present in each (readiness W-input: a pattern-grep is satisfied by the
         template alone).
-- [ ] 6.0 FR-6 — the registry row and the corpus-test migration
-  - [ ] 6.1 `PLACEHOLDERS.md`: the enumerated row — meaning, two legal values, no
+- [x] 6.0 FR-6 — the registry row and the corpus-test migration
+  - [x] 6.1 `PLACEHOLDERS.md`: the enumerated row — meaning, two legal values, no
         `workflow.config` field mapping.
-  - [ ] 6.2 The value-builder rule, once, everywhere a fixture synthesizes per-row
+  - [x] 6.2 The value-builder rule, once, everywhere a fixture synthesizes per-row
         values (`row.enumerated?.[0] ?? generic`): `content-placeholders.test.ts:158,
         173,185,206,217`, `prompts.test.ts:289-292`, `init.test.ts:315-325`.
-  - [ ] 6.3 Census moves: registry 20→21 (`content-placeholders.test.ts:96`);
+  - [x] 6.3 Census moves: registry 20→21 (`content-placeholders.test.ts:96`);
         zero→one enumeration (`:103`); both required-value censuses (`:107,164`);
         the nine-key set → ten (`init.test.ts:383-395`).
-  - [ ] 6.4 Enumeration coverage, mutation-checked: both fragments exist and render
+  - [x] 6.4 Enumeration coverage, mutation-checked: both fragments exist and render
         with their text; an illegal key is refused; a temp-copy missing-fragment case
         **runs** the failure; terminality stays green.
-- [ ] 7.0 Migration & Rollback verification (infra parent)
-  - [ ] 7.1 Confirm the one-revert unit: fragments + registry row + protocol block +
+- [x] 7.0 Migration & Rollback verification (infra parent)
+  - [x] 7.1 Confirm the one-revert unit: fragments + registry row + protocol block +
         bootstrap clauses + test expectations revert together; nothing published moves.
-  - [ ] 7.2 Restatement sweep by grep: counts (21, ten, one enumeration), the `src/**`
+  - [x] 7.2 Restatement sweep by grep: counts (21, ten, one enumeration), the `src/**`
         boundary wording, the proceed-rule wording across its three homes.
-  - [ ] 7.3 Confirm the adopter consequences as written: one-way install untouched;
+  - [x] 7.3 Confirm the adopter consequences as written: one-way install untouched;
         a stale `AUTONOMY_MODE` key degrades to a render diagnostic at next install
         (`prompts.ts:621-650`); the addendum stays as provenance history on any revert.
-- [ ] 8.0 Phase 5 — Testing
-  - [ ] 8.1 Every §11 command into the Verification Ledger with evidence; floor green.
+- [x] 8.0 Phase 5 — Testing
+  - [x] 8.1 Every §11 command into the Verification Ledger with evidence; floor green.
 - [ ] 9.0 Phase 6 — Final Auditing
   - [ ] 9.1 Independent adversarial review (different model/session):
         `_docs/reviews/review-031-autonomy-mode-method-policy.md`, Quorum row, `pass`
@@ -185,20 +185,20 @@ re-derive them. Each gets a re-open task (0.1).
 
 | Gate               | Command / Check                                                  | Scope | Result  | Evidence | Notes |
 | ------------------ | ---------------------------------------------------------------- | ----- | ------- | -------- | ----- |
-| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | pending |          | shape-and-clauses, read directly; approval is the operator row |
-| FR-2               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | pending |          | paired mode renderings |
-| FR-3               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | pending |          | snapshot parenthetical byte-compared |
-| FR-4               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | pending |          | proceed rule quoted against the addendum |
-| FR-5               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | pending |          | two-copy identity |
-| FR-6               | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | pending |          | census 21, one enumeration, mutation checks |
-| FR-6               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | pending |          | enumerated-aware builders |
-| FR-6               | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | pending |          | ten-key set through init |
-| FR-6               | `pnpm verify:workflow`                                           | repo  | pending |          | bundle scripts only; digest proof is the package rows |
-| types              | `pnpm check-types`                                               | repo  | pending |          |       |
-| lint               | `pnpm lint`                                                      | repo  | pending |          |       |
-| test               | `pnpm test`                                                      | repo  | pending |          | whole suite via turbo |
-| build              | `pnpm build`                                                     | repo  | pending |          |       |
-| operator           | owner approval of the FR-1 addendum; acceptance names the path   | repo  | pending |          | `skipped` is illegal |
+| FR-1               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | passed  | 43/43; A2 read directly, all four shape assertions | shape-and-clauses; approval was the 1.2 operator stop, owner-given in-session |
+| FR-2               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | passed  | fragments paired + render-level both-modes in content-placeholders | paired mode renderings |
+| FR-3               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | passed  | snapshot sentence anchored in the snapshot itself, matched in the fragment and the render | snapshot parenthetical byte-compared |
+| FR-4               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | passed  | clause-2 core quoted in the runner assertion | proceed rule quoted against the addendum |
+| FR-5               | `pnpm --filter provegate test test/content-prompts.test.ts`      | pkg   | passed  | block-extracted and compared with toBe — identity, not pattern | two-copy identity |
+| FR-6               | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg   | passed  | 21/21: census 21 rows, TEN required, both fragments, illegal key, temp-copy mutation | census 21, one enumeration, mutation checks |
+| FR-6               | `pnpm --filter provegate test test/prompts.test.ts`              | pkg   | passed  | builder rule renders green | enumerated-aware builders |
+| FR-6               | `pnpm --filter provegate test test/init.test.ts`                 | pkg   | passed  | 83/83; activation block names exactly ten keys | ten-key set through init |
+| FR-6               | `pnpm verify:workflow`                                           | repo  | passed  | PASS after pack-drift reconcile (both bootstrap sides changed by design) | bundle scripts only; digest proof is the package rows |
+| types              | `pnpm check-types`                                               | repo  | passed  | 0 errors |       |
+| lint               | `pnpm lint`                                                      | repo  | passed  | clean |       |
+| test               | `pnpm test`                                                      | repo  | passed  | 7/7 turbo tasks | whole suite via turbo |
+| build              | `pnpm build`                                                     | repo  | passed  | clean |       |
+| operator           | owner approval of the FR-1 addendum; acceptance names the path   | repo  | operator | approval given in-session 2026-07-28 ("ok 031 için onay") and sealed into A2's status line; the close acceptance must name the exact addendum path (W2, checked at Phase 6) | `skipped` is illegal |
 | independent-review | `_docs/reviews/review-031-autonomy-mode-method-policy.md`        | repo  | pending |          | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.

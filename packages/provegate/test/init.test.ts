@@ -321,7 +321,7 @@ function promptsReady(dir = '.provegate') {
     parseRegistry(readFileSync(join(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8')),
   );
   const values: Record<string, string> = {};
-  for (const row of rows) values[row.token] = `v-${row.token}`;
+  for (const row of rows) values[row.token] = row.enumerated?.[0] ?? `v-${row.token}`;
   return { ...DEFAULT_CONFIG, prompts: { ...DEFAULT_CONFIG.prompts, enabled: true, dir, values } };
 }
 
@@ -380,7 +380,7 @@ describe('PRD-029 migration and rollback', () => {
     expect(readFileSync(join(root, 'workflow.config.json'), 'utf8')).toBe(existing);
   });
 
-  it('ACTIVATION: the printed block names exactly the nine required keys', () => {
+  it('ACTIVATION: the printed block names exactly the ten required keys', () => {
     const packageDir = promptsPackageDir();
     const rows = requiredValues(
       packageDir,
@@ -391,7 +391,7 @@ describe('PRD-029 migration and rollback', () => {
     const parsed: unknown = JSON.parse(block.slice(0, block.indexOf('\n\nvalues:')));
     const values = (parsed as { prompts: { values: Record<string, null> } }).prompts.values;
     expect(Object.keys(values).sort()).toEqual(rows.map((r) => r.token).sort());
-    expect(Object.keys(values)).toHaveLength(9);
+    expect(Object.keys(values)).toHaveLength(10);
   });
 
   it('REFUSAL: an unresolved value leaves the filesystem byte-identical', () => {

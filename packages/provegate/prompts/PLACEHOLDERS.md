@@ -28,6 +28,7 @@ field, the mapping is noted.
 | `{{MEMORY_ROOT}}` | Root of your durable-memory record store | `_brain` | `memory.root` | — | — |
 | `{{REVIEW_TOOL}}` | Your cross-model reviewer invocation | `codex review` | — | — | — |
 | `{{ENV_NOTES}}` | What "real environment" means for your integration tests | `local PostgreSQL via compose` | — | allowed | — |
+| `{{AUTONOMY_MODE}}` | Whether Phase 3's approval gate may be skipped — a decision the human records, never one the agent infers from its session | `human-gated` | — | — | `human-gated, autonomous` |
 
 Column meanings (PRD-029 FR-4 reads this table; it is the single authority):
 
@@ -39,7 +40,8 @@ Column meanings (PRD-029 FR-4 reads this table; it is the single authority):
   global rule in either direction is wrong, so the policy is per token and lives here.
 - **Enumerated** — when set, a comma-separated list of the token's legal values. The package
   ships one fragment per value at `prompts/_fragments/<TOKEN>.<value>.md` and the config
-  supplies the KEY, never the prose. No token is enumerated yet; PRD-031 ships the first.
+  supplies the KEY, never the prose. `{{AUTONOMY_MODE}}` is the first enumerated token
+  (PRD-031, owner-approved addendum `autonomy-mode-and-proceed-rule-2026-07-27`).
 
 Rules:
 

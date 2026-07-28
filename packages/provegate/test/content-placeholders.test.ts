@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -94,22 +95,25 @@ describe('required values (PRD-029 FR-4)', () => {
   const rows = parseRegistry(readFileSync(join(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8'));
 
   it('parses every registry row, with its config field, empty policy and enumeration', () => {
-    expect(rows).toHaveLength(20);
+    expect(rows).toHaveLength(21);
     expect(rows.filter((r) => r.configField !== null)).toHaveLength(7);
     expect(rows.filter((r) => r.emptyAllowed).map((r) => r.token).sort()).toEqual([
       'DOMAIN_CHECKS',
       'ENV_NOTES',
     ]);
-    // The mechanism ships with zero enumerated tokens; PRD-031 ships the first.
-    expect(rows.filter((r) => r.enumerated !== null)).toEqual([]);
+    // PRD-031 ships the first enumerated token; its two legal values are the
+    // whole set (the enumerated-aware value builders below key off this).
+    const enumerated = rows.filter((r) => r.enumerated !== null);
+    expect(enumerated.map((r) => r.token)).toEqual(['AUTONOMY_MODE']);
+    expect(enumerated[0]?.enumerated).toEqual(['human-gated', 'autonomous']);
   });
 
-  it('derives NINE required values from the rendered corpus, not twenty from the table', () => {
+  it('derives TEN required values from the rendered corpus, not twenty-one from the table', () => {
     // The registry also covers practices/templates/, which the store does not
     // render. Deriving the requirement from the catalogue would make an adopter
     // answer four questions that cannot change one byte of the store.
     const required = requiredValues(packageDir, planned, rows);
-    expect(required).toHaveLength(9);
+    expect(required).toHaveLength(10);
   });
 
   it('excludes exactly the four tokens no rendered file consumes', () => {
@@ -157,11 +161,11 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('renders cleanly once every required value is supplied', () => {
     const values: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = 'x';
+    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
     const config = { ...DEFAULT_CONFIG, prompts: { ...DEFAULT_CONFIG.prompts, values } };
     const result = renderPrompts(packageDir, config);
     expect(result.files.size).toBeGreaterThan(19);
-    expect(result.required).toHaveLength(9);
+    expect(result.required).toHaveLength(10);
     for (const [path, body] of result.files) {
       if (path === 'prompts/PLACEHOLDERS.md') continue; // verbatim by disposition
       expect(body).not.toMatch(/\{\{[A-Z][A-Z0-9_]*\}\}/);
@@ -170,7 +174,7 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('leaves the verbatim registry unsubstituted — rendering it would eat the table', () => {
     const values: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = 'x';
+    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
     const result = renderPrompts(packageDir, {
       ...DEFAULT_CONFIG,
       prompts: { ...DEFAULT_CONFIG.prompts, values },
@@ -182,7 +186,7 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('enforces the per-token empty policy in BOTH directions', () => {
     const base: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) base[row.token] = 'x';
+    for (const row of requiredValues(packageDir, planned, rows)) base[row.token] = row.enumerated?.[0] ?? 'x';
 
     const allowed = { ...base, DOMAIN_CHECKS: '' };
     expect(() =>
@@ -203,7 +207,7 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('reports a values key no rendered token consumes as `unused`', () => {
     const values: Record<string, string> = { NOT_A_TOKEN: 'x' };
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = 'x';
+    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
     expect(() =>
       renderPrompts(packageDir, {
         ...DEFAULT_CONFIG,
@@ -214,7 +218,7 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('names a registry-declared but unrendered token as unused, with the reason', () => {
     const values: Record<string, string> = { LINK_TO_VISION_DOC: 'docs/vision.md' };
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = 'x';
+    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
     expect(() =>
       renderPrompts(packageDir, {
         ...DEFAULT_CONFIG,
@@ -228,5 +232,101 @@ describe('required values (PRD-029 FR-4)', () => {
     // is one pass, and re-scanning would break the opacity guarantee.
     expect(() => assertFragmentTerminal('f.md', 'body {{CMD_TEST}}\n')).toThrow(/not terminal/);
     expect(() => assertFragmentTerminal('f.md', 'plain body\n')).not.toThrow();
+  });
+});
+
+describe('the first enumerated token (PRD-031 FR-6)', () => {
+  const packageDir = promptsPackageDir();
+  const planned = planStore(packageDir);
+  const rows = parseRegistry(readFileSync(join(packageDir, 'prompts/PLACEHOLDERS.md'), 'utf8'));
+  const baseValues = (): Record<string, string> => {
+    const v: Record<string, string> = {};
+    for (const row of requiredValues(packageDir, planned, rows))
+      v[row.token] = row.enumerated?.[0] ?? 'x';
+    return v;
+  };
+
+  it('every declared legal value has its exact fragment file', () => {
+    const row = rows.find((r) => r.token === 'AUTONOMY_MODE');
+    for (const value of row?.enumerated ?? []) {
+      const rel = `prompts/_fragments/AUTONOMY_MODE.${value}.md`;
+      expect(existsSync(join(packageDir, rel)), rel).toBe(true);
+    }
+  });
+
+  it('both legal modes render, each carrying its own fragment text and never the other', () => {
+    for (const [mode, marker, absent] of [
+      ['human-gated', 'This STOP has no exception', 'Exception: in autonomous-execution mode'],
+      ['autonomous', 'Exception: in autonomous-execution mode', 'This STOP has no exception'],
+    ] as const) {
+      const values = { ...baseValues(), AUTONOMY_MODE: mode };
+      const result = renderPrompts(packageDir, {
+        ...DEFAULT_CONFIG,
+        prompts: { ...DEFAULT_CONFIG.prompts, values },
+      });
+      const phase3 = result.files.get('prompts/phase-3-task-generator.md') ?? '';
+      expect(phase3, mode).toContain(marker);
+      expect(phase3, mode).not.toContain(absent);
+      // neither rendering asks the agent to decide its own mode — both carry
+      // the configured-statement sentence instead (wrap-normalized)
+      expect(phase3.replace(/\s+/g, ' ')).toContain(
+        'an agent never assesses which mode its own session is in',
+      );
+    }
+  });
+
+  it('the autonomous rendering reproduces the snapshot exception text, parenthetical included', () => {
+    const snapshot = readFileSync(
+      join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md'),
+      'utf8',
+    );
+    const m = /Exception: in autonomous-execution mode \(single-session test runs, agent-led sweeps\), document the skipped approval gate/.exec(snapshot);
+    expect(m, 'the snapshot sentence moved — re-anchor this test').not.toBeNull();
+    const values = { ...baseValues(), AUTONOMY_MODE: 'autonomous' };
+    const result = renderPrompts(packageDir, {
+      ...DEFAULT_CONFIG,
+      prompts: { ...DEFAULT_CONFIG.prompts, values },
+    });
+    const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(/\n/g, ' ');
+    expect(phase3).toContain(
+      'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate',
+    );
+  });
+
+  it('an illegal key is refused at render, naming the legal values', () => {
+    const values = { ...baseValues(), AUTONOMY_MODE: 'yolo' };
+    expect(() =>
+      renderPrompts(packageDir, {
+        ...DEFAULT_CONFIG,
+        prompts: { ...DEFAULT_CONFIG.prompts, values },
+      }),
+    ).toThrow(/legal values are human-gated, autonomous/);
+  });
+
+  it('a missing fragment FAILS the render — mutation-run against a temp copy of the corpus', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'provegate-frag-'));
+    try {
+      cpSync(packageDir, tmp, { recursive: true });
+      rmSync(join(tmp, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'));
+      const values = { ...baseValues(), AUTONOMY_MODE: 'autonomous' };
+      expect(() =>
+        renderPrompts(tmp, {
+          ...DEFAULT_CONFIG,
+          prompts: { ...DEFAULT_CONFIG.prompts, values },
+        }),
+      ).toThrow(/does not exist in the package/);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('both fragments are terminal', () => {
+    for (const value of ['human-gated', 'autonomous']) {
+      const text = readFileSync(
+        join(packageDir, `prompts/_fragments/AUTONOMY_MODE.${value}.md`),
+        'utf8',
+      );
+      expect(() => assertFragmentTerminal(`AUTONOMY_MODE.${value}.md`, text)).not.toThrow();
+    }
   });
 });

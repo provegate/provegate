@@ -67,6 +67,8 @@
   "practices/verify/verify-dependency-audit.mjs",
   "practices/verify/verify-test-task-coverage.mjs",
   "practices/verify/verify-workflow.mjs",
+  "prompts/_fragments/AUTONOMY_MODE.human-gated.md",
+  "prompts/_fragments/AUTONOMY_MODE.autonomous.md",
   "prompts/PLACEHOLDERS.md",
   "prompts/README.md",
   "prompts/adapters/codex-starter.md",
