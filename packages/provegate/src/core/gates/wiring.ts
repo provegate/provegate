@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { resolveContainedPaths } from '../config/load.js';
@@ -509,9 +509,19 @@ export function auditWiring(
   // is refused outright — `scripts/verify/../outside/verify-foo.mjs` must not
   // pass a prefix test whose claim is "under scriptsDir". Fail closed: a
   // traversal is no key, never a resolved one.
-  const normLexical = (p: string): string => p.replace(/^(\.\/)+/, '').replace(/[/\\]+$/, '');
-  const scriptsDirPrefix = normLexical(config.wiring.scriptsDir) + '/';
+  const normLexical = (p: string): string =>
+    p.replace(/^(\.\/)+/, '').replace(/[/\\]+/g, '/').replace(/\/+$/, '');
+  const scriptsDirNorm = normLexical(config.wiring.scriptsDir);
+  // `.` (and its spellings) legally mean the repository root: the prefix is
+  // then empty and every non-traversal relative path is under it.
+  const scriptsDirPrefix = scriptsDirNorm === '.' || scriptsDirNorm === '' ? '' : scriptsDirNorm + '/';
   const keyOf = new Map<string, string>();
+  // FR-1 registration is by FILE, not by basename: a script invoking
+  // `scripts/verify/nested/verify-foo.mjs` must not make the top-level
+  // `verify-foo.mjs` candidate look registered (round-2 [P1]). So the
+  // scriptsDir-RELATIVE path is kept for registration while the basename
+  // stays the surface-matching key.
+  const registeredRelative = new Set<string>();
   for (const [name, body] of Object.entries(scripts)) {
     if (!pattern.test(name)) continue;
     const cmds = scanCommandSurface(body);
@@ -520,10 +530,11 @@ export function auditWiring(
       const file = interpreterInvokedFile(tokens);
       if (file === null || !file.endsWith('.mjs')) continue;
       const normalized = normLexical(file);
-      if (normalized.split(/[/\\]/).some((seg) => seg === '.' || seg === '..')) continue;
+      if (normalized.split('/').some((seg) => seg === '.' || seg === '..')) continue;
       if (!normalized.startsWith(scriptsDirPrefix)) {
         continue; // invokes a file outside wiring.scriptsDir — not a key
       }
+      registeredRelative.add(normalized.slice(scriptsDirPrefix.length));
       keyOf.set(name, baseOf(normalized));
       break;
     }
@@ -546,15 +557,35 @@ export function auditWiring(
 
   const hooksDirPath = readPath('wiring.hooksDir');
   if (hooksDirPath !== null && existsSync(hooksDirPath)) {
+    let rootReal: string | null;
+    try {
+      rootReal = realpathSync(resolve(root));
+    } catch {
+      rootReal = null;
+    }
     let hookFiles = 0;
     for (const name of readdirSync(hooksDirPath)) {
       const full = resolve(hooksDirPath, name);
-      // lstat, not stat: the DIRECTORY was containment-checked, each entry was
-      // not, and stat follows a symlink wherever it points — external content
-      // could silently wire a check. A symlinked hook is therefore skipped
-      // entirely (inside or outside the repo): the false-negative direction,
-      // and the remedy is a regular file, which is what a git hook is.
-      if (!lstatSync(full).isFile()) continue;
+      // The DIRECTORY was containment-checked; each entry was not, and stat
+      // would follow a symlink wherever it points — external content could
+      // silently wire a check. Git DOES execute a symlinked hook, so a link
+      // whose target stays inside the repository is read (round-2 [P2]);
+      // an external or dangling target is refused, fail-closed.
+      const entry = lstatSync(full);
+      if (entry.isSymbolicLink()) {
+        if (rootReal === null || contained.under === null) continue;
+        let target: string;
+        try {
+          target = realpathSync(full);
+        } catch {
+          continue; // dangling — not a hook
+        }
+        if (!contained.under(target, rootReal) || !statSync(target).isFile()) continue;
+        hookFiles += 1;
+        collectKeys(readFileSync(target, 'utf8'));
+        continue;
+      }
+      if (!entry.isFile()) continue;
       hookFiles += 1;
       collectKeys(readFileSync(full, 'utf8'));
     }
@@ -605,13 +636,15 @@ export function auditWiring(
   // decided by the same command rule as everything else, never a substring
   // search (`echo verify-foo.mjs` in an unrelated body is not registration).
   if (scriptsDirPath !== null && existsSync(scriptsDirPath)) {
-    const registeredFiles = new Set(keyOf.values());
     let onDisk = 0;
     for (const name of readdirSync(scriptsDirPath)) {
-      if (!statSync(resolve(scriptsDirPath, name)).isFile()) continue; // FR-1 selects FILES
+      // lstat and never dereference: a dangling symlink named like a script
+      // must not crash the audit, and a symlink to an external file is not an
+      // in-directory candidate (round-2 [P2]). FR-1 selects regular FILES.
+      if (!lstatSync(resolve(scriptsDirPath, name)).isFile()) continue;
       if (!/^verify-.*\.mjs$/.test(name)) continue;
       onDisk += 1;
-      if (!registeredFiles.has(name)) {
+      if (!registeredRelative.has(name)) {
         issues.push(
           `script on disk "${name}" is not registered as a package.json gate — register it or delete it`,
         );

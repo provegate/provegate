@@ -770,6 +770,11 @@ function runCheck(args: string[]): number {
 
   if (args.includes('--wiring')) {
     const report = auditWiring(config, manifest, root);
+    // PRD-025: the surface list is the visibility half of the narrow grammar —
+    // a surface lost to a non-conforming input shows up here as a missing
+    // entry, which is what a maintainer watches. Printed on success AND
+    // failure, or the promise in the release note is only programmatic.
+    console.log(`[check --wiring] surfaces read: ${report.surfaces.join(', ')}`);
     if (!report.ok) {
       console.error('[check --wiring] wiring issues:');
       for (const issue of report.issues) console.error(`  - ${issue}`);

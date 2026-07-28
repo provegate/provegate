@@ -581,6 +581,75 @@ describe('auditWiring key derivation hardening (review round 1)', () => {
   });
 });
 
+describe('auditWiring round-2 hardening', () => {
+  it('P1: a nested invocation does not register the top-level candidate of the same basename', () => {
+    const root = repo({
+      scripts: {
+        ...FLOOR,
+        'verify:foo': 'node scripts/verify/nested/verify-foo.mjs',
+      },
+      ci: 'jobs:\n  a:\n    steps:\n      - run: pnpm verify:foo\n',
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    mkdirSync(resolve(root, 'scripts/verify/nested'), { recursive: true });
+    writeFileSync(resolve(root, 'scripts/verify/nested/verify-foo.mjs'), '// nested');
+    const report = auditWiring(cfg, defaultManifest(cfg), root);
+    // the DIRECT candidate is unregistered even though a same-basename nested file is invoked
+    expect(report.issues).toContainEqual(
+      expect.stringContaining('script on disk "verify-foo.mjs" is not registered'),
+    );
+    // control: invoking the direct file registers it
+    const direct = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      ci: 'jobs:\n  a:\n    steps:\n      - run: pnpm verify:foo\n',
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    expect(
+      auditWiring(cfg, defaultManifest(cfg), direct).issues.some((i) =>
+        i.includes('is not registered'),
+      ),
+    ).toBe(false);
+  });
+
+  it('scriptsDir "." is legal: a root-level invocation derives its key and registers', () => {
+    const dotCfg = { ...cfg, wiring: { ...cfg.wiring, scriptsDir: '.' } };
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node verify-foo.mjs\n' },
+    });
+    writeFileSync(resolve(root, 'verify-foo.mjs'), '// fixture');
+    const report = auditWiring(dotCfg, defaultManifest(dotCfg), root);
+    expect(report.issues.some((i) => i.includes('"verify:foo" is wired nowhere'))).toBe(false);
+    expect(report.issues.some((i) => i.includes('is not registered'))).toBe(false);
+  });
+
+  it('a hook symlink whose target stays inside the repository is read (git executes it)', () => {
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: {},
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    writeFileSync(resolve(root, 'real-hook.sh'), 'node scripts/verify/verify-foo.mjs\n');
+    mkdirSync(resolve(root, '.githooks'), { recursive: true });
+    symlinkSync(resolve(root, 'real-hook.sh'), resolve(root, '.githooks', 'pre-commit'));
+    expect(fooWired(root)).toBe(true);
+  });
+
+  it('a dangling symlink named like a script neither crashes nor becomes a candidate', () => {
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node scripts/verify/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
+      scriptFiles: ['verify-foo.mjs'],
+    });
+    symlinkSync(
+      resolve(root, 'scripts/verify/gone.mjs'),
+      resolve(root, 'scripts/verify', 'verify-dangling.mjs'),
+    );
+    const report = auditWiring(cfg, defaultManifest(cfg), root);
+    expect(report.issues.some((i) => i.includes('verify-dangling.mjs'))).toBe(false);
+  });
+});
+
 describe('auditWiring on-disk direction (FR-1)', () => {
   it('an unregistered on-disk verify script fails, naming the file', () => {
     const root = repo({
