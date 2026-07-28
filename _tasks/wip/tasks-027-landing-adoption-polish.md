@@ -1,0 +1,278 @@
+# Tasks: Landing Adoption Polish — a Shareable Card, a Copyable First Action, Linked Claims
+
+> **PRD**: [prd-027-landing-adoption-polish.md](../../_prds/wip/prd-027-landing-adoption-polish.md)
+> **Readiness**: [readiness-027-landing-adoption-polish.md](../../_readiness/wip/readiness-027-landing-adoption-polish.md)
+> **Status**: Not Started
+> **Readiness Score**: 8.20/10 (iteration 7, PASS — fourth independent scorer)
+> **Model Tier (Execution)**: high
+> **Model Tier (Audit)**: high
+> **PRD Class**: feature
+> **Autonomous Close**: operator-gated
+> **Created**: 2026-07-28
+
+---
+
+## Task Outcome Rules
+
+- `[x]` means the task was completed as written.
+- Leave operator-owned, environment-dependent, or blocked tasks unchecked — `skipped`
+  is illegal for operator rows.
+- Record implementation decisions in **Deferrals & Decisions**; human/runtime work in
+  **Operator Handoff**.
+- A PRD may be `Code Complete` with operator handoff items, but it is not
+  `Ship Verified` until required handoff items are resolved or explicitly accepted —
+  this close is **operator-gated**: the merge gate refuses without an owner-signed
+  acceptance entry.
+- Phase 4 agents hold a valid lock lease before editing implementation files or this
+  task file.
+- No `any`, no `eslint-disable`, no `|| true`. Surface blockers verbatim.
+
+---
+
+## Memory Context
+
+Slugs the PRD selected, carried so implementation does not re-derive them:
+
+- `metadata-declares-what-it-cannot-provide` — the Memory Output this PRD creates; the
+  unifying defect (declared capabilities with nothing behind them). Binds 1.0.
+- `false-green-on-missing-file` — FR-1/FR-8 assert against built HTML; an absent build
+  file fails the row, and a fresh build precedes the emitted-metadata reads. Binds 1.0, 8.0.
+- `grep-token-anchors-real-impl` — FR-7's census is word-anchored over comment-stripped
+  sources (`PROOF` is a prefix of `PROOF_EVIDENCE`). Binds 4.0.
+- `gate-wire-or-delete` — an export must not outlive its last external reference; a
+  declared link with no target is an unwired surface. Binds 4.0, 5.0.
+- `turbo-cache-masks-out-of-input-reads` — `landing.test.tsx` reads within the web
+  package's inputs; keep it that way. Binds every test task.
+- `notes-column-runs-commands` — the PRD's disposition predates PRD-024's same-day fix
+  of the §11 parser; the discipline (no backticks in Notes cells) is kept regardless.
+  Binds 8.0.
+- `push-is-human-by-omission` — FR-4 makes `Refusal` addressable; nothing executes git.
+- `state-model-before-mechanism` — the export contract (FR-9) is the written ground
+  truth; implement against it, do not re-litigate it. Binds 2.0.
+
+---
+
+## Relevant Files
+
+- `apps/web/app/opengraph-image.tsx` — NEW: the card route (FR-1)
+- `apps/web/app/layout.tsx` — metadata coherence, no `images` declaration + comment (FR-1)
+- `apps/web/app/alt/page.tsx` — own metadata, pinned concept title, noindex (FR-8)
+- `apps/web/app/sections/content.ts` — `SITE_TITLE`/`PRODUCT_NAME`/`PRODUCT_NAME_PARTS`,
+  install single-sourced, `TRUST_STRIP` hrefs, `PROOF` deleted (FR-1/3/4/7)
+- `apps/web/app/sections/ui.tsx` — `Wordmark` derives from `PRODUCT_NAME_PARTS` (FR-1)
+- `apps/web/app/sections/index.tsx` — `Refusal` id, TrustStrip anchors, hero wrapper
+  class, two `CopyableCodeBlock` imports (FR-4/6/9)
+- `apps/web/app/sections/tabs.tsx` — two `CopyableCodeBlock` imports (FR-9)
+- `apps/web/app/sections/hero-terminal.tsx` — copy control (FR-2)
+- `apps/web/app/sections/nav.tsx` — retained-ratio scrollspy, `aria-current` (FR-5)
+- `apps/web/app/globals.css` — the ≤900px hero rule (FR-6)
+- `packages/design/src/react/CodeBlock.tsx` — server renderer, `copyable` prop REMOVED,
+  span deleted (FR-9)
+- `packages/design/src/react/client.ts` — NEW: `CopyableCodeBlock` (FR-9)
+- `packages/design/src/react/index.ts` — barrel keeps the server renderer only (FR-9)
+- `packages/design/tsup.config.ts` — second config + `banner {js:'"use client";'}` +
+  both `clean: false` + pre-clean build script (FR-9)
+- `packages/design/package.json` — `./react/client` export, build script (FR-9)
+- `packages/design/README.md`, `apps/web/README.md` — import-contract descriptions (FR-9)
+- `_docs/launch/announcement-draft.md` — NEW `## Launch checklist` section (FR-1)
+- `apps/web/test/metadata.test.ts` — NEW (FR-1/FR-8)
+- `apps/web/test/landing.test.tsx`, `apps/web/test/content-web.test.ts`,
+  `apps/web/test/a11y.test.ts` — extended, never weakened
+- `packages/design/test/props.test.tsx` — extended (FR-9)
+- `_brain/learnings/metadata-declares-what-it-cannot-provide.md` + `_brain/INDEX.md` —
+  the Memory Output + hook
+- `_docs/reviews/review-027-landing-adoption-polish.md` — Phase 6 artifact
+- `_docs/wip/summary-027-landing-adoption-polish.md` — Phase 7 summary
+
+---
+
+## Tasks
+
+- [ ] 0.0 Pre-flight
+  - [ ] 0.1 `node packages/provegate/dist/cli.js open PRD-027` — lease the Conflict
+        Surface (apps/web files, five design files, two READMEs, launch draft, brain
+        learning). `gate queue` first: no expected overlap with active claims.
+  - [ ] 0.2 Add the Active Agents row to `STATUS.md`; create the implementation
+        worktree (`git worktree add -b prd-027-landing-adoption-polish
+        ../provegate-prd-027 main` + `pnpm install --frozen-lockfile` +
+        `pnpm --filter @provegate/design build` — web consumes the built dist).
+  - [ ] 0.3 Fresh baseline: `pnpm --filter web build`, then run the four §2 metric
+        commands and record their pre-change outputs in the Progress Log
+        (expected: `12 6 0` · `4 false true` · `38 ["PROOF"]` · `true false`).
+  - [ ] 0.4 **STOP-equivalent handoff row**: the 375×667 hero-height baseline is the
+        operator's, measured on the PRE-change tree before any 7.x work merges — the
+        row is seeded in Operator Handoff below. Implementation of 7.0 may not start
+        until its `Recorded value` cell is filled.
+- [ ] 1.0 FR-1 + FR-8 — the card and the concept page, one atomic unit
+  - [ ] 1.1 `apps/web/app/opengraph-image.tsx`: file-convention OG route, 1200×630,
+        brand values imported from `@provegate/design/tokens` JS (satori cannot read
+        CSS custom properties — the PRD-014 pattern), title/name from the new
+        `content.ts` constants.
+  - [ ] 1.2 `apps/web/app/sections/content.ts`: add `SITE_TITLE`, `PRODUCT_NAME`,
+        `PRODUCT_NAME_PARTS`; `apps/web/app/sections/ui.tsx::Wordmark` derives from
+        the parts; `layout.tsx` metadata derives title/description from the constants,
+        declares NO `openGraph.images`/`twitter.images` key, and carries the comment
+        naming the resolver reason (`resolve-metadata.js:137-157`).
+  - [ ] 1.3 `apps/web/app/alt/page.tsx`: exported `metadata` — pinned title
+        `ProveGate — alternative landing concept`, own description, `card: 'summary'`,
+        no image of either kind, `robots: noindex, nofollow`.
+  - [ ] 1.4 `_docs/launch/announcement-draft.md`: append the `## Launch checklist`
+        section — one item: owner runs an OG debugger against the deployed origin
+        before the first share; `/` renders the 1200×630 card, `/alt` title-only;
+        ordering: after first deploy, before first share.
+  - [ ] 1.5 NEW `apps/web/test/metadata.test.ts`: the source coherence triple; fresh
+        built `index.html` emits absolute `og:image`, 1200/630 dimensions,
+        `twitter:image`; `alt.html` emits the pinned title, no image, summary card,
+        noindex+nofollow robots; an ABSENT build file fails both rows rather than
+        skipping.
+  - [ ] 1.6 `pnpm --filter web build` + `node scripts/check-static-egress.mjs` — the
+        card added no external fetch.
+- [ ] 2.0 FR-9 — the split renderer
+  - [ ] 2.1 `packages/design/src/react/CodeBlock.tsx`: delete the aria-hidden span and
+        the `copyable` prop from `CodeBlockProps`; the server renderer keeps
+        everything else byte-compatible for existing consumers.
+  - [ ] 2.2 NEW `packages/design/src/react/client.ts`: `CopyableCodeBlock` — wraps the
+        server renderer; `<button type="button">` with accessible name `/copy/i` in
+        the header slot; payload = `copyText` ?? string `children`; renders no control
+        when neither yields a string; `navigator.clipboard` guarded (absent → no-op).
+  - [ ] 2.3 `packages/design/tsup.config.ts`: export an array — existing config plus a
+        `react/client` entry config carrying `banner: { js: '"use client";' }`; BOTH
+        configs `clean: false`; `packages/design/package.json` build script becomes
+        `rm -rf dist && tsup`, exports gains `./react/client` → dist path.
+  - [ ] 2.4 Migrate the four call sites: `apps/web/app/sections/index.tsx` (2) and
+        `apps/web/app/sections/tabs.tsx` (2) import `CopyableCodeBlock` from
+        `@provegate/design/react/client`.
+  - [ ] 2.5 Update `packages/design/README.md` and `apps/web/README.md`
+        import-contract descriptions; `apps/docs/README.md` untouched.
+  - [ ] 2.6 Tests: `packages/design/test/props.test.tsx` — button renders + activation
+        writes payload (clipboard mocked) + missing clipboard no-throw + non-string
+        no-control + **the barrel `CodeBlockProps` type carries no `copyable`**
+        (type-level assertion) + **built `dist/react/client.js` starts with
+        `"use client"`** + **five-output coexistence after one clean build**
+        (`tokens`, `cli/index`, `react/index`, `react/client`, declarations).
+        `apps/web/test/landing.test.tsx` — the four blocks expose working controls
+        whose payloads equal the constants they render, and the four import sites
+        resolve to the client subpath.
+- [ ] 3.0 FR-2 — the hero copy control
+  - [ ] 3.1 `apps/web/app/sections/hero-terminal.tsx`: real copy control for the
+        install command; usable before the typing animation finishes; present in the
+        reduced-motion finished state; clipboard guarded as FR-9's.
+  - [ ] 3.2 `landing.test.tsx`: control present, payload is the real install constant,
+        reduced-motion state carries it, animation unaffected by activation.
+- [ ] 4.0 FR-3 + FR-7 — one install source, no dead exports
+  - [ ] 4.1 `content.ts`: the install command declared once; hero terminal, hero copy,
+        install tab and `/alt` all derive from it (value derivation, not equal
+        strings).
+  - [ ] 4.2 Delete `content.ts::PROOF`; `content-web.test.ts`: word-anchored,
+        comment-stripped app-wide census excluding the declaration file — zero
+        externally-unreferenced exports; the four install consumers derive from the
+        single declaration.
+- [ ] 5.0 FR-4 — claims link to their proof
+  - [ ] 5.1 `sections/index.tsx`: `Refusal` gains `id="refusal"`; the three
+        `TRUST_STRIP` claims render as `<a href="#…">` to `#refusal`/`#ledger`/`#proof`
+        (hrefs live in `content.ts`).
+  - [ ] 5.2 `landing.test.tsx`: the anchor-closure test — every rendered `href="#…"`
+        (nav and footer included) resolves to a rendered id.
+- [ ] 6.0 FR-5 — the scrollspy
+  - [ ] 6.1 `sections/nav.tsx`: retained per-target ratio map with declared thresholds
+        (a callback is a delta, not a snapshot), document-order tie-break,
+        `aria-current="location"` on exactly one desktop-strip link, no indicator
+        below 900px, no-`IntersectionObserver` renders inert and throws nothing.
+  - [ ] 6.2 `landing.test.tsx`: sequential-callback simulation incl. out-of-order
+        threshold arrivals; exactly one location token with the drawer open.
+- [ ] 7.0 FR-6 — the mobile hero (blocked on the Operator Handoff baseline row)
+  - [ ] 7.1 `globals.css` ≤900px block + `sections/index.tsx` hero wrapper class: the
+        `HandoffCard` absent from the collapsed hero, no second copy anywhere.
+  - [ ] 7.2 `a11y.test.ts` + `landing.test.tsx`: the wrapper class sits inside the
+        900px block; exactly one `HandoffCard` in the document, inside that wrapper —
+        the CSS rule and the card count cannot both pass while the card shows.
+- [ ] 8.0 Phase 5 — Testing: every PRD §11 row, then the floor
+  - [ ] 8.1 `pnpm --filter web build` (fresh, FR-1)
+  - [ ] 8.2 `pnpm --filter web test test/metadata.test.ts` (FR-1 + FR-8)
+  - [ ] 8.3 `node scripts/check-static-egress.mjs` (FR-1 reading)
+  - [ ] 8.4 `pnpm --filter web test test/landing.test.tsx` (FR-2/4/5/6/9)
+  - [ ] 8.5 `pnpm --filter web test test/content-web.test.ts` (FR-3 + FR-7)
+  - [ ] 8.6 `pnpm --filter web test test/a11y.test.ts` (FR-6)
+  - [ ] 8.7 `pnpm --filter @provegate/design test` (FR-9)
+  - [ ] 8.8 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` && `pnpm build`
+        && `pnpm --filter web build` && `node scripts/check-static-egress.mjs`
+  - [ ] 8.9 Post-change metric re-run: the four §2 commands emit their Target values;
+        record outputs in the Progress Log next to the 0.3 baselines.
+  - [ ] 8.10 Re-read PRD §12 DO NOT — confirm none introduced (no section reorder, no
+        copy-hierarchy change, no `.changeset/` write, no reformat sweep, no
+        aria-hidden fallback span).
+- [ ] 9.0 Phase 6 — Final Auditing
+  - [ ] 9.1 Independent adversarial review, different model/session, `Critical: 0`,
+        `Quorum` field present (`1/1 pass`) →
+        `_docs/reviews/review-027-landing-adoption-polish.md`.
+  - [ ] 9.2 Operator rows executed in a real browser (Claude-in-Chrome per the
+        PRD-013 pattern; same-origin 375px iframe for the viewport rows) — results
+        recorded in Operator Handoff, `skipped` illegal.
+  - [ ] 9.3 `pnpm verify:workflow` green after any review-driven fix.
+  - [ ] 9.4 Draft `_docs/wip/summary-027-landing-adoption-polish.md`.
+- [ ] 10.0 Phase 7 — Learning and close (operator-gated)
+  - [ ] 10.1 Write `_brain/learnings/metadata-declares-what-it-cannot-provide.md` +
+        the `_brain/INDEX.md` hook (≤120 chars).
+  - [ ] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact,
+        launch-checklist section all in the merge diff.
+  - [ ] 10.3 Owner acceptance: the merge gate refuses without an owner-signed entry in
+        `_state/acceptances.json` covering the operator rows — the agent transcribes
+        only on explicit in-session owner direction, never originates.
+  - [ ] 10.4 `node packages/provegate/dist/cli.js run PRD-027` — chain + local merge;
+        if the run stops after "archived", follow `gate-run-resume-after-archive`
+        (un-archive, resume `--from-phase=7`). Push stays the owner's.
+  - [ ] 10.5 `release PRD-027`, drop the STATUS.md row, remove the worktree.
+
+---
+
+## Verification Ledger
+
+| Gate | Command / Check | Scope | Result | Evidence | Notes |
+| ---- | --------------- | ----- | ------ | -------- | ----- |
+| FR-1 | `pnpm --filter web build` | web | pending | | fresh build precedes emitted reads |
+| FR-1/8 | `pnpm --filter web test test/metadata.test.ts` | web | pending | | coherence triple + emitted card + alt split; absent file fails |
+| FR-1 | `node scripts/check-static-egress.mjs` | root | pending | | zero external origins |
+| FR-2/4/5/6/9 | `pnpm --filter web test test/landing.test.tsx` | web | pending | | |
+| FR-3/7 | `pnpm --filter web test test/content-web.test.ts` | web | pending | | word-anchored census |
+| FR-6 | `pnpm --filter web test test/a11y.test.ts` | web | pending | | |
+| FR-9 | `pnpm --filter @provegate/design test` | design | pending | | button/type/directive/coexistence set |
+| metrics | the four §2 commands, post-change | web | pending | | targets vs 0.3 baselines |
+| types | `pnpm check-types` | monorepo | pending | | |
+| lint | `pnpm lint` | monorepo | pending | | |
+| test | `pnpm test` | monorepo | pending | | |
+| build | `pnpm build` + `pnpm --filter web build` | monorepo | pending | | |
+| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | pending | | |
+| durable | `pnpm verify:durable-artifacts` | repo | pending | | incl. launch checklist section |
+
+Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
+
+## Deferrals & Decisions
+
+- (none yet)
+
+## Progress Log
+
+| Date | Task | Notes |
+| ---- | ---- | ----- |
+|      |      |       |
+
+## Blockers / Open Questions
+
+- (none)
+
+## Operator Handoff
+
+> Real-browser checks; `skipped` illegal. Category ∈ {runtime, staging, deploy, secret,
+> manual-qa, legal, external}.
+
+| Task | Category | Owner | Required Check | Status | Notes |
+| ---- | -------- | ----- | -------------- | ------ | ----- |
+| 0.4 | manual-qa | owner | **Baseline: 375×667 hero block rendered height on the PRE-change tree.** Recorded value: ______ px | pending | measured after Phase 3, BEFORE any 7.x implementation; Claude-in-Chrome + 375px same-origin iframe per PRD-013 |
+| 9.2a | manual-qa | owner | hero copy control and install-tab control write the real command to the system clipboard, both themes | pending | FR-2 + FR-9 |
+| 9.2b | manual-qa | owner | 375×667 post-change: hero measurably shorter than the recorded baseline; no `HandoffCard` in the hero; no horizontal scroll | pending | FR-6; CTAs explicitly NOT claimed above the fold |
+| 9.2c | manual-qa | owner | scrolling `/` highlights exactly one nav link incl. fast scroll; no text shift; nothing below 900px | pending | FR-5 |
+| 9.2d | manual-qa | owner | the three trust-strip anchors take focus, show a visible ring, land on the right section (keyboard) | pending | FR-4 |
+
+> **Launch precondition (NOT a close row):** after the first deploy and before the first
+> share, the owner runs the OG-debugger check per the `## Launch checklist` FR-1 adds to
+> `_docs/launch/announcement-draft.md`.
