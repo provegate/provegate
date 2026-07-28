@@ -209,8 +209,7 @@ lease-disjoint now. Re-run `gate queue` before Phase 3.
 
 ## 9. Open Questions
 
-- (none — the revalidation interval is a Phase 3 owner setting with a proposed
-  default, not an open design question)
+- (none)
 
 ---
 

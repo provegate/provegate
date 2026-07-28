@@ -730,10 +730,7 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 
 ## 9. Open Questions
 
-- [ ] none. Two questions were resolved as Non-Goals rather than deferred: section order and
-      hero CTA hierarchy both belong to the design handoff, and each is named above with the
-      cost of changing it. `/alt`'s survival to launch is likewise out of scope — FR-8 makes
-      the route harmless either way, so nothing here blocks on the answer.
+- (none)
 
 ---
 

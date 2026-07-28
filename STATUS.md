@@ -12,6 +12,7 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 | Agent | Work item | Phase | Started |
 | ----- | --------- | ----- | ------- |
 | Claude Fable 5 (Claude Code) | PRD-027 — phases 4-7 on owner Go (worktree) | 4 (Implement) | 2026-07-28 |
+| Claude Fable 5 (this session) | PRD-028 — phases 4-7 on owner Go (worktree per task 0.2); heads-up 027: your wip §9 was conformed to the closed grammar on main by owner direction — rebase/merge main before your PRD edits | 4 (Implement) | 2026-07-28 |
 | Claude Fable 5 (Claude Code) | PRD-031 — phases 4-7 on owner Go (approval-first: addendum draft, then the 1.2 operator stop) | 4 (Implement) | 2026-07-28 |
 
 ## Current state

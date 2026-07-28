@@ -179,9 +179,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 9. Open Questions
 
-- (none) — the repair pattern is established by PRD-024 and the deferral recorded the
-  defect with its evidence; nothing here awaits an owner decision beyond ordinary Phase 1
-  review and the below-threshold triage call recorded in the header.
+- (none)
 
 ---
 

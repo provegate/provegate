@@ -527,8 +527,7 @@ independently:
 
 ## 9. Open Questions
 
-- (none — every open question this PRD would have carried is a question the state model
-  answers, and it is tracked there rather than restated here)
+- (none)
 
 ---
 
