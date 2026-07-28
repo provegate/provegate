@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-026-duplicate-consolidation.md](../../_prds/wip/prd-026-duplicate-consolidation.md)
 > **Readiness**: [readiness-026-duplicate-consolidation.md](../../_readiness/wip/readiness-026-duplicate-consolidation.md)
-> **Status**: Operator Verification
+> **Status**: Ship Verified
 > **Readiness Score**: 8.43/10 (PASS, iteration 6)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -218,7 +218,7 @@ parent are noted there.
   - [x] 10.2 Write `_docs/reviews/review-026-duplicate-consolidation.md` (Quorum row
         required).
   - [x] 10.3 Remediate; re-run 9.x after every fix until Critical: 0.
-- [ ] 11.0 Phase 7 — Learning & close
+- [x] 11.0 Phase 7 — Learning & close
   - [x] 11.1 Write `_brain/learnings/docs-are-a-wiring-surface.md` + INDEX pointer
         (hook ≤ 120 chars).
   - [x] 11.2 Durable Artifacts vs merge diff; Memory Outputs vs the PRD on main (no
@@ -226,9 +226,9 @@ parent are noted there.
   - [x] 11.3 `_brain` capture protocol for anything non-derivable hit in flight.
   - [x] 11.4 Summary `_docs/wip/summary-026-duplicate-consolidation.md`; Status headers;
         `gate status`.
-  - [ ] 11.5 Operator acceptance: STOP and hand to the owner (transcription only on
+  - [x] 11.5 Operator acceptance: STOP and hand to the owner (transcription only on
         explicit in-session direction, ADR-0003 rules).
-  - [ ] 11.6 `gate run PRD-026` from the worktree; if the merge stops after the archive,
+  - [x] 11.6 `gate run PRD-026` from the worktree; if the merge stops after the archive,
         apply `gate-run-resume-after-archive` (un-archive, resume from 7). Merge to
         local main; board close. Push stays the owner's.
 
@@ -315,4 +315,4 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
-| 11.5 | manual-qa | owner | Owner-signed acceptance entry in `_state/acceptances.json` for the operator-gated close (decision the owner's; transcription per ADR-0003 if directed in-session) | pending | the merge gate refuses without it |
+| 11.5 | manual-qa | owner | Owner-signed acceptance entry in `_state/acceptances.json` for the operator-gated close (decision the owner's; transcription per ADR-0003 if directed in-session) | resolved | owner approved in-session 2026-07-28 ("kabul"); entry agent-transcribed; merge gate passed |
