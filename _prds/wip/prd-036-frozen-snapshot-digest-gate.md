@@ -13,18 +13,21 @@
 > code, no CLI surface, no method content changes. Not `test-hardening` because the test
 > itself is correct; what is wrong is the build tool's view of what it reads.
 > **Autonomous Close**: eligible
-> **Value**: 2.80 (MF/UI/TL/AR/RM: 4/2/2/1/5)
+> **Value**: 3.45 (MF/UI/TL/AR/RM: 5/2/4/1/5)
 
-<!-- 0.25*4 + 0.25*2 + 0.20*2 + 0.15*1 + 0.15*5
-     = 1.00 + 0.50 + 0.40 + 0.15 + 0.75 = 2.80 -->
+<!-- 0.25*5 + 0.25*2 + 0.20*4 + 0.15*1 + 0.15*5
+     = 1.25 + 0.50 + 0.80 + 0.15 + 0.75 = 3.45 -->
 
-<!-- Value honesty: 2.80 is BELOW the 3.40 candidate threshold. This item exists because
-the deferral board hit its cap of 15 on 2026-07-28 and the rule is convert-the-oldest-due
-row, never skip recording. Per the triage protocol the next step is expand-or-cut: one
-expansion is already inside (FR-2 generalizes to every out-of-package read), and if the
-owner judges the expanded form still below the line after a second expansion attempt, the
-recorded rationale for cutting is that CI checks out fresh, so the guarantee already holds
-where it is public and the gap is local-developer-only. -->
+<!-- Value history: born at 2.80 (4/2/2/1/5), below the 3.40 threshold, from the
+deferral-cap conversion rule. EXPANDED on the owner's triage direction of 2026-07-28 —
+the first of the protocol's two expansion attempts — to absorb the class, not only the
+instance: FR-1 now declares BOTH measured out-of-package reads (the source snapshot and
+the real-bundle fixture PRD-025's review added the same day), and FR-2's census is the
+standing gate that makes the NEXT undeclared read fail loudly. MF rises to 5 because
+cache-key truthfulness is what keeps every gate's green honest — this exact class
+shipped two real stale-green breaks before the blanket rule existed; TL rises to 4
+because every future corpus-reading test (the PRD-024 pattern, the PRD-025 bundle
+fixture, the snapshot digests) inherits the census instead of rediscovering the trap. -->
 
 <!-- Autonomous Close: `eligible` — every verification is machine-checkable and this PRD
 produces no operator-owned rows. -->
@@ -46,10 +49,13 @@ cache — a cached green replays over a snapshot comparison that never re-ran. T
 guarantee is real; the gap is local-only, which is why it sat on the deferral board
 rather than in the pipeline.
 
-PRD-024's FR-2 establishes the repair pattern for this exact shape: the generic `test`
-task gains `"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/_prds/**"]` plus a reasoned
-entry in `scripts/verify/turbo-inputs-exceptions.json`. This PRD extends that same list
-by one glob. It therefore lands after PRD-024, whose edit it extends.
+PRD-024's FR-2 established the repair pattern and its landing on 2026-07-28 shipped it:
+the `test` task now declares `$TURBO_DEFAULT$` plus three root globs with a reasoned
+exceptions entry. This PRD extends that list — and the same day supplied a second
+customer: PRD-025's review added a fixture reading the real
+`scripts/verify/verify-workflow.mjs` from the package tests, recorded in that PRD's
+Deferrals as this census's work. FR-1 therefore declares BOTH measured out-of-package
+reads, and FR-2 is the gate that finds the third before a reviewer has to.
 
 ---
 
@@ -67,7 +73,7 @@ by one glob. It therefore lands after PRD-024, whose edit it extends.
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
-| Out-of-package read paths in `provegate#test` absent from its cache key | 1 (the source snapshot) | 0 | FR-1; a snapshot edit re-runs the digest test (cache miss), verified by FR-2's sweep |
+| Out-of-package read paths in `provegate#test` absent from its cache key | 2, measured 2026-07-28: the source snapshot (digest tests) and `scripts/verify/verify-workflow.mjs` (PRD-025's bundle fixture) | 0 | FR-1; an edit to either re-runs the tests (cache miss), verified by FR-2's census |
 | Package tests reading repo-root paths with no declared input | unmeasured | 0, with the census recorded | FR-2 |
 
 ---
@@ -95,12 +101,13 @@ so that a green suite means the shipped prompts still trace to the snapshot on d
 Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
-1. **FR-1 — Declare the snapshot in the test task's cache key.** Extend the `test` task's
-   `inputs` in `turbo.json` — the array PRD-024's FR-2 creates — with
-   `$TURBO_ROOT$/docs/research/provegate-bootstrap/source-snapshot/**`, and extend the
-   written reason on the existing `"test"` entry in
-   `scripts/verify/turbo-inputs-exceptions.json` to name the snapshot read alongside the
-   PRD corpus read. Both parts follow PRD-024's stated grammar: root-prefixed because task
+1. **FR-1 — Declare both measured out-of-package reads in the test task's cache key.**
+   Extend the `test` task's `inputs` in `turbo.json` — the array PRD-024's FR-2 landed —
+   with `$TURBO_ROOT$/docs/research/provegate-bootstrap/source-snapshot/**` (the digest
+   tests' read) and `$TURBO_ROOT$/scripts/verify/verify-workflow.mjs` (the real-bundle
+   grammar fixture PRD-025 added), and extend the written reason on the existing
+   `"test"` entry in `scripts/verify/turbo-inputs-exceptions.json` to name both reads
+   alongside the PRD corpus read. Both parts follow PRD-024's stated grammar: root-prefixed because task
    inputs are package-relative, appended to a list that already carries `$TURBO_DEFAULT$`,
    and excepted because `verify:turbo-inputs` refuses an undeclared `inputs` key. The
    accepted cost is the same shape PRD-024 records: every workspace's `test` task re-runs
@@ -150,9 +157,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Dependencies
 
-- **PRD-024 must land first** — FR-1 extends the `inputs` array and exception entry that
-  its FR-2 creates, and both files are inside PRD-024's Conflict Surface until it closes.
-  Re-run `gate queue` before claiming rather than trusting this paragraph.
+- **PRD-024 is Ship Verified (2026-07-28)** — the `inputs` array and the reasoned
+  exception entry FR-1 extends are on `main`, so the former hard ordering is met.
+  PRD-026 declares nearby paths (`package.json`, CI); re-run `gate queue` before
+  claiming rather than trusting this paragraph.
 
 ---
 
@@ -295,4 +303,5 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, on the owner's triage direction | **Expanded and queued (first expansion of the protocol's two).** The owner's call on the below-threshold header: absorb the class. FR-1 now declares BOTH out-of-package reads measured on 2026-07-28 — the source snapshot and the real-bundle fixture PRD-025's review round added the same day, recorded in that PRD's Deferrals as this census's work — and the census's value claim changes kind: it is the standing gate for the class, not a one-instance repair. Value 2.80 → 3.45 (MF 4→5: cache-key truthfulness underwrites every gate's green and the class has two shipped breaks on record; TL 2→4: every future corpus-reading test inherits the census). PRD-024's landing turned the dependency from future work into a shipped seam: the inputs array and the reasoned exception entry exist on main, so FR-1 is an extension, not a creation. Serialization note updated — PRD-024 is Ship Verified, and the remaining coordination is only that PRD-026 also touches `package.json`/CI near the same seam; re-run `gate queue` |
 | 2026-07-28 | Claude Fable 5, converting a deferral at the board cap | Converted from the STATUS.md deferral "Frozen-snapshot digest" (opened PRD-017 Phase 6 round 9, due 2026-08-29) when the board hit its cap of 15 rows — the cap rule converts the oldest-due row. The original sketch (a cache-free `scripts/verify/` twin) is rejected in Non-Goals: PRD-024's input-declaration pattern closes the gap without a second implementation of the pin. Value scored honestly at 2.80, below the 3.40 candidate threshold, with the expand-or-cut status recorded in the header comment for the owner's triage call. Created with `gate new` |
