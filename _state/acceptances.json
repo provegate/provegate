@@ -292,6 +292,19 @@
       "date": "2026-07-28",
       "method": "interactive",
       "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-028",
+      "owner": "owner",
+      "items": [
+        "7.1 independent review accepted (Codex, 7 rounds, verdict pass, Critical: 0 sustained rounds 6-7, quorum 1/1)",
+        "0.4 stop-rule resolution ratified: owner-directed \u00a79 conformance edits on main (48d5503) for 027/034/036/039 in place of a hand-back",
+        "operator acceptance of the operator-gated close via gate run; push remains the owner's"
+      ],
+      "reason": "owner approved the acceptance in-session ('kabul', 2026-07-28) after the phase 4-7 report; the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
     }
   ]
 }
