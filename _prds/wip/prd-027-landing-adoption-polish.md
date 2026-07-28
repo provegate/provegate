@@ -3,7 +3,7 @@
 > **Status**: Draft
 >
 > **Created**: 2026-07-27
-> **Updated**: 2026-07-27
+> **Updated**: 2026-07-28
 > **Author**: Claude Opus 5, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `landing-adoption-polish`
@@ -29,11 +29,13 @@
 ## 1. Introduction / Overview
 
 An independent review of the shipped landing page (`apps/web`, PRD-013) produced ten
-suggestions. Six survived verification against the code; four did not, and two more
-defects the review missed were found while checking it. This PRD ships the six that
-survived plus the two new ones. It touches **no section order and no copy claim** — those
-are the owner-approved handoff's, and the parts of the review that wanted them changed are
-Non-Goals with a pointer to what they'd cost.
+suggestions. Six survived verification against the code; two more defects the review missed
+were found while checking it; and one item this PRD had **rejected** — the copy button —
+came back at readiness iteration 4, where the rejection itself was proven wrong (the
+affordance it cited as working is inert). This PRD ships the six that survived, the two new
+ones, and the resurrected one as FR-9 — nine FRs. It touches **no section order and no copy
+claim** — those are the owner-approved handoff's, and the parts of the review that wanted
+them changed are Non-Goals with a pointer to what they'd cost.
 
 The unifying defect is small and consistent: **the page asserts things it does not wire.**
 
@@ -46,19 +48,27 @@ The unifying defect is small and consistent: **the page asserts things it does n
 | The mobile hero spends the first screen on a duplicate | `globals.css:132-143` collapses `.pg-hero` to one column at ≤900px, stacking eyebrow + h1 + lede + a 188px-min terminal (`hero-terminal.tsx:70`) + two CTAs + the principles line + a nine-line `HandoffCard`. |
 | A content export is dead | `content.ts:284` exports `PROOF`; nothing imports it. `PROOF_EVIDENCE` replaced it and it was never deleted. |
 | A concept page competes with the product page | `app/alt/page.tsx` exports no `metadata`, so `/alt` inherits the root title and description — and, once FR-1 lands, the OG card too, because the resolver threads `resolvedMetadata` down the segment chain (`resolve-metadata.js:764-800`). Measured: `alt.html` already emits metadata byte-identical to `/`, with no `robots` meta. It also links back to `/` as "current landing" (`alt/page.tsx:470`). |
-| The install command is authored **three** times | Measured, not eyeballed: `npm install -D provegate` appears at `content.ts:18` (`HERO.install`), `:35` (`HERO_TERMINAL.steps`) and `:350` (`INSTALLERS[0].code`) — three independent authorings in the file whose header claims to be "the single source of landing copy". |
+| The install command is authored **four** times app-wide | Measured, not eyeballed: `npm install -D provegate` appears at `content.ts:18` (`HERO.install`), `:35` (`HERO_TERMINAL.steps`), `:350` (`INSTALLERS[0].code`) — three independent authorings in the file whose header claims to be "the single source of landing copy" — **and a fourth outside it**, `alt/page.tsx:202`, in a file that already imports `HERO` and authors the literal anyway. |
+| The page advertises "copy" where nothing copies | `copyable` renders `<span aria-hidden="true">copy</span>` with no handler (`CodeBlock.tsx:52-56`); its doc comment delegates wiring to a consumer it gives no wiring point. Four call sites advertise it; zero can copy. |
 
-Two review items are **rejected** rather than deferred, because the code contradicts them:
+One review item is **rejected** rather than deferred, because the code contradicts it:
 
 - *"`Problem` and `Proof` both render `PROOF_STATS` — the same three stats twice."* They do
   not. `Problem` renders `PROOF_STATS` (`index.tsx:168`); `Proof` renders `PROOF_EVIDENCE`
   and `LIMITS` (`index.tsx:516`, `531`). The separation is the design decision — limits
   adjacent to evidence — and `landing.test.tsx:79-85` asserts it.
-- *"Terminal blocks need a copy button."* `InstallTabs` and every CI snippet already pass
-  `copyable` (`tabs.tsx:93`, `tabs.tsx:121`), which renders one
-  (`packages/design/src/react/CodeBlock.tsx:38-52`). The blocks without a copy control —
-  hero terminal, `GateRun`, `CommandRef`, the playground plan — are **output**, not input.
-  FR-2 adds the one copy affordance that is genuinely missing, and no others.
+
+A second review item — *"terminal blocks need a copy button"* — was rejected in an earlier
+revision of this PRD, **and that rejection was wrong.** The rejection claimed `copyable`
+"renders one"; it renders `<span aria-hidden="true">copy</span>` with no handler and no
+clipboard call, and the component's own comment says the wiring "is the consumer's"
+(`packages/design/src/react/CodeBlock.tsx:11-14,52-56`) — while giving the consumer no wiring
+point. No consumer wires it: all four call sites (`tabs.tsx:93`, `:121`, `index.tsx:794`,
+`:797`) pass the prop and stop. The shipped page therefore **shows the word "copy" where
+nothing is copyable** — this PRD's own thesis defect, one layer down, previously cited as
+proof the defect was absent. FR-9 wires it for real. The narrower half of the old rejection
+stands: the blocks without any affordance — hero terminal, `GateRun`, `CommandRef`, the
+playground plan — are **output**, not input, and gain nothing.
 
 ---
 
@@ -80,27 +90,31 @@ Two review items are **rejected** rather than deferred, because the code contrad
 - [ ] No landing content export exists without at least one **other** source under
       `apps/web/app` referencing it. (Deliberately "referencing", not "rendering" — FR-7
       states why the stronger claim is not the one being made.)
+- [ ] Every rendered "copy" affordance actually copies. A visible copy label with no
+      handler is the metadata defect of FR-1 wearing a UI shirt, and after FR-9 none is left.
 
 ### Success Metrics
 
-| Metric | Current | Target | Measurement |
-| ------ | ------- | ------ | ----------- |
-Every "current" value below was produced by a command, and the command is named beside it.
-Three earlier rounds each shipped one loose number here; a measured value without its
-measurement is the defect this table exists to prevent.
+Every "Current" value below was produced by the **read-only command in its own cell**, run
+against today's tree (a fresh `pnpm --filter web build` first for the rows that read built
+HTML). The "Held by" column names the **acceptance test that will hold the target** — most
+of those tests do not exist yet, which is exactly why they cannot be what measured the
+current value. Three earlier rounds each shipped one loose number here, and a fourth
+conflated the two kinds of command; this table exists to prevent both.
 
-| Metric | Current | Target | Measurement |
-| ------ | ------- | ------ | ----------- |
-| `og:image` / `twitter:image` emitted for `/` | **0 of each**, while `twitter:card` declares `summary_large_image` — grep of the meta tags in `.next/server/app/index.html` | both present, image absolute under `metadataBase`, 1200×630 | `pnpm --filter web test test/metadata.test.ts` |
-| Copy affordances for the install command in the hero | 0 — `HeroTerminal` types the command with no control (`hero-terminal.tsx:71-91`) | 1 | `pnpm --filter web test test/landing.test.tsx` |
-| TrustStrip claims rendered as links | 0 of 3 — all three are `<span>` (`index.tsx:136-153`) | 3 of 3 | `pnpm --filter web test test/landing.test.tsx` |
-| Anchor targets that exist for a TrustStrip claim | 2 of 3 — `#ledger` and `#proof` render; `Refusal` carries no id (`index.tsx:426`) | 3 of 3 | `pnpm --filter web test test/landing.test.tsx` |
-| Orphaned anchors — rendered `href="#…"` with no matching id | **0**, measured by rendering all 23 blocks and diffing hrefs against ids | 0, asserted for every anchor instead of assumed | anchor-closure test (FR-4) |
-| Exports of `sections/content.ts` with no reference outside the declaration file | 1 — `PROOF`, the only one of 38, by word-anchored token census | 0, asserted | `pnpm --filter web test test/content-web.test.ts` |
-| Routes emitting product-page metadata | 2 — `/` and `/alt` emit byte-identical metadata, and `alt.html` has no `robots` meta | 1 | `pnpm --filter web test test/metadata.test.ts` |
-| External origins fetched by the built app | 0 — `node scripts/check-static-egress.mjs` reports `[egress] clean` | 0, unchanged; the OG card must not regress it | `node scripts/check-static-egress.mjs` |
-| `HandoffCard` rendered in the mobile hero at ≤900px | 1 — the card is in the collapsed grid's second item | 0, with no second copy anywhere in the document | `pnpm --filter web test test/landing.test.tsx` + `test/a11y.test.ts` |
-| Mobile hero block height at 375px | not yet measured — the operator records it **before** the change | measurably shorter by the card's height | operator row, real browser |
+| Metric | Current — measured by | Target — held by |
+| ------ | --------------------- | ---------------- |
+| `og:image` / `twitter:image` emitted for `/` | **0 of each** — `grep -c 'property="og:image"' apps/web/.next/server/app/index.html` → 0, while `twitter:card` declares `summary_large_image` | both present, image absolute under `metadataBase`, 1200×630 — `test/metadata.test.ts` (new) |
+| Copy affordances for the install command in the hero | 0 — `grep -cw termButton apps/web/app/sections/hero-terminal.tsx` → 0 | 1 — `test/landing.test.tsx` |
+| TrustStrip claims rendered as links | 0 of 3 — `sed -n '136,153p' apps/web/app/sections/index.tsx \| grep -c '<a'` → 0 | 3 of 3 — `test/landing.test.tsx` |
+| Anchor targets that exist for a TrustStrip claim | 2 of 3 — `grep -c 'id="refusal"' apps/web/app/sections/index.tsx` → 0; `#ledger` and `#proof` render | 3 of 3 — `test/landing.test.tsx` |
+| Orphaned anchors in built HTML — `href="#…"` with no matching id | **0 orphans across 12 anchor occurrences over 6 unique targets** — `grep -o 'href="#[^"]*"' apps/web/.next/server/app/index.html \| sort -u` diffed against the emitted `id=` set | 0, asserted for every anchor by the closure test (FR-4) |
+| Rendered `copyable` affordances that actually copy | **0 of 4** — `grep -rn copyable apps/web/app --include='*.tsx'` → 4 call sites; the rendered control is `<span aria-hidden="true">` with no handler (`CodeBlock.tsx:52-56`) | 4 of 4 — design `props.test.tsx` + `test/landing.test.tsx` (FR-9) |
+| Exports of `sections/content.ts` with no reference outside the declaration file | 1 of 38 — `grep -cE '^export ' apps/web/app/sections/content.ts` → 38; `grep -rnw PROOF apps/web/app --include='*.ts*' \| grep -v sections/content.ts` → 0 hits | 0, asserted — `test/content-web.test.ts` |
+| Routes emitting product-page metadata | 2 — `diff` of the sorted `<meta…>` sets of `index.html` and `alt.html` → 0 lines, and `alt.html` has no `robots` meta | 1 — `test/metadata.test.ts` (new) |
+| External origins fetched by the built apps | 0 — `node scripts/check-static-egress.mjs` → `[egress] clean`; note the script scans **both** built apps when present, so this row is cross-cutting rather than FR-1-specific | 0, unchanged; the OG card must not regress it — same script, in the cross-cutting floor |
+| `HandoffCard` rendered in the mobile hero at ≤900px | 1 — `grep -c '<HandoffCard' apps/web/app/sections/index.tsx` → 1, inside the collapsed grid's second item | 0, with no second copy anywhere in the document — `test/landing.test.tsx` + `test/a11y.test.ts` |
+| Mobile hero block height at 375px | not yet measured — the operator records it **before Phase 4 starts**, per the capture step in §11 | measurably shorter by the card's height — operator row, real browser, compared against the recorded value |
 
 The CTAs are deliberately absent from this table. FR-6 cannot lift them above the fold and
 says why; see the Non-Goal.
@@ -136,6 +150,8 @@ so that I can try it before I decide to read anything.
 - [ ] The hero exposes one copy control whose payload is the real install command.
 - [ ] It works before the typing animation finishes and under `prefers-reduced-motion`.
 - [ ] Nothing about the animation is faked to accommodate it.
+- [ ] Every block elsewhere on the page that advertises "copy" actually copies — no
+      aria-hidden label with no handler survives (FR-9).
 
 #### User Story 3 — the skeptic
 
@@ -203,17 +219,25 @@ Each FR carries the exact target paths the implementing agent will touch.
 
    **Content, so the implementer never invents copy.** Non-Goals forbid new claims, so the
    card composes only strings that already exist — but they must first *be* strings. Neither
-   is reusable today: the wordmark is split JSX (`ui.tsx:147`) and the title is a nested
-   `metadata` property (`layout.tsx:9`). So introduce two constants in `sections/content.ts`,
-   `PRODUCT_NAME` and `SITE_TITLE`, holding the values already shipped, and have
-   `layout.tsx`, the card's JSX and the card's `alt` all consume them — one declaration, no
-   drift. `PRINCIPLES` (`content.ts:306`) is the footer line. Export
+   is reusable today: the wordmark is split JSX (`ui.tsx:157` — `Prove` and `Gate` are two
+   nodes so the accent can colour the second) and the title is a nested `metadata` property
+   (`layout.tsx:10`). So introduce, in `sections/content.ts`:
+   `PRODUCT_NAME_PARTS = ['Prove', 'Gate'] as const` — the split the wordmark's styling
+   needs, declared once — `PRODUCT_NAME` derived as the parts joined, and `SITE_TITLE`
+   holding the title already shipped. **Every consumer of the name then derives from that one
+   declaration**: `layout.tsx`, the card's JSX and the card's `alt` consume `PRODUCT_NAME` /
+   `SITE_TITLE`, and `Wordmark` (`ui.tsx`) maps `PRODUCT_NAME_PARTS` instead of hardcoding
+   the two nodes — otherwise the constant is introduced *because* the wordmark is split JSX
+   while the split JSX survives beside it, which is the single-source claim made false at
+   birth. `PRINCIPLES` (`content.ts:306`) is the footer line. Export
    `size = { width: 1200, height: 630 }` and pass that same object to `ImageResponse`, plus
    `contentType = 'image/png'` and an `alt` equal to `SITE_TITLE`. The mark is the green
    token square the docs card already draws (`route.tsx:54-62`), not a new asset.
    - **Targets:** `apps/web/app/opengraph-image.tsx`, `apps/web/app/layout.tsx`,
      `apps/web/app/sections/content.ts::SITE_TITLE`,
-     `apps/web/app/sections/content.ts::PRODUCT_NAME`, `apps/web/test/metadata.test.ts`
+     `apps/web/app/sections/content.ts::PRODUCT_NAME`,
+     `apps/web/app/sections/content.ts::PRODUCT_NAME_PARTS`,
+     `apps/web/app/sections/ui.tsx::Wordmark`, `apps/web/test/metadata.test.ts`
 2. **FR-2**: The hero carries one copy control for the install command. Its accessible name
    matches `/copy/i`, its payload is the install string from `sections/content.ts` (never a
    second literal), and it is operable before the typing animation settles and when
@@ -223,19 +247,26 @@ Each FR carries the exact target paths the implementing agent will touch.
    `termButton` exists for this chrome (`ui.tsx:173-211`).
    - **Targets:** `apps/web/app/sections/hero-terminal.tsx`,
      `apps/web/app/sections/index.tsx::Hero`, `apps/web/test/landing.test.tsx`
-3. **FR-3**: The install command is authored once in `sections/content.ts`. Measured, it is
-   authored **three** times today: `:18` (`HERO.install`), `:35` (`HERO_TERMINAL.steps`) and
-   `:350` (`INSTALLERS[0].code`). After this FR all three derive from one declaration and the
-   rendered output of each is byte-identical to today's.
+3. **FR-3**: The install command is authored once, **app-wide**. Measured, it is authored
+   **four** times today: `content.ts:18` (`HERO.install`), `:35` (`HERO_TERMINAL.steps`),
+   `:350` (`INSTALLERS[0].code`) — and `alt/page.tsx:202`, which renders the npm line as its
+   own literal in a file that already imports `HERO`. An earlier revision said "three",
+   which was correct *within `content.ts`* and wrong about the app; the census below is
+   scoped so that mistake cannot recur. After this FR all four derive from one declaration
+   and the rendered output of each is byte-identical to today's.
 
-   **Assert the derivation, not the character count.** The invariant is that the three
+   **Assert the derivation, not the character count.** The invariant is that the four
    consumers cannot drift apart, which is a property of their *values*: `INSTALLERS`' npm
-   `code` equals `HERO.install`, and `HERO.install.split('\n')` equals
+   `code` equals `HERO.install`; `HERO.install.split('\n')` equals
    `HERO_TERMINAL.steps.slice(0, 2)` — the terminal's third step (`npx gate run PRD-001`) is
-   deliberately not part of the install pair. A source-text count is secondary and must
-   tolerate prose: strip comments before counting, since a doc comment quoting
-   `npm install -D provegate` is not a duplication and must not fail the gate.
-   - **Targets:** `apps/web/app/sections/content.ts`, `apps/web/test/content-web.test.ts`
+   deliberately not part of the install pair; and `/alt`'s rendered install line equals
+   `HERO.install.split('\n')[0]`, consumed from the constant rather than re-typed. A
+   source-text census is secondary, **scans every source under `apps/web/app` excluding the
+   declaration file**, and must tolerate prose: strip comments before counting, since a doc
+   comment quoting `npm install -D provegate` is not a duplication and must not fail the
+   gate.
+   - **Targets:** `apps/web/app/sections/content.ts`, `apps/web/app/alt/page.tsx`,
+     `apps/web/test/content-web.test.ts`
 4. **FR-4**: Claims link to evidence, and every anchor resolves. `Refusal` gains
    `id="refusal"`. Each `TRUST_STRIP` entry carries its own href — the ledger claim to
    `#ledger`, the 80+-agents claim to `#proof`, the push claim to `#refusal` — and renders
@@ -340,8 +371,12 @@ Each FR carries the exact target paths the implementing agent will touch.
      `apps/web/test/content-web.test.ts`
 8. **FR-8**: `/alt` stops competing with `/`, in search **and** in unfurls. The route stays —
    it is the owner's comparison surface — but it exports its own `metadata` with
-   `robots: { index: false, follow: false }` and a title naming it a concept. Whether `/alt`
-   survives to launch is not decided here.
+   `robots: { index: false, follow: false }` and a title naming it a concept. The title is
+   pinned verbatim so no copy is invented at implementation time:
+   **`ProveGate — alternative landing concept`**, composed as `PRODUCT_NAME` (FR-1's
+   constant) plus the phrase `alternative landing concept`, which is the route's own
+   self-description in its module comment (`alt/page.tsx:24`) — a name for the page, not a
+   new claim about the tool. Whether `/alt` survives to launch is not decided here.
 
    **`noindex` governs crawlers, not unfurls, so FR-1 hands `/alt` a problem FR-8 must
    close.** The resolver accumulates metadata down the segment chain
@@ -370,6 +405,42 @@ Each FR carries the exact target paths the implementing agent will touch.
    title, **no** `og:image`, **no** `twitter:image`, `twitter:card="summary"`, and a `robots`
    meta carrying `noindex` and `nofollow`. Same absence-and-staleness rule as FR-1.
    - **Targets:** `apps/web/app/alt/page.tsx`, `apps/web/test/metadata.test.ts`
+9. **FR-9**: `CodeBlock`'s `copyable` affordance copies. Today it renders
+   `<span aria-hidden="true">copy</span>` with no handler and no clipboard call
+   (`CodeBlock.tsx:52-56`), and its doc comment delegates the wiring to "the consumer" while
+   exposing no wiring point — no `onCopy`, no slot, no ref to the label. Four call sites
+   advertise it (`tabs.tsx:93`, `:121`, `index.tsx:794`, `:797`); zero can copy. That is the
+   declared-capability defect of FR-1 in component form, and this PRD previously cited it as
+   evidence the defect was absent.
+
+   **The contract.** `copyable` renders a real `<button type="button">` whose accessible
+   name matches `/copy/i`, in the same header slot the span occupies today. Its payload is a
+   new optional `copyText` prop when provided, else `children` when `children` is a plain
+   string — which covers all four current call sites (`current.code`, `C.HERO.install`,
+   `C.MANIFEST_SEED` are all strings), so **no consumer changes**. When neither yields a
+   string, the control does not render: an affordance with no payload is the defect this FR
+   deletes, and silently rendering it anyway would reintroduce it. The handler guards
+   `navigator.clipboard` exactly as FR-2 does — absent (jsdom, insecure context) means
+   no-op, never a throw. The component stays dependency-free; a platform API call inside an
+   event handler does not breach the "side-effect-free" note, but the doc comment that
+   promised consumer wiring must be rewritten to state the new contract, or the comment
+   becomes the next stale promise.
+
+   **Scope consequence, stated.** This FR touches `packages/design`, which the rest of the
+   PRD does not. `@provegate/design` is `private: true`, so changesets skips it — no
+   changeset, no version bump, no `.changeset/` write (that directory is another active
+   PRD's claimed surface, and this FR must not enter it). The Conflict Surface below claims
+   the two design files by name, and `gate queue` was re-run before claiming: no active
+   claim overlaps them.
+
+   **Tests, both layers.** Design (`props.test.tsx`): the button renders with the
+   accessible name; activating it writes the payload (clipboard mocked); a missing
+   clipboard does not throw; non-string children with no `copyText` renders no control.
+   Web (`landing.test.tsx`): each of the four advertising blocks exposes a working control
+   whose payload equals the constant it renders. The hero terminal's control is FR-2's and
+   is asserted there — this FR adds no affordance to output blocks.
+   - **Targets:** `packages/design/src/react/CodeBlock.tsx`,
+     `packages/design/test/props.test.tsx`, `apps/web/test/landing.test.tsx`
 
 ---
 
@@ -397,7 +468,8 @@ Each FR carries the exact target paths the implementing agent will touch.
   memory-producing PRD needs the same one-line append and none of PRD-024/025/026/028 declares
   it, so the collision is invisible to the path-conflict gate repo-wide. Fixing that means both
   a `.gitattributes` driver **and** a `sharedAppendOnly` entry — overlap subtraction reads
-  configuration only, never `.gitattributes` (`conflicts.ts:63`), so neither alone is enough.
+  configuration only, never `.gitattributes` (`conflicts.ts:67-68`, where `materialize` subtracts only the
+configured `sharedAppendOnly` set), so neither alone is enough.
   That is memory-substrate work; this PRD only declares its own write.
 - **The `/` vs `/alt` concept contest.** FR-8 only stops `/alt` from being indexed and
   mistaken for the product page.
@@ -405,8 +477,10 @@ Each FR carries the exact target paths the implementing agent will touch.
   design brief. Nothing new is asserted about the tool.
 - **`apps/docs`.** Its OG route already exists and is untouched; this PRD reads it as the
   pattern to follow.
-- **A published release.** `web` is `private: true`, so changesets skips it; no changeset
-  and no version bump.
+- **A published release.** `web` and `@provegate/design` are both `private: true`
+  (`apps/web/package.json`, `packages/design/package.json`), so changesets skips every
+  package this PRD touches; no changeset, no version bump, and no write into `.changeset/`
+  — which is also an active claim of PRD-025's Conflict Surface.
 
 ---
 
@@ -446,13 +520,17 @@ Each FR carries the exact target paths the implementing agent will touch.
   `max-width: 900px` block — the class is the joining term, asserted on both sides.
 - **Given** `sections/content.ts`, **When** its exports are enumerated, **Then** every one is
   referenced by a source under `apps/web/app`, and `PROOF` is gone.
-- **Given** a freshly built `/alt`, **When** `alt.html` is read, **Then** it emits its own
-  concept title, **no** `og:image`, **no** `twitter:image`, `twitter:card="summary"`, and a
-  `robots` meta carrying `noindex` and `nofollow`.
-- **Given** `sections/content.ts`, **When** the install declaration is compared to its three
-  consumers, **Then** `INSTALLERS`' npm `code` equals `HERO.install` and `HERO.install`'s two
-  lines equal the first two `HERO_TERMINAL.steps` — and a doc comment quoting the command
-  fails nothing.
+- **Given** a freshly built `/alt`, **When** `alt.html` is read, **Then** it emits the title
+  `ProveGate — alternative landing concept`, **no** `og:image`, **no** `twitter:image`,
+  `twitter:card="summary"`, and a `robots` meta carrying `noindex` and `nofollow`.
+- **Given** `sections/content.ts`, **When** the install declaration is compared to its four
+  consumers, **Then** `INSTALLERS`' npm `code` equals `HERO.install`, `HERO.install`'s two
+  lines equal the first two `HERO_TERMINAL.steps`, and `/alt`'s rendered install line equals
+  the declaration's first line — and a doc comment quoting the command fails nothing.
+- **Given** any block that advertises a copy affordance, **When** the reader activates it,
+  **Then** the block's real payload reaches the clipboard — and **When** `navigator.clipboard`
+  is absent, **Then** nothing throws. A `copyable` block whose payload cannot be derived
+  renders no affordance at all.
 - **Given** the export census, **When** it runs, **Then** it excludes `content.ts` itself and
   matches word-anchored tokens, so `PROOF` is **not** kept alive by `PROOF_EVIDENCE`.
 - **Given** a scroll position where two sections intersect in separate observer callbacks,
@@ -480,7 +558,8 @@ source **and** the emitted tags on the built output — see FR-1 for why neither
 enough.
 
 **Why an anchor-closure test rather than three assertions.** Three new hrefs are three new
-chances to rot. The page has **no** orphaned anchor today — all six rendered anchors resolve,
+chances to rot. The page has **no** orphaned anchor today — twelve `href="#…"` occurrences
+over six unique targets, every one resolving,
 measured by rendering the whole composition — so this installs a regression floor while the
 surface is clean rather than fixing a bug. Asserting the closed set (every rendered
 `href="#…"` has a rendered `id`) costs the same to write as three individual assertions and
@@ -495,9 +574,10 @@ directly above it. FR-6 therefore pins those lines as load-bearing: they may not
 to shorten the hero further.
 
 **Clipboard.** `navigator.clipboard.writeText` is a platform API — no dependency. It is
-undefined in jsdom and in insecure contexts, so the handler must guard rather than throw;
-the test asserts the control's presence and payload wiring, and the real copy is an operator
-row.
+undefined in jsdom and in insecure contexts, so every handler must guard rather than throw.
+Two control kinds exist after this PRD and share that guard: FR-2's hero control (TermBar
+chrome, `termButton`) and FR-9's `CodeBlock` button (design package). The tests assert
+presence and payload wiring for both; the real copy is an operator row.
 
 ### Dependencies
 
@@ -506,9 +586,11 @@ row.
 
 ### Rollback
 
-Six of the eight FRs revert cleanly and independently: they are additive or deletive changes
-to a private, unpublished app with no data, no schema and no consumer. `web` is
-`private: true`, so changesets skips it — no version to unpublish, no adopter to migrate.
+Seven of the nine FRs revert cleanly and independently: they are additive or deletive
+changes to private, unpublished packages with no data, no schema and no external consumer.
+`web` and `@provegate/design` are both `private: true`, so changesets skips them — no
+version to unpublish, no adopter to migrate. Reverting FR-9 restores the inert span, which
+is the shipped state — worse, but not broken by the revert.
 
 **FR-1 and FR-8 are one ordered rollback unit.** FR-8 exists *because* FR-1 makes the root
 card reach `/alt`. Reverting FR-8 alone leaves the root card in place with no override on
@@ -521,10 +603,20 @@ LinkedIn and every other unfurl consumer **caches the card it already fetched**,
 schedule. A wrong card outlives its revert by hours to days, and the remedies are per-platform
 cache-purge tools the repository does not control.
 
-The consequence is an **ordering constraint, not a rollback plan**: the real-unfurl operator
-rows in §11 are a **precondition to sharing either URL anywhere** — a README, a post, a
-message — not post-hoc checks. This is the one place in this PRD where "ship it, revert if
-wrong" does not hold, and it is why FR-1's verification includes a human step at all.
+The consequence is an **ordering constraint, not a rollback plan** — and it binds the
+**deploy-and-share step, not this PRD's close.** An earlier revision made a real-client
+unfurl check a blocking pre-merge operator row, and that row could not execute: deployment
+is a Non-Goal, the repository has no web preview or deploy workflow
+(`.github/workflows/ci.yml` builds, `release.yml` publishes npm — measured), and fetching
+`provegate.dev` before this change deploys would inspect old production. A gate that cannot
+run is not a gate. So the split is: **this PRD's close is held by the emitted-tag
+assertions** (`test/metadata.test.ts`, on fresh builds, both routes); **the real-unfurl
+check is a launch precondition** — before either URL is shared anywhere (a README, a post,
+a message), the owner runs an OG debugger against the *deployed* origin and sees `/` render
+the card and `/alt` render title-only. That step belongs to whatever act first deploys or
+shares the URL — the launch checklist around `_docs/launch/announcement-draft.md` is its
+natural home — and §11 records it as a launch note rather than a close-blocking row,
+because unfurl consumers cache what they fetch and a wrong card outlives its revert.
 
 Two smaller notes, so nobody looks for a plan that isn't needed:
 
@@ -547,8 +639,12 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 - [ ] `apps/web/app/sections/index.tsx` — `Refusal` id, `TrustStrip` anchors, hero card
       wrapper class (FR-4, FR-6)
 - [ ] `apps/web/app/sections/nav.tsx` — active-section state (FR-5)
+- [ ] `apps/web/app/sections/ui.tsx` — `Wordmark` derives from `PRODUCT_NAME_PARTS` (FR-1)
 - [ ] `apps/web/app/globals.css` — the ≤900px rule (FR-6)
-- [ ] `apps/web/app/alt/page.tsx` — own metadata, noindex (FR-8)
+- [ ] `apps/web/app/alt/page.tsx` — own metadata, noindex, install line from the constant
+      (FR-3, FR-8)
+- [ ] `packages/design/src/react/CodeBlock.tsx` — `copyable` wired for real (FR-9)
+- [ ] `packages/design/test/props.test.tsx` — extended, never weakened (FR-9)
 - [ ] `apps/web/test/metadata.test.ts` — new
 - [ ] `apps/web/test/landing.test.tsx`, `apps/web/test/content-web.test.ts`,
       `apps/web/test/a11y.test.ts` — extended, never weakened
@@ -617,7 +713,7 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
   adds an `id` and an anchor, no code path. The omission stays an omission.
 - reviewed: `memory-index-vs-detail` — it governs the single output below: the durable fact
   is a platform behaviour the repo does not record, not a description of this diff. The
-  eight FRs themselves are derivable from the code and are not written to `_brain`.
+  nine FRs themselves are derivable from the code and are not written to `_brain`.
 
 ---
 
@@ -628,7 +724,10 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
   `twitter.card: 'summary_large_image'` with no image produces no card, no build error, no
   lint warning and no test failure. The durable rule is the coherence assertion — when a
   declaration names a richer form, assert in a test that the asset it promises exists — and
-  it generalizes past OG cards to any declared-capability field.
+  it generalizes past OG cards to any declared-capability field. This PRD itself supplied
+  the second instance: `copyable` rendered the word "copy" with no handler (FR-9), and the
+  PRD's earlier revision cited that inert declaration as proof the capability existed —
+  the failure mode includes *reviewers reading declarations as evidence*.
 
 ---
 
@@ -636,6 +735,8 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 
 - `apps/web/app/**`
 - `apps/web/test/**`
+- `packages/design/src/react/CodeBlock.tsx`
+- `packages/design/test/props.test.tsx`
 - `_brain/learnings/metadata-declares-what-it-cannot-provide.md`
 - `_brain/INDEX.md`
 
@@ -651,16 +752,21 @@ serializes the INDEX append across memory-producing PRDs, and given the absent m
 that serialization is correct rather than over-claiming.
 
 Two limits on that reasoning, stated so it is not read as a fix: overlap subtraction consults
-**configuration only**, never `.gitattributes` (`conflicts.ts:63`), so adding a union driver
+**configuration only**, never `.gitattributes` (`conflicts.ts:67-68`, where `materialize` subtracts only the
+configured `sharedAppendOnly` set), so adding a union driver
 would not by itself change queue behaviour; and PRD-024, PRD-025, PRD-026 and PRD-028 all
 declare new memory records **without** declaring the INDEX write, so the repo-wide collision
 stays invisible to the gate no matter what this PRD does. Both are Non-Goals above.
 
-Not claimed, deliberately: `apps/docs/**` (read as the OG pattern, never written) and
+Not claimed, deliberately: `apps/docs/**` (read as the OG pattern, never written),
 `scripts/check-static-egress.mjs` (executed as a gate, never edited — if the OG card trips
-it, the card is wrong, not the check). Measured with `gate queue` on 2026-07-27: no active
-claim overlaps `apps/web/**` or `_brain/**`. Re-run `gate queue` before claiming — and expect
-an INDEX overlap the moment another memory-producing PRD declares the same path.
+it, the card is wrong, not the check), and `.changeset/**` (both touched packages are
+`private: true`, and the directory is PRD-025's declared surface — FR-9 states the
+avoidance as a rule). Measured with `gate queue` on 2026-07-28: zero in-flight claims, so
+nothing overlaps `apps/web/**`, `packages/design/**` or `_brain/**`; the two design paths
+are named file-by-file rather than as a glob so the claim stays as narrow as FR-9's touch.
+Re-run `gate queue` before claiming — and expect an INDEX overlap the moment another
+memory-producing PRD declares the same path.
 
 ---
 
@@ -685,15 +791,17 @@ Run from the repo root after `pnpm build`.
 | ---- | --------------- | ----- | ----- |
 | FR-1 | `pnpm --filter web build` | web | a fresh build, so the emitted-metadata rows below cannot read a stale tree |
 | FR-1 | `pnpm --filter web test test/metadata.test.ts` | web | the source coherence triple plus the emitted og:image, its 1200x630 dimensions and the twitter image; an absent build file fails the row |
-| FR-1 | `node scripts/check-static-egress.mjs` | root | the OG card fetches nothing external |
+| FR-1 | `node scripts/check-static-egress.mjs` | root | the OG card fetches nothing external; the script scans both built apps when present, so it repeats in the cross-cutting floor and this row is its FR-1 reading |
 | FR-2 | `pnpm --filter web test test/landing.test.tsx` | web | hero copy control, real payload, reduced-motion |
-| FR-3 | `pnpm --filter web test test/content-web.test.ts` | web | the three consumers derive from one declaration; comment-stripped source count as the secondary check |
+| FR-3 | `pnpm --filter web test test/content-web.test.ts` | web | the four consumers derive from one declaration, alt included; comment-stripped app-wide census excluding the declaration file as the secondary check |
 | FR-4 | `pnpm --filter web test test/landing.test.tsx` | web | every rendered anchor resolves to a rendered id |
 | FR-5 | `pnpm --filter web test test/landing.test.tsx` | web | retained per-target ratio map driven by sequential callbacks, document-order tie-break, exactly one location token across the whole nav with the drawer open, no-IO fallback throws nothing |
 | FR-6 | `pnpm --filter web test test/a11y.test.ts` | web | the wrapper class is hidden inside the 900px block of the stylesheet |
 | FR-6 | `pnpm --filter web test test/landing.test.tsx` | web | exactly one HandoffCard, and it sits inside an element carrying that same wrapper class |
 | FR-7 | `pnpm --filter web test test/content-web.test.ts` | web | word-anchored token census over comment-stripped sources, excluding the declaration file |
-| FR-8 | `pnpm --filter web test test/metadata.test.ts` | web | the built alt route emits its own title, no image of either kind, a summary card and a robots meta carrying noindex and nofollow; an absent build file fails the row |
+| FR-8 | `pnpm --filter web test test/metadata.test.ts` | web | the built alt route emits the pinned concept title, no image of either kind, a summary card and a robots meta carrying noindex and nofollow; an absent build file fails the row |
+| FR-9 | `pnpm --filter @provegate/design test` | design | the copyable control is a real button with an accessible copy name; activation writes the payload; absent clipboard throws nothing; non-string children with no copyText renders no control |
+| FR-9 | `pnpm --filter web test test/landing.test.tsx` | web | each of the four advertising blocks exposes a working control whose payload equals the constant it renders |
 
 <!-- No backticks in the Scope/Notes cells of an FR row: the §11 parser extracts every
 backticked span on the whole row (`safety.ts:47-59`, deliberate — a bare word must surface
@@ -705,9 +813,12 @@ Cross-cutting floor (all green before Code Complete):
 
 - `pnpm check-types` — zero errors
 - `pnpm lint` — zero warnings
-- `pnpm test` — added tests pass; the three existing web test files keep every assertion
+- `pnpm test` — added tests pass; the three existing web test files and the design
+  package's `props.test.tsx` keep every assertion
 - `pnpm build` — clean build
 - `pnpm --filter web build` — the landing and the OG route build
+- `node scripts/check-static-egress.mjs` — zero external origins across every built app
+  present, the cross-cutting reading of the FR-1 row above
 
 Hard caps — none apply, and each is named so Phase 2 can confirm rather than assume:
 
@@ -718,23 +829,30 @@ Hard caps — none apply, and each is named so Phase 2 can confirm rather than a
 
 Operator-owned (real browser, recorded as `operator` rows — `skipped` is illegal):
 
-- The install command actually reaches the system clipboard, in both themes.
-- At 375×667: **record the hero block height before the change**, then confirm it shrank, that
-  no `HandoffCard` renders in the hero, and that there is no horizontal scroll. The CTAs are not
-  part of this row — FR-6 cannot lift them and the PRD does not claim it does.
+- The install command actually reaches the system clipboard, in both themes — from the hero
+  control (FR-2) and from the install tab's block (FR-9).
+- **Baseline capture, before Phase 4 starts:** at 375×667 against the pre-change tree, the
+  operator measures the hero block's rendered height and **records the pixel value in the
+  review artifact** (`_docs/reviews/review-027-landing-adoption-polish.md`, first operator
+  row) — that artifact is a declared Durable Artifact, so the number survives to the moment
+  it is compared. A comparison whose before-value has no recorded home is not a
+  measurement.
+- At 375×667 after the change: confirm the hero shrank against the recorded value, that no
+  `HandoffCard` renders in the hero, and that there is no horizontal scroll. The CTAs are
+  not part of this row — FR-6 cannot lift them and the PRD does not claim it does.
 - Scrolling `/` highlights exactly one nav link at a time, with no text shift on activation —
   including while scrolling *fast*, where threshold callbacks arrive out of order. Below 900px
   there is deliberately no indicator.
-- **BLOCKING, and ordered:** the card renders correctly in a real unfurl (an OG debugger, X or
-  Slack) for `/`. This row is a **precondition to the URL being shared anywhere** — a README, a
-  post, a message — not a post-hoc check: unfurl consumers cache what they fetched, so a wrong
-  card survives its own revert (§7 → Rollback).
-- **BLOCKING, and ordered, for `/alt` too:** the same debugger shows `/alt` unfurling with its
-  own concept title and **no image**, not the product card. Machine assertions cover the emitted
-  tags; only a real client proves what the tags produce, and `/alt` is the route whose whole
-  purpose is to not look like `/`.
 - Keyboard: the three trust-strip anchors take focus, show a visible ring, and land on the
   right section.
+
+**Launch precondition — deliberately not an operator row of this PRD**, because it cannot
+execute before a deploy exists and a row that cannot run is not a gate (§7 → Rollback,
+measured against the repo's workflows). Before either URL is shared anywhere, the owner
+runs an OG debugger against the **deployed** origin: `/` renders the 1200×630 card, `/alt`
+unfurls title-only with no image. Unfurl consumers cache what they fetch, so this check
+precedes the first share, on whatever PRD or owner action performs the deploy — the launch
+checklist around `_docs/launch/announcement-draft.md` is its home.
 
 Before Phase 2 PASS, run: `gate check PRD-027`
 
@@ -771,7 +889,7 @@ Before Phase 2 PASS, run: `gate check PRD-027`
   `content.ts` itself. `PROOF` is a prefix of `PROOF_EVIDENCE`, and every export names itself at
   its own declaration — either mistake greens the orphan.
 - DO NOT assert FR-3 by counting the install literal in raw source. Comments are prose; the
-  invariant is that the three consumers derive from one declaration.
+  invariant is that the four consumers — `/alt` included — derive from one declaration.
 - DO NOT skip the `_brain/INDEX.md` pointer line. A learning without its index entry is not
   captured (`_brain/PROTOCOL.md:219-224`), and the path is declared so the write is in scope.
 - DO NOT state a measured number anywhere in this PRD without the command that produced it.
@@ -790,8 +908,15 @@ Before Phase 2 PASS, run: `gate check PRD-027`
   `sections/content.ts`.
 - DO NOT add a dependency. `next/og` ships with `next`; the clipboard is a platform API.
 - DO NOT let the nav active indicator change layout when it activates.
-- DO NOT weaken or delete an assertion in `landing.test.tsx`, `content-web.test.ts` or
-  `a11y.test.ts` to make a change pass. If an existing assertion fails, the change is wrong.
+- DO NOT weaken or delete an assertion in `landing.test.tsx`, `content-web.test.ts`,
+  `a11y.test.ts` or the design package's `props.test.tsx` to make a change pass. If an
+  existing assertion fails, the change is wrong.
+- DO NOT render a copy affordance whose payload cannot be derived, and DO NOT keep the
+  aria-hidden span as a fallback. A visible "copy" with no handler is the defect FR-9
+  deletes; reintroducing it quietly for an edge case is the same defect with a rationale.
+- DO NOT write anything into `.changeset/`. Both touched packages are `private: true`, so
+  changesets skips them — and that directory is PRD-025's claimed surface; entering it
+  creates the path collision the queue gate exists to prevent.
 - DO NOT add an `inputs` key to any task in `turbo.json` — `scripts/verify/verify-turbo-inputs.mjs`
   refuses it as a blanket rule (exceptions file is empty), and narrowing the `test` task's key
   is precisely what would create the stale-green defect that currently cannot happen here.
@@ -804,4 +929,5 @@ Before Phase 2 PASS, run: `gate check PRD-027`
 | Date | Author | Changes |
 | ---- | ------ | ------- |
 | 2026-07-27 | Claude Opus 5 | Initial draft — six verified items from the independent landing review, two defects found while verifying it, two items rejected with evidence |
+| 2026-07-28 | Claude Fable 5 | **Iteration-4 remediation, every finding re-verified against source before editing.** **[P1] H closed as FR-9**: the rejection of the copy-button review item is deleted and replaced with the corrected finding — `copyable` renders `<span aria-hidden="true">copy</span>` with no handler (`CodeBlock.tsx:52-56` re-read; all four call sites re-measured passing plain-string children), so FR-9 wires it in the component: a real button, `copyText`-or-string-children payload, no-payload renders no control, clipboard guarded, doc comment rewritten. Scope consequence stated in the FR and the Conflict Surface: two `packages/design` files claimed by name; both touched packages measured `private: true`, so no `.changeset/` write — that directory is PRD-025's claim and a new DO NOT names the avoidance. **[P1] I closed by rebinding the constraint**: the two BLOCKING real-unfurl operator rows could not execute pre-merge (no deploy or preview workflow — `ci.yml`/`release.yml` re-checked), so the close is held by the emitted-tag assertions and the real-unfurl check is restated as a launch precondition bound to the first deploy/share, pointed at the launch checklist. **[P2]s J, K, L, M closed**: FR-3 goes app-wide — the fourth authoring at `alt/page.tsx:202` re-measured, `/alt` becomes a named consumer, the census excludes only the declaration file; FR-1 gains `PRODUCT_NAME_PARTS` with `Wordmark` (`ui.tsx:157`) as a named consumer so the split JSX cannot survive beside the constant, and FR-8's title is pinned verbatim from the route's own self-description; the Success Metrics table now separates the read-only command that produced each current value (every one re-run this session: 0 og:image, 0/4 working copy affordances, 38 exports/1 orphan, 12 anchor occurrences over 6 targets, 0-line metadata diff between routes) from the acceptance test that will hold the target; the mobile-height baseline gets a capture point (before Phase 4) and a durable home (the review artifact's first operator row). **[P3]s N, O, P closed**: occurrences vs targets stated everywhere the count appears; the egress row marked cross-cutting and repeated in the floor; the duplicated metrics header removed and the stale `conflicts.ts:63` citation corrected to `:67-68` at both sites |
 | 2026-07-27 | Claude Opus 5 | **Rebuilt after loss.** A concurrent session committed this PRD mid-round (`b63f5d6`, capturing the 484-line draft) and the PRD-021 land/merge commits then overwrote the uncommitted W1–W15 remediations; no stash and no dangling blob carried them (`4a16dfd`, `d4b1900`, `8ef533d` all hold one Changelog row). This row rebuilds all fifteen **and** closes Codex's iteration-3 findings in one pass, from `_readiness/wip/readiness-027-landing-adoption-polish.md`, which survived because it had been committed. **FR-1:** the `images` declaration is forbidden with the resolver cited (`resolve-metadata.js:137-157`), asserted at two levels — a source coherence triple plus the emitted `og:image` in built HTML — with absence *and* staleness failing the row, and the card's content pinned to new `SITE_TITLE` / `PRODUCT_NAME` constants because the wordmark is split JSX and the title a nested metadata property, so neither was reusable. **FR-3/FR-15:** install baseline corrected to three (`content.ts:18,35,350`), asserted as value derivation not character count. **FR-5:** `aria-current="location"`, and the algorithm rewritten — an `IntersectionObserver` callback is not a snapshot, so a retained per-target ratio map with declared thresholds replaces "greatest ratio in this callback", tested with sequential callbacks; `aria-current` belongs to the desktop strip alone, since `Nav` maps `NAV_LINKS` twice. **FR-6:** the fold claim withdrawn everywhere including the operator row, the grid geometry stated, and the assertion joined through the wrapper class so a CSS rule and a card count can no longer both pass while the card stays visible. **FR-7:** the census excludes the declaration file and matches word-anchored tokens, because `PROOF` is a prefix of `PROOF_EVIDENCE`; `grep-token-anchors-real-impl` declared as a Memory Input, alongside `false-green-on-missing-file`. **FR-8:** `/alt` drops the inherited card by declaration (`:182-190` replaces wholesale), takes `card: 'summary'`, and is asserted on emitted metadata — measured before-state: `alt.html` emits metadata byte-identical to `/` with no robots meta, though the files differ in size. **§7:** Rollback added, with FR-1+FR-8 as one ordered unit and the unfurl-cache asymmetry making the real-unfurl operator rows a precondition to sharing either URL. **Scope/Conflict Surface/Durable Artifacts:** `_brain/INDEX.md` declared in all three, with the two limits on that reasoning stated as Non-Goals. Every Success Metric now carries the command that produced its current value |
