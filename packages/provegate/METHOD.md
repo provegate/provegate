@@ -131,9 +131,17 @@ Work with operator-owned handoff rows may close autonomously **only** when an
 owner-signed acceptance entry exists in the acceptances file
 (`_state/acceptances.json`, see `schemas/acceptances.schema.json`): the signing
 identity must be in `workflow.config.json` `owners` (roles, never person names), items
-non-empty, reason recorded. Agents never write acceptance entries on their own
-initiative — the acceptance is the owner's decision, recorded verbatim. The runner's
-merge gate validates the entry mechanically and refuses otherwise.
+non-empty, reason recorded. The runner's merge gate validates the entry mechanically and
+refuses otherwise.
+
+An agent never originates an acceptance on its own initiative, and never accepts its own
+work. It may **transcribe** one: on explicit in-session owner direction, an agent writes
+the entry with `authorship: "agent-transcribed"`. `owner` names who DECIDED; `authorship`
+names who TYPED. An owner writing directly records `owner-written`. Both values are
+required and enumerated, so authorship is queryable rather than buried in prose — but the
+field is a record, not an enforcement: nothing prevents a false value, and nothing can.
+What it buys is that concealing authorship becomes an affirmative false statement in a
+typed field instead of an unreadable ambiguity. See ADR-0003.
 
 ## Deferral governance
 

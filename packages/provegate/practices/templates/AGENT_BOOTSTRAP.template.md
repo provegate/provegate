@@ -43,8 +43,10 @@ An autonomous agent must STOP and ask the human before any of:
 - **New dependency** — adding any dependency not named in the spec.
 - **Out-of-scope files** — touching files outside the spec's documented scope / Conflict Surface.
 - **Secrets / env** — modifying secrets or `.env.*` beyond what the spec specifies.
-- **Operator acceptance** — an agent never writes the acceptance store; recording a
-  waiver is a deliberate human action by an allowlisted owner.
+- **Operator acceptance** — an agent writes the acceptance store only on explicit
+  in-session owner direction, and only with `authorship: "agent-transcribed"`; absent that
+  direction, stop and ask. `owner` names who DECIDED, never who typed. An agent never
+  originates an acceptance and never accepts its own work.
 - **Unspecified design question** — a design decision the spec doesn't answer.
 
 On a blocker, surface the error verbatim — never paper over it with an `any` cast, an

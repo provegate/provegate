@@ -31,7 +31,7 @@
 - [locks on main not worktree](learnings/locks-on-main-not-worktree.md) — write locks to the main checkout, not the ephemeral worktree, or teardown orphans the claim
 - [conflict check independent of override](learnings/conflict-check-independent-of-override.md) — pre-start overlap check reads the item's declared surface, never a caller override
 - [no completed/done status alias](learnings/no-completed-done-status-alias.md) — "Completed"/"Done" self-declares the terminal state and inverts gate order; reject it
-- [operator acceptance no self-accept](learnings/operator-acceptance-no-self-accept.md) — an agent must never self-accept operator rows; TTY/--yes + owner allowlist
+- [operator acceptance no self-accept](learnings/operator-acceptance-no-self-accept.md) — never self-accept; transcribing an owner decision is a different act, and the record says which
 - [operator row must be a table row](learnings/operator-row-must-be-a-table-row.md) — a checkbox-bullet operator row counts as 0 rows; the merge gate passes without the acceptance
 - [two parsers wrong together](learnings/two-parsers-wrong-together.md) — a corpus proves agreement, not correctness; bind each claim to behaviour
 - [fixture must reach production shape](learnings/fixture-must-reach-production-shape.md) — a regression called with cleaner arguments than production cannot detect the defect
@@ -55,5 +55,6 @@
 
 ## ADRs
 
+- [ADR-0003 acceptance authorship](adr/ADR-0003-acceptance-authorship.md) — owner records who decided, authorship records who typed; a record, not an enforcement
 - [ADR-0002 agent protocol delivery](adr/ADR-0002-agent-protocol-delivery.md) — protocols reach agents as a one-way rendered store; pointer-only adapters; enumerated tokens, not a template language
 - [ADR-0001 closed-loop agent memory](adr/ADR-0001-closed-loop-agent-memory.md) — declared PRD inputs, watch-triggered review, base-ref weakening proof, Phase 7 capture

@@ -26,7 +26,7 @@
     },
     "brain/INDEX.md": {
       "dest": "_brain/INDEX.md",
-      "pack": "88d9de413f4fd430",
+      "pack": "24750e380c5a78b3",
       "track": "pack",
       "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
     },
@@ -47,8 +47,8 @@
     },
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
-      "pack": "6083eb45e7cfa526",
-      "repo": "f9664d50c0ed05a2"
+      "pack": "bb3c2597386d9f09",
+      "repo": "94e9817e8bdd57c2"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",
@@ -243,8 +243,8 @@
     },
     "brain/learnings/operator-acceptance-no-self-accept.md": {
       "dest": "_brain/learnings/operator-acceptance-no-self-accept.md",
-      "pack": "2594d47567b8024a",
-      "repo": "2594d47567b8024a"
+      "pack": "c937cda399f0355e",
+      "repo": "c937cda399f0355e"
     },
     "brain/learnings/push-is-human-by-omission.md": {
       "dest": "_brain/learnings/push-is-human-by-omission.md",
