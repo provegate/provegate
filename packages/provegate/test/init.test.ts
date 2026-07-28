@@ -109,7 +109,14 @@ describe('initWorkspace (FR-2, W1)', () => {
     initWorkspace(cfg, root);
     expect(buildState(cfg, root).records).toEqual([]);
     const manifest = loadManifest(cfg, root);
-    expect(auditWiring(cfg, manifest, root)).toEqual({ ok: true, issues: [] });
+    // PRD-025 added `surfaces` to WiringReport (an FR-required output field);
+    // a scaffold with no package.json reads zero script bodies and no other
+    // surface exists yet.
+    expect(auditWiring(cfg, manifest, root)).toEqual({
+      ok: true,
+      issues: [],
+      surfaces: ['manifest', 'scripts:0'],
+    });
   });
 
   it('refuses config-controlled paths that escape the root (absolute, dotdot, symlink)', () => {
