@@ -33,6 +33,10 @@ Migration, by hand, per wip PRD that now fails `gate check`:
    to it — the closed form passes only when the link resolves.
 3. The shipped PRD template states both forms immediately before the §9 heading; an
    older install keeps its old template until you re-copy it.
+4. Completed and deferred historical artifacts are OUTSIDE the migration: rewriting
+   history is not required, and the wip corpus is what the readiness gate protects.
+   Re-running `gate check` against an already-completed PRD may now honestly report
+   §9 failures that were invisible before — expected, not a regression.
 
 The change is one-directional-safe: a §9 in the closed form also passes the old
 substring rule, so rolling back strands nothing.

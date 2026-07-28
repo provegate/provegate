@@ -1,4 +1,5 @@
 import {
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -207,6 +208,11 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     writeFileSync(join(root, '_prds/deferred/prd-126-later.md'), '# PRD-126: Later\n');
     writeFileSync(join(root, '_prds/wip/prd-124-other.md'), '# PRD-124: Other\n');
     writeFileSync(join(root, '_prds/wip/prd-128-stub.md'), 'a smuggled question, no heading\n');
+    // Round 1 (codex): the wrong-width and parser-rejected rows carry
+    // otherwise-valid EXISTING targets, so the named rule is each row's only
+    // failing cause — a deny riding on a missing file is not evidence.
+    writeFileSync(join(root, '_prds/wip/prd-023-x.md'), '# PRD-023: X\n');
+    writeFileSync(join(root, '_prds/wip/prd-123.md'), '# PRD-123: Parser Reject\n');
   }
 
   for (const row of rows) {
@@ -249,6 +255,34 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     expect(
       oq(doc(['- Deferred to [PRD-123](_prds/wip/nested/prd-123-followup.md)']), root).join('; '),
     ).toContain('directly inside a lifecycle state directory');
+  });
+
+  it('[R1-P1-1] a state DIRECTORY aliased to another role cannot relabel finished work', () => {
+    // `_prds/deferred` → `_prds/completed`: the file-level lstat sees a regular
+    // file, the realpath stays under the artifact root, and the H1 is real —
+    // only the canonical state segment betrays the alias.
+    const root = mkdtempSync(join(tmpdir(), 'provegate-oq-'));
+    roots.push(root);
+    mkdirSync(join(root, '_prds/wip'), { recursive: true });
+    mkdirSync(join(root, '_prds/completed'), { recursive: true });
+    writeFileSync(join(root, '_prds/wip/prd-042-declaring.md'), '# PRD-042: Declaring\n');
+    writeFileSync(join(root, '_prds/completed/prd-129-done.md'), '# PRD-129: Done\n');
+    symlinkSync(join(root, '_prds/completed'), join(root, '_prds/deferred'));
+    expect(
+      oq(doc(['- Deferred to [PRD-129](_prds/deferred/prd-129-done.md)']), root).join('; '),
+    ).toContain('canonically sits outside its claimed state directory');
+  });
+
+  it('[R1-P1-2] a hardlinked target is refused — realpath canonicalizes names, not identity', () => {
+    const root = workspace();
+    writeFileSync(join(root, '_prds/completed/prd-130-done.md'), '# PRD-130: Done\n');
+    linkSync(join(root, '_prds/completed/prd-130-done.md'), join(root, '_prds/wip/prd-130-alias.md'));
+    expect(
+      oq(doc(['- Deferred to [PRD-130](_prds/wip/prd-130-alias.md)']), root).join('; '),
+    ).toContain('multiple hard links');
+    // the same file with one link resolves — the refusal is about link count
+    writeFileSync(join(root, '_prds/wip/prd-131-single.md'), '# PRD-131: Single\n');
+    expect(oq(doc(['- Deferred to [PRD-131](_prds/wip/prd-131-single.md)']), root)).toEqual([]);
   });
 
   it('a state directory that is itself a symlink out of the root fails the canonical check', () => {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T13:17:00.513Z",
+  "generatedAt": "2026-07-28T13:53:54.319Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1028,9 +1028,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 38,
+        "status": "In Progress",
+        "checkedCount": 30,
+        "uncheckedCount": 8,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -1381,19 +1381,19 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-038-executable-quickstart.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-038-executable-quickstart.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 4.95,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },

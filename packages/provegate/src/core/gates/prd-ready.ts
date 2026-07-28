@@ -223,6 +223,13 @@ function deferralIssue(
     return 'the target file does not exist';
   }
   if (!stat.isFile()) return 'the target is not a regular file — a symlink is refused';
+  // Round 1: a hardlink is a second NAME for the same inode — realpath
+  // canonicalizes pathnames, not file identity, so a finished artifact
+  // hardlinked into a wip role would pass every path-level rule. A repository
+  // artifact has one link; more than one means identity cannot be established.
+  if (stat.nlink > 1) {
+    return 'the target has multiple hard links — canonical identity cannot be established';
+  }
   // Rule 7 — canonical identity: the realpath stays under the realpath'd
   // artifact root, and differs from the declaring PRD's own artifact (the
   // alias comparison a number check cannot see).
@@ -230,6 +237,15 @@ function deferralIssue(
   const realFromRoot = relative(realpathSync(artifactRoot), realTarget);
   if (realFromRoot.startsWith('..') || isAbsolute(realFromRoot)) {
     return 'the target canonically resolves outside the artifact root';
+  }
+  // Round 1: the ROLE must hold at the canonical location too. `lstat` refuses
+  // a symlinked FILE, but a symlinked state DIRECTORY (`deferred` →
+  // `completed`) relabels finished work as unfinished while every file-level
+  // check passes — so the canonical path's state segment must be the same
+  // directory the lexical path claimed.
+  const realSegments = realFromRoot.split(sep);
+  if (realSegments.length !== 2 || realSegments[0] !== state) {
+    return 'the target canonically sits outside its claimed state directory — a directory alias is refused';
   }
   const declaring = declaringArtifactPath(config, root, declaringNumber);
   if (declaring !== null && realpathSync(declaring) === realTarget) {
