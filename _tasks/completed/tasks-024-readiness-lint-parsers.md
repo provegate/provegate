@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-024-readiness-lint-parsers.md](../../_prds/wip/prd-024-readiness-lint-parsers.md)
 > **Readiness**: [readiness-024-readiness-lint-parsers.md](../../_readiness/wip/readiness-024-readiness-lint-parsers.md)
-> **Status**: Ship Verified (pending merge + operator acceptance)
+> **Status**: Ship Verified
 > **Readiness Score**: 8.35/10 PASS (quorum 2/2 — concurring independent 8.18)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -213,9 +213,9 @@ on it: a record is evidence only while it is true.
   - [x] 10.2 Confirm both durable learnings and the review artifact are in the merge
         diff (`verify:durable-artifacts` runs in the bundle; Memory Outputs are
         compared against the PRD as committed on `main`).
-  - [ ] 10.3 Write the summary artifact to the configured summary directory and move
+  - [x] 10.3 Write the summary artifact to the configured summary directory and move
         the PRD/readiness/tasks artifacts to `completed/` per the close flow.
-  - [ ] 10.4 Board: remove the Active Agents row, update Current state, re-run
+  - [x] 10.4 Board: remove the Active Agents row, update Current state, re-run
         `gate status`. Push stays with the owner.
 
 ---

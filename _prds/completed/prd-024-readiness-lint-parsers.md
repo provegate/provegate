@@ -1,6 +1,6 @@
 # PRD-024: §11 Command Extraction — Read the Command Column, Report the Rest
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28
