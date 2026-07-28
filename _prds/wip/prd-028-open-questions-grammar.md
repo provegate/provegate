@@ -569,6 +569,17 @@ artifact.
   did NOT cover everything the lint reads: the `_brain` store was outside every cache
   key. FR-3 adds it and asserts all four root inputs; `turbo.json` and the exceptions
   file are back on this surface for exactly that write.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — close-time watch fire on
+  this document's own closing diff; the record's move is what rounds 1-5 actually took:
+  five referent-split findings were answered by scoping out the whole ambiguous-path
+  layer (the refused charset) instead of patching each character.
+- not-applicable: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/prds.json`, which this closing diff touches only as a mechanical
+  regeneration via `gate status`; no free-text field moved.
+- reviewed: `state-model-before-mechanism` — close-time watch fire on the closing diff;
+  the resolution predicate consumes the existing state model (the artifact parser,
+  configured roles, the directory listing) rather than inventing a parallel mechanism,
+  which is the record's rule already satisfied.
 - not-applicable: `exemption-marker-needs-no-prose` — this PRD's own Memory Output;
   its watch on `prd-ready.ts` fires on the very diff that created the record, not on a
   prior trap (the same newborn-watch pattern PRD-025 and PRD-026 recorded at close).
