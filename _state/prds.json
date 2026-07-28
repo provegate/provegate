@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T13:26:36.853Z",
+  "generatedAt": "2026-07-28T13:29:52.769Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -976,13 +976,13 @@
         "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
         "readiness": "_readiness/wip/readiness-027-landing-adoption-polish.md",
         "tasks": "_tasks/wip/tasks-027-landing-adoption-polish.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-027-landing-adoption-polish.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.2,
@@ -991,9 +991,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 56,
+        "status": "Ship Verified",
+        "checkedCount": 52,
+        "uncheckedCount": 4,
         "operatorHandoffCount": 5
       },
       "summary": {
