@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T13:31:14.322Z",
+  "generatedAt": "2026-07-28T13:33:45.292Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -968,21 +968,21 @@
       "prd": "PRD-027",
       "number": 27,
       "slug": "landing-adoption-polish",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
-        "readiness": "_readiness/wip/readiness-027-landing-adoption-polish.md",
-        "tasks": "_tasks/wip/tasks-027-landing-adoption-polish.md",
-        "summary": "_docs/wip/summary-027-landing-adoption-polish.md"
+        "prd": "_prds/completed/prd-027-landing-adoption-polish.md",
+        "readiness": "_readiness/completed/readiness-027-landing-adoption-polish.md",
+        "tasks": "_tasks/completed/tasks-027-landing-adoption-polish.md",
+        "summary": "_docs/completed/summary-027-landing-adoption-polish.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.2,
@@ -992,8 +992,8 @@
       },
       "task": {
         "status": "Ship Verified",
-        "checkedCount": 52,
-        "uncheckedCount": 4,
+        "checkedCount": 56,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 5
       },
       "summary": {

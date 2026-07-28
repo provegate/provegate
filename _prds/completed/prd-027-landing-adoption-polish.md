@@ -1,6 +1,6 @@
 # PRD-027: Landing Adoption Polish — a Shareable Card, a Copyable First Action, Linked Claims
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28

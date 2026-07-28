@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-027-landing-adoption-polish.md](../../_prds/wip/prd-027-landing-adoption-polish.md)
 > **Readiness**: [readiness-027-landing-adoption-polish.md](../../_readiness/wip/readiness-027-landing-adoption-polish.md)
-> **Status**: Ship Verified (pending owner acceptance + merge)
+> **Status**: Ship Verified
 > **Readiness Score**: 8.20/10 (iteration 7, PASS — fourth independent scorer)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -210,18 +210,18 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
         recorded in Operator Handoff, `skipped` illegal.
   - [x] 9.3 `pnpm verify:workflow` green after any review-driven fix.
   - [x] 9.4 Draft `_docs/wip/summary-027-landing-adoption-polish.md`.
-- [ ] 10.0 Phase 7 — Learning and close (operator-gated)
+- [x] 10.0 Phase 7 — Learning and close (operator-gated)
   - [x] 10.1 Write `_brain/learnings/metadata-declares-what-it-cannot-provide.md` +
         the `_brain/INDEX.md` hook (≤120 chars).
   - [x] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact,
         launch-checklist section all in the merge diff.
-  - [ ] 10.3 Owner acceptance: the merge gate refuses without an owner-signed entry in
+  - [x] 10.3 Owner acceptance: the merge gate refuses without an owner-signed entry in
         `_state/acceptances.json` covering the operator rows — the agent transcribes
         only on explicit in-session owner direction, never originates.
-  - [ ] 10.4 `node packages/provegate/dist/cli.js run PRD-027` — chain + local merge;
+  - [x] 10.4 `node packages/provegate/dist/cli.js run PRD-027` — chain + local merge;
         if the run stops after "archived", follow `gate-run-resume-after-archive`
         (un-archive, resume `--from-phase=7`). Push stays the owner's.
-  - [ ] 10.5 `release PRD-027`, drop the STATUS.md row, remove the worktree.
+  - [x] 10.5 `release PRD-027`, drop the STATUS.md row, remove the worktree.
 
 ---
 
