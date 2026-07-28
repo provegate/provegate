@@ -13,6 +13,32 @@
 > findings are carried forward; only the packaging changed. Read this document as the
 > record of how the problem was understood, and the three successors as the work.
 >
+> **Closed**: 2026-07-28, archived to the completed state with the status left at
+> `Superseded` rather than `Archived` — the reason is worth more on the board than the
+> fact. Nothing merged from this document; the carry-forward below is what closed it.
+>
+> **Where each requirement went.** Verified against the successors' own changelogs at
+> close, not asserted:
+>
+> | This PRD | Carried by                                  |
+> | -------- | ------------------------------------------- |
+> | FR-1     | PRD-025 `wiring-audit-completion`           |
+> | FR-2     | PRD-026 `duplicate-consolidation`           |
+> | FR-3     | PRD-025 (in all its parts) and PRD-026      |
+> | FR-4     | PRD-025                                     |
+> | FR-5     | PRD-026                                     |
+> | FR-6     | PRD-026 — the six documents it now covers   |
+> | FR-7 a/b/c | PRD-024 `readiness-lint-parsers`, with the corpus-command defect iteration 6 found |
+> | FR-8     | PRD-026                                     |
+> | FR-9     | PRD-026                                     |
+>
+> The successors record what CHANGED in each carry-over rather than copying it — PRD-026's
+> FR-4 verification no longer names the script it deletes (this document verified a
+> requirement with the very script it removed, and five rounds missed it), PRD-025 closed
+> FR-3's open-ended interpreter list after iteration 6 found it unfalsifiable, and PRD-024
+> carries the §9 findings onward to PRD-028. Read those three changelogs for the deltas;
+> this table is only the routing.
+>
 > **Created**: 2026-07-25
 > **Updated**: 2026-07-27
 > **Author**: Cursor, for owner review
