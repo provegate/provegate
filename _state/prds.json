@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T06:25:14.662Z",
+  "generatedAt": "2026-07-28T06:37:56.842Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1087,13 +1087,13 @@
         "prd": "_prds/wip/prd-030-prompt-store-integrity.md",
         "readiness": "_readiness/wip/readiness-030-prompt-store-integrity.md",
         "tasks": "_tasks/wip/tasks-030-prompt-store-integrity.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-030-prompt-store-integrity.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.15,
@@ -1103,8 +1103,8 @@
       },
       "task": {
         "status": "Code Complete",
-        "checkedCount": 32,
-        "uncheckedCount": 13,
+        "checkedCount": 41,
+        "uncheckedCount": 4,
         "operatorHandoffCount": 8
       },
       "summary": {

@@ -1,6 +1,6 @@
 # PRD-030: Prompt Store State Model — the Precondition for Integrity
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
