@@ -427,30 +427,47 @@ Each FR carries the exact target paths the implementing agent will touch.
    promised consumer wiring must be rewritten to state the new contract, or the comment
    becomes the next stale promise.
 
-   **Delivery architecture — decided, iteration 5 [P1] Q.** A handler in `CodeBlock.tsx`
-   is not a browser feature until the built package entry carries a client boundary: the
-   design package ships a bundled barrel (`src/react/index.ts` → `dist/react/index.js`),
-   and a `"use client"` directive placed only in the component source is dropped by the
-   bundle (proven by the iteration-5 esbuild probe). Two of the four call sites are
-   rendered from the server component `sections/index.tsx`, so handler-only wiring never
-   reaches their DOM. The chosen architecture is a **dedicated client subpath entry**,
-   not a client-marked barrel — marking the whole barrel `"use client"` would pull every
-   section primitive of a deliberately static landing into the hydration bundle to fix
-   two blocks:
-   - `packages/design/src/react/client.ts` (new) re-exports `CodeBlock`;
+   **Delivery architecture — decided, iteration 5 [P1] Q, completed by iteration 6
+   [P1] V/W.** A handler in `CodeBlock.tsx` is not a browser feature until the built
+   package entry carries a client boundary: the design package ships a bundled barrel
+   (`src/react/index.ts` → `dist/react/index.js`), and a `"use client"` directive
+   placed only in the component source is dropped by the bundle (proven by the
+   iteration-5 esbuild probe). Two of the four call sites are rendered from the server
+   component `sections/index.tsx`. And the barrel has a server consumer this PRD must
+   not break: `apps/docs/components/mdx.tsx:3-13` imports `CodeBlock` into Fumadocs'
+   server MDX pipeline under a comment promising the shared components carry no client
+   hooks. The chosen architecture is therefore a **split renderer**, not a re-export:
+   - the barrel `CodeBlock` stays a server-safe renderer and **loses the `copyable`
+     prop at the type level** — the aria-hidden span is deleted (per the DO NOT), no
+     handler code path exists in it, and the docs comment stays true. Passing
+     `copyable` through the barrel becomes a compile error, which is the test that
+     rejects server-context imports through the wrong subpath;
+   - `packages/design/src/react/client.ts` (new) exports `CopyableCodeBlock`: wraps
+     the server renderer, adds the `<button type="button">` (accessible name
+     `/copy/i`), the `copyText`/string-children payload contract above, and the
+     guarded `navigator.clipboard` handler;
    - `tsup.config.ts` gains a second config for that entry with
-     `banner: { js: '"use client";' }`, so the directive survives the build **at the
-     entry the consumer imports**;
+     `banner: { js: '"use client";' }`. **Build-output model (iteration 6 [P1] W):**
+     installed tsup runs an options array concurrently over the shared `dist`, so
+     `clean: true` in either config races the other's writes — both configs set
+     `clean: false` and the package `build` script performs one explicit pre-clean
+     (`rm -rf dist && tsup`). A clean-build test asserts `tokens`, `cli/index`,
+     `react/index`, `react/client` and their declaration files all coexist after one
+     `pnpm --filter @provegate/design build`;
    - `packages/design/package.json` `exports` gains `./react/client` (dist path);
-   - the two server-rendered call sites in `apps/web/app/sections/index.tsx` switch
-     their `CodeBlock` import to `@provegate/design/react/client`. The earlier "no
-     consumer changes" promise is withdrawn — it was the [P1]'s root: a contract that
-     stopped one layer before delivery. The two `tabs.tsx` call sites already sit
-     inside a client boundary and keep the barrel import.
+   - **all four** web call sites (`sections/index.tsx` ×2, `sections/tabs.tsx` ×2)
+     import `CopyableCodeBlock` from `@provegate/design/react/client` — uniform, even
+     though the tabs sit inside a client boundary already. The earlier "no consumer
+     changes" promise is withdrawn — it was the [P1]'s root: a contract that stopped
+     one layer before delivery. `apps/docs` is untouched **and provably unaffected**:
+     its imports resolve to the server renderer whose surface only shrank by a prop it
+     never passed.
    Delivery is asserted where it exists: a design test reads the **built**
-   `dist/react/client.js` and asserts the leading `"use client"` directive, and a web
-   test asserts the two server sections import from the client subpath — a jsdom render
-   cannot see an RSC boundary, so the directive and the import path are the evidence.
+   `dist/react/client.js` and asserts the leading `"use client"` directive; the
+   clean-build coexistence test holds the output model; a web test asserts the four
+   call sites import from the client subpath; and the barrel's `CodeBlockProps` type
+   test asserts `copyable` is gone — a jsdom render cannot see an RSC boundary, so
+   directives, types and import paths are the evidence.
 
    **Scope consequence, stated.** This FR touches `packages/design`, which the rest of
    the PRD does not. Both touched packages are unpublished (`private: true`) and the
@@ -467,8 +484,9 @@ Each FR carries the exact target paths the implementing agent will touch.
    whose payload equals the constant it renders. The hero terminal's control is FR-2's and
    is asserted there — this FR adds no affordance to output blocks.
    - **Targets:** `packages/design/src/react/CodeBlock.tsx`,
-     `packages/design/src/react/client.ts`, `packages/design/tsup.config.ts`,
-     `packages/design/package.json`, `apps/web/app/sections/index.tsx`,
+     `packages/design/src/react/client.ts`, `packages/design/src/react/index.ts`,
+     `packages/design/tsup.config.ts`, `packages/design/package.json`,
+     `apps/web/app/sections/index.tsx`, `apps/web/app/sections/tabs.tsx`,
      `packages/design/test/props.test.tsx`, `apps/web/test/landing.test.tsx`
 
 ---
@@ -625,10 +643,13 @@ presence and payload wiring for both; the real copy is an operator row.
 ### Rollback
 
 Seven of the nine FRs revert cleanly and independently: they are additive or deletive
-changes to private, unpublished packages with no data, no schema and no external consumer.
-`web` and `@provegate/design` are both `private: true`, so changesets skips them — no
-version to unpublish, no adopter to migrate. Reverting FR-9 restores the inert span, which
-is the shipped state — worse, but not broken by the revert.
+changes to private, unpublished packages with no data, no schema and no external
+published consumer. Neither package is published (`private: true` blocks publication;
+by repository policy no changeset is written — the effective changesets config would
+version them, see the Non-Goal), so there is no version to unpublish and no adopter to
+migrate. Reverting FR-9 restores the inert span, which is the shipped state — worse,
+but not broken by the revert; the docs' server import survives both directions because
+the server renderer never gains a handler.
 
 **FR-1 and FR-8 are one ordered rollback unit.** FR-8 exists *because* FR-1 makes the root
 card reach `/alt`. Reverting FR-8 alone leaves the root card in place with no override on
@@ -681,7 +702,15 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 - [ ] `apps/web/app/globals.css` — the ≤900px rule (FR-6)
 - [ ] `apps/web/app/alt/page.tsx` — own metadata, noindex, install line from the constant
       (FR-3, FR-8)
-- [ ] `packages/design/src/react/CodeBlock.tsx` — `copyable` wired for real (FR-9)
+- [ ] `packages/design/src/react/CodeBlock.tsx` — server renderer, `copyable` prop
+      removed at the type level, span deleted (FR-9)
+- [ ] `packages/design/src/react/client.ts` — new client entry, `CopyableCodeBlock` (FR-9)
+- [ ] `packages/design/src/react/index.ts` — barrel keeps the server renderer only (FR-9)
+- [ ] `packages/design/tsup.config.ts` — second config, banner, `clean: false` pair +
+      pre-clean build script (FR-9)
+- [ ] `packages/design/package.json` — `./react/client` export, build script (FR-9)
+- [ ] `apps/web/app/sections/tabs.tsx` — both call sites import the client entry (FR-9)
+- [ ] `_docs/launch/announcement-draft.md` — the `## Launch checklist` section (FR-1)
 - [ ] `packages/design/test/props.test.tsx` — extended, never weakened (FR-9)
 - [ ] `apps/web/test/metadata.test.ts` — new
 - [ ] `apps/web/test/landing.test.tsx`, `apps/web/test/content-web.test.ts`,
@@ -735,12 +764,15 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
   anchor-closure test is the same record applied to anchors — a declared link with no
   target is an unwired surface.
 - reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`, and its
-  shape is this PRD's own trajectory: five rounds with Scope & Testability flat near
-  5.5 while the rest measured exact — a sign the item kept specifying against unwritten
-  ground truth. The iteration-5 work order wrote the ground truth by execution (the
-  esbuild bundle probe behind FR-9's architecture, the resolved changesets config), and
-  this remediation binds the FRs to those measured facts instead of another wording
-  round.
+  shape is this PRD's own trajectory: six rounds with Scope & Testability flat while
+  the rest measured exact. The record's literal prescription — write the state
+  transitions before mechanism — is **deliberately not taken**: a static page's
+  delivery boundary is not a state machine with actors and interrupted states; the
+  unwritten ground truth here was a package **export contract**, and iteration 6's V/W
+  findings forced it to be written as one (the split-renderer contract and the
+  build-output model in FR-9, each held by a named test). Recorded as reviewed, with
+  the honest admission that two probes alone did not end the trajectory — the
+  written-contract form of the record's lesson is what this round applies.
 - applied: `score-must-equal-weighted-sum` — the declared 3.40 equals the arithmetic shown
   under the header. The candidate lands exactly on the threshold and was deliberately not
   rounded up; the header comment says what to do if the owner scores a dimension lower.
@@ -785,8 +817,12 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 - `apps/web/test/**`
 - `packages/design/src/react/CodeBlock.tsx`
 - `packages/design/src/react/client.ts`
+- `packages/design/src/react/index.ts`
 - `packages/design/tsup.config.ts`
+- `packages/design/package.json`
 - `packages/design/test/props.test.tsx`
+- `apps/web/app/sections/tabs.tsx`
+- `_docs/launch/announcement-draft.md`
 - `_brain/learnings/metadata-declares-what-it-cannot-provide.md`
 - `_brain/INDEX.md`
 
@@ -994,5 +1030,6 @@ Before Phase 2 PASS, run: `gate check PRD-027`
 | ---- | ------ | ------- |
 | 2026-07-27 | Claude Opus 5 | Initial draft — six verified items from the independent landing review, two defects found while verifying it, two items rejected with evidence |
 | 2026-07-28 | Claude Fable 5 | **Iteration-4 remediation, every finding re-verified against source before editing.** **[P1] H closed as FR-9**: the rejection of the copy-button review item is deleted and replaced with the corrected finding — `copyable` renders `<span aria-hidden="true">copy</span>` with no handler (`CodeBlock.tsx:52-56` re-read; all four call sites re-measured passing plain-string children), so FR-9 wires it in the component: a real button, `copyText`-or-string-children payload, no-payload renders no control, clipboard guarded, doc comment rewritten. Scope consequence stated in the FR and the Conflict Surface: two `packages/design` files claimed by name; both touched packages measured `private: true`, so no `.changeset/` write — that directory is PRD-025's claim and a new DO NOT names the avoidance. **[P1] I closed by rebinding the constraint**: the two BLOCKING real-unfurl operator rows could not execute pre-merge (no deploy or preview workflow — `ci.yml`/`release.yml` re-checked), so the close is held by the emitted-tag assertions and the real-unfurl check is restated as a launch precondition bound to the first deploy/share, pointed at the launch checklist. **[P2]s J, K, L, M closed**: FR-3 goes app-wide — the fourth authoring at `alt/page.tsx:202` re-measured, `/alt` becomes a named consumer, the census excludes only the declaration file; FR-1 gains `PRODUCT_NAME_PARTS` with `Wordmark` (`ui.tsx:157`) as a named consumer so the split JSX cannot survive beside the constant, and FR-8's title is pinned verbatim from the route's own self-description; the Success Metrics table now separates the read-only command that produced each current value (every one re-run this session: 0 og:image, 0/4 working copy affordances, 38 exports/1 orphan, 12 anchor occurrences over 6 targets, 0-line metadata diff between routes) from the acceptance test that will hold the target; the mobile-height baseline gets a capture point (before Phase 4) and a durable home (the review artifact's first operator row). **[P3]s N, O, P closed**: occurrences vs targets stated everywhere the count appears; the egress row marked cross-cutting and repeated in the floor; the duplicated metrics header removed and the stale `conflicts.ts:63` citation corrected to `:67-68` at both sites |
+| 2026-07-28 | orchestrating session (non-scorer), second pass | **Iteration-6 findings V/W/X/Y/Z + the W29 rewrite applied.** V: the delivery architecture completed as a SPLIT RENDERER — the barrel `CodeBlock` stays server-safe and loses `copyable` at the type level (compile error is the wrong-subpath test; the docs server-MDX consumer provably unaffected), the client entry exports `CopyableCodeBlock`, all four web call sites move to it. W: build-output model fixed — both tsup configs `clean: false`, one explicit pre-clean in the build script, clean-build coexistence test over all five outputs. X: Targets, Implementation Scope and Conflict Surface swept into agreement (design package.json, client.ts, index.ts, tsup config, tabs.tsx, launch draft everywhere they belong). Y: the Rollback section's surviving false changesets sentence corrected to the policy form. Z acknowledged: the iteration-5 changelog claimed a sweep it had not run — this row is written AFTER grepping the document for every corrected claim, and the sweep discipline is exactly `a-rule-corrected-survives-where-it-is-restated`. W29: the `state-model-before-mechanism` disposition rewritten from ceremonial to honest — the record's lesson lands as a written export contract, not as two probes. |
 | 2026-07-28 | orchestrating session (non-scorer), on owner direction | **Iteration-5 work order W24–W29 applied.** W24: FR-9 gains its delivery architecture — a dedicated client subpath entry (`react/client` + tsup banner `"use client"`), chosen over a client-marked barrel to keep the static landing unhydrated; the "no consumer changes" promise withdrawn, two server call sites re-import from the client entry, delivery asserted on the BUILT entry's directive plus import-path assertions; Targets/Conflict Surface widened accordingly. W25: emitted tags declared the complete close contract; the live-unfurl §6 criterion replaced; FR-1 now CREATES the `## Launch checklist` in `_docs/launch/announcement-draft.md` (Target + Durable Artifact) so the precondition survives close in an owner-owned surface. W26: four metric cells rewritten to single verified commands each emitting every claimed number (all four re-run this session: 12/6/0, 4+span, 38+PROOF, identical+no-robots); HandoffCard cell narrowed to source occurrences. W27: the mobile baseline moved from the temporally impossible Phase-6 review artifact to the task artifact's Operator Handoff. W28: the false "changesets skips private packages" premise corrected everywhere to repository policy (effective `privatePackages.version=true` acknowledged). W29: the `gate-wire-or-delete` disposition narrowed to FR-7's actual claim and `state-model-before-mechanism` dispositioned against this PRD's own flat-dimension trajectory. |
 | 2026-07-27 | Claude Opus 5 | **Rebuilt after loss.** A concurrent session committed this PRD mid-round (`b63f5d6`, capturing the 484-line draft) and the PRD-021 land/merge commits then overwrote the uncommitted W1–W15 remediations; no stash and no dangling blob carried them (`4a16dfd`, `d4b1900`, `8ef533d` all hold one Changelog row). This row rebuilds all fifteen **and** closes Codex's iteration-3 findings in one pass, from `_readiness/wip/readiness-027-landing-adoption-polish.md`, which survived because it had been committed. **FR-1:** the `images` declaration is forbidden with the resolver cited (`resolve-metadata.js:137-157`), asserted at two levels — a source coherence triple plus the emitted `og:image` in built HTML — with absence *and* staleness failing the row, and the card's content pinned to new `SITE_TITLE` / `PRODUCT_NAME` constants because the wordmark is split JSX and the title a nested metadata property, so neither was reusable. **FR-3/FR-15:** install baseline corrected to three (`content.ts:18,35,350`), asserted as value derivation not character count. **FR-5:** `aria-current="location"`, and the algorithm rewritten — an `IntersectionObserver` callback is not a snapshot, so a retained per-target ratio map with declared thresholds replaces "greatest ratio in this callback", tested with sequential callbacks; `aria-current` belongs to the desktop strip alone, since `Nav` maps `NAV_LINKS` twice. **FR-6:** the fold claim withdrawn everywhere including the operator row, the grid geometry stated, and the assertion joined through the wrapper class so a CSS rule and a card count can no longer both pass while the card stays visible. **FR-7:** the census excludes the declaration file and matches word-anchored tokens, because `PROOF` is a prefix of `PROOF_EVIDENCE`; `grep-token-anchors-real-impl` declared as a Memory Input, alongside `false-green-on-missing-file`. **FR-8:** `/alt` drops the inherited card by declaration (`:182-190` replaces wholesale), takes `card: 'summary'`, and is asserted on emitted metadata — measured before-state: `alt.html` emits metadata byte-identical to `/` with no robots meta, though the files differ in size. **§7:** Rollback added, with FR-1+FR-8 as one ordered unit and the unfurl-cache asymmetry making the real-unfurl operator rows a precondition to sharing either URL. **Scope/Conflict Surface/Durable Artifacts:** `_brain/INDEX.md` declared in all three, with the two limits on that reasoning stated as Non-Goals. Every Success Metric now carries the command that produced its current value |
