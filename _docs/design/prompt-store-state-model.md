@@ -1,6 +1,6 @@
 # Prompt Store State Model
 
-> **Owner**: owner · **Status**: Revision 1 owner-approved 2026-07-28 (`_state/acceptances.json`, PRD-030, items 4.1 T1–T7 and 4.3); **Revision 2 awaiting owner approval** — supersedes Revision 1's banner-uniqueness claim, consequences enumerated in the closing section · **Created**: 2026-07-28
+> **Owner**: owner · **Status**: Revision 2 owner-approved 2026-07-28 (`_state/acceptances.json`, PRD-030 — second entry; Revision 1 approved earlier the same day, items 4.1 T1–T7 and 4.3) · **Created**: 2026-07-28
 > **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/completed/prd-030-prompt-store-integrity.md)
 > **Consumed by**: PRD-034, whose functional requirements are written against this document
 > and are blocked until it is approved.
@@ -348,7 +348,7 @@ longer holds, which is the restatement failure both parent items were narrowed t
 
 ---
 
-## Revision 2 — 2026-07-28, awaiting owner approval
+## Revision 2 — 2026-07-28, owner-approved (acceptance in `_state/acceptances.json`)
 
 **Trigger.** PRD-034's iteration-1 independent readiness score (Codex, 5.1 ITERATE) proved
 against the shipped renderer that Revision 1's uniqueness claim is false:

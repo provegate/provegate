@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-025-wiring-audit-completion.md](../../_prds/wip/prd-025-wiring-audit-completion.md)
 > **Readiness**: [readiness-025-wiring-audit-completion.md](../../_readiness/wip/readiness-025-wiring-audit-completion.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.30/10 (PASS, iteration 5)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -270,7 +270,7 @@ a record is evidence only while it is true.
         `_docs/review-artifact.template.md`, Quorum row REQUIRED — the template's
         "optional" note contradicts the gate; see the standing deferral).
   - [x] 8.6 Remediate findings; re-run 7.x after every fix; loop until `Critical: 0`.
-- [ ] 9.0 Phase 7 — Learning & close
+- [x] 9.0 Phase 7 — Learning & close
   - [x] 9.1 Write `_brain/learnings/surface-set-without-its-predicate.md` (the declared
         Memory Output: porting inputs without their predicate registers nothing;
         replacing an unsafe predicate with an open-ended one is the same defect in a
@@ -283,10 +283,10 @@ a record is evidence only while it is true.
         non-derivable hit during implementation.
   - [x] 9.4 Write `_docs/wip/summary-025-wiring-audit-completion.md`; advance PRD/tasks
         Status headers; `gate status`.
-  - [ ] 9.5 Operator acceptance (operator-gated close): STOP and hand to the owner —
+  - [x] 9.5 Operator acceptance (operator-gated close): STOP and hand to the owner —
         an agent never originates the acceptance. On the owner's explicit in-session
         direction only, transcribe with `authorship: "agent-transcribed"`.
-  - [ ] 9.6 `gate run PRD-025` from the worktree for the gated close; merge to local
+  - [x] 9.6 `gate run PRD-025` from the worktree for the gated close; merge to local
         main; archive artifacts; refresh the board. Push stays the owner's.
 
 ---
@@ -382,4 +382,4 @@ sentence rationale>`. Never inline on sub-task lines.
 
 | Task | Category  | Owner | Required Check | Status | Notes |
 | ---- | --------- | ----- | -------------- | ------ | ----- |
-| 9.5  | manual-qa | owner | Owner-signed acceptance entry in `_state/acceptances.json` for the operator-gated close (decision the owner's; transcription per ADR-0003 if directed in-session) | pending | the merge gate refuses without it |
+| 9.5  | manual-qa | owner | Owner-signed acceptance entry in `_state/acceptances.json` for the operator-gated close (decision the owner's; transcription per ADR-0003 if directed in-session) | resolved | owner approved in-session 2026-07-28 ("onay"); entry agent-transcribed; merge gate passed |
