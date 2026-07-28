@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T11:40:16.243Z",
+  "generatedAt": "2026-07-28T11:40:37.385Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1012,13 +1012,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-028-open-questions-grammar.md",
         "readiness": "_readiness/wip/readiness-028-open-questions-grammar.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-028-open-questions-grammar.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -1028,10 +1028,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 38,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
