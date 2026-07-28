@@ -95,3 +95,7 @@ them.
 3. Mount it in `app/page.tsx` in narrative order.
 4. `landing.test.tsx` checks the section set + order; `content-web.test.ts`
    checks copy discipline and that no raw hex crept in.
+
+Copy affordances import from `@provegate/design/react/client`
+(`CopyableCodeBlock`) — the server barrel's `CodeBlock` deliberately has no
+copy prop, so an affordance can never render without its handler (PRD-027).

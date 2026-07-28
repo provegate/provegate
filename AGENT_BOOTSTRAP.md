@@ -73,6 +73,15 @@ On a blocker, surface the error verbatim — never paper over it with an `any` c
 `eslint-disable`, or a `|| true`. Push to remote is never an agent action: the runner has
 no push code path (enforced by omission), and `gate push` refuses by design.
 
+## The proceed rule (Phases 4–7)
+
+During Phases 4–7 the only legitimate stops are the enumerated stop-and-ask checkpoints
+and a failed gate. Every other decision is the agent's to take and to record in the task
+file's **Deferrals & Decisions**, never to escalate: asking permission for in-scope,
+reversible work is not caution, it is a manufactured gate — the mirror image of skipping
+a real one.
+
+
 ## Knowledge map
 
 ```

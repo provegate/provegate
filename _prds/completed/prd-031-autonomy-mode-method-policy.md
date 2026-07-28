@@ -1,6 +1,6 @@
 # PRD-031: Autonomy Mode and the Phase 4–7 Proceed Rule
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
@@ -444,6 +444,24 @@ ceremonial answer this contract exists to prevent.
 
 Required in a memory-enabled repository, alongside Memory Outputs below.
 
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this PRD
+  file, which the closing diff edits (changelog and close-time dispositions). The
+  record's action was already taken in this item's own history: iteration 1's decisive
+  finding WAS a scope error (the impossible text-only boundary) and the rework admitted
+  the corpus-test layer instead of clause-patching around it.
+- reviewed: `state-model-before-mechanism` — same watch trigger, same file; this diff
+  carries close bookkeeping, not a re-sampled mechanism, and the item's readiness
+  trajectory (5.78 → 7.40 → 8.88) rose monotonically rather than oscillating in-band.
+- applied: `docs-are-a-wiring-surface` — its watch covers `practices/**`, and FR-5 edits
+  the shipped bootstrap template, which is exactly this record's surface: a document that
+  becomes an adopter's operating rules. The record's discipline is applied — the added
+  proceed-rule block is held by a test (the two-copy identity assertion), so the shipped
+  instruction cannot drift from the live one it mirrors; nothing here instructs the
+  registration of a check that does not exist.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/prds.json`, which an intermediate commit had put in this diff; the snapshot was
+  restored to main's copy and leaves the diff (it regenerates after the merge), and no
+  free-text field is added anywhere.
 - applied: `shipped-content-needs-a-delivery-gate` — its watch covers four of this PRD's
   targets (`phase-3-task-generator.md`, both `AUTONOMY_MODE` fragments,
   `PLACEHOLDERS.md`, `orchestration-runner.md`), and the record's rule is this PRD's

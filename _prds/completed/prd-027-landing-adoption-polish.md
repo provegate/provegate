@@ -1,6 +1,6 @@
 # PRD-027: Landing Adoption Polish — a Shareable Card, a Copyable First Action, Linked Claims
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28
@@ -748,6 +748,20 @@ Two smaller notes, so nobody looks for a plan that isn't needed:
 
 ## Memory Inputs
 
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this PRD
+  file, which the closing diff edits (changelog rows, the §9 conformance rewrite, the
+  FR-9 seam corrections). The record's action was already taken where it applied: both
+  review criticals landed in one seam (FR-9 delivery) and were closed inside it, not
+  re-scoped — two rounds in one seam with converging fixes is repair, not the flat
+  oscillation the record names.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — same watch, same file, and
+  applied in earnest: the FR-9 slot correction was swept across the component, the
+  client wrapper, both deny tests, the ledger evidence and the decision record, after
+  round 2 caught the decision record still describing the round-1 shape.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/prds.json`, which an intermediate merge commit had put in this diff; the
+  snapshot was restored to main's copy and leaves the diff (it regenerates after the
+  merge), and no free-text field is added anywhere.
 - applied: `grep-token-anchors-real-impl` — FR-7's census is exactly the shape this record
   warns about, and it was measured failing: `PROOF` is a **prefix of `PROOF_EVIDENCE`**
   (`content.ts:284` vs `:291`), so a substring scan would green the orphan the FR exists to
@@ -1033,6 +1047,7 @@ Before Phase 2 PASS, run: `gate check PRD-027`
 | Date | Author | Changes |
 | ---- | ------ | ------- |
 | 2026-07-27 | Claude Opus 5 | Initial draft — six verified items from the independent landing review, two defects found while verifying it, two items rejected with evidence |
+| 2026-07-28 | Claude Fable 5 (implementing session) | **§9 rewritten to PRD-028's closed grammar** — the checkbox form with its wrapped tail was one of the four prerequisites PRD-028's Phase-3 discovery recorded; the resolved-as-Non-Goals rationale it carried is already stated in §5, so nothing is lost. Done inside this PRD's own cycle by its own session, which is what the discovery's stop rule asks |
 | 2026-07-28 | Claude Fable 5 | **Iteration-4 remediation, every finding re-verified against source before editing.** **[P1] H closed as FR-9**: the rejection of the copy-button review item is deleted and replaced with the corrected finding — `copyable` renders `<span aria-hidden="true">copy</span>` with no handler (`CodeBlock.tsx:52-56` re-read; all four call sites re-measured passing plain-string children), so FR-9 wires it in the component: a real button, `copyText`-or-string-children payload, no-payload renders no control, clipboard guarded, doc comment rewritten. Scope consequence stated in the FR and the Conflict Surface: two `packages/design` files claimed by name; both touched packages measured `private: true`, so no `.changeset/` write — that directory is PRD-025's claim and a new DO NOT names the avoidance. **[P1] I closed by rebinding the constraint**: the two BLOCKING real-unfurl operator rows could not execute pre-merge (no deploy or preview workflow — `ci.yml`/`release.yml` re-checked), so the close is held by the emitted-tag assertions and the real-unfurl check is restated as a launch precondition bound to the first deploy/share, pointed at the launch checklist. **[P2]s J, K, L, M closed**: FR-3 goes app-wide — the fourth authoring at `alt/page.tsx:202` re-measured, `/alt` becomes a named consumer, the census excludes only the declaration file; FR-1 gains `PRODUCT_NAME_PARTS` with `Wordmark` (`ui.tsx:157`) as a named consumer so the split JSX cannot survive beside the constant, and FR-8's title is pinned verbatim from the route's own self-description; the Success Metrics table now separates the read-only command that produced each current value (every one re-run this session: 0 og:image, 0/4 working copy affordances, 38 exports/1 orphan, 12 anchor occurrences over 6 targets, 0-line metadata diff between routes) from the acceptance test that will hold the target; the mobile-height baseline gets a capture point (before Phase 4) and a durable home (the review artifact's first operator row). **[P3]s N, O, P closed**: occurrences vs targets stated everywhere the count appears; the egress row marked cross-cutting and repeated in the floor; the duplicated metrics header removed and the stale `conflicts.ts:63` citation corrected to `:67-68` at both sites |
 | 2026-07-28 | orchestrating session, post-PASS | **Iteration 7 scored PASS 8.20** (fourth fresh Codex scorer; all six iteration-6 findings confirmed genuinely closed; metric commands reproduced again). Its two watch items applied as post-PASS precision edits, quoted from the report: the FR-1/FR-8 rollback rule tightened to an atomic joint revert (sequential order exists only as a non-deployable working-tree state), and the two README import-contract descriptions (`packages/design`, `apps/web`) added to FR-9's Targets, Scope and Conflict Surface — `apps/docs/README.md` deliberately unchanged. Verdict unchanged by these edits; owner may order a confirmation pass at Phase 3 approval. |
 | 2026-07-28 | orchestrating session (non-scorer), second pass | **Iteration-6 findings V/W/X/Y/Z + the W29 rewrite applied.** V: the delivery architecture completed as a SPLIT RENDERER — the barrel `CodeBlock` stays server-safe and loses `copyable` at the type level (compile error is the wrong-subpath test; the docs server-MDX consumer provably unaffected), the client entry exports `CopyableCodeBlock`, all four web call sites move to it. W: build-output model fixed — both tsup configs `clean: false`, one explicit pre-clean in the build script, clean-build coexistence test over all five outputs. X: Targets, Implementation Scope and Conflict Surface swept into agreement (design package.json, client.ts, index.ts, tsup config, tabs.tsx, launch draft everywhere they belong). Y: the Rollback section's surviving false changesets sentence corrected to the policy form. Z acknowledged: the iteration-5 changelog claimed a sweep it had not run — this row is written AFTER grepping the document for every corrected claim, and the sweep discipline is exactly `a-rule-corrected-survives-where-it-is-restated`. W29: the `state-model-before-mechanism` disposition rewritten from ceremonial to honest — the record's lesson lands as a written export contract, not as two probes. |

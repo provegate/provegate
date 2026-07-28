@@ -7,6 +7,7 @@
  * equally importable from the client sections.
  */
 import * as React from 'react';
+import { PRODUCT_NAME_PARTS } from './content';
 
 /** Container: `--pg-container` wide, 28px gutters (design brief responsive rule). */
 export const shell: React.CSSProperties = {
@@ -154,7 +155,7 @@ export function Wordmark({ size = 'var(--pg-text-lg)' }: { size?: string }): Rea
         color: 'var(--pg-text)',
       }}
     >
-      Prove<span style={{ color: 'var(--pg-accent)' }}>Gate</span>
+      {PRODUCT_NAME_PARTS[0]}<span style={{ color: 'var(--pg-accent)' }}>{PRODUCT_NAME_PARTS[1]}</span>
     </span>
   );
 }

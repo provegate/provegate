@@ -5,23 +5,34 @@ export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
   filename?: string;
   lang?: string;
   prompt?: boolean;
-  copyable?: boolean;
+}
+
+/** INTERNAL. The header slot exists only for `CopyableCodeBlock` (the client
+ * entry), which is the one consumer allowed to put a control there — a PUBLIC
+ * slot would let any caller render a handlerless "copy" affordance, which is
+ * exactly the defect FR-9 deletes. Not re-exported from the barrel; the
+ * type-level deny test holds the public surface closed. */
+export interface InternalCodeBlockProps extends CodeBlockProps {
+  headerControl?: React.ReactNode;
 }
 
 /** Always-dark terminal code/command block — the terminal surface is its own
- * panel regardless of theme. Evidence is monospace. `copyable` renders a copy
- * affordance; the actual clipboard wiring is the consumer's (kept dependency-
- * and side-effect-free here). */
-export function CodeBlock({
+ * panel regardless of theme. Evidence is monospace. This is the SERVER-SAFE
+ * renderer: no hooks, no handlers, importable from server components and
+ * Fumadocs' MDX pipeline. A copy control is a client capability and lives in
+ * `@provegate/design/react/client` (`CopyableCodeBlock`) — this component
+ * deliberately has no `copyable` prop, so a copy affordance can never render
+ * without the handler behind it (PRD-027 FR-9). */
+export function CodeBlockBase({
   children,
   filename,
   lang,
   prompt = false,
-  copyable = false,
+  headerControl,
   className = '',
   style = {},
   ...rest
-}: CodeBlockProps): React.JSX.Element {
+}: InternalCodeBlockProps): React.JSX.Element {
   return (
     <div
       className={`pg-codeblock ${className}`}
@@ -35,7 +46,7 @@ export function CodeBlock({
       }}
       {...rest}
     >
-      {filename || copyable ? (
+      {filename || headerControl ? (
         <div
           style={{
             display: 'flex',
@@ -49,11 +60,7 @@ export function CodeBlock({
           }}
         >
           <span>{filename}</span>
-          {copyable ? (
-            <span aria-hidden="true" style={{ color: 'var(--pg-term-dim)' }}>
-              copy
-            </span>
-          ) : null}
+          {headerControl ?? null}
         </div>
       ) : null}
       <pre
@@ -73,4 +80,13 @@ export function CodeBlock({
       </pre>
     </div>
   );
+}
+
+/** The public server-safe renderer: no copy affordance, no header slot. The
+ * explicit `headerControl={undefined}` AFTER the spread is load-bearing: a
+ * JS caller (or a structural spread) could otherwise smuggle the internal
+ * slot through the public surface — Codex round 2 reproduced exactly that
+ * against the built barrel. */
+export function CodeBlock(props: CodeBlockProps): React.JSX.Element {
+  return <CodeBlockBase {...props} headerControl={undefined} />;
 }

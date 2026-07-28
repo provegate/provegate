@@ -1,9 +1,11 @@
+import type { Metadata } from 'next';
 import * as React from 'react';
 import { Icon, PhasePipeline } from '@provegate/design/react';
 import {
   COMMANDS,
   CORE_RULE,
   CTA,
+  PRODUCT_NAME,
   FEATURES,
   HERO,
   LINKS,
@@ -25,6 +27,25 @@ import './alt.css';
  * Same facts as the main page (all copy comes from sections/content.ts), a
  * different reading rhythm: install and evidence first, narrative later.
  */
+
+// PRD-027 FR-8: /alt stops competing with / in search AND in unfurls. The
+// `openGraph` declaration REPLACES the resolved parent object wholesale
+// (resolve-metadata.js:182-190), so declaring title+description with NO
+// `images` key drops the card app/opengraph-image.tsx would otherwise thread
+// down the segment chain — and the card TYPE goes with the image:
+// `summary_large_image` without an image is FR-1's defect one route over.
+export const metadata: Metadata = {
+  title: `${PRODUCT_NAME} — alternative landing concept`,
+  description:
+    'An alternative landing concept for internal comparison — denser, terminal-forward, docs-style. Not the product page.',
+  robots: { index: false, follow: false },
+  openGraph: {
+    title: `${PRODUCT_NAME} — alternative landing concept`,
+    description:
+      'An alternative landing concept for internal comparison — denser, terminal-forward, docs-style. Not the product page.',
+  },
+  twitter: { card: 'summary' },
+};
 
 const muted: React.CSSProperties = { color: 'var(--pg-text-muted)' };
 const subtle: React.CSSProperties = { color: 'var(--pg-text-subtle)' };
@@ -199,7 +220,7 @@ function Hero(): React.JSX.Element {
               }}
             >
               <span style={{ color: 'var(--pg-text-subtle)' }}>$</span>
-              <span>npm install -D provegate</span>
+              <span>{HERO.install.split('\n')[0]}</span>
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <a href={LINKS.github} style={primaryBtn}>

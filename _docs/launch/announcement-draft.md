@@ -63,3 +63,12 @@ Quickstart: install to handoff card in one sitting.
 - "Why manual push?" → push is the authority handoff; everything reversible is
   autonomous, the irreversible step costs one keystroke, and the runner has no push
   code path to misconfigure.
+
+## Launch checklist
+
+- [ ] **Before the first share, after the first deploy** (PRD-027 FR-1 — unfurl
+      consumers cache what they fetch, so a wrong card outlives its revert): run
+      an OG debugger against the **deployed** origin — `/` renders the 1200×630
+      card; `/alt` unfurls title-only with **no** image and a `summary` card.
+      Ordering: after first deploy, before the URL appears in any README, post,
+      or message.

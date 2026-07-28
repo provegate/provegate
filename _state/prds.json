@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T14:51:33.242Z",
+  "generatedAt": "2026-07-28T14:54:04.333Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -968,21 +968,21 @@
       "prd": "PRD-027",
       "number": 27,
       "slug": "landing-adoption-polish",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-027-landing-adoption-polish.md",
-        "readiness": "_readiness/wip/readiness-027-landing-adoption-polish.md",
-        "tasks": "_tasks/wip/tasks-027-landing-adoption-polish.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-027-landing-adoption-polish.md",
+        "readiness": "_readiness/completed/readiness-027-landing-adoption-polish.md",
+        "tasks": "_tasks/completed/tasks-027-landing-adoption-polish.md",
+        "summary": "_docs/completed/summary-027-landing-adoption-polish.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.2,
@@ -991,9 +991,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 56,
+        "status": "Ship Verified",
+        "checkedCount": 56,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 5
       },
       "summary": {
@@ -1116,21 +1116,21 @@
       "prd": "PRD-031",
       "number": 31,
       "slug": "autonomy-mode-method-policy",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-031-autonomy-mode-method-policy.md",
-        "readiness": "_readiness/wip/readiness-031-autonomy-mode-method-policy.md",
-        "tasks": "_tasks/wip/tasks-031-autonomy-mode-method-policy.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-031-autonomy-mode-method-policy.md",
+        "readiness": "_readiness/completed/readiness-031-autonomy-mode-method-policy.md",
+        "tasks": "_tasks/completed/tasks-031-autonomy-mode-method-policy.md",
+        "summary": "_docs/completed/summary-031-autonomy-mode-method-policy.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.88,
@@ -1139,9 +1139,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 41,
+        "status": "Ship Verified",
+        "checkedCount": 39,
+        "uncheckedCount": 2,
         "operatorHandoffCount": 2
       },
       "summary": {
@@ -1355,7 +1355,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 5.3,
+        "score": 7.1,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
@@ -1392,7 +1392,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 4.95,
+        "score": 5.62,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null

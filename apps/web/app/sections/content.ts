@@ -11,6 +11,21 @@ import type { Phase } from '@provegate/design/react';
 
 export const TAGLINE = 'ProveGate (prove + gate): prove it, then let it propagate.';
 
+/**
+ * The product name, declared once as the split the wordmark's styling needs
+ * (the accent colours the second part) and derived everywhere else — the
+ * layout title, the OG card and its alt all consume these, so the name cannot
+ * drift between its consumers (PRD-027 FR-1).
+ */
+export const PRODUCT_NAME_PARTS = ['Prove', 'Gate'] as const;
+export const PRODUCT_NAME = PRODUCT_NAME_PARTS.join('');
+export const SITE_TITLE = `${PRODUCT_NAME} — prove it, then let it propagate.`;
+
+/** The FR-6 joining term: the hero HandoffCard wrapper class. The DOM half
+ * (landing.test) and the stylesheet half (a11y.test) both read THIS constant,
+ * so the two assertions cannot drift apart while both stay green. */
+export const HERO_HANDOFF_CLASS = 'pg-hero-handoff';
+
 export const HERO = {
   eyebrow: 'open-source · CLI + method',
   thesis: "Your coding agent's “done” is not evidence. Gate it on exit codes.",
@@ -32,7 +47,9 @@ export const HERO_TERMINAL: {
   human: string;
 } = {
   title: 'zsh — ~/app',
-  steps: ['npm install -D provegate', 'npx gate init', 'npx gate run PRD-001'],
+  // The install pair derives from HERO.install (PRD-027 FR-3); only the run
+  // step is authored here.
+  steps: [...HERO.install.split('\n'), 'npx gate run PRD-001'],
   echoes: ['added 1 package', '[init] next: see QUICKSTART.md', null],
   gates: [
     { name: 'phase 4', command: 'pnpm check-types', code: 0 },
@@ -52,11 +69,15 @@ export const NAV_LINKS = [
   ['Install', '#install'],
 ] as const;
 
-/** The trust strip under the hero — three invariants, each stated elsewhere. */
+/**
+ * The trust strip under the hero — three invariants, each linking to the
+ * section that substantiates it (PRD-027 FR-4). Every href is a real
+ * section id; the anchor-closure test holds the whole page's set.
+ */
 export const TRUST_STRIP = [
-  'listed but not run is never passed',
-  'one test killed what 80+ agents could not',
-  'push is always yours',
+  ['listed but not run is never passed', '#ledger'],
+  ['one test killed what 80+ agents could not', '#proof'],
+  ['push is always yours', '#refusal'],
 ] as const;
 
 /** The three approved proof stats — verbatim, no rounding, no fabrication. */
@@ -281,12 +302,6 @@ export const OPERATOR_FLOW = {
   note: 'An agent never writes an acceptance for itself: recording one is a deliberate action by an allowlisted owner, and the merge gate refuses a row that has none.',
 } as const;
 
-export const PROOF = {
-  scored: '0',
-  body: 'critical post-ship findings in the scored era. Unscored era: 2. A 143-findings × 83-scores calibration study forced the redesign (binary verdict + hard caps; the decimal score had r = −0.03 with post-ship defects).',
-  self: 'This repo runs its own method: gate run landed the commits that built gate run.',
-};
-
 /** Evidence bullets beside the limits — same section, by design. */
 export const PROOF_EVIDENCE = [
   '~390 production PRDs shipped through the workflow on a multi-tenant SaaS TypeScript monorepo, including multi-wave parallel execution.',
@@ -347,7 +362,7 @@ export const FEATURES = [
 
 /** Install tabs — the two package managers the tool actually ships through. */
 export const INSTALLERS = [
-  { id: 'npm', label: 'npm', file: 'terminal', code: 'npm install -D provegate\nnpx gate init' },
+  { id: 'npm', label: 'npm', file: 'terminal', code: HERO.install },
   { id: 'pnpm', label: 'pnpm', file: 'terminal', code: 'pnpm add -D provegate\npnpm exec gate init' },
 ] as const;
 

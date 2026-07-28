@@ -266,6 +266,45 @@
       "date": "2026-07-28",
       "method": "in-session direction",
       "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-027",
+      "owner": "owner",
+      "items": [
+        "9.2a-d live operator rows executed and confirmed by the owner in-browser (Tab focus rings + targets, Cmd+V system clipboard, 375px hero 1240px vs 1562px baseline, scrollspy 5/5)",
+        "9.1 independent review accepted (Codex, 3 rounds, verdict pass, critical 0, quorum 1/1)",
+        "10.3 operator acceptance of the operator-gated close via gate run"
+      ],
+      "reason": "owner personally verified the live browser rows this session ('evet/evet') and directed the close in-session ('Transkribe et', 2026-07-28); the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-031",
+      "owner": "owner",
+      "items": [
+        "1.2 addendum approval: docs/research/provegate-bootstrap/source-snapshot/addenda/autonomy-mode-and-proceed-rule-2026-07-27.md approved in-session before any method byte moved (W3 held; W2 satisfied by this item naming the exact path)",
+        "9.1 independent review accepted (Codex, 3 rounds, verdict pass, critical 0, quorum 1/1)",
+        "operator acceptance of the operator-gated close via gate run"
+      ],
+      "reason": "owner approved the drafted addendum in-session ('ok 031 icin onay') and directed this transcription ('et', 2026-07-28); the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-028",
+      "owner": "owner",
+      "items": [
+        "7.1 independent review accepted (Codex, 7 rounds, verdict pass, Critical: 0 sustained rounds 6-7, quorum 1/1)",
+        "0.4 stop-rule resolution ratified: owner-directed \u00a79 conformance edits on main (48d5503) for 027/034/036/039 in place of a hand-back",
+        "operator acceptance of the operator-gated close via gate run; push remains the owner's"
+      ],
+      "reason": "owner approved the acceptance in-session ('kabul', 2026-07-28) after the phase 4-7 report; the agent transcribed the decision",
+      "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
     }
   ]
 }

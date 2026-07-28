@@ -556,3 +556,92 @@ describe('phase 6 round 8 — the constraint count is discriminating', () => {
     expect(countIn(`${four}\n5. Reopen every prior learning before running tests.`)).toBe(5);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRD-031 — the addendum (FR-1, read DIRECTLY: the frozen-snapshot digest
+// deliberately excludes MANIFEST.md and addenda/**, so no digest row can prove
+// this file), the configured exception (FR-2/FR-3), the orchestration proceed
+// rule (FR-4), and the two-copy bootstrap identity (FR-5).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SNAPSHOT_ROOT = join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot');
+const A2 = join(SNAPSHOT_ROOT, 'addenda/autonomy-mode-and-proceed-rule-2026-07-27.md');
+
+describe('the autonomy addendum — shape and clauses, never approval (PRD-031 FR-1)', () => {
+  // This suite proves ARTIFACT SHAPE and the two authorized clauses. It cannot
+  // and does not prove the owner's approval ACT — that is the operator-owned
+  // task row plus the committed acceptance naming this exact path (ADR-0003).
+  it('exists at the exact declared path and would fail without it', () => {
+    expect(existsSync(A2), 'the FR-1 addendum is missing').toBe(true);
+  });
+
+  it('carries owner approval status with a date, the scope, and the unchanged-snapshot statement', () => {
+    const a2 = readFileSync(A2, 'utf8');
+    expect(a2).toMatch(/\*\*Status:\*\* approved by the owner, \d{4}-\d{2}-\d{2}/);
+    expect(a2).toContain('PRD-031');
+    expect(a2).toContain('the frozen snapshot under `../` is unchanged and stays');
+  });
+
+  it('states both authorized clauses', () => {
+    const a2 = readFileSync(A2, 'utf8');
+    expect(a2).toContain('configured value, never a self-assessment');
+    expect(a2).toContain('proceed rule beside the stop rules');
+  });
+
+  it('is listed in the snapshot manifest addenda table', () => {
+    const manifest = readFileSync(join(SNAPSHOT_ROOT, 'MANIFEST.md'), 'utf8');
+    expect(manifest).toContain('addenda/autonomy-mode-and-proceed-rule-2026-07-27.md');
+    expect(manifest).toMatch(/autonomy-mode-and-proceed-rule[^|]*\| 2026-07-28 \| owner \|/);
+  });
+});
+
+describe('the configured exception (PRD-031 FR-2/FR-3)', () => {
+  it('the shipped protocol carries the token, not a self-granted exception', () => {
+    const phase3 = prompt('phase-3-task-generator.md');
+    expect(phase3).toContain('{{AUTONOMY_MODE}}');
+    // the old unconditioned one-liner is gone from the shipped source
+    expect(phase3).not.toMatch(/Exception: in\s+autonomous-execution mode, document/);
+  });
+
+  it('the human-gated fragment has no exception and no self-assessment; the autonomous one reproduces the snapshot text', () => {
+    const gated = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md'), 'utf8');
+    const auto = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'), 'utf8');
+    expect(gated).toContain('This STOP has no exception');
+    expect(gated).not.toContain('Exception:');
+    // FR-3: the snapshot's sentence, parenthetical included, byte-anchored to
+    // the snapshot itself so an abridgement cannot recur unnoticed
+    const snapshot = readFileSync(join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'), 'utf8').replace(/\s+/g, ' ');
+    const sentence = 'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.';
+    expect(snapshot).toContain(sentence);
+    expect(auto.replace(/\s+/g, ' ')).toContain(sentence);
+    // both fragments state the configured-statement rule
+    for (const f of [gated, auto]) {
+      expect(f.replace(/\s+/g, ' ')).toContain('an agent never assesses which mode its own session is in');
+    }
+  });
+});
+
+describe('the proceed rule (PRD-031 FR-4/FR-5)', () => {
+  const PROCEED_HEAD = '## The proceed rule (Phases 4–7)';
+
+  it('the orchestration protocol states it, wording traced to the addendum clause', () => {
+    const runner = prompt('orchestration-runner.md');
+    expect(runner).toContain(PROCEED_HEAD);
+    // the addendum's clause-2 core, quoted so the trace is checked not narrated
+    expect(runner.replace(/\s+/g, ' ')).toContain(
+      'the only legitimate stops are the enumerated stop-and-ask checkpoints and a failed gate',
+    );
+  });
+
+  it('both bootstrap copies carry the proceed rule IDENTICALLY — a pattern in each would be satisfied by the template alone', () => {
+    const live = readFileSync(join(pkgRoot, '../../AGENT_BOOTSTRAP.md'), 'utf8');
+    const tmpl = readFileSync(join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'), 'utf8');
+    const block = (s: string): string => {
+      const i = s.indexOf(PROCEED_HEAD);
+      expect(i, 'proceed rule missing from a bootstrap copy').toBeGreaterThanOrEqual(0);
+      const j = s.indexOf('\n## ', i + 1);
+      return s.slice(i, j === -1 ? undefined : j).trim();
+    };
+    expect(block(live)).toBe(block(tmpl));
+  });
+});
