@@ -1,5 +1,28 @@
 # Readiness Assessment: PRD-031 — Autonomy-Mode Method Policy
 
+> **Iteration 2 (Codex, independent) — 7.40/10, ITERATE; up 1.62, four of seven pieces
+> fully closed — and the method-content cap re-trips on a sharper reading of FR-1.**
+> Scored the rework (`eb4e929`); same orchestration disclosure (rework author
+> orchestrates, Codex owns every verdict). **Closed with citations**: mutation-checked
+> enumeration coverage (renderer contract confirmed at `prompts.ts:595-613`),
+> serialization vs 026/032, the re-founded chain (verified against `_state/prds.json`),
+> the honest bundle note and the three corrected dispositions, and Value 3.55 with a
+> rollback the scorer verified down to the `[unused]`-diagnostic behavior
+> (`prompts.ts:621-650`). **Still open, both real:** (1) the first-enumeration
+> migration reaches sites the rework did not name — five more in
+> `content-placeholders.test.ts` (`:164,173,185,206,217`), plus `prompts.test.ts:289-292`
+> and `init.test.ts:315-325,383-395`, which synthesize illegal `v-AUTONOMY_MODE` values
+> and hardcode nine keys, in files absent from Targets; (2) **FR-1's approval proof can
+> be self-issued** — the package test verifies approval-shaped *text*, so an
+> agent-authored addendum saying "approved by the owner" passes without any owner act;
+> the remedy is structural: an operator-owned task row plus a committed owner
+> acceptance naming the exact addendum path, with the package assertion demoted to
+> shape-and-clauses. Two smaller: FR-2/FR-4's §11 rows expect assertions in a test
+> neither FR targets; one "no TypeScript file" survivor in §7. Scorecard
+> 7.0 / 6.5 / 7.5 / 9.5 / 6.0 / 8.5 → 7.40.
+>
+> <details><summary>Iteration 1 (5.78 ITERATE, Codex)</summary>
+>
 > **Iteration 1 (Codex, independent) — 5.78/10, ITERATE; band 4–5.9, so the prescribed
 > action is Phase-1 rework (`score-band-prescribes-the-action`) — and unlike PRD-032,
 > the item survives triage: honest Value recomputes to 3.55, above the 3.40 threshold.**
@@ -25,14 +48,16 @@
 > closed grammar, all caps clear (traceability conditionally — the addendum must land
 > first, and the ordering must be proven by the repaired FR-1 test).
 
+> </details>
+
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-031-autonomy-mode-method-policy.md` |
-| Score                  | 5.78/10                                        |
-| Verdict                | ITERATE — band 4–5.9, Phase-1 rework: the text-only scope is impossible against the shipped corpus tests, the claimed missing-fragment test does not exist, the addendum verification is green without the addendum, and the surface collides undeclared with PRD-026/032 |
-| Iteration              | 1                                              |
+| Score                  | 7.40/10                                        |
+| Verdict                | ITERATE — the migration surface reaches two undeclared test files (plus five uncited sites in the declared one), and FR-1's approval proof is self-issuable: approval-shaped text satisfies the package test without an owner act, so the method-content cap trips until the approval is bound to an operator-owned row and a committed acceptance naming the addendum path |
+| Iteration              | 2                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts** |
@@ -154,6 +179,7 @@ land first and the repaired FR-1 test must prove the ordering).
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
+| 2   | 2026-07-28 | 7.40  | ITERATE | **Scored the rework `eb4e929`; four of seven pieces CLOSED** (mutation-checked enumeration coverage — renderer contract confirmed `prompts.ts:595-613`; 026/032 serialization; the re-founded chain verified against `_state/prds.json`; honest bundle note + three corrected dispositions; Value 3.55 with rollback verified to the `[unused]` diagnostic at `prompts.ts:621-650`). **Piece 1 PARTIAL**: the four specified fixture moves are not the complete set — `content-placeholders.test.ts:164,173,185,206,217` plus `prompts.test.ts:289-292` and `init.test.ts:315-325,383-395` (illegal synthesized `v-AUTONOMY_MODE` values, hardcoded nine-key sets) sit in files outside Targets. **Piece 3 PARTIAL → [P1]**: the direct-read addendum assertion is non-vacuous against today's tree, but it proves approval-shaped TEXT — an agent can self-issue it; the cap re-trips until approval is an operator-owned row plus a committed owner acceptance naming the exact path. [P2]: FR-2/FR-4 §11 rows expect `content-prompts.test.ts` assertions neither FR targets. [P3]: one §7 no-TypeScript survivor. 7.0/6.5/7.5/9.5/6.0/8.5 → 7.40. |
 | 1   | 2026-07-28 | 5.78  | ITERATE | First independent round. The decisive finding is a self-contradiction: the first enumerated token in the registry necessarily moves the corpus tests the PRD forbids touching. Beside it: a claimed package test that does not exist, an addendum verification green without the addendum, undeclared surface collisions with 026/032, the 030→034 staleness class, and three ceremonial dispositions. Architecture use, FR-3's snapshot accuracy, and the addenda mechanism's legality all held. Honest Value 3.55 — above threshold, candidacy keeps. |
 
 ---
