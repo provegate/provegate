@@ -57,8 +57,11 @@ An autonomous agent must STOP and ask the human before any of:
   takes zero runtime dependencies, ever).
 - **Out-of-scope files** — touching files outside the spec's documented scope / Conflict Surface.
 - **Secrets / env** — modifying secrets or `.env.*` beyond what the spec specifies.
-- **Operator acceptance** — an agent never writes `_state/acceptances.json`; recording a
-  waiver is a deliberate human action by an allowlisted owner (the merge gate validates it).
+- **Operator acceptance** — an agent writes `_state/acceptances.json` only on explicit
+  in-session owner direction, and only with `authorship: "agent-transcribed"`; absent that
+  direction, stop and ask. `owner` names who DECIDED, never who typed. An agent never
+  originates an acceptance and never accepts its own work (the merge gate validates the
+  entry mechanically).
 - **Method content** — anything in `packages/provegate` prompts/templates/schemas not
   traceable to the source snapshot.
 - **Unspecified design question** — a design decision the spec doesn't answer.

@@ -192,17 +192,6 @@
       "date": "2026-07-27",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
-    },
-    {
-      "prd": "PRD-033",
-      "owner": "owner",
-      "items": [
-        "3.15 owner confirms the landed acceptance-authorship rule is the rule they decided, across the three prose sites, the memory record and its packed twin, and ADR-0003"
-      ],
-      "reason": "owner directed this change, chose the structural option over the documentation-only one when the trade was put to them, and approved the close in session after reading the phase report. The agent verified the rule is consistent across eight sites and machine-checks five of them; it cannot verify the text is the rule the owner wanted, which is exactly what this row records. Written by the agent at the owner’s explicit in-session direction under the rule this PRD lands — the first entry the new field governs",
-      "date": "2026-07-28",
-      "method": "interactive (owner-directed, agent-transcribed)",
-      "authorship": "agent-transcribed"
     }
   ]
 }

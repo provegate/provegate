@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-27T19:50:50.236Z",
+  "generatedAt": "2026-07-28T06:05:25.095Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1042,21 +1042,21 @@
       "prd": "PRD-029",
       "number": 29,
       "slug": "method-delivery-agent-binding",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-029-method-delivery-agent-binding.md",
-        "readiness": "_readiness/wip/readiness-029-method-delivery-agent-binding.md",
-        "tasks": "_tasks/wip/tasks-029-method-delivery-agent-binding.md",
-        "summary": "_docs/wip/summary-029-method-delivery-agent-binding.md"
+        "prd": "_prds/completed/prd-029-method-delivery-agent-binding.md",
+        "readiness": "_readiness/completed/readiness-029-method-delivery-agent-binding.md",
+        "tasks": "_tasks/completed/tasks-029-method-delivery-agent-binding.md",
+        "summary": "_docs/completed/summary-029-method-delivery-agent-binding.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.35,
@@ -1085,32 +1085,32 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-030-prompt-store-integrity.md",
-        "readiness": "",
-        "tasks": "",
+        "readiness": "_readiness/wip/readiness-030-prompt-store-integrity.md",
+        "tasks": "_tasks/wip/tasks-030-prompt-store-integrity.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
-        "tasks": "missing",
+        "readiness": "wip",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.15,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
-        "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "status": "Code Complete",
+        "checkedCount": 32,
+        "uncheckedCount": 13,
+        "operatorHandoffCount": 8
       },
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-27"
+      "lastUpdated": "2026-07-28"
     },
     {
       "prd": "PRD-031",
@@ -1185,6 +1185,80 @@
         "shipReadiness": "Unknown"
       },
       "lastUpdated": "2026-07-27"
+    },
+    {
+      "prd": "PRD-033",
+      "number": 33,
+      "slug": "acceptance-authorship-provenance",
+      "status": "Operator Verification",
+      "cyclePhase": "7 (Learning)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-033-acceptance-authorship-provenance.md",
+        "readiness": "_readiness/wip/readiness-033-acceptance-authorship-provenance.md",
+        "tasks": "_tasks/wip/tasks-033-acceptance-authorship-provenance.md",
+        "summary": "_docs/wip/summary-033-acceptance-authorship-provenance.md"
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "wip"
+      },
+      "readiness": {
+        "score": 8.25,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
+      },
+      "task": {
+        "status": "Operator Verification",
+        "checkedCount": 66,
+        "uncheckedCount": 2,
+        "operatorHandoffCount": 1
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-034",
+      "number": 34,
+      "slug": "prompt-store-reconciliation",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
     }
   ]
 }

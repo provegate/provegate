@@ -21,7 +21,7 @@
     "acceptanceEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["prd", "owner", "items", "reason", "date", "method"],
+      "required": ["prd", "owner", "items", "reason", "date", "method", "authorship"],
       "properties": {
         "prd": {
           "type": "string",
@@ -52,6 +52,10 @@
           "type": "string",
           "minLength": 1,
           "description": "How the acceptance was recorded, e.g. \"interactive\" or \"--yes\"."
+        },
+        "authorship": {
+          "enum": ["owner-written", "agent-transcribed"],
+          "description": "Who TYPED the entry, beside `owner`, which names who DECIDED. `owner-written` — an owner wrote it directly. `agent-transcribed` — an agent wrote it on explicit in-session owner direction; the decision is still the owner's, and `owner` still names them. This is a record, not an enforcement: nothing prevents a false value, and nothing can. It exists so authorship is queryable rather than buried in four phrasings of `method`, and so a concealed authorship is an affirmative false statement instead of an unreadable ambiguity."
         }
       }
     }

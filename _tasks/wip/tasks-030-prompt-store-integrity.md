@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/wip/prd-030-prompt-store-integrity.md)
 > **Readiness**: [readiness-030-prompt-store-integrity.md](../../_readiness/wip/readiness-030-prompt-store-integrity.md)
-> **Status**: Not Started
+> **Status**: Code Complete
 > **Readiness Score**: 8.15/10 (PASS, iteration 2)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -77,69 +77,69 @@ a record is evidence only while it is true.
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 Claim the work item: write a lock lease naming PRD-030, the phase, the TTL and
+- [x] 0.0 Pre-flight
+  - [x] 0.1 Claim the work item: write a lock lease naming PRD-030, the phase, the TTL and
         `ownedPaths` mirroring the PRD's Conflict Surface
         (`_docs/design/prompt-store-state-model.md`,
         `_brain/learnings/state-model-before-mechanism.md`). Lease goes on the main
         checkout, not the worktree.
-  - [ ] 0.2 Run `gate queue` and confirm no active execution-phase claim overlaps those two
+  - [x] 0.2 Run `gate queue` and confirm no active execution-phase claim overlaps those two
         paths — PRD-031 and PRD-034 are expected to be disjoint; if either has claimed
         them, stop and record the conflict.
-  - [ ] 0.3 Open each Memory Context record and confirm the paths and commands it names
+  - [x] 0.3 Open each Memory Context record and confirm the paths and commands it names
         still exist; record any stale finding in **Deferrals & Decisions**.
-  - [ ] 0.4 Read PRD-029 as shipped (`packages/provegate/src/core/run/prompts.ts`,
+  - [x] 0.4 Read PRD-029 as shipped (`packages/provegate/src/core/run/prompts.ts`,
         `init.ts::runInit`, `init.ts::PACK_MAP`) to establish what the installer actually
         does today. The model describes transitions of the store that exists, not of the
         store the retracted design imagined.
 
-- [ ] 1.0 The state model — transitions and actors
-  - [ ] 1.1 Create `_docs/design/prompt-store-state-model.md` with the four constraints
+- [x] 1.0 The state model — transitions and actors
+  - [x] 1.1 Create `_docs/design/prompt-store-state-model.md` with the four constraints
         stated up front, verbatim from the PRD §4: additive-only `init` (`wx`, nothing ever
         overwritten); no command deletes an adopter's file; no code path reaches a git
         remote; `packages/provegate` takes zero runtime dependencies. Every later section is
         written under them.
-  - [ ] 1.2 `### T1 Install into a repo that already has a config` — answer how activation
+  - [x] 1.2 `### T1 Install into a repo that already has a config` — answer how activation
         is recorded when no file may be edited. Read `init.ts::runInit` before writing.
-  - [ ] 1.3 `### T2 Upgrade` — answer what changes, who applies it, and how the process
+  - [x] 1.3 `### T2 Upgrade` — answer what changes, who applies it, and how the process
         terminates. Termination is the axis the retracted design failed on.
-  - [ ] 1.4 `### T3 Upgrade with one deliberately edited file` — answer whether the edit
+  - [x] 1.4 `### T3 Upgrade with one deliberately edited file` — answer whether the edit
         survives and what authority says so. Name the authority; "the tool respects it" is
         not an authority.
-  - [ ] 1.5 `### T4 Add / remove an adapter` — answer what happens to the previous file and
+  - [x] 1.5 `### T4 Add / remove an adapter` — answer what happens to the previous file and
         who may delete it.
-  - [ ] 1.6 `### T5 Rename the store directory` — answer how the old tree is discovered, or
+  - [x] 1.6 `### T5 Rename the store directory` — answer how the old tree is discovered, or
         state that it is not.
-  - [ ] 1.7 `### T6 Remove the config block` — answer what remains discoverable, stated as a
+  - [x] 1.7 `### T6 Remove the config block` — answer what remains discoverable, stated as a
         limit if the answer is nothing.
-  - [ ] 1.8 `### T7 The receipt's own second write` — answer who writes it and whether it is
+  - [x] 1.8 `### T7 The receipt's own second write` — answer who writes it and whether it is
         itself a destination.
-  - [ ] 1.9 For every transition with no honest answer inside the constraints, record the
+  - [x] 1.9 For every transition with no honest answer inside the constraints, record the
         limit and argue the impossibility **from a named constraint**. An asserted
         impossibility and an abandoned one produce identical text — this sub-task is the
         one the Phase 6 reviewer is briefed to attack (W10).
-  - [ ] 1.10 Re-read §12: confirm no sentence describes what a command does. Any such
+  - [x] 1.10 Re-read §12: confirm no sentence describes what a command does. Any such
         sentence belongs in PRD-034 or nowhere, and its presence here is the restatement
         failure this item was narrowed to stop.
 
-- [ ] 2.0 Structural conformance (the machine gate)
-  - [ ] 2.1 Close each `### T<n>` section with a single line of the exact form
+- [x] 2.0 Structural conformance (the machine gate)
+  - [x] 2.1 Close each `### T<n>` section with a single line of the exact form
         `- T<n> resolved: reads=<...> writes=<...> actor=<...> interrupt=<...>`, all four
         axes carrying a real answer.
-  - [ ] 2.2 Run the two `grep -qE` chains from PRD §11 locally and confirm exit 0. Then
+  - [x] 2.2 Run the two `grep -qE` chains from PRD §11 locally and confirm exit 0. Then
         blank one axis in a scratch copy and confirm exit 1 — the gate is only evidence if
         it discriminates. Do not commit the scratch copy.
-  - [ ] 2.3 Confirm no `resolved:` line restates a mechanism (a command name, a flag, a file
+  - [x] 2.3 Confirm no `resolved:` line restates a mechanism (a command name, a flag, a file
         format). The line records who acts and what moves, not how a tool implements it.
 
-- [ ] 3.0 Migration & Rollback Plan (infra class — 20% of the readiness weight)
-  - [ ] 3.1 Record the ordering constraint in the model's closing section: PRD-034's §4 is
+- [x] 3.0 Migration & Rollback Plan (infra class — 20% of the readiness weight)
+  - [x] 3.1 Record the ordering constraint in the model's closing section: PRD-034's §4 is
         blocked until this document is owner-approved, and no partial approval unblocks a
         subset of transitions.
-  - [ ] 3.2 Record the undo: this item's rollback is a revert of one document commit. No
+  - [x] 3.2 Record the undo: this item's rollback is a revert of one document commit. No
         adopter state, no schema, no deploy ordering — state it explicitly rather than
         leaving the dimension implicitly empty.
-  - [ ] 3.3 Record what a **later** change to the model costs once PRD-034 exists: which
+  - [x] 3.3 Record what a **later** change to the model costs once PRD-034 exists: which
         FRs would be invalidated, and that the correction is a superseding revision of this
         document rather than an edit in place.
 
@@ -153,15 +153,15 @@ a record is evidence only while it is true.
         `_docs/design/prompt-store-state-model.md`. **An agent never writes this file, and
         never checks 4.3 on the owner's behalf.**
 
-- [ ] 5.0 Phase 5 — Testing
-  - [ ] 5.1 Run `test -f _docs/design/prompt-store-state-model.md`; paste command and
+- [x] 5.0 Phase 5 — Testing
+  - [x] 5.1 Run `test -f _docs/design/prompt-store-state-model.md`; paste command and
         output into the Verification Ledger.
-  - [ ] 5.2 Run the T1–T4 `grep -qE` chain; paste command and output.
-  - [ ] 5.3 Run the T5–T7 `grep -qE` chain; paste command and output.
-  - [ ] 5.4 Run the cross-cutting floor — `pnpm check-types`, `pnpm lint`, `pnpm test`,
+  - [x] 5.2 Run the T1–T4 `grep -qE` chain; paste command and output.
+  - [x] 5.3 Run the T5–T7 `grep -qE` chain; paste command and output.
+  - [x] 5.4 Run the cross-cutting floor — `pnpm check-types`, `pnpm lint`, `pnpm test`,
         `pnpm build` — and confirm each is unchanged from the pre-work baseline. A green
         floor here means the tree was not touched, which is this item's §6 criterion.
-  - [ ] 5.5 Update every ledger row with `passed` / `failed` and the evidence. A row that
+  - [x] 5.5 Update every ledger row with `passed` / `failed` and the evidence. A row that
         was not executed is never `passed`.
 
 - [ ] 6.0 Phase 6 — Final Auditing
@@ -179,13 +179,13 @@ a record is evidence only while it is true.
   - [ ] 6.4 Fix every finding or waive it with a one-line justification in the ledger.
 
 - [ ] 7.0 Phase 7 — Learning
-  - [ ] 7.1 Write `_brain/learnings/state-model-before-mechanism.md`: when a design's state
+  - [x] 7.1 Write `_brain/learnings/state-model-before-mechanism.md`: when a design's state
         transitions are unwritten, each remediation round repairs the counterexample it was
         given and produces a new one; the tell is a **flat remediation trajectory** across
         rounds (4.48, 5.73, 5.90, 5.63, 4.53 on PRD-029, then 4.50 on PRD-030's first
         round), and the fix is to make the model itself the work item. Include `watch`,
         `links`, and the `**Why:**` / `**How to apply:**` lines the protocol requires.
-  - [ ] 7.2 Add the one-line pointer to `_brain/INDEX.md` under Workflow gotchas. Hook
+  - [x] 7.2 Add the one-line pointer to `_brain/INDEX.md` under Workflow gotchas. Hook
         ≤ 120 characters. `_brain/INDEX.md` is `sharedAppendOnly` — append, never rewrite
         neighbouring lines.
   - [ ] 7.3 Confirm every Durable Artifact path appears in the merge diff: the learning,
@@ -207,13 +207,13 @@ it must be `passed` and name the review artifact path.
 
 | Gate               | Command / Check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Scope | Result  | Evidence | Notes                                                                 |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------- | -------- | ------------------------------------------------------------------------ |
-| FR-1               | `test -f _docs/design/prompt-store-state-model.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | pending |          | presence; fails on absence                                               |
-| FR-1               | `grep -qE "^- T1 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T2 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T3 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T4 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`               | repo  | pending |          | transitions 1–4 answered on all four axes                                |
-| FR-1               | `grep -qE "^- T5 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T6 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T7 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`                                                                                                                                      | repo  | pending |          | transitions 5–7, same discipline                                         |
-| types              | `pnpm check-types`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | pending |          | floor; unchanged from baseline — this item adds no code                  |
-| lint               | `pnpm lint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | pending |          | floor                                                                    |
-| test               | `pnpm test`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | pending |          | floor; existing tests unchanged, none added                              |
-| build              | `pnpm build`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | repo  | pending |          | floor                                                                    |
+| FR-1               | `test -f _docs/design/prompt-store-state-model.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | passed  | `exit 0` | presence; fails on absence                                              |
+| FR-1               | `grep -qE "^- T1 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T2 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T3 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T4 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`               | repo  | passed  | `exit 0`; blanking `T4 reads=` in a scratch copy → `exit 1` | transitions 1–4 answered on all four axes; the gate discriminates |
+| FR-1               | `grep -qE "^- T5 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T6 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md && grep -qE "^- T7 resolved: reads=\S.* writes=\S.* actor=\S.* interrupt=\S.*" _docs/design/prompt-store-state-model.md`                                                                                                                                      | repo  | passed  | `exit 0` | transitions 5–7, same discipline                                        |
+| types              | `pnpm check-types`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | repo  | passed  | `5 cached, 5 total >>> FULL TURBO` | floor; full cache hit IS the evidence no package input changed |
+| lint               | `pnpm lint`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | passed  | `4 cached, 4 total >>> FULL TURBO` | floor                                              |
+| test               | `pnpm test`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | repo  | passed  | `7 successful, 7 total; 7 cached >>> FULL TURBO` | floor; existing tests unchanged, none added |
+| build              | `pnpm build`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | repo  | passed  | `4 cached, 4 total >>> FULL TURBO` | floor                                              |
 | independent-review | `_docs/reviews/review-030-prompt-store-integrity.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                     | repo  | pending |          | verdict pass, critical = 0; reviewer is not the authoring session         |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.

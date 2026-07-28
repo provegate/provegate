@@ -112,3 +112,48 @@ describe('the research pack declares itself frozen (FR-11)', () => {
     expect(text).toContain('https://provegate.dev/docs');
   });
 });
+
+/**
+ * PRD-033 FR-4 — the acceptance-authorship rule, in the two SHIPPED statements.
+ *
+ * Package files only. The repo-root statement in `AGENT_BOOTSTRAP.md` and the
+ * store itself are outside this package's turbo cache key, so asserting on them
+ * here would pass from cache over a change it never read; `verify:acceptance-rule`
+ * covers those, cache-free. The split is by where the file lives, not by what is
+ * asserted.
+ */
+describe('acceptance authorship rule, as shipped (PRD-033)', () => {
+  const shipped = [
+    'METHOD.md',
+    'practices/templates/AGENT_BOOTSTRAP.template.md',
+  ] as const;
+
+  // Matched across whitespace, so the assertion is about the CONTENT and not
+  // about one line-wrapping of it — a reflowed paragraph is not a rule change.
+  const phrase = (words: string): RegExp => new RegExp(words.split(' ').join('\\s+'), 'i');
+
+  it.each(shipped)('%s permits transcription and names the required value', (rel) => {
+    const text = read(join(pkgRoot, rel));
+    expect(text).toMatch(/agent-transcribed/);
+    expect(text).toMatch(phrase('explicit in-session owner direction'));
+    // `owner` must keep meaning who DECIDED, or the field records nothing.
+    expect(text).toMatch(/who\s+DECIDED/i);
+  });
+
+  it.each(shipped)('%s no longer states the prohibition it replaced', (rel) => {
+    const text = read(join(pkgRoot, rel));
+    // The exact sentences that were false for nine work items. A paraphrase
+    // added at a new site is not caught here — that residual is named in the
+    // header of `scripts/verify/verify-acceptance-rule.mjs`.
+    expect(text).not.toMatch(phrase('an agent never writes'));
+    expect(text).not.toMatch(phrase('never write acceptance entries on their own'));
+  });
+
+  it('the shipped rule keeps the self-accept prohibition it must not weaken', () => {
+    // Deciding and typing are two acts. Loosening the second must not read as
+    // loosening the first.
+    for (const rel of shipped) {
+      expect(read(join(pkgRoot, rel))).toMatch(phrase('never accepts its own work'));
+    }
+  });
+});

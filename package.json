@@ -36,6 +36,7 @@
     "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
     "verify:gates-wired": "node scripts/verify/verify-gates-wired.mjs",
     "verify:pack-drift": "node scripts/verify/verify-pack-drift.mjs",
+    "verify:acceptance-rule": "node scripts/verify/verify-acceptance-rule.mjs",
     "verify:turbo-inputs": "node scripts/verify/verify-turbo-inputs.mjs",
     "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
     "verify:value-score": "node packages/provegate/dist/cli.js check --value-score",

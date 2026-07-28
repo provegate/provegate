@@ -26,7 +26,7 @@
     },
     "brain/INDEX.md": {
       "dest": "_brain/INDEX.md",
-      "pack": "88d9de413f4fd430",
+      "pack": "24750e380c5a78b3",
       "track": "pack",
       "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
     },
@@ -47,8 +47,8 @@
     },
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
-      "pack": "6083eb45e7cfa526",
-      "repo": "f9664d50c0ed05a2"
+      "pack": "bb3c2597386d9f09",
+      "repo": "94e9817e8bdd57c2"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",
@@ -140,7 +140,7 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "7e5cfd4e9eafcee9",
-      "repo": "150374e23c3bd010",
+      "repo": "5b349c987b6c5d1d",
       "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit"
     },
     "verify/gates-wired-exceptions.json": {
@@ -243,8 +243,8 @@
     },
     "brain/learnings/operator-acceptance-no-self-accept.md": {
       "dest": "_brain/learnings/operator-acceptance-no-self-accept.md",
-      "pack": "2594d47567b8024a",
-      "repo": "2594d47567b8024a"
+      "pack": "e6ed258147729463",
+      "repo": "e6ed258147729463"
     },
     "brain/learnings/push-is-human-by-omission.md": {
       "dest": "_brain/learnings/push-is-human-by-omission.md",
