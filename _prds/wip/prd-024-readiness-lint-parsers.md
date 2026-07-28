@@ -3,7 +3,7 @@
 > **Status**: Draft
 >
 > **Created**: 2026-07-27
-> **Updated**: 2026-07-27
+> **Updated**: 2026-07-28
 > **Author**: Claude Opus 5, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `readiness-lint-parsers`
@@ -45,17 +45,30 @@ were sharing a document, and the smaller one was being held hostage.
 command. Allowlisted, it silently joins the Phase-5 gate; non-allowlisted, it fails the
 readiness lint for prose.
 
-**Measured on the live corpus, 2026-07-27.** Three Notes-cell tokens across the configured
-wip directory reach the parser today:
+**The hazard is measured, and the measurement is dated because it moves.** Re-run
+2026-07-28 by grepping every `| FR-N` row in the wip corpus and cell-splitting it:
 
-| PRD | Row | Token | Effect today |
-| --- | --- | ----- | ------------ |
-| PRD-021 | FR-8 | `pnpm build` | **allowlisted — it silently joins the Phase-5 gate**, declared by nobody |
-| PRD-026 | FR-5 | `pack-manifest.json` | inert, excluded as a file path (`safety.ts:51-58`) |
-| PRD-027 | FR-7 | `sections/content.ts` | inert, same |
+| PRD | Row | Token | Effect | State of this row |
+| --- | --- | ----- | ------ | ----------------- |
+| PRD-021 | FR-8 | `pnpm build` | **allowlisted — it silently joined the Phase-5 gate**, declared by nobody | **archived** 2026-07-27 to `_prds/completed/`; the row survives at `prd-021-governance-truth-up.md:1278` |
+| PRD-026 | FR-5 | `pack-manifest.json` | inert, excluded as a file path (`safety.ts:51-58`) | live in wip |
+| PRD-027 | FR-7 | `sections/content.ts` | inert, same | gone — that Notes cell is prose now |
 
-One live instance of the real hazard, in a PRD nobody wrote it into deliberately. That is
-the whole case for this work, and it is one row rather than a hypothetical.
+**Read the two numbers separately, because only one of them is the case for this work.**
+
+- **Live count in the wip corpus today: zero.** PRD-021's instance archived with its PRD and
+  PRD-027's was edited away, leaving only PRD-026's inert file path. Claiming a live hazard
+  would be false, so it is not claimed.
+- **Proven instances of the class: one, dated and still readable.** PRD-021 FR-8 is the
+  existence proof — a real command, in a real PRD, silently executing at Phase 5 because a
+  Notes cell explained it. That row was written by an author who did not know they were
+  declaring a gate command, and nothing about the parser has changed since.
+
+The class is what this PRD fixes, and a reader who wants the current live count should re-run
+the grep rather than trust this paragraph. The defect's cost is not the size of today's
+sample: the parser is unchanged, so the next author who backticks a command in a Notes cell
+reproduces PRD-021 FR-8 exactly, and the one inert token still in the corpus sits a single
+edit away from being that author.
 
 `_brain/learnings/notes-column-runs-commands.md` predicted this exactly, and its "how to
 apply" ends with *fix it in the parser*. Its interim guidance — keep backticks out of Notes
@@ -73,7 +86,8 @@ apply" ends with *fix it in the parser*. Its interim guidance — keep backticks
 - [ ] Preserve the exported signature and every existing consumer, so nothing published
       moves.
 - [ ] Land it with a corpus pass over live wip PRDs, run by a command that actually executes
-      the lint — not a bundle that never calls it.
+      the lint — not a bundle that never calls it — asserting the §11 issue class this PRD
+      introduces rather than a whole-lint green the corpus does not carry.
 - [ ] Retire `notes-column-runs-commands`'s interim guidance in the same change that removes
       its hazard, so the record does not outlive its fix.
 
@@ -81,8 +95,8 @@ apply" ends with *fix it in the parser*. Its interim guidance — keep backticks
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
-| Backticked tokens outside the Command column that reach the gate | 3 measured in the wip corpus, one of them an allowlisted command | 0 | FR-1 fixtures plus the FR-2 corpus pass |
-| Commands executing at Phase 5 that no author declared | 1, in PRD-021 FR-8's Notes cell | 0 | the same |
+| Backticked tokens outside the Command column that reach the gate | 1 in the wip corpus on 2026-07-28, inert; 3 on 2026-07-27, one of them an allowlisted command | 0, and structurally rather than by sample | FR-1 fixtures plus the FR-2 corpus pass |
+| Commands executing at Phase 5 that no author declared | 0 live on 2026-07-28; 1 proven, in the now-archived PRD-021 FR-8 | 0, unreachable rather than absent | the same |
 | Reporting channels for a malformed §11 row | 0 — the parser returns a bare array | 1, surfaced at readiness and refused at run | FR-1 fixtures |
 | §11 sections a document may declare | unbounded; only the first is read | exactly 1 | FR-1 fixture |
 | Corpus commands that do not execute the rule they verify | 1 — the repo bundle never calls the readiness lint | 0 | FR-2's row names a command that calls it |
@@ -123,14 +137,15 @@ so that "all commands passed" cannot mean "the commands I could read passed".
 
 ```
 As a maintainer landing a stricter lint,
-I want the corpus pass to run the lint I changed,
-so that "the corpus is green" is evidence rather than an assertion.
+I want the corpus pass to run the lint I changed and to assert the rule I changed,
+so that its verdict is evidence about my change rather than about everyone else's.
 ```
 
 **Acceptance Criteria:**
 
-- [ ] The corpus command invokes the readiness lint over every wip PRD and asserts per-file
-      outcomes.
+- [ ] The corpus command invokes the readiness lint over every wip PRD and asserts, per file,
+      that no §11-parser-class issue is reported — the class this change owns, rather than the
+      whole verdict, which turns on rules this change never reads.
 
 ---
 
@@ -154,9 +169,16 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    `chain.test.ts:48`, and `single-package.test.ts:100-119`, which passes one through
    `buildGateChain`). A three-cell minimum would make every one of them malformed, change
    the lint's verdict on them and trip the new chain refusal — breaking this FR's own
-   binding rule that no existing test may need editing to accommodate the guard. Measured
-   across the whole fixture corpus: fifteen literal FR rows in five files — ten two-cell,
-   four three-cell, one four-cell — plus two four-cell rows from the template round-trip.
+   binding rule that no existing test may need editing to accommodate the guard. Re-measured
+   2026-07-28 across the whole fixture corpus by cell-splitting every literal `| FR-N` row in
+   `packages/provegate/test/`: **sixteen literal FR rows in six files — ten two-cell, four
+   three-cell, two four-cell** — plus two four-cell rows from the template round-trip
+   (`templates/prd-template.md:205-206`). The ten two-cell rows are exactly the four files
+   named above; the two four-cell literals are `example-manifests.test.ts:60` and
+   `value-score.test.ts:235`. An earlier revision of this paragraph said fifteen rows in five
+   files with one four-cell, which undercounted `value-score.test.ts` — the aggregate was
+   wrong while the load-bearing part, the ten two-cell rows, was right, and it is corrected
+   here rather than left as an approximately-true number.
 
    **Splitting on the pipe is safe by contract, and the contract already exists.** The PRD
    template forbids a pipe character inside a backticked command in this table, so the
@@ -164,7 +186,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    **There are two readers of this table, not one, and scoping only the executor's leaves
    the hole open.** `lintPrd` independently decides whether a row carries a runnable command
-   by scanning the **entire row** (`prd-ready.ts:127-142`). After scoping
+   by scanning the **entire row** (`prd-ready.ts:133-148`). After scoping
    `parseVerificationCommands` alone, a Command cell holding no runnable command still
    passes readiness whenever the Notes cell contains an allowlisted token — and the executor
    then receives nothing from that row (`chain.ts:491`). Both readers take their cells from
@@ -192,7 +214,13 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    **Zero sections is not a parser issue, and the distinction is load-bearing.** A missing
    §11 already fails today, through the required-but-empty Phase-5 gate
-   (`chain.ts:787-790`, bound by `chain.test.ts:173-183`). Routing it through the new issue
+   (`chain.ts:787-790`). **The existing test does not bind the zero-section case, and saying
+   so is the point of citing it precisely:** `chain.test.ts:173-183` feeds the chain
+   `'## 11. Verification Commands\n\nnothing\n'` — a document that **has** the section, whose
+   body is the word `nothing`, and which therefore yields no runnable rows. It binds *one
+   section, no rows*, which is a third case. So the zero-section proof is a **new** fixture,
+   which the `chain.test.ts` row in §11 already requires, and the existing assertion is the
+   compatibility control beside it rather than the evidence for it. Routing it through the new issue
    channel would replace that path with a different refusal and break the compatibility this
    PRD promises. So: **zero sections is a readiness-lint failure only** — `lintPrd` reports
    it, `buildGateChain`'s issue guard does not fire on it, and the existing empty-gate
@@ -202,7 +230,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    and contradicted its own acceptance criteria.
 
    **Exactly one §11 section, because otherwise "any malformed row" is false.** §11 is
-   selected by `sectionMatching` in both `safety.ts:45` and `prd-ready.ts:127`, which
+   selected by `sectionMatching` in both `safety.ts:45` and `prd-ready.ts:133`, which
    returns the **first** match and an empty string when there is none (`markdown.ts:90`). A
    malformed or unsafe row in a **second** verification section is invisible today. Use
    `sectionsMatching` (`markdown.ts:65`) and require exactly one: zero fails as missing, two
@@ -235,41 +263,124 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
    The runnable form is a package test: iterate every PRD under the **configured wip
    directory** and call the lint with the caller's real argument shape — config, manifest,
-   content **and the repository root**, four arguments, as `cli.ts:654-655` passes them.
-   **The root is not optional.** `lintPrd` takes it fourth (`prd-ready.ts:108-113`) and,
-   with memory enabled, omitting it fails with an unrelated missing-root error
-   (`prd-ready.ts:169-173`); this repository enables memory. Measured: this PRD passes with
-   the root and fails without it, for a reason that has nothing to do with the rule under
-   test. A three-argument call is `fixture-must-reach-production-shape` violated in the FR
-   that cites it.
+   content, **the repository root, and the PRD's own number**. That is **five** arguments,
+   and it is what the sole production caller passes: `cli.ts:795` reads
+   `lintPrd(config, manifest, content, root, found.record.number)`. Both trailing arguments
+   are optional in the signature (`prd-ready.ts:109-119`) and both change the outcome here,
+   so the fixture takes both:
+
+   - **The root is not optional in practice.** `lintPrd` takes it fourth and, with memory
+     enabled, omitting it fails with an unrelated missing-root error
+     (`prd-ready.ts:181-185`); this repository enables memory. Measured: this PRD passes with
+     the root and fails without it, for a reason that has nothing to do with the rule under
+     test.
+   - **The PRD number is not decoration either.** It reaches `valueScoreIssue`
+     (`prd-ready.ts:178`, `value-score.ts:184-201`), which enforces the value header only
+     from the configured `enforceFrom` id — `17` in this repository's `workflow.config.json`.
+     Omit it and the id becomes undecidable, so a wip PRD missing its header passes the test
+     while failing the real `gate check`. That is the same false green as the missing root,
+     one parameter further along, and it was found by reading the caller rather than the
+     signature.
+
+   A call short of that shape is `fixture-must-reach-production-shape` violated in the FR that
+   cites it. This is stated at five rather than four because the fifth parameter landed with
+   PRD-021 after this FR was first written; re-read the call site rather than this sentence if
+   the signature moves again.
 
    Read the directory from config rather than hardcoding it, so the test follows a
    repository that renames it.
 
-   **The corpus is green today, measured rather than hoped.** Across every PRD in the wip
-   directory on 2026-07-27 — seven at the time of the last measurement, and deliberately not
-   fixed as a number, because that count changed three times during this PRD's readiness
-   rounds — **73 FR rows, zero malformed**, and **exactly one verification section each**, in
-   the canonical heading form. FR-1 therefore introduces no new failure anywhere
-   in the live corpus. What it does change is a **relaxation** — the three Notes-cell tokens
-   in §1 stop reaching the parser, which is the defect being fixed. **This PRD has no corpus
-   prerequisite**, and that is a direct consequence of the 2026-07-27 narrowing: every
-   prerequisite the wider version carried came from the §9 grammar, which is now PRD-028's.
+   **What the corpus test asserts is the §11 issue class, not a green lint — and the
+   difference is measured, not stylistic.** Method: `gate check` run per file over the
+   configured wip directory as `node packages/provegate/dist/cli.js check PRD-NNN`, plus a
+   cell-split census of every `| FR-N` row inside each file's verification section. Measured
+   2026-07-28 across the nine PRDs then in the wip directory:
 
-   **Report, never edit.** If a wip PRD newly fails when the test is written, that is a
-   finding for its author. **Allowlisting an expected failure is forbidden** — a sweep with a
-   known-red exemption is the ledger-shaped bypass `known-red-ledger-must-expire` warns
-   about, arriving in a test instead of a ledger. Stop and hand back. Completed PRDs are
-   historical artifacts and are outside the sweep; they are never rewritten to manufacture
-   compliance.
+   - **The whole lint is red in three of nine files, for reasons this PRD does not touch.**
+     PRD-026 fails on three missing memory-input dispositions, PRD-031 on two, and PRD-034
+     because it declares no §4 FR section at all. None of the three is a §11 parser outcome,
+     and none of them is anything FR-1 changes in either direction.
+   - **The §11 substance is clean across all nine.** **57 FR rows, zero malformed**, and
+     **exactly one verification section each**, in the canonical heading form.
+
+   So a per-file assertion of *whole-lint green* is unwritable today, and writing it would
+   force exactly the move the next paragraph forbids. The assertion is therefore scoped to
+   the class of issue FR-1 introduces: **for every PRD in the configured wip directory, the
+   lint reports no §11-parser-class issue** — no malformed row, no zero-section or
+   duplicate-section verdict, and no unsafe-command issue raised from a cell other than the
+   Command column. Every other issue the lint may report is that file's own business and the
+   test neither asserts on it nor is made green by it.
+
+   PRD-034 is the case that makes the scoping concrete rather than convenient: it has one
+   canonical verification section and zero FR rows, so it carries **no** §11-parser-class
+   issue and passes this assertion, while failing the whole lint on a §4 rule FR-1 never
+   reads. A whole-lint assertion would have made PRD-034 a blocker for a parser fix that
+   cannot affect it.
+
+   The count is deliberately not fixed as a number: it moved four times during this PRD's
+   readiness rounds, most recently when PRD-030 archived on 2026-07-28 and took the corpus
+   from ten files to nine. The test enumerates the directory rather than a list.
+
+   FR-1 therefore introduces **no new failure anywhere in the live corpus**, and what it does
+   change is a **relaxation** — the Notes-cell tokens in §1 stop reaching the parser, which is
+   the defect being fixed. **With the assertion scoped this way this PRD has no corpus
+   prerequisite**, and that is now a measured statement rather than an inherited one: a
+   prerequisite would exist only if some wip PRD carried a §11-parser-class issue that had to
+   be remediated before the test could pass, and zero of the nine do. The three red files
+   block nothing here because the test never asks them the question they fail.
+
+   **Report, never edit — scoped to the same class.** If a wip PRD newly carries a
+   §11-parser-class issue when the test is written, that is a finding for its author.
+   **Allowlisting an expected §11-class failure is forbidden** — a sweep with a known-red
+   exemption is the ledger-shaped bypass `known-red-ledger-must-expire` warns about, arriving
+   in a test instead of a ledger. Stop and hand back. The scoping above is not that bypass
+   wearing a different name: an allowlist names *files* and expires only when someone
+   remembers it, while this scoping names the *rule* under test and admits no per-file
+   exception at all. Completed PRDs are historical artifacts and are outside the sweep; they
+   are never rewritten to manufacture compliance.
 
    **The corpus test reads outside its package, so its inputs are declared.** It reads PRDs
    at the repository root while `turbo.json:15-17` declares no additional inputs for the
    test task, so a change under the wip directory replays a stale green —
    `turbo-cache-masks-out-of-input-reads`, exactly. **The strategy is chosen rather than left
-   as an either/or:** add `_prds/**` to the test task's declared `inputs` in `turbo.json`. A
-   separate uncached command was the alternative and is rejected — it needs a new package
-   script, a new manifest entry, and a second place for a check to be forgotten.
+   as an either/or, and it is written in the one form this repository's own gate accepts:**
+   set `"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/_prds/**"]` on the `test` task in
+   `turbo.json`, **and** add an entry keyed `"test"` to
+   `scripts/verify/turbo-inputs-exceptions.json` carrying a written reason. All three parts
+   are load-bearing, each verified against source on 2026-07-28:
+
+   - `$TURBO_ROOT$/` is required because task `inputs` are **package-relative**. A bare
+     `_prds/**` resolves under `packages/provegate/`, which holds no PRDs, so the glob would
+     match nothing and the stale green would survive the fix written to remove it. Turbo
+     2.10.5 is the pinned version and its binary carries the `$TURBO_ROOT$` and
+     `$TURBO_DEFAULT$` microsyntax.
+   - `$TURBO_DEFAULT$` is required because declaring `inputs` **replaces** the default hash
+     set rather than adding to it (`node_modules/turbo/schema.json:585-590`). Omitting it
+     drops the package's own `src/` and `test/` out of the cache key — a wider stale green
+     than the one being fixed.
+   - The exceptions entry is required because `scripts/verify/verify-turbo-inputs.mjs:60-68`
+     **refuses any cached task that declares `inputs` at all** unless the task is named in
+     `scripts/verify/turbo-inputs-exceptions.json` with a non-empty string reason. That file
+     is `{}` today, and the check is the tenth member of the `verify:workflow` bundle
+     (`scripts/verify/verify-workflow.mjs:15-24`) — the same bundle this PRD's own
+     cross-cutting floor requires green. Without the entry FR-2 fails its own verification
+     before it fails anything else. This is the path the verifier's header names for a task
+     that genuinely needs `inputs`: an exceptions entry with a reason, a deliberate and
+     reviewable act rather than a silent narrowing. The reason written there states what the
+     narrowing is for — the test task reads repository-root PRDs that the package-default
+     hash set cannot see — so the entry is falsifiable when the corpus test is removed.
+
+   **The accepted cost, stated rather than discovered.** `turbo.json` declares **one generic
+   `test` task** and every workspace inherits it, so this input applies to all of them: any
+   change under `_prds/**` invalidates the test cache for `provegate`, `@provegate/design`
+   and `web` alike, not only the package that reads PRDs. Narrowing it to one workspace
+   would need a package-level `turbo.json` or a `//#`-scoped task, both new surface this PRD
+   does not add. The trade is deliberate and it is the cheaper side: re-running two unrelated
+   suites on a PRD edit costs build minutes, while an undeclared input costs a false green on
+   the corpus sweep — which is the failure this whole PRD exists to remove.
+
+   A separate uncached command was the other alternative and is rejected — it needs a new
+   package script, a new manifest entry, and a second place for a check to be forgotten.
 
    **The glob is deliberately broader than the configured directory, because the two cannot
    track each other.** The test resolves the wip directory from config so a rename is
@@ -277,11 +388,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    (`node_modules/turbo/schema.json:585-590`) and cannot read that config. Naming the exact
    configured path would mean that after a rename the test reads the new directory while the
    cache still watches the old one — a stale green produced by the very mechanism meant to
-   prevent one. `_prds/**` covers every state directory the artifact root can hold, so it
-   survives a rename of any subdirectory. **The invariant, stated so a later editor does not
-   narrow it back:** this glob must remain at or above the artifact root, never at the
-   configured wip path.
-   - **Targets:** `packages/provegate/test/lint-parsers.test.ts`, `turbo.json`
+   prevent one. `$TURBO_ROOT$/_prds/**` covers every state directory the artifact root can
+   hold, so it survives a rename of any subdirectory. **The invariant, stated so a later
+   editor does not narrow it back:** this glob must remain at or above the artifact root,
+   never at the configured wip path.
+   - **Targets:** `packages/provegate/test/lint-parsers.test.ts`, `turbo.json`,
+     `scripts/verify/turbo-inputs-exceptions.json`
 
 ---
 
@@ -291,7 +403,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   exemption and the bullets-only section filter — move to **PRD-028** with the four levels of
   hiding place four independent rounds uncovered. They are a separate problem that was
   sharing a document with this one, and the evidence for separating them is that every
-  blocking finding across those four rounds came from that half.
+  **unresolved** blocking finding across those four rounds came from that half. The §11 half
+  drew [P1]s of its own in rounds one and two; they were closed and stayed closed, which is
+  the opposite of what happened on the §9 side.
 - **Section cardinality for §9 and the FR block.** `frBlocks` has the same first-match-only
   behavior (`prd-ready.ts:28`) and §9 the same again. Both go to PRD-028. Only §11's
   cardinality is here, because FR-1's own claim — the chain refuses when *any* row is
@@ -319,13 +433,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   skipped; **given** a row with five cells, **Then** the extras are ignored.
 - **Given** a §11 table containing one malformed row and several valid ones, **When** the
   chain is built, **Then** it refuses before executing any of them.
+- **Given** a document declaring two verification sections, **When** the chain is built,
+  **Then** it refuses as well — the commands the parser returned are a subset of the ones
+  declared, so coverage is unknown. The lint test alone does not bind this.
 - **Given** a PRD with no verification section at all, **Then** its existing required-empty
-  Phase-5 failure is unchanged (`chain.test.ts:173`).
+  Phase-5 failure is unchanged — proved on a **new** fixture, because the existing
+  `chain.test.ts:173-183` declares the section with no runnable rows, which is a different
+  input.
 - **Given** a document with two verification sections, or none, or whose only matching
   heading is a longer variant, **Then** the lint fails in each case.
 - **Given** every PRD in the configured wip directory, **When** the corpus test runs,
-  **Then** each file's outcome matches its expectation, and a newly failing file is reported
-  by name rather than edited or allowlisted.
+  **Then** each file reports no §11-parser-class issue, **and given** a file that fails the
+  lint for a rule outside that class, **Then** the corpus test still passes; **and given** a
+  file that newly carries a §11-parser-class issue, **Then** it is reported by name rather
+  than edited or allowlisted.
 - **Given** a caller of the exported parser, **Then** it still receives an array and the two
   existing consuming tests pass unchanged.
 
@@ -350,7 +471,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Dependencies
 
-- **None.** After the 2026-07-27 narrowing this PRD has no corpus prerequisite and no
+- **None.** With FR-2's assertion scoped to the §11 issue class, and measured 2026-07-28 —
+  zero of the nine wip PRDs carries such an issue, while three are red on rules this change
+  never reads — this PRD has no corpus prerequisite and no
   ordering constraint against PRD-025, PRD-026 or PRD-028. It shares `prd-ready.ts` with
   PRD-021, PRD-026 and PRD-028, so those serialize on that file. Re-run `gate queue` before
   claiming rather than trusting this paragraph.
@@ -359,15 +482,22 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ### Rollback
 
 Revert the shared cell extractor and the internal row parser, the `lintPrd` changes, the
-§11 cardinality check, and **the `buildGateChain` refusal guard**; delete the new test file
-and the turbo input. The exported signature never changed, so nothing published moves in
-either direction. Any edit made to `safety.test.ts`, `content-templates.test.ts` or
-`chain.test.ts` reverts with them.
+§11 cardinality check, and **the `buildGateChain` refusal guard**; delete the new test file.
+The turbo input and its exceptions entry revert **together and in that order** — removing the
+`inputs` key while leaving the `"test"` entry in `scripts/verify/turbo-inputs-exceptions.json`
+fails `verify:turbo-inputs` from the other direction, since the verifier also refuses an
+exception naming a task that no longer declares `inputs`
+(`scripts/verify/verify-turbo-inputs.mjs:74-77`). The exported signature never changed, so
+nothing published moves in either direction. Any edit made to `safety.test.ts`,
+`content-templates.test.ts` or `chain.test.ts` reverts with them.
 
 **FR-1 changes executed commands, not only verdicts.** `buildGateChain` runs the parser's
 output directly, so scoping the parser removes any command an existing PRD was accidentally
-getting from its Notes cell — one, measured, in PRD-021. Forward that is the fix; backward a
-revert restores it. Neither direction is a silent no-op.
+getting from its Notes cell. Measured 2026-07-28, no wip PRD is getting one today — PRD-021,
+the one proven instance, archived on 2026-07-27 — so the executed set does not move for any
+document currently in the pipeline. Forward that is the fix; backward a revert restores the
+reachability. Neither direction is a silent no-op, and the reason to state it is that the
+next PRD to write a backticked command in Notes gets it silently until this lands.
 
 No state, artifact, config, or published-surface migration exists.
 
@@ -386,8 +516,14 @@ No state, artifact, config, or published-surface migration exists.
       pass
 - [ ] `packages/provegate/test/safety.test.ts`, `test/content-templates.test.ts` — existing
       consumers of the preserved export, asserted unchanged
-- [ ] `packages/provegate/test/chain.test.ts` — the refusal proof for FR-1's guard
-- [ ] `turbo.json` — declare the wip directory as an input for the test task (FR-2)
+- [ ] `packages/provegate/test/chain.test.ts` — the refusal proofs for FR-1's guard: the
+      malformed row **and** the duplicate section, plus the new zero-section compatibility
+      fixture
+- [ ] `turbo.json` — declare the artifact root as an input on the test task, as
+      `["$TURBO_DEFAULT$", "$TURBO_ROOT$/_prds/**"]` (FR-2)
+- [ ] `scripts/verify/turbo-inputs-exceptions.json` — the `test` entry with its written
+      reason, without which `verify:turbo-inputs` refuses the line above and takes
+      `verify:workflow` red (FR-2)
 - [ ] `_brain/learnings/notes-column-runs-commands.md` — retire the interim guidance
 
 ---
@@ -405,8 +541,9 @@ No state, artifact, config, or published-surface migration exists.
 - `_brain/learnings/unparseable-command-must-fail-loudly.md` — governs the malformed-row
   channel
 - `_brain/learnings/false-green-on-missing-file.md` — the class this defect belongs to
-- `_readiness/wip/readiness-024-readiness-lint-parsers.md` — four independent rounds, every
-  blocking finding of which came from the §9 half now in PRD-028
+- `_readiness/wip/readiness-024-readiness-lint-parsers.md` — the full round history. Across
+  the four rounds on the combined document, every **unresolved** blocking finding came from
+  the §9 half now in PRD-028; the §11 [P1]s from rounds one and two were closed there
 - PRD-023 §4 — where this defect was first written down
 
 ---
@@ -423,12 +560,17 @@ No state, artifact, config, or published-surface migration exists.
   assertion needs a cause independent of the scenario. Each deny fixture is paired with a
   positive control on the same input: the Command column still yields its command, and a
   conforming table still passes.
-- applied: `fixture-must-reach-production-shape` — the corpus test must call the lint with
-  all four arguments; a three-argument call fails on an unrelated memory error in this
-  repository and would have reported as coverage.
+- applied: `fixture-must-reach-production-shape` — the corpus test must call the lint with all
+  five arguments the production caller passes (`cli.ts:795`). A short call fails on an
+  unrelated memory error, or silently skips the value header check, and either would have
+  reported as coverage. The shape was re-read from the call site on 2026-07-28 rather than
+  carried from this FR's first draft, which said four.
 - applied: `turbo-cache-masks-out-of-input-reads` — FR-2's corpus test reads PRDs at the
-  repository root while the test task declares no additional inputs, so the wip directory
-  becomes a declared input and `turbo.json` is a target.
+  repository root while the test task declares no additional inputs, so the artifact root
+  becomes a declared input. That takes two files, and both are targets: `turbo.json` for the
+  `$TURBO_DEFAULT$` + `$TURBO_ROOT$/_prds/**` list, and
+  `scripts/verify/turbo-inputs-exceptions.json` for the entry without which this repository's
+  own `verify:turbo-inputs` gate refuses the declaration.
 - applied: `known-red-ledger-must-expire` — FR-2 forbids allowlisting an expected corpus
   failure. A sweep with a known-red exemption is this record's bypass arriving in a test
   rather than a ledger.
@@ -469,6 +611,7 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/content-templates.test.ts`
 - `packages/provegate/test/chain.test.ts`
 - `turbo.json`
+- `scripts/verify/turbo-inputs-exceptions.json`
 - `_brain/learnings/notes-column-runs-commands.md`
 - `_brain/learnings/lint-must-name-the-span-it-judges.md`
 
@@ -507,9 +650,9 @@ single line — and never a pipe character inside a backticked command in this t
 | ---- | ---------------------------------------------------------- | ----- | ----- |
 | FR-1 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | a Notes-cell backtick is not a command, the Command cell still is, a two-column row still yields its command, extra cells are ignored, and a row with fewer than two cells is reported rather than skipped |
 | FR-1 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | a row whose Command cell is prose fails readiness even when Notes carries an allowlisted token; zero or duplicate verification sections each fail; a heading variant is not the section |
-| FR-1 | `pnpm --filter provegate test test/chain.test.ts`           | pkg   | the chain refuses when any row is malformed, before executing the readable ones; a table with no malformed row behaves exactly as today; a PRD with no verification section keeps its existing required-empty failure |
+| FR-1 | `pnpm --filter provegate test test/chain.test.ts`           | pkg   | the chain refuses when any row is malformed, before executing the readable ones; it refuses again on a document declaring two verification sections, which is FR-1's other parser-issue rule and is proved here rather than only in the lint test; a table with no malformed row behaves exactly as today; a PRD with no verification section at all keeps its existing required-empty failure, on a new fixture — the one at line 173 declares the section with no runnable rows, which is a third case |
 | FR-1 | `pnpm --filter provegate test test/safety.test.ts`          | pkg   | the exported parser still returns an array and every existing assertion passes unchanged |
-| FR-2 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | the corpus pass: every PRD in the configured wip directory run through the readiness lint with all four arguments, expected outcome asserted per file |
+| FR-2 | `pnpm --filter provegate test test/lint-parsers.test.ts`    | pkg   | the corpus pass: every PRD in the configured wip directory run through the readiness lint with all five production arguments, asserting per file that no §11-parser-class issue is reported — and a file red on a rule outside that class does not fail the sweep |
 | FR-2 | `pnpm --filter provegate test`                              | pkg   | the whole package suite stays green — no existing fixture changed meaning |
 
 Cross-cutting floor (run before Code Complete):
@@ -523,8 +666,10 @@ Cross-cutting floor (run before Code Complete):
 Hard caps (when your gates manifest configures them):
 
 - Deny test: `packages/provegate/test/lint-parsers.test.ts` — the Notes-cell token, the
-  prose-Command row, the malformed row, and the duplicate section must each **fail**. A
-  fixture that only passes on good input is not evidence.
+  prose-Command row, the malformed row, and the duplicate section must each **fail** the
+  lint; `packages/provegate/test/chain.test.ts` — the malformed row and the duplicate section
+  must each make `buildGateChain` **refuse**, since a rule proved only at the lint is a rule
+  the executor can contradict. A fixture that only passes on good input is not evidence.
 - Contract test: n/a — no client-to-server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-024`
@@ -544,23 +689,44 @@ rationalize.
 - DO NOT change the return type of the exported parser. It is exported and two existing
   tests consume it as an array; widening it is a breaking change to a published surface this
   PRD is not otherwise touching. Add an internal parser and keep the export.
-- DO NOT set the well-formed threshold at three cells. Three existing fixtures declare
-  two-column tables; three would make all of them malformed and trip the new guard.
+- DO NOT set the well-formed threshold at three cells. **Four** existing test files declare
+  two-column tables, carrying ten rows between them; a three-cell minimum would make every
+  one of those rows malformed and trip the new guard.
 - DO NOT silently skip a §11 row that fails to split. An unclassifiable row is reported, or
   the change is a new false green replacing an old one.
-- DO NOT let the chain run the rows it could read when another row is malformed. Partial
-  coverage reported as success is the failure this FR exists to prevent.
+- DO NOT let the chain run the rows it could read when another row is malformed, or when the
+  document declares a second verification section. Partial coverage reported as success is
+  the failure this FR exists to prevent, and both cases produce it.
+- DO NOT prove the duplicate-section rule at the lint only. FR-1 states that the chain
+  refuses on it; a rule with no chain-level proof is one an implementation can pass every
+  named test while contradicting.
 - DO NOT edit `chain.ts`, `prd-ready.ts`, or the existing test files without them being in
   the Conflict Surface. They are.
-- DO NOT call the readiness lint with three arguments anywhere in the fixtures. The fourth
-  is the repository root and omitting it fails for a reason unrelated to the rule under test.
+- DO NOT call the readiness lint short of its five production arguments anywhere in the
+  fixtures. The fourth is the repository root, whose absence fails for a reason unrelated to
+  the rule under test; the fifth is the PRD number, whose absence silently disables the value
+  header check and passes a file the real `gate check` refuses.
 - DO NOT let the corpus test run inside a cached task without declaring what it reads. A
   stale green over a corpus the task never re-read is this defect's own shape, in a build
   tool instead of a parser.
-- DO NOT allowlist a known-failing PRD to make the corpus green. Report it and stop.
+- DO NOT declare that input without `$TURBO_DEFAULT$`, without the `$TURBO_ROOT$/` prefix, or
+  without the exceptions entry. Dropping the default empties the package's own files from the
+  cache key; dropping the prefix resolves the glob inside the package, where no PRD lives; and
+  dropping the entry makes `verify:turbo-inputs` refuse the change outright, taking
+  `verify:workflow` — this PRD's own floor — red.
+- DO NOT delete the exceptions entry while leaving the `inputs` key, or the reverse. The
+  verifier refuses both halves of that pair separately.
+- DO NOT allowlist a PRD that carries a §11-parser-class issue to make the corpus green.
+  Report it and stop. Scoping the assertion to that issue class is not the same move: it
+  names the rule under test and admits no per-file exception, where an allowlist names files
+  and expires only when someone remembers it.
+- DO NOT widen the corpus assertion to whole-lint green. Three of nine wip PRDs are red today
+  on rules FR-1 never reads, so that assertion is unwritable without the allowlist the line
+  above forbids.
 - DO NOT pull any §9 Open Questions work back into this PRD. It is PRD-028's, and the reason
-  is on the record: across four independent rounds every blocking finding came from that
-  half while this one drew none after round two.
+  is on the record: across four independent rounds every **unresolved** blocking finding came
+  from that half, while this half's round-one and round-two [P1]s were closed and drew no
+  successor.
 - DO NOT delete `notes-column-runs-commands.md` when its hazard is fixed. Edit it, so the
   trap and its resolution stay discoverable together.
 
@@ -570,5 +736,6 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5 remediation session, on scorer handoff | **Closed readiness iteration 7's four work items; every finding re-verified against live source before it was written, and two of them came back changed.** **(1) FR-2's turbo strategy now survives this repository's own gate.** It was specified as a bare `_prds/**` on the test task, which `scripts/verify/verify-turbo-inputs.mjs:60-68` refuses outright for any cached task — the exceptions file is `{}` and the check is the tenth member of the `verify:workflow` bundle this PRD's floor requires green, so FR-2 failed its own verification. Rewritten to `"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/_prds/**"]` plus a reasoned `"test"` entry in `scripts/verify/turbo-inputs-exceptions.json`, with each of the three parts justified separately: the prefix because task inputs are package-relative and a bare glob resolves where no PRD lives, the default because `inputs` replaces rather than extends the hash set, the entry because the gate demands it. `$TURBO_ROOT$`/`$TURBO_DEFAULT$` confirmed present in the pinned turbo 2.10.5 binary. The accepted cost is now stated rather than left to be discovered: one generic `test` task serves every workspace, so a PRD edit re-runs `provegate`, `@provegate/design` and `web` alike — deliberate, against stale-green. Exceptions file added to Targets, Implementation Scope and Conflict Surface, and the two-way revert order added to Rollback. **(2) FR-2's corpus expectation model is scoped to the §11 issue class.** Measured 2026-07-28 by `gate check` per file: three of the nine wip PRDs are red — PRD-026 on three missing memory-input dispositions, PRD-031 on two, PRD-034 on no §4 FR section — while the §11 substance is clean at **57 FR rows, zero malformed, exactly one canonical section each**. So the old "the corpus is green today" was false at the whole-lint level and true at the §11 level. The test now asserts per file that no §11-parser-class issue is reported, PRD-034 named as the case that makes the scoping concrete rather than convenient, and the distinction from an allowlist argued explicitly: this names the rule, an allowlist names files. "No corpus prerequisite" survives, re-derived from the measurement instead of inherited from the narrowing. **(3) The duplicate-section chain refusal has a named proof.** FR-1 states the chain refuses on two or more sections and no chain test held it; added to the `chain.test.ts` §11 row, the Gherkin criteria, Implementation Scope, the hard-cap deny list and DO NOT. Evidence precision alongside it: `chain.test.ts:173-183` feeds the chain a document that **has** its §11 section with the body `nothing`, so it binds one-section-no-rows, and the zero-section case needs the new fixture the row already required. **(4) Stale-claim sweep, plus two the handoff did not name.** §1's table re-anchored — PRD-021's `pnpm build` instance archived 2026-07-27 and PRD-027's token was edited away, so the live count is **zero** and the class proof is the dated archived row at `prd-021-governance-truth-up.md:1278`; success metrics and Rollback follow. "Three existing fixtures" corrected to four everywhere. The narrowing-history claim aligned in Non-Goals, References and DO NOT to the introduction's corrected "every **unresolved** blocking finding". Line anchors refreshed after PRD-021's fifth parameter: `prd-ready.ts:127-142` → `:133-148`, `:169-173` → `:181-185`, `:127` → `:133`. **Found while verifying, not in the handoff:** `cli.ts:654-655` no longer holds the caller — it is `cli.ts:795` and it passes **five** arguments, not four, the fifth being the PRD number that gates the value header from `enforceFrom: 17`; omitting it lets a header-less PRD pass the fixture while the real `gate check` refuses it, which is the same `fixture-must-reach-production-shape` failure one parameter further along. FR-2, the §11 table, DO NOT and the Memory Input updated to five. Also: the fixture census said fifteen rows in five files with one four-cell and undercounted `value-score.test.ts` — re-measured to **sixteen rows in six files, ten two-cell, four three-cell, two four-cell**; the load-bearing ten two-cell rows were right. No FR renumbered, no Value header change — scope is unchanged and the arithmetic still holds |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Narrowed to the §11 reader; the §9 Open Questions work moves to PRD-028 (owner decision after readiness iteration 4).** Four independent rounds scored the wider PRD 6.75, 6.83, 7.40, 6.95 without converging, and the evidence was unambiguous: **every blocking finding across those rounds came from the §9 half**, where the exemption grammar moved to a new hiding place four consecutive times, each move created by the previous fix. This defect drew no objection after round two. Two unrelated problems were sharing a document and the smaller one was being held hostage. What survives here is FR-1 in full — column scoping, the exact two-cell row grammar with its fifteen-row fixture measurement, the internal-versus-exported parser split that preserves the published signature, the shared extractor both readers use, and the chain refusal — plus §11 cardinality, which stays because FR-1's own claim that the chain refuses when any row is malformed is false without it, and the corpus pass. **The defect is now measured on the live corpus rather than argued**: three Notes-cell tokens reach the parser today and one of them, in PRD-021 FR-8, is allowlisted and therefore silently executing at Phase 5. **Every corpus prerequisite disappeared with the narrowing** — zero malformed rows and exactly one canonical verification section across all six wip PRDs — so this PRD now has no ordering constraint at all, where the wider version had five. Value re-scored 3.75 to 3.50 for the reduced scope |
 | 2026-07-27 | Claude Opus 5, on owner direction | **Split from PRD-023**, carrying its FR-7 a/b/c plus the corpus-command defect iteration 6 found in it. Four readiness rounds and their remediations are recorded in `_readiness/wip/readiness-024-readiness-lint-parsers.md`; the findings that belonged to the §9 half travel with it to PRD-028. Created with `gate new` |
