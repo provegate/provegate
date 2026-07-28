@@ -34,8 +34,10 @@ re-derive them. Each binds to the parent whose work depends on it:
 
 - `adr-section-blank-line-reads-empty` — the record this PRD retires. Its "how to
   apply" ends with *fix it in the parser*; 2.0 is that fix, 4.0 the retirement.
-- `two-parsers-wrong-together` — the corpus proved agreement, not correctness. The
-  1.0 case asserts the document IS valid, never that implementations match. Binds 1.0.
+- `two-parsers-wrong-together` — all three copies shared one wrong anchor, so no
+  parity check could surface it; the corpus asserted correct verdicts but had no
+  case with the formatter's shape. The 1.0 case adds that coverage, asserting the
+  document IS valid, never that implementations match. Binds 1.0.
 - `narrow-the-grammar-not-the-parser` — reviewed: one anchor token changes; the
   `^## ` stop and everything else stays. Binds 2.0.
 - `strictness-added-during-extraction-is-a-behavior-change` — reviewed: this widens
@@ -218,6 +220,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 - 6.1 — [P1] formatter claim narrowed to body scope; prettier's frontmatter list reflow pinned as an executing limitation in the runner; the learning keeps the live format-sweep warning instead of retiring fully.
 - 6.1 — [P1] learning's history corrected: corpus asserted correctness but had a coverage hole and a never-executed repo copy; "agreement-only" claim removed.
 - 6.1 — [P2] workflow ledger note restored to prior rationale + appended the new divergence, instead of overwriting.
+- 6.1 round 2 — [P1] pin rebuilt on the repository prettier config (resolveConfig; printWidth 100) with three assertions: source valid, bytes changed, output refused — a default-width pin was a false green about `pnpm format`.
+- 6.1 round 2 — [P1] stale "agreement-only" corpus history swept out of PRD goal 2, §7, FR-2, DO NOT, and this file's Memory Context; the durable learning was already correct.
 
 ## Progress Log
 

@@ -88,7 +88,13 @@ if (!smoke) {
   r.fail(`smoke case '${SMOKE_CASE}' is not in the fixture`);
 } else {
   const { default: prettier } = await import('prettier');
-  const formatted = await prettier.format(smoke.content, { parser: 'markdown' });
+  // The REPOSITORY's prettier config, not the defaults: `pnpm format` runs with
+  // `.prettierrc.json` (printWidth 100), and a pin formatted at the default 80
+  // reflows lines the real sweep leaves alone — a false green about the very
+  // behavior it claims to pin (phase 6 round 2).
+  const prettierConfig = (await prettier.resolveConfig(FIXTURE)) ?? {};
+  const fmt = (src) => prettier.format(src, { ...prettierConfig, parser: 'markdown' });
+  const formatted = await fmt(smoke.content);
   const issues = validateMemoryRecord(formatted, {
     slug: smoke.slug,
     isAdr: smoke.isAdr,
@@ -101,16 +107,36 @@ if (!smoke) {
     );
   }
 
-  // Pinned limitation (PRD-035 phase 6 round 1): prettier reflows a frontmatter
-  // inline list past its print width into an indented block form the subset
-  // rejects, so formatting a links-bearing record still breaks validation.
-  // Assert the refusal on prettier's own output so the limitation is a named,
-  // executing fact rather than a silent one.
+  // Pinned limitation (PRD-035 phase 6 rounds 1-2): under the repository's own
+  // prettier config, a frontmatter inline list past the configured print width
+  // is reflowed into an indented block form the subset rejects. Three
+  // assertions, so the pin cannot be satisfied vacuously: the unformatted
+  // source is valid (the refusal cannot pre-exist formatting), the formatter
+  // actually changed the bytes (the reflow happened under THIS config), and the
+  // reflowed output is refused.
   const linkedSrc = smoke.content.replace(
     'type: decision',
-    'links: [two-parsers-wrong-together, adr-section-blank-line-reads-empty, false-green-on-missing-file]\ntype: decision',
+    'links: [two-parsers-wrong-together, adr-section-blank-line-reads-empty, false-green-on-missing-file, turbo-cache-masks-out-of-input-reads]\ntype: decision',
   );
-  const linkedFormatted = await prettier.format(linkedSrc, { parser: 'markdown' });
+  const srcIssues = validateMemoryRecord(linkedSrc, {
+    slug: smoke.slug,
+    isAdr: smoke.isAdr,
+  }).issues;
+  if (srcIssues.length > 0) {
+    r.fail(
+      `pin premise broken: the unformatted long-links source no longer validates: ${srcIssues
+        .map((i) => `${i.field} — ${i.message}`)
+        .join('; ')}`,
+    );
+  }
+  const linkedFormatted = await fmt(linkedSrc);
+  if (linkedFormatted === linkedSrc) {
+    r.fail(
+      'pin premise broken: the repository prettier config no longer reflows the ' +
+        'long links line — lengthen the pin line past the configured printWidth, ' +
+        'or retire the pin if the reflow is deliberately gone',
+    );
+  }
   const reflowedIssues = validateMemoryRecord(linkedFormatted, {
     slug: smoke.slug,
     isAdr: smoke.isAdr,
