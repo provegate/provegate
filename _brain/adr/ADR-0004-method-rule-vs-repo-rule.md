@@ -53,6 +53,8 @@ born agreeing at that PRD's close, and neither store ever contains the deleted t
 | verify-pack-drift.mjs | repo |
 | verify-acceptance-rule.mjs | repo |
 | verify-turbo-inputs.mjs | repo |
+| verify-dependency-audit.mjs | repo |
+| verify-workflow.mjs | repo |
 | verify-script-classes.mjs | repo |
 
 ## Alternatives
