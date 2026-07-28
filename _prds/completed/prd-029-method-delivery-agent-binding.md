@@ -1,6 +1,6 @@
 # PRD-029: Method Delivery — One-Way Protocol Install
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
