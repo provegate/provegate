@@ -9,6 +9,20 @@ import type { StateRecord } from '../state/build.js';
  * config role identities — never person names.
  */
 
+/**
+ * Who TYPED an acceptance, beside `owner`, which names who DECIDED.
+ *
+ * A record, not an enforcement. Nothing prevents an agent from writing
+ * `owner-written` and nothing can — the agent holds the pen either way. What the
+ * union buys is that authorship is queryable instead of buried in prose, and
+ * that concealing it becomes an affirmative false statement in a typed field
+ * rather than an unreadable ambiguity. See ADR-0003.
+ */
+export type Authorship = 'owner-written' | 'agent-transcribed';
+
+/** The legal values, in the order the refusal message names them. */
+export const AUTHORSHIP_VALUES: readonly Authorship[] = ['owner-written', 'agent-transcribed'];
+
 export interface AcceptanceEntry {
   prd: string;
   owner: string;
@@ -16,6 +30,7 @@ export interface AcceptanceEntry {
   reason: string;
   date: string;
   method: string;
+  authorship: Authorship;
 }
 
 export const ACCEPTANCES_FILENAME = 'acceptances.json';
@@ -37,7 +52,15 @@ function acceptancesPath(config: WorkflowConfig, root: string): string {
 const ACCEPTANCE_SCHEMA_VERSION = 1;
 
 /** The fields an entry must carry, and the only ones it may. */
-const ENTRY_FIELDS = ['prd', 'owner', 'items', 'reason', 'date', 'method'] as const;
+const ENTRY_FIELDS = [
+  'prd',
+  'owner',
+  'items',
+  'reason',
+  'date',
+  'method',
+  'authorship',
+] as const;
 
 /**
  * Why the acceptance STORE is not the documented one, or null when it is.
@@ -79,6 +102,11 @@ function entryProblem(entry: unknown): string | null {
   }
   const record = entry as Record<string, unknown>;
   for (const field of ENTRY_FIELDS) {
+    // `authorship` is checked below against its enum, which subsumes presence
+    // AND says what the legal values are. A bare "missing `authorship`" sends
+    // the reader to the schema to learn a vocabulary of two words the message
+    // could have named itself.
+    if (field === 'authorship') continue;
     if (record[field] === undefined) return `the acceptance entry is missing \`${field}\``;
   }
   for (const key of Object.keys(record)) {
@@ -91,6 +119,18 @@ function entryProblem(entry: unknown): string | null {
     if (typeof value !== 'string' || value.trim().length === 0) {
       return `the acceptance entry's \`${field}\` must be a non-empty string`;
     }
+  }
+  // Absent and illegal are one check here, and the message names both values on
+  // either path. This is the ONLY place that decides what a legal `authorship`
+  // is: `validAcceptance` re-checks `owner`, `items` and `reason` and must never
+  // grow a second opinion about this field — a checker that agrees today is a
+  // second authority that has not disagreed yet.
+  if (!AUTHORSHIP_VALUES.includes(record.authorship as Authorship)) {
+    return (
+      "the acceptance entry's `authorship` must be " +
+      AUTHORSHIP_VALUES.map((value) => `\`${value}\``).join(' or ') +
+      ' — `owner` names who decided, `authorship` names who typed'
+    );
   }
   if (!Array.isArray(record.items) || record.items.length === 0) {
     return "the acceptance entry's `items` must be a non-empty array";
@@ -280,13 +320,33 @@ export function operatorGateOk(
     }
     acceptance = parsed.entry;
   } else {
-    acceptance = loadAcceptance(config, root, record.prd);
+    // `loadAcceptanceChecked`, not `loadAcceptance`: its own contract says a
+    // caller that treats an acceptance as AUTHORIZATION must read `problem`,
+    // and this is that caller. Discarding it made a store that EXISTS and is
+    // malformed indistinguishable from no store at all, so the refusal told the
+    // operator to "record an owner acceptance entry" while the entry sat right
+    // there with a bad field — sending them to write a second one. Found by
+    // PRD-033's tests; the defect predates the authorship field.
+    const loaded = loadAcceptanceChecked(config, root, record.prd);
+    if (loaded.problem !== null) {
+      return {
+        ok: false,
+        why: `${operatorRows} operator-owned row(s), and \`${acceptancesRelativePath(config)}\` ${loaded.problem}`,
+      };
+    }
+    acceptance = loaded.entry;
   }
   if (validAcceptance(config, acceptance)) {
     return {
       ok: true,
       waived: true,
-      why: `${operatorRows} operator row(s) waived via ${ACCEPTANCES_FILENAME} (${acceptance!.owner})`,
+      // The authorship rides in the reason, not only in the JSON. A close that
+      // rests on an entry an agent typed says so in the handoff card, at the
+      // moment it matters, instead of waiting for someone to read the store
+      // later and reconstruct it from prose.
+      why:
+        `${operatorRows} operator row(s) waived via ${ACCEPTANCES_FILENAME} ` +
+        `(${acceptance!.owner} decided, ${acceptance!.authorship})`,
     };
   }
 

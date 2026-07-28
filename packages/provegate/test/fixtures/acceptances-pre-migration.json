@@ -11,8 +11,7 @@
       ],
       "reason": "reviewed three codex rounds and the fix commits; accepting autonomous close via gate run",
       "date": "2026-07-22",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-003",
@@ -23,8 +22,7 @@
       ],
       "reason": "reviewed three codex rounds incl. the governed quorum deferral; accepting autonomous close",
       "date": "2026-07-22",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-004",
@@ -35,8 +33,7 @@
       ],
       "reason": "reviewed four codex rounds (3 criticals fixed, incl. the quorum gate's own bypass) and the fix commits; accepting autonomous close via gate run",
       "date": "2026-07-23",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-005",
@@ -47,8 +44,7 @@
       ],
       "reason": "reviewed both codex rounds (pack-manifest critical fixed) and the release surface; accepting autonomous close via gate run",
       "date": "2026-07-23",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-006",
@@ -59,8 +55,7 @@
       ],
       "reason": "authorized codex rounds r1-r8 interactively; reviewed the r8 report and fix commit, then instructed apply and go; accepting autonomous close via gate run",
       "date": "2026-07-23",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-007",
@@ -71,8 +66,7 @@
       ],
       "reason": "authorized the review loop and instructed continue through every round; reviewed the r31 confirmation and the review artifact, then instructed close",
       "date": "2026-07-23",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-013",
@@ -85,8 +79,7 @@
       ],
       "reason": "ran operator browser QA via Claude-in-Chrome; all four handoff rows pass, one 375px evidence-table clip fixed and re-verified; accepting autonomous close via gate land",
       "date": "2026-07-24",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-014",
@@ -98,8 +91,7 @@
       ],
       "reason": "reviewed the codex two-round review and the fix commit; accepting autonomous close on the green machine gates + the pass review, with the two real-browser operator rows waived without an in-browser pass this session",
       "date": "2026-07-24",
-      "method": "interactive",
-      "authorship": "owner-written"
+      "method": "interactive"
     },
     {
       "prd": "PRD-016",
@@ -109,8 +101,7 @@
       ],
       "reason": "owner directed the close in chat after the three-reviewer quorum (codex 4 rounds + two sonnet sessions; 7 criticals found and closed); accepting autonomous close via gate land \u2014 push stays human",
       "date": "2026-07-25",
-      "method": "owner chat directive (recorded by agent at explicit owner instruction)",
-      "authorship": "agent-transcribed"
+      "method": "owner chat directive (recorded by agent at explicit owner instruction)"
     },
     {
       "prd": "PRD-017",
@@ -120,8 +111,7 @@
       ],
       "reason": "owner directed the close in chat after the twelve-round independent audit; accepting autonomous close via gate land - push stays human",
       "date": "2026-07-25",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-018",
@@ -132,8 +122,7 @@
       ],
       "reason": "owner accepted the stated residual after 26 independent rounds: 126 critical + 27 high + 68 medium + 4 low found and all remediated, 0 outstanding. Round 26's readiness assessment rated its four blocking defects two plausible and two adversarial - three fixed with mutation-checked regressions, one adversarial item (a validator's script identity does not pin its implementation) deferred in STATUS.md with an owner and a due date. No confirming assessment was run against the current code and the review artifact says so. Activation is one-way",
       "date": "2026-07-26",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-019",
@@ -143,8 +132,7 @@
       "owner": "owner",
       "reason": "owner directed the close in chat. 10.3 was discharged by DOGFOOD rather than by owner judgement, and it found a real defect: a fresh `gate init --practices` install reported placeholders clean while its scaffolded AGENT_BOOTSTRAP.md still carried five unfilled tokens, because the check scanned only the index. Fixed with a mutation-checked regression, and the remediation text on a broken validator was verified readable on that same install. The owner did NOT personally run the doctor on a foreign repository; that judgement is accepted on the recorded evidence instead. One round of review, run as a readiness assessment: DO NOT CLOSE with 6 blockers (4 routine) plus 8 test defects, all remediated, 0 outstanding, no confirming re-run. 899 tests and the full floor green",
       "date": "2026-07-26",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-022",
@@ -155,8 +143,7 @@
       "owner": "owner",
       "reason": "owner directed the close in chat. 6.2 was discharged by MEASUREMENT rather than judgement about hypothetical leases: `_state/locks` held exactly one lease at close time, PRD-022's own, claimed after the last control-artifact change (03a1500), and its checkout is byte-identical to base for both control files - so this merge refuses nothing in flight. The remedy the refusal prints is proven to work in the fixture, not just documented. One independent adversarial round (Codex, a different model family) returned DO NOT CLOSE with four blockers; all four remediated, the two that turned on runtime behaviour re-measured here before being accepted, 0 outstanding. Three further findings confirmed real and recorded rather than absorbed: two inherited lease-discovery holes and one adversarial race, the last deferred in STATUS.md with an owner and a due date because its fix would be a second definition of drift inside cli.ts, which the PRD forbids. 917 tests, full floor green, verify:workflow PASS",
       "date": "2026-07-27",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-020",
@@ -166,8 +153,7 @@
       "owner": "owner",
       "reason": "owner directed the close in chat after round 3. The judgement 11.3 asks for was NOT made by the owner reading the page; it is accepted on the recorded evidence instead, and the evidence is unusually direct for a content PRD: three independent adversarial rounds by a different model family raised eleven findings, six of which were claims exceeding their mechanism - a cookbook that was not runnable as copied, a hard cap satisfied by the shipped PRD template's own placeholder, an impossible install sequence, an empty-manifest claim that was false twice over, a wiring explanation that described a filesystem scan the audit does not do, and an overwrite warning placed after the action it prevents. All eleven remediated, zero outstanding. The adopter path was walked twice end to end in scratch repos built by gate init, not asserted: the copied domain gate ran, failed on an unguarded route, passed once guarded, and the hard cap refused a fresh gate new PRD and cleared on a real deny-test line. 946 tests, full floor green, no file under packages/provegate/src touched",
       "date": "2026-07-27",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-021",
@@ -178,8 +164,7 @@
       "owner": "owner",
       "reason": "owner directed the close in chat. 12.5 was discharged by measurement rather than judgement about hypothetical leases: _state/locks held exactly one lease at close time, PRD-021's own, so no in-flight work is stopped - and the refusal path is not hypothetical here, it is the live instance FR-5 fixtures. Two independent review rounds (Codex, a different model family) both returned DO NOT CLOSE with twelve findings; two more came from the implementer's own checks. All fourteen remediated, zero outstanding. Nine of the fourteen were one defect - a rule corrected where it was owned and left standing elsewhere - which is what the review brief was written to hunt and what the _brain record now names. The value-score gate is proven at the unit, through lintPrd, and through the built CLI over a seeded corpus; the live repo sweeps green at 11 scored, 0 without a header, 15 skipped with reasons. 1024 tests across 49 files, full floor green, verify:workflow and verify:review-artifact PASS",
       "date": "2026-07-27",
-      "method": "agent-directed by owner in chat; not an interactive owner confirmation",
-      "authorship": "agent-transcribed"
+      "method": "agent-directed by owner in chat; not an interactive owner confirmation"
     },
     {
       "prd": "PRD-029",
@@ -190,8 +175,7 @@
       ],
       "reason": "owner ran both operator verifications live and read the evidence recorded in the task file; the banner-in-description finding they surfaced is a deferral, not a blocker. Owner-decided in session and transcribed by the agent at the owner's explicit direction \u2014 see the standing `Acceptance authorship rule` deferral",
       "date": "2026-07-27",
-      "method": "interactive (owner-directed, agent-transcribed)",
-      "authorship": "agent-transcribed"
+      "method": "interactive (owner-directed, agent-transcribed)"
     }
   ]
 }
