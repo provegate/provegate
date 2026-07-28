@@ -125,6 +125,11 @@ export function durableDeclarationIssue(content: string): string | null {
     if (/^\s*-\s+none\b/i.test(declared)) continue;
     if (/`none`/i.test(declared)) continue;
     if (artifactPaths(bullet).length > 0) continue;
+    // The deleted script's documented rule, kept: placeholder paths containing
+    // `{`, `}`, or `*` are ignored until filled in — a template-shaped bullet
+    // is not-yet-filled, not invalid. Without this, `gate new`'s own template
+    // fails the lint it ships beside.
+    if ([...declared.matchAll(/`([^`]+)`/g)].some((m) => /[{}*]/.test(m[1]!))) continue;
     return `Durable Artifacts: bullet is neither a \`none\` nor a path-bearing claim: ${bullet.trim().slice(0, 80)}`;
   }
   return null;

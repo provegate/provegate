@@ -164,23 +164,16 @@ const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
   { src: 'scripts/secret-scan.mjs', dest: 'scripts/secret-scan.mjs' },
   { src: 'verify/lib.mjs', dest: 'scripts/verify/lib.mjs' },
   { src: 'verify/verify-brain.mjs', dest: 'scripts/verify/verify-brain.mjs' },
-  { src: 'verify/verify-review-artifact.mjs', dest: 'scripts/verify/verify-review-artifact.mjs' },
-  {
-    src: 'verify/verify-durable-artifacts.mjs',
-    dest: 'scripts/verify/verify-durable-artifacts.mjs',
-  },
   { src: 'verify/verify-deferred.mjs', dest: 'scripts/verify/verify-deferred.mjs' },
   {
     src: 'verify/verify-test-task-coverage.mjs',
     dest: 'scripts/verify/verify-test-task-coverage.mjs',
   },
-  { src: 'verify/verify-gates-wired.mjs', dest: 'scripts/verify/verify-gates-wired.mjs' },
   {
     src: 'verify/verify-dependency-audit.mjs',
     dest: 'scripts/verify/verify-dependency-audit.mjs',
   },
   { src: 'verify/verify-workflow.mjs', dest: 'scripts/verify/verify-workflow.mjs' },
-  { src: 'verify/gates-wired-exceptions.json', dest: 'scripts/verify/gates-wired-exceptions.json' },
   { src: 'verify/test-task-allowlist.json', dest: 'scripts/verify/test-task-allowlist.json' },
   { src: 'verify/audit-allowlist.json', dest: 'scripts/verify/audit-allowlist.json' },
 ];

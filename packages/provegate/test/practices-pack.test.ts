@@ -75,7 +75,9 @@ const KEY_FILES = [
   'scripts/secret-scan.mjs',
   'scripts/verify/lib.mjs',
   'scripts/verify/verify-workflow.mjs',
-  'scripts/verify/gates-wired-exceptions.json',
+  // PRD-026: the packed wiring/review/durable scripts and the exceptions file
+  // are retired — the CLI sweeps replaced them, so the pack no longer ships
+  // them and a fresh install no longer creates them.
 ];
 
 describe('gate init --practices (real temp repos)', () => {
