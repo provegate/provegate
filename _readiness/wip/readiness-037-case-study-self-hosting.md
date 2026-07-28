@@ -1,152 +1,127 @@
 # Readiness Assessment: PRD-037 — Case Study, Part Two: the Tool's Own Ledger
 
-**ITERATE — 5.30/10.** The central evidence contract is not currently implementable without choosing undocumented data semantics and an MDX-generation architecture. Several required figures are not reliably derivable from the declared committed sources.
+**ITERATE — 6.28/10.** The delivery architecture is now substantially decided, but the narrowed figure set still cannot be derived under its own contract: 11 of 29 Ship Verified readiness artifacts have no Iteration History table, and the surviving tables do not share the stated row grammar.
 
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
-| Score | 5.30/10 |
+| Score | 6.28/10 |
 | Verdict | ITERATE |
-| Iteration | 1 |
-| Model Tiers | Execution: high; Audit: high |
+| Iteration | 2 |
+| PRD Class | feature |
 | Scored by | GPT-5 via codex-cli — fresh independent session |
 | Self-scored | no |
 | Date | 2026-07-28 |
-| PRD Lint | waived/green — exact CLI invocation hit the documented read-only `EPERM` while opening `_state/prds.json.80508.tmp`; the built read-only `lintPrd` equivalent returned `{"ok":true,"issues":[]}`; relying on the orchestrating session’s out-of-sandbox green run on 2026-07-28 |
-| State Record | pending |
+| PRD Lint | waived/green — `node packages/provegate/dist/cli.js check PRD-037` hit the documented sandbox `EPERM` opening `_state/prds.json.9047.tmp`; the read-only `lintPrd` equivalent returned `{"ok":true,"issues":[]}`; relying on the orchestrating session's out-of-sandbox green run on 2026-07-28 |
+| State Record | unchanged — analysis-only rescore; `_state/prds.json` still records iteration 1 at 5.30 ITERATE |
+| Repository Changes | none |
 
-## Model Tier Recommendation
+## Iteration 2 — Rework Review
 
-| Phase | Tier | Rationale |
+| Rework piece | Status | Verification |
 | --- | --- | --- |
-| Phase 4 — Execution | high | The code volume is small, but the work defines a public evidence contract over heterogeneous historical artifacts. Silent miscounting is the primary failure mode. |
-| Phase 6 — Audit | high | Audit must independently rederive every published value, mutation-test the drift gate, and verify that unsupported history was omitted rather than inferred. |
+| Per-figure contract table | **PARTIAL** | The PRD now names `shipVerified`, `closeModes`, and `readinessIterations` with sources and failure behavior: “a file whose table cannot be parsed is a named failure, never a zero” (`_prds/wip/prd-037-case-study-self-hosting.md:103-107`). The first two derive cleanly; the third makes the current repository fail. |
+| Underivable figures cut | **PARTIAL** | FR-1 correctly says scorer sessions, review aggregates, and resumed stops are “cut, not approximated” (`:109-115`). The introduction still promises “independent-scorer counts,” “review rounds,” “criticals found-and-closed,” and resumed closes as numbers the reader can reproduce (`:35-39`). |
+| Committed sentinel-region mechanism | **PARTIAL** | The architectural choice is made: unique sentinels, `--print`, `--check`, byte comparison, and first-differing-line failure (`:121-136`). The regeneration instruction merely says to rerun `--print`; no mode or exact operation replaces the committed region, and missing/duplicate sentinel behavior is not specified. |
+| Stored-projection correction | **CLOSED** | FR-1 now states that “the committed doc region in FR-2 is a PROJECTION” and explicitly retracts the earlier “no stored figure” overclaim (`:116-119`). |
+| Digits outside the generated table | **OPEN — NEW CONTRADICTION** | FR-2 requires “no digit outside the sentinels” (`:128-130`), while FR-4 requires the published section to state that failed rounds include “the 5.1s” (`:138-141`). The acceptance criterion also forbids a digit absent from FR-1 output (`:168-169`), and FR-1 does not output readiness scores. |
+| Verifier hosting | **CLOSED for feasibility; OPEN for test coverage** | `scripts/verify/verify-doc-claims.mjs` is a synchronous top-level script with a resolved repository root and reporter, so it can host a child invocation of the derivation script. Its baseline passed: `6 document(s) scanned, 0 allowed`. However, its fixture copies only the verifier, helper, package file, and six governance documents (`packages/provegate/test/doc-claims-script.test.ts:31-80`); it does not provide the new script, state, readiness corpus, or case study. The test is absent from Targets and Conflict Surface. |
 
-## Analysis
+### Derivability Probe
 
-### 1. Technical Depth & Architecture
-
-**[FINDING — Technical Depth; executed] FR-1 mixes clean state fields with figures that have no normalized source or defined derivation.** `_state/prds.json` records status, close mode, final readiness score/verdict, and artifact paths, but no readiness-round count, scorer-session identity, review-round count, historical critical count, stop identifier, or resume relationship (`_state/prds.json:5-40`). The probe over the current snapshot produced 29 `Ship Verified` records, split 27 operator-gated and 2 eligible. Those figures are directly derivable. The remaining claims are not uniformly so.
-
-| Claimed figure | Derivability judgment | Evidence |
+| Figure | Result | Evidence |
 | --- | --- | --- |
-| PRDs Ship Verified | Reliable | Exact `status === "Ship Verified"` predicate exists in state (`_state/prds.json:9-12`). |
-| Operator-gated versus eligible closes | Reliable if restricted to Ship Verified | `autonomousClose` is structured beside status (`_state/prds.json:9-12`). |
-| Readiness iterations total and maximum | Ambiguous | Summing Quick Meta ordinals over Ship Verified records gives 83 with maximum 10; summing all 30 completed readiness files gives 89 because superseded PRD-023 contributes six rounds (`_state/prds.json:820-841`). FR-1 never chooses the corpus. |
-| ITERATE→PASS trajectories | Partial only | PRD-012 carries a complete three-row history (`_readiness/completed/readiness-012-web-design-adoption.md:105-111`), while PRD-008 reports iteration 2 but has only a later amendment, not two scored history rows (`_readiness/completed/readiness-008-lease-commands.md:8-17,97-123`). |
-| Distinct independent scorer sessions | Not reliably derivable | Early artifacts identify a self-scoring session (`readiness-008-lease-commands.md:13-14`); PRD-017 says only “independent agent” without stable identity (`readiness-017-agent-memory-substrate.md:13-14`); only later artifacts sometimes record session IDs. Labels cannot be deduplicated into distinct sessions. |
-| Review rounds total | Not reliably derivable | PRD-001 encodes three rounds in quorum prose and narrative (`_docs/reviews/review-001-config-state-locks.md:10-21`); PRD-008 has no round field (`review-008-lease-commands.md:3-10`); PRD-016 combines four Codex rounds with two independent sessions and their own re-verifications (`review-016-practices-pack.md:5-12,34-49`). No closed counting rule resolves these shapes. |
-| Criticals closed | Not reliably derivable as an aggregate | Review headers record outstanding `Critical: 0`, while narrative records historical findings—for example four criticals in PRD-001 (`review-001-config-state-locks.md:7,17-21`). Other artifacts use P1/High/blocker taxonomies. FR-1 does not define equivalence or deduplication. |
-| Gate-chain stops resumed | Not derivable from the declared committed sources | Local `_state/prd-metrics.jsonl` contains apparent stop/pass sequences (`:20-22`, `:72-75`, `:228-246`), and a probe found 32 stopped events followed by later same-phase passes. However, `git ls-files --error-unmatch _state/prd-metrics.jsonl` failed: the file is untracked and absent from a fresh clone. It also lacks run IDs or an explicit `resumedFrom` relation. |
+| `shipVerified` | **DERIVABLE** | Exact predicate `status === "Ship Verified"` yields **29** records. |
+| `closeModes` | **DERIVABLE** | Over those 29 records, `autonomousClose` yields **27 operator-gated** and **2 eligible**, with no unknown or missing values in the current snapshot. |
+| `readinessIterations` | **NOT DERIVABLE UNDER THE CONTRACT** | Only 18 of the 29 Ship Verified readiness artifacts contain an `## Iteration History` table. The other 11 are PRD-005 through PRD-011, PRD-013 through PRD-016. PRD-008 is especially dispositive: Quick Meta says iteration 2, but no history table exists (`_readiness/completed/readiness-008-lease-commands.md:3-15,97-123`). Strict implementation must therefore fail on the current repository. |
 
-This conflicts with FR-1’s mandatory figure list (`_prds/wip/prd-037-case-study-self-hosting.md:100-109`). The later instruction to omit unsupported figures (`:166-169`) does not resolve the conflict; it gives the implementer discretion to violate FR-1.
+The stated grammar is also false about the corpus. Technical Considerations calls it “the `| date | iteration | score | verdict |` row shape the completed corpus actually uses” (`_prds/wip/prd-037-case-study-self-hosting.md:185-188`). Most tables instead use `| # | Date | Score | Verdict | Key Changes |`, for example PRD-001 (`_readiness/completed/readiness-001-config-state-locks.md:120-124`). PRD-035 uses the different `| Date | Iteration | Score | Verdict | Notes |` order (`_readiness/completed/readiness-035-adr-section-anchor.md:128-133`).
 
-**[FINDING — Technical Depth; executed] FR-3 does not extend an existing figure-tracing mechanism.** The current `verify-doc-claims.mjs` scans six governance documents (`scripts/verify/verify-doc-claims.mjs:43-53`) and rejects lines that combine a wired script token with a future marker (`:130-157`). It neither scans the case study nor evaluates figures nor invokes another script. The executed baseline reported “6 document(s) scanned” and passed.
+The ambiguity changes the result:
 
-The actual existing figure discipline is in `packages/provegate/test/content-launch.test.ts`: evidence-page percentages are traced to the research source (`:75-110`), and four origin figures are asserted across the case study and whitepaper (`:126-142`). Calling `verify:doc-claims` “PRD-004’s figure-tracing lint” at PRD lines 43-45 and 118 is factually wrong and conceals a new checker architecture.
+- Counting only data rows in the 18 existing history tables gives 72.
+- Summing Quick Meta iteration ordinals across all 29 Ship Verified items gives 83.
+- Combining history rows with Quick Meta fallback for the 11 missing tables gives 84, because PRD-024 includes a distinct `9b` row while Quick Meta reports iteration 9.
 
-**[FINDING — Clarity] “The doc embeds the script’s output” leaves a blocking design decision unresolved.** The case study is a static MDX file with no import or generated region (`apps/docs/content/docs/case-study.mdx:1-67`). The docs build is only `next build`; there is no generation hook (`apps/docs/package.json:7-13`). The declared implementation scope names only the script, MDX file, and existing verifier (`_prds/wip/prd-037-case-study-self-hosting.md:185-191`).
+Thus “row count” is mechanically countable only after deciding whether a concurring `9b` assessment is an iteration and how table-less historical items participate. Those semantics remain unwritten.
 
-An implementer must choose among materially different designs:
+The Superseded exclusion does work: PRD-023 is explicitly `status: "Superseded"` with a completed readiness artifact, so selecting Ship Verified state records first excludes it. The absent-artifact rule is also clear. Neither repairs the current missing-table case.
 
-- a committed generated block with sentinels;
-- a build-time generated include;
-- an MDX component importing derived data;
-- or a verifier comparing manually pasted output.
+### Promise and Contradiction Sweep
 
-Those choices change targets, tests, build behavior, maintenance, and rollback. They also expose a contradiction: FR-1 says no stored figure exists anywhere (`:107-109`), while FR-2 requires rendered figures in a committed document (`:111-117`).
+Three stale promise classes survive:
 
-### 2. Edge Cases & Failure Modes
+1. The introduction still says the repository has run “30+” PRDs and that one script reproduces independent-scorer counts, review rounds, criticals, and resumed closes (`_prds/wip/prd-037-case-study-self-hosting.md:30-39`). The approximate `30+` is itself a typed self-hosting figure, while the other promised aggregates were expressly cut later.
 
-**[FINDING — Completeness] Corpus membership and missing-history behavior are undefined.** A completed readiness artifact can belong to a superseded rather than shipped item (`_state/prds.json:820-841`). Some shipped records have incomplete task or summary state, and historical readiness formats vary. FR-1 must say whether each metric is computed over Ship Verified items, every completed readiness artifact, or every record, and whether malformed or missing metadata fails the whole derivation or excludes one metric.
+2. FR-4's mandatory “5.1s” wording cannot coexist with FR-2's no-digit rule or §6's rule that every prose digit must occur in FR-1 output (`:128-141,168-169`).
 
-**[FINDING — Completeness] Review counts lack a closed grammar and can double-count narrative restatements.** PRD-001 repeats its historical critical count in summary and finding rows (`review-001-config-state-locks.md:17-34`). PRD-016 describes Codex rounds, Sonnet rounds, and closure re-verification in overlapping prose (`review-016-practices-pack.md:16-49`). A regex over “Round” or “critical” will count headings, summaries, and restatements rather than events. No source-precedence rule, required metadata field, or deny fixture is specified.
+3. The historical checker description remains wrong: the introduction still calls the current surface “PRD-004's figure-tracing lint” (`:41-45`). `verify-doc-claims.mjs` presently checks wired scripts described as future work (`scripts/verify/verify-doc-claims.mjs:2-35,130-186`); PRD-004's origin-figure assertions live in `packages/provegate/test/content-launch.test.ts`.
 
-**[FINDING — Scope & Testability] FR-3 omits the existing checker tests from its Targets.** `doc-claims-script.test.ts` executes the verifier in a fixture repository and provides exactly the six files in its current scanned set (`packages/provegate/test/doc-claims-script.test.ts:31-80`). Extending the script to require state, readiness, reviews, a case-study document, or the derivation script changes that fixture contract. Yet FR-3 targets only `verify-doc-claims.mjs` (`_prds/wip/prd-037-case-study-self-hosting.md:118-122`). No test is required for a stale value, missing figure, duplicated generated region, extra digit, malformed artifact, or derivation failure.
+The sequencing text also remains stale. It describes PRD-026 among “all in-flight items” (`_prds/wip/prd-037-case-study-self-hosting.md:195-198`), while `_state/prds.json` records PRD-026 Ship Verified and `STATUS.md` names it as shipped.
 
-**[FINDING — Scope & Testability] Several §11 commands do not prove their claimed outcomes.** A docs build does not assert the expected heading ID, and `pnpm verify:doc-claims` currently cannot prove either figure equality or “no unsourced digit outside the table” (`_prds/wip/prd-037-case-study-self-hosting.md:250-257`). The source needs explicit assertions or a checker mode whose exit status covers those predicates.
+### Testability and Operational Lifecycle
 
-**[FINDING — Scope & Testability; executed] The conflict conclusion currently holds, but its supporting prose is stale.** The active PRD-027 lease owns web/design/announcement paths and does not overlap this PRD (`_state/locks/prd-027-landing-adoption-polish.json:9-39`). The board-active PRD-031 surface is also disjoint (`_prds/wip/prd-031-autonomy-mode-method-policy.md:522-544`). However, PRD-037 describes PRD-026 as in flight (`_prds/wip/prd-037-case-study-self-hosting.md:173-176`) while state records it Ship Verified (`_state/prds.json:931-934`). This is not a current overlap blocker, but the sequencing statement must be refreshed.
+The direct checker architecture is feasible, but the verification contract remains incomplete:
 
-### 3. Maintainability & Developer Experience
+- `packages/provegate/test/doc-claims-script.test.ts` and `packages/provegate/test/content-launch.test.ts` remain outside Targets, Implementation Scope, and Conflict Surface.
+- No required fixture covers missing or duplicate sentinels, a stale byte, first-differing-line diagnostics, missing history tables, either historical table shape, `9b`, Superseded exclusion, unknown close modes, or a missing readiness artifact.
+- `pnpm --filter docs build` proves that the MDX builds, not that the promised heading id remains exact.
+- The cross-cutting floor says “added tests pass” (`_prds/wip/prd-037-case-study-self-hosting.md:281-286`) without specifying any added test file.
+- `--print` emits content but does not update the committed projection. The regeneration rule needs either a write mode or an exact replacement procedure whose output is then checked.
 
-**[FINDING — Maintainability] The “cannot go stale” claim reverses the actual maintenance contract.** If the MDX contains a committed projection, every later Ship Verified transition changes at least the shipped-count and close-mode figures. `verify:doc-claims` will then intentionally make unrelated future work red until the case study is regenerated. That can be a valid design, but the PRD supplies neither an update command nor ownership/order for that recurring operation. If figures are instead generated only at build time, the required build integration and deployment inputs are absent from scope.
-
-**[FINDING — Clarity] The formal PRD shape passes, but the executable semantics do not.** Every FR has Targets, §11 contains runnable command tokens, the DO NOT section exists, Open Questions is explicitly empty, and no TBD marker exists (`_prds/wip/prd-037-case-study-self-hosting.md:195-197,250-279`). Therefore no formal Clarity cap or lint cap applies. The score remains below 7 because the core source predicates and embedding mechanism are undecided.
-
-**[FINDING — Multi-Tenancy & Security] No repository hard cap fires, but figure honesty is below readiness.** The work adds no runtime dependency to `packages/provegate`, push path, network call, telemetry, protected tenant surface, or method content (`_prds/wip/prd-037-case-study-self-hosting.md:270-279`). Nevertheless, the feature’s public trust claim depends on figures that the declared inputs cannot reproduce. Publishing heuristic counts as “recomputed evidence” would violate the PRD’s own honesty boundary even though conventional security surfaces are untouched.
-
-The existing case study models better discipline: it labels evidence provenance up front (`apps/docs/content/docs/case-study.mdx:6-11`), places caveats beside claims (`:20-21,36-37,44-45`), and closes with explicit non-claims (`:62-67`). FR-4 preserves that intent, but FR-1 does not yet provide equally defensible data.
-
-### 4. Migration & Rollback
-
-**[FINDING — Migration & Rollback] Plain revert is plausible only after the delivery architecture is chosen.** Reverting three files is sufficient for a committed static block, but not for a build-generated include or MDX component, which would require additional build/config/component targets. Conversely, a committed projection needs an atomic update and rollback contract covering the derived block, verifier mapping, and tests. The one-line rollback at PRD line 171 assumes away the unresolved architecture.
-
-No stored schema or remote migration exists, so data rollback risk is low. The missing piece is operational migration: how later Ship Verified transitions refresh the published projection without producing persistent red gates or undocumented manual edits.
+No runtime dependency, push path, network call, telemetry, method-content change, tenant surface, schema migration, or repository hard cap is introduced. Plain revert remains credible once the actual test and regeneration surface is declared.
 
 ## Scorecard
 
 | Dimension | Weight | Score | Weighted | Notes |
 | --- | ---: | ---: | ---: | --- |
-| Clarity | 15% | 6.5/10 | 0.975 | Strong document shape and explicit targets, but undefined corpus predicates and embedding architecture |
-| Completeness | 20% | 4.5/10 | 0.900 | Several mandatory figures lack reliable committed sources; tests and recurring update workflow omitted |
-| Technical Depth | 25% | 4.5/10 | 1.125 | No normalized metric model, source precedence, shared derivation boundary, or concrete MDX binding |
-| Multi-Tenancy & Security | 20% | 5.0/10 | 1.000 | Critical repository rules respected; central figure-honesty guarantee is not supportable |
-| Scope & Testability | 10% | 6.0/10 | 0.600 | Narrow file surface and runnable commands, but commands do not discriminate several claimed outcomes |
-| Migration & Rollback | 10% | 7.0/10 | 0.700 | No state/schema migration; revert is easy once architecture and regeneration lifecycle are specified |
-| **Total** | **100%** |  | **5.300/10** | **ITERATE** |
+| Clarity | 15% | 6.8/10 | 1.020 | Figure table and MDX choice improve clarity, but the authoritative iteration grammar contradicts the corpus and the output rules contradict FR-4 |
+| Completeness | 20% | 5.8/10 | 11 shipped artifacts cannot satisfy the required table source; stale promises, tests, and regeneration behavior remain |
+| Technical Depth | 25% | 5.8/10 | State predicates and sentinel architecture are sound, but the historical parser model and iteration semantics are not implementable as written |
+| Multi-Tenancy & Security | 20% | 6.4/10 | Repository critical rules are respected; public figure honesty still fails on the central readiness metric and surviving numeric claims |
+| Scope & Testability | 10% | 5.7/10 | Small production surface, but required test surfaces and discriminating deny fixtures are omitted |
+| Migration & Rollback | 10% | 8.0/10 | No state/schema migration; committed projection is revertible, though refresh and test-file ownership must be added |
+| **Total** | **100%** |  | **6.280/10** | **ITERATE** |
 
-Hard caps: none. The verdict follows the weighted score and the unresolved evidence architecture, not a hard cap.
+Hard caps: none.
+
+Clarity cap: **7.0 applies** because the authoritative source grammar for a required figure is unresolved and contradicts the current corpus.
 
 ## Missing Pieces
 
-1. Replace FR-1’s prose list with a per-figure contract table naming the JSON key, label, exact corpus predicate, authoritative source, parser grammar, computation, exclusions, and missing/malformed-input behavior.
+1. Cut `readinessIterations`, migrate all 29 Ship Verified artifacts to one canonical history-table grammar, or define a truthful alternative source. If Quick Meta is chosen, specify its integer-prefix grammar and decide explicitly whether concurring rows such as `9b` count.
 
-2. Keep only presently reliable figures—Ship Verified count and Ship Verified close-mode split—unless normalization work is added. For readiness totals, explicitly choose Ship Verified artifacts or all completed readiness artifacts and state how superseded PRDs are treated.
+2. Sweep the retracted figures through the introduction and historical-lint description. Remove `30+`, scorer counts, review aggregates, critical counts, and resumed-stop promises unless they are generated under a contract.
 
-3. Remove “distinct independent scorer sessions” or add a normalized, stable session identifier to readiness artifacts plus an explicit historical migration. Free-text `Scored by` labels are not deduplicable evidence.
+3. Resolve the direct no-digit contradiction: remove “the 5.1s” from required published prose, or derive and place that claim inside the generated region under an added figure contract.
 
-4. Remove aggregate review rounds and criticals-closed figures or introduce normalized review metadata with event identity, round count, historical severity counts, taxonomy, and deduplication rules. Do not infer these from narrative prose.
+4. Complete the generated-region lifecycle: define default versus `--print` output, require exactly one ordered sentinel pair, state missing/duplicate behavior, and provide an exact write/replacement procedure.
 
-5. Remove gate-chain stops resumed from this PRD unless a committed event ledger is added to scope. Such a ledger needs run/attempt identity, stop event identity, explicit resume linkage, coverage start, schema validation, and fresh-clone availability. The current local metrics JSONL is untracked and insufficient.
+5. Add `packages/provegate/test/doc-claims-script.test.ts` and `packages/provegate/test/content-launch.test.ts` to Targets and Conflict Surface. Require fixtures for both table shapes, missing tables/artifacts, Superseded exclusion, `9b`, unknown close modes, stale bytes, missing/duplicate regions, first-line diagnostics, and preservation of the existing future-claim behavior.
 
-6. Choose the MDX delivery mechanism in the PRD. Recommended: a committed canonical generated region delimited by unique sentinels, with one command that prints the region and a check mode that compares it byte-for-byte. Revise “no stored figure exists” to acknowledge the committed projection and document when it must be regenerated. If build-time generation is chosen instead, add every component/config/build target and fresh-build test.
-
-7. Specify a single shared derivation implementation used by both the CLI-facing script and the drift verifier. Do not duplicate metric logic or parse the human-formatted Markdown output when stable JSON is available.
-
-8. Rewrite FR-3 against the current checker reality: preserve the existing future-claim predicate, add the case study as a separate explicitly named claim surface, define generated-region parsing and exact equality, and state how derivation failures propagate.
-
-9. Add `packages/provegate/test/doc-claims-script.test.ts` and `packages/provegate/test/content-launch.test.ts` to Targets and Conflict Surface. Require fixtures for correct output, one changed value, missing/duplicate region, extra digit outside the region, malformed state, missing readiness/review input, and preservation of the existing future-claim behavior.
-
-10. Add §11 rows that actually assert the stable heading ID and run the targeted checker tests. A successful docs build alone is not an ID assertion.
-
-11. Correct the historical claim: PRD-004’s origin-figure tracing lives in `content-launch.test.ts`; `verify-doc-claims.mjs` came later and currently checks wired scripts described as future work.
-
-12. Refresh sequencing: PRD-026 is Ship Verified; the current active PRD-027 lease and board-active PRD-031 surfaces are disjoint. Retain the required pre-Phase-3 queue/lease recheck.
-
-13. Expand rollback to cover the selected generated-region/build mechanism, shared derivation module, verifier changes, and tests atomically. Document how future state changes refresh or intentionally invalidate the published projection.
+6. Replace the docs-build-only heading check with an assertion for the exact heading id, and refresh the PRD-026 sequencing statement.
 
 ## Iteration History
 
 | Date | Iteration | Score | Verdict | Notes |
 | --- | ---: | ---: | --- | --- |
 | 2026-07-28 | 1 | 5.30/10 | ITERATE | Independent adversarial review found underivable scorer/review/stop figures, an incorrect account of the existing lint, and an unresolved MDX embedding architecture |
+| 2026-07-28 | 2 | 6.28/10 | ITERATE | Sentinel architecture and stored-projection correction verified; full-corpus probe found 11 Ship Verified artifacts without history tables, incompatible table grammars, surviving cut-figure promises, and a new `5.1s` versus no-digit contradiction |
 
 ## Verdict
 
-**ITERATE — 5.30/10.**
+**ITERATE — 6.28/10.**
 
-The narrative goal is strong and the existing case study provides an appropriate honesty model, but the proposed “evidence by execution” cannot yet reproduce its own required figure set from a fresh clone. Phase 1 must first narrow the figures to supported data or add normalized committed evidence, then specify one concrete MDX projection mechanism and mutation-tested binding.
+The rework made real progress: two figures derive exactly, the Superseded exclusion is sound, the stored projection is acknowledged, and the sentinel-based checker architecture is feasible. It still cannot meet its central fresh-clone acceptance criterion because the required readiness-iteration derivation fails against the repository it is meant to describe. Return to Phase 1 to cut or redefine that figure, sweep the retracted promises, resolve the digit contradiction, and bind the mechanism to executable tests.
+```
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 1 transcribed
-> verbatim from a fresh independent Codex session. The scorer ran its own derivation
-> probe over the committed artifacts and established which promised figures are NOT
-> reliably derivable (scorer-session dedup, review-round/critical aggregates, resumed
-> stops) — the draft's figure list overreached its own "omit, never estimate" rule.
-> Score band 4-5.9 = Phase 1 rework: the figure set narrows to what the artifacts
-> support, and the MDX delivery mechanism gets decided (committed sentinel region).
-> Lint EPERM is the documented sandbox artifact; out-of-sandbox green the same day.
+> **Transcription note (orchestrating session, 2026-07-28).** Iteration 2 transcribed
+> verbatim from a fresh independent Codex session; 5.30 → 6.28. Its probe found the
+> history-table grammar varies across the 29 Ship Verified artifacts (concurring rows
+> like `9b` included), so the rework CUTS `readinessIterations` rather than migrating
+> 29 artifacts — the derivable pair remains, unassailable. Lint EPERM is the documented
+> sandbox artifact; out-of-sandbox green the same day.
