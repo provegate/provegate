@@ -78,9 +78,16 @@ for (const rel of SITES) {
 for (const rel of SITES) {
   const path = join(root, rel);
   if (!existsSync(path)) continue;
-  if (!phrase('never accepts its own work').test(read(path)) && !/self-accept/i.test(read(path))) {
-    r.fail(`${rel}: no longer keeps the self-accept prohibition`);
-  }
+  const text = read(path);
+  // A RULE sentence, not the bare token. Matching `/self-accept/` let the record
+  // files pass on their own frontmatter `name:` line — the assertion was
+  // satisfied by the filename, so the body could have dropped the rule entirely
+  // and this check would still have been green.
+  const keeps =
+    phrase('never accepts its own work').test(text) ||
+    phrase('must never self-accept').test(text) ||
+    phrase('never self-accept').test(text);
+  if (!keeps) r.fail(`${rel}: no longer keeps the self-accept prohibition`);
 }
 
 const LEGAL = ['owner-written', 'agent-transcribed'];

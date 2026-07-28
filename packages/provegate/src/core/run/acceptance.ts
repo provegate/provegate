@@ -172,6 +172,14 @@ export function loadAcceptance(
  * A caller that treats an acceptance as AUTHORIZATION must read `problem` —
  * `loadAcceptance` returning null and returning a schema-invalid entry are
  * different facts, and only this shape tells them apart.
+ *
+ * That warning was already here, and `operatorGateOk`'s fallback branch used
+ * `loadAcceptance` anyway for as long as both existed: a store that EXISTED and
+ * was malformed became indistinguishable from no store, and the refusal told the
+ * operator to record an entry while the bad one sat right there. A comment is
+ * not a gate. `loadAcceptance` now has NO production caller — it survives for
+ * tests and for readers who genuinely do not care why. If a third caller ever
+ * appears, this is the function it should use instead.
  */
 export function loadAcceptanceChecked(
   config: WorkflowConfig,
