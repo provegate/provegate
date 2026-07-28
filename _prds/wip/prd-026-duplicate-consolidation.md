@@ -79,7 +79,7 @@ which is a hard prerequisite.
 | Checks a **fresh** adopter loses by upgrading | n/a | 0 | `NEXT_STEPS.md` names the replacing flag for each |
 | Checks an **existing** adopter loses by upgrading | n/a | 0 once they run the migration; three stale copies keep running until they do | the changeset migration section. **Not** provable by any fixture — the migration is manual |
 | Removed pack paths an upgrade re-ships or deletes | n/a | 0 | the upgrade fixture, through the executor |
-| Live documents naming a deleted check, under FR-6's stated boundary | 7 | 0 | FR-6 |
+| Live documents naming a deleted check | 7 raw; 6 inside FR-6's boundary (STATUS.md's historical hits are the seventh, excluded by the stated rule) | 0 in-boundary | FR-6 |
 | Repo surfaces that invoke `gate` | measured at Phase 4 | the root manifest plus at least one CI step | CI workflow text plus the manifest |
 
 ---
@@ -229,10 +229,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `scripts/verify/gates-wired-exceptions.json` (deleted),
      `scripts/verify/verify-workflow.mjs::CHECKS`,
      `package.json`
-4. **FR-4 — The root manifest and CI run the CLI.** Replace the manifest's single
-   `verify:workflow` entry with the checks it wraps, so a check that later moves into the
-   package changes one manifest line and nothing else. Add a CI step that runs the built
-   CLI's sweeps after the build.
+4. **FR-4 — The root manifest and CI run the CLI.** The manifest transaction is
+   retain-plus-add: `verify:workflow` STAYS (the owner's 2026-07-25 decision keeps the
+   local no-build bundle), and the two sweep aliases join phase 4 beside it — an earlier
+   opening sentence said "replace the entry with the checks it wraps", which contradicted
+   the authoritative enumeration below and let two different manifests satisfy this FR.
+   Add a CI step that runs the built CLI's sweeps after the build.
 
    **The contribution is the manifest-driven surface, not the first invocation.** PRD-021
    already puts a `gate` call in a `package.json` script that CI runs. What this FR adds is
@@ -397,6 +399,8 @@ Each FR carries the exact target paths the implementing agent will touch. Use
      `scripts/verify/pack-drift-ledger.json`,
      `packages/provegate/test/pack-manifest.json`,
      `packages/provegate/test/practices-pack.test.ts`,
+     `packages/provegate/test/pack.test.ts` (the tarball-versus-allowlist assertion whose
+     data shrinks with the pack),
      `packages/provegate/test/init.test.ts`,
      `packages/provegate/src/core/gates/manifest.ts::validateManifest` (the trimmed
      justification contract)
@@ -571,8 +575,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 - **Completing the wiring audit.** That is PRD-025 in full and a hard prerequisite here.
   The **class ledger** is no longer a non-goal: owner decision of 2026-07-27 moved it here
   from PRD-025 as a repo-class check (FR-8), because it governs this repository's scripts
-  directory and because the PRD that deletes the scripts must be the one that drops their
-  rows.
+  directory and because one PRD must own the whole transaction — which FR-8 resolves by
+  construction: the deleted trio is never written into either store, so no rows are ever
+  dropped.
 - **The readiness lint parsers.** PRD-024.
 - **Making `gate init` remove anything, on upgrade or otherwise.** The additive-only
   invariant is load-bearing for every pack path; a pack that deletes adopter files is a
@@ -672,8 +677,10 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   audit now reads hooks, bundle membership and sibling script bodies under the narrowed
   grammar, reports its surfaces, and `gate check --wiring` prints them; deleting
   `verify-gates-wired.mjs` no longer removes any guarantee. The ledger moved here (FR-8).
-- **The decision record committed on the base branch** — a precondition, not a work item
-  (FR-8). Absent at Phase 4 start means stop.
+- **ADR-0004 on the base branch** — a precondition, not a work item (FR-8). Drafted
+  2026-07-28 as a transcription of the owner's recorded 2026-07-25/27 decisions and
+  awaiting the owner's ratification, which the Phase-3 Go supplies; absent or unratified
+  at Phase 4 start means stop.
 - **PRD-024 Ship Verified 2026-07-28** — the serialization it once forced on `lintPrd` is
   history; FR-2 builds on its landed §11 machinery. PRD-028 (in flight, Phase 1-2) also
   names `prd-ready.ts`: document phases hold no lease, but re-run `gate queue` before
@@ -948,7 +955,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-6 | `pnpm --filter provegate test test/consolidation.test.ts`   | pkg   | no live document outside the source snapshot and the work-item artifacts names a deleted check |
 | FR-7 | `pnpm --filter provegate test test/changeset-entry.test.ts` | pkg   | one entry declares a minor bump and carries all five migration steps including the exceptions conversion |
 | FR-8 | `pnpm --filter provegate test test/consolidation.test.ts` | pkg | the mutate-one-green-baseline fixtures through `targetRoot()`: unclassified, stale, expired, malformed-pending, table-versus-ledger disagreement — each asserting its specific issue, beside the passing baseline pair |
-| FR-8 | `pnpm verify:script-classes`                                | repo  | unclassified, stale, expired, and owner-less or date-less pending entries each fail, every fixture mutating one green baseline; the three deleted scripts appear in neither store |
+| FR-8 | `pnpm verify:script-classes`                                | repo  | the LIVE repository evidence only: the check passes on the real ledger-plus-record pair and the three deleted scripts appear in neither store — the mutate-one-baseline fixtures are the consolidation-test row above, which the PRD itself says a live invocation cannot exercise |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -1040,6 +1047,7 @@ rationalize.
 
 | Date       | Author | Changes       |
 | ---------- | ------ | ------------- |
+| 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-4 remediation — three [P1]s, three [P2]s, again the sweeps' own residue.** ADR-0004 now EXISTS on the base branch: drafted as a transcription of the owner's recorded 2026-07-25/27 decisions, carrying the surviving set only per the born-agreeing rule, with ratification bound to the Phase-3 Go and the Dependencies wording honest about that state; Non-Goals' surviving "drops their rows" became by-construction language. FR-4's opening sentence now states the retain-plus-add transaction the enumeration always meant, so one manifest satisfies the FR. The Memory Input rationale citing the dead digit selector was the resurrection vector for both iteration-3 selector defects and now states select-then-bind. The live FR-8 row claims only live-repository evidence; the metric distinguishes seven raw hits from six in-boundary; `pack.test.ts` joins FR-5's Targets because its allowlist data shrinks with the pack |
 | 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-3 remediation — five [P1]s and two [P2]s, every one a sweep the iteration-2 pass left short, which is this repository's most-measured defect arriving in its own remediation.** The born-agreeing transaction now holds at every restatement: Implementation Scope reads the ADR as a baseline and removes nothing, the Conflict Surface deliberately does NOT claim it (with the reason in place), Durable Artifacts calls it this PRD's own precondition. FR-8 gains the §11 row its fixtures needed (`consolidation.test.ts` through `targetRoot()`), so the live-check row stops being the only evidence — this time actually. FR-6's boundary excludes the `_prds` STATE directories rather than the whole tree that contains its own declared target, and the acceptance criterion carries the enumerated-exclusions form plus the vacuity control. The five-count survived in three binding places (FR-4's prose, the Gherkin, the §11 FR-3 row) and is now nine everywhere. The review selector returns to the deleted script's two-rule form — `^review-.*\.md$` minus `.template.` — because digits alone select `review-026-copy.template.md`, and the no-identifier deny case is reachable again precisely because selection is broader than the id shape. The justification contract is decided (trimmed non-empty), `manifest.ts::validateManifest` joins Targets and the Conflict Surface, and the whitespace deny case is named. Line cites refreshed to `ci.yml:75-88` and `package.json:32,34,37` |
 | 2026-07-28 | Claude Fable 5, on owner direction | **Iteration-2 remediation (seven [P1]s, two P2s) plus the same-day truth-up its prerequisites' landings forced.** FR-8's five: the ledger check is wired by name — `verify:script-classes` registered and a member of the root bundle, which after PRD-025 is a recognized wiring surface (O); the two-store transaction is by construction — the deleted trio enters NEITHER store, ADR-0004 (renumbered: 0002/0003 were taken by shipped decisions) pre-lands carrying the surviving set only with a dated note, and no row is ever removed (P); the rollback reverts the ledger WITH the consolidation it gates, dissolving the impossible method/method-pending state, and every "PRD-025's ledger" citation is gone (Q); FR-8's fixtures run through `targetRoot()` against fixture roots so mutate-one-baseline is executable, and the live-check row stops being the only evidence (R). Outside FR-8: the manifest enumeration now CHANGES the manifest — two new non-verify aliases (`check:review-artifacts`, `check:durable-artifacts`) join phase 4 after `build`, honoring User Story 3 without putting a bare `node` in the manifest (S); FR-1's selection is `^review-\d{3}-.*\.md$`, template-proof by the id it must derive anyway (T); FR-6's scan set is defined by enumerated, asserted exclusions with `.changeset/**` excluded BECAUSE the migration note must name the deleted checks, and the six documents demoted from boundary to measured hits (U); the justification contract is trimmed non-empty with a whitespace deny case (I). Truth-up, measured 2026-07-28: the root bundle is ELEVEN members (acceptance-rule, turbo-inputs, memory-record-corpus landed during the wave), so the deletion leaves eight and FR-8 makes **nine**; PRD-024 and PRD-025 are Ship Verified so both serialization notes collapse to a PRD-028 caution; FR-7 inherits the per-entry selector discriminators PRD-025 shipped, as a third qualifying entry. Memory Inputs gain `surface-set-without-its-predicate` — born yesterday from PRD-025 and watching the gates this PRD extends |
 | 2026-07-28 | Claude Fable 5, retro action 5 | **Four missing memory-input dispositions added; `gate check PRD-026` green again.** The corpus went red when active records' watches began overlapping this PRD's declared targets — two at creation (`scope-out-the-layer-the-rounds-keep-hitting` and `a-rule-corrected-survives-where-it-is-restated`, both watching `_prds/README.md`, an FR-6 target), one on `init.ts` (`shipped-content-needs-a-delivery-gate` — applied: deleting PACK_MAP entries is a delivery change and FR-5's production-init upgrade fixture is the installed-side proof), and one arriving the same day this fix landed (`gate-run-resume-after-archive`, created by PRD-035's close, watching `run/**`). Each disposition states what was done about the record rather than editing any record to quiet the gate. No FR, target, or Value change |

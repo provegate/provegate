@@ -60,6 +60,7 @@
 
 ## ADRs
 
+- [ADR-0004 method rule vs repo rule](adr/ADR-0004-method-rule-vs-repo-rule.md) — class = what a check READS; the class ledger is repo-class, in scripts/verify, never shipped
 - [ADR-0003 acceptance authorship](adr/ADR-0003-acceptance-authorship.md) — owner records who decided, authorship records who typed; a record, not an enforcement
 - [ADR-0002 agent protocol delivery](adr/ADR-0002-agent-protocol-delivery.md) — protocols reach agents as a one-way rendered store; pointer-only adapters; enumerated tokens, not a template language
 - [ADR-0001 closed-loop agent memory](adr/ADR-0001-closed-loop-agent-memory.md) — declared PRD inputs, watch-triggered review, base-ref weakening proof, Phase 7 capture
