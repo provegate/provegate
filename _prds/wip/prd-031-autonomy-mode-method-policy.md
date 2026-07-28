@@ -144,6 +144,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    `addenda/` table in `source-snapshot/MANIFEST.md`. The addendum is authored **by the
    owner**; an agent may draft it, and the approval is the owner's recorded act.
 
+   **The approval is structural, not textual** (iteration 2's cap finding: an
+   agent-authored file saying "approved by the owner" satisfies any text assertion
+   without an owner act). Two bindings make it an act the machine can hold: the
+   approval is an **operator-owned task row** in this PRD's task plan — which is what
+   its `operator-gated` close already implies — and the committed owner acceptance
+   entry in `_state/acceptances.json` must **name the exact addendum path in its
+   `items`**; the merge gate validates that entry mechanically, and an agent may
+   transcribe it only on explicit in-session owner direction with
+   `authorship: "agent-transcribed"` (ADR-0003). The package assertion is thereby
+   demoted to what a test can honestly prove — artifact shape and the two authorized
+   clauses — and says so in its own name; it never claims to prove approval.
+
    **The verification is a new named assertion, because the existing one is green
    without the addendum** (iteration 1): `content-prompts.test.ts` deliberately
    excludes `MANIFEST.md` and all of `addenda/**` from the frozen-snapshot digest
@@ -170,16 +182,24 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    prose.
 
    This uses PRD-029 FR-4's enumerated-token mechanism, which exists precisely so this PRD
-   adds **no code target**: scalar `prompts.values` substitution cannot select a text block,
-   and putting the block text into an adopter's config would move method content out of the
-   package and fail provenance from the other side. Both were found at PRD-029's readiness
-   iteration 2. `_fragments/` is a render **input**, not an emitted path — PRD-029 FR-2 rule
-   4 — so the fragments never appear in a store.
+   adds **no production-code target**: scalar `prompts.values` substitution cannot select a
+   text block, and putting the block text into an adopter's config would move method content
+   out of the package and fail provenance from the other side. Both were found at PRD-029's
+   readiness iteration 2. `_fragments/` is a render **input**, not an emitted path — PRD-029
+   FR-2 rule 4 — so the fragments never appear in a store.
+
+   **The named assertion lives in `content-prompts.test.ts`, which is therefore a target
+   of this FR** (iteration 2: the §11 row expected it while no FR claimed it): the
+   human-gated rendering contains no exception and no self-assessment instruction and
+   states that the repository is configured human-gated; the autonomous rendering carries
+   the snapshot's exception text. Both halves render from one fixture, so the autonomous
+   half is the independent cause that keeps the negative assertion non-vacuous.
    - **Targets:** `packages/provegate/prompts/phase-3-task-generator.md`,
      `packages/provegate/prompts/_fragments/AUTONOMY_MODE.human-gated.md`,
      `packages/provegate/prompts/_fragments/AUTONOMY_MODE.autonomous.md`,
      `packages/provegate/prompts/PLACEHOLDERS.md`,
-     `packages/provegate/test/content-placeholders.test.ts`
+     `packages/provegate/test/content-placeholders.test.ts`,
+     `packages/provegate/test/content-prompts.test.ts`
 
 3. **FR-3**: The shipped copy of the Phase 3 protocol is reconciled with the snapshot on the
    one point where it already silently diverges: our copy drops the snapshot's parenthetical
@@ -193,8 +213,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 4. **FR-4**: `orchestration-runner.md` states the same proceed rule for the phases it drives,
    because it is the document an agent reads when it is inside Phases 4–7 and it currently
    describes the loop without saying that asking is not part of it. Wording traces to the
-   addendum.
-   - **Targets:** `packages/provegate/prompts/orchestration-runner.md`
+   addendum. **Its named assertion lives in `content-prompts.test.ts`, a target of this
+   FR** (iteration 2): the rendered orchestration protocol carries the proceed rule, and
+   the assertion quotes the addendum's clause so the trace is checked rather than
+   narrated.
+   - **Targets:** `packages/provegate/prompts/orchestration-runner.md`,
+     `packages/provegate/test/content-prompts.test.ts`
 
 5. **FR-5**: Both `AGENT_BOOTSTRAP` copies gain the proceed rule beside the stop rules: the
    only legitimate stops during Phases 4–7 are the enumerated stop-and-ask checkpoints and a
@@ -218,11 +242,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - `content-placeholders.test.ts:96` — the registry-row count moves 20 → 21;
    - `:103` — the zero-enumerations assertion becomes: exactly one enumerated token,
      `AUTONOMY_MODE`, with legal values `human-gated` and `autonomous`;
-   - `:107` — the required-value census follows the rendered corpus (the count moves
-     with the token's arrival in a rendered consumer);
-   - `:158` — the clean-render fixture supplies a **legal** enumerated value
-     (`human-gated`) for this token instead of the generic `x` the renderer rejects
-     for an enumeration (`prompts.ts:595`).
+   - `:107` **and `:164`** — both required-value censuses follow the rendered corpus;
+   - `:158` **and every generic value builder (`:173,185,206,217`)** — one rule,
+     stated once and applied everywhere a fixture synthesizes a value per registry
+     row: **select `row.enumerated?.[0]` when the row is enumerated, else the generic
+     value**. That rule is the whole migration recipe, and it is what makes the next
+     enumerated token a zero-edit event in these fixtures;
+   - **`prompts.test.ts:289-292` and `init.test.ts:315-325`** — the same builder rule:
+     both synthesize `v-KEY` strings today, which the renderer rejects for an
+     enumeration;
+   - **`init.test.ts:383-395`** — the hardcoded nine-key set moves to ten.
+
+   The two additional files are declared targets and claimed surface — iteration 2
+   found them outside both, which would have made the suite红 at Phase 4 with no
+   in-scope way to fix it.
 
    **Enumeration coverage is mutation-checked, not asserted once** (iteration 1 found
    the claimed missing-fragment package test does not exist — the live corpus asserts
@@ -238,7 +271,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    `gate init --prompts`** — not from the moment this PRD lands. The consequence for
    PRD-032 stands: it must derive its own value set rather than hardcoding a count.
    - **Targets:** `packages/provegate/prompts/PLACEHOLDERS.md`,
-     `packages/provegate/test/content-placeholders.test.ts`
+     `packages/provegate/test/content-placeholders.test.ts`,
+     `packages/provegate/test/prompts.test.ts`,
+     `packages/provegate/test/init.test.ts`
 
 ---
 
@@ -305,17 +340,19 @@ PRD-029's previous draft stated "read the snapshot first" as its precondition, a
 does not authorize — the snapshot says the opposite of what the change wants, so the only
 lawful paths are an addendum or abandoning the change.
 
-**No code, on purpose — and the second attempt at it is the one that works.** The first
-design put `autonomy` in the `prompts` config block, which would have made this PRD claim
-`core/config/**` and serialize it against PRD-030. The second expressed it as a plain
-`prompts.values` entry, and PRD-029's readiness iteration 2 killed that too: scalar
-substitution cannot select a text block, and putting the block text in the config moves
-method prose into an adopter's file where the provenance rule cannot see it. The third —
-**an enumerated token whose fragments ship in the package** — gets the outcome with neither
-cost: the human sets a key in `workflow.config.json`, the agent never assesses itself, the
-prose stays in the package under the addendum's authority, and this PRD's target list
-contains no TypeScript file. **That is what keeps 030 and 031 parallelizable**, and it is
-PRD-029 FR-4 that pays for it.
+**No production code, on purpose — and the second attempt at it is the one that works.**
+The first design put `autonomy` in the `prompts` config block, which would have claimed
+`core/config/**`. The second expressed it as a plain `prompts.values` entry, and
+PRD-029's readiness iteration 2 killed that too: scalar substitution cannot select a
+text block, and putting the block text in the config moves method prose into an
+adopter's file where the provenance rule cannot see it. The third — **an enumerated
+token whose fragments ship in the package** — gets the outcome with neither cost: the
+human sets a key in `workflow.config.json`, the agent never assesses itself, the prose
+stays in the package under the addendum's authority, and this PRD's target list
+contains **no file under `packages/provegate/src/**`** — the four corpus-test files it
+does target are fixture surface the token necessarily moves, declared rather than
+denied. (An earlier "no TypeScript file" absolute survived here one round after it was
+corrected everywhere else — `a-rule-corrected-survives-where-it-is-restated`, again.)
 
 **Two copies, one wording, held by a test.** FR-5 edits the same rule in two files. This
 repository's records say plainly what happens next if nothing holds them together, and the
@@ -372,6 +409,9 @@ deleting it would falsify the record the cap exists to keep.
       direct-read addendum assertions
 - [ ] `packages/provegate/test/content-placeholders.test.ts` — registry count,
       enumeration coverage, legal-value fixture, missing-fragment mutation check
+- [ ] `packages/provegate/test/prompts.test.ts` and
+      `packages/provegate/test/init.test.ts` — the enumerated-aware value-builder rule
+      and the ten-key set
 
 ---
 
@@ -496,6 +536,8 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/practices/templates/AGENT_BOOTSTRAP.template.md`
 - `packages/provegate/test/content-prompts.test.ts`
 - `packages/provegate/test/content-placeholders.test.ts`
+- `packages/provegate/test/prompts.test.ts`
+- `packages/provegate/test/init.test.ts`
 - `AGENT_BOOTSTRAP.md`
 - `docs/research/provegate-bootstrap/source-snapshot/addenda/**`
 - `docs/research/provegate-bootstrap/source-snapshot/MANIFEST.md`
@@ -525,12 +567,14 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR   | Command / Check                                              | Scope | Notes                                                                                                        |
 | ---- | ------------------------------------------------------------ | ----- | -------------------------------------------------------------------------------------------------------------- |
-| FR-1 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | the addendum exists, carries an owner and a date, and the snapshot manifest names it in the addenda table       |
+| FR-1 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | artifact shape and the two authorized clauses, read directly because the digest excludes addenda; approval itself is the operator-owned row below, never this test |
 | FR-2 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | both renderings; the human-gated one contains no exception and no self-assessment instruction                   |
 | FR-3 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | the autonomous rendering reproduces the snapshot's exception text including its parenthetical                   |
 | FR-4 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | the orchestration protocol states the proceed rule and its wording traces to the addendum                      |
 | FR-5 | `pnpm --filter provegate test test/content-prompts.test.ts`  | pkg   | both bootstrap copies carry the proceed rule and carry it identically; either one missing fails                 |
-| FR-6 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg | the token is registered and no shipped prompt carries an unregistered one                                       |
+| FR-6 | `pnpm --filter provegate test test/content-placeholders.test.ts` | pkg | registry census 21 with one enumeration, both fragments render, illegal key refused, temp-copy missing-fragment mutation fails |
+| FR-6 | `pnpm --filter provegate test test/prompts.test.ts`          | pkg   | the enumerated-aware value builder renders green |
+| FR-6 | `pnpm --filter provegate test test/init.test.ts`             | pkg   | the ten-key required set and the builder rule hold through init |
 | FR-6 | `pnpm verify:workflow`                                        | repo  | the repo bundle stays green with the addendum in place — workflow-script checks only; the digest and the addendum proof live in the package-test rows above, which the bundle never runs |
 
 Cross-cutting floor (run before Code Complete):
@@ -547,6 +591,13 @@ Hard caps (when your gates manifest configures them):
 - **Method-content cap: FR-1 is the discharge.** Every byte FR-2 through FR-6 changes must
   trace to the addendum or to the frozen snapshot. This is the cap the previous draft tripped.
 
+Operator-owned (recorded as `operator` rows — `skipped` is illegal):
+
+- **The owner approves the FR-1 addendum**, and the committed acceptance entry names
+  the exact addendum path in its `items`. An agent may draft the file and may
+  transcribe the acceptance only on explicit in-session owner direction
+  (`authorship: "agent-transcribed"`). No package test claims to prove this act.
+
 Before Phase 2 PASS, run: `gate check PRD-031`
 
 ---
@@ -562,8 +613,9 @@ rationalize.
   manifest. Reading the snapshot is not authorization; the snapshot says the opposite.
 - DO NOT edit the frozen snapshot. The extension lives beside it, dated and attributed. That
   is what an addendum is for.
-- DO NOT let an agent approve the addendum. Drafting is agent work; approval is the owner's
-  recorded act.
+- DO NOT let an agent approve the addendum, and DO NOT let approval-shaped text stand in
+  for the act: the proof is the operator-owned row plus the committed acceptance naming
+  the exact addendum path — a package test asserts shape and clauses only.
 - DO NOT reintroduce a self-assessable exception in any wording. "In autonomous mode",
   "where appropriate", "unless the session is unattended" are all the same defect: the gated
   party evaluating its own exemption.
@@ -589,6 +641,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                                                                                 |
 | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | Claude Fable 5 (non-scorer session), iteration-2 rework | **All four iteration-2 pieces applied; the approval becomes an act, not a text.** **(1)** The migration surface completes: the value-builder rule is stated once — select the first legal enumerated value when the row is enumerated, else the generic — and applied at every site iteration 2 named (`content-placeholders.test.ts:164,173,185,206,217`; `prompts.test.ts:289-292`; `init.test.ts:315-325,383-395`, nine keys → ten); both additional files join Targets, Scope, Surface and §11. **(2)** FR-1's approval binds structurally: an operator-owned task row plus the committed owner acceptance naming the exact addendum path (ADR-0003 transcription rules restated), with the package assertion demoted to shape-and-clauses and the §11 note saying so. **(3)** `content-prompts.test.ts` joins FR-2 and FR-4 with their named semantic assertions (human-gated negative paired with the autonomous positive from one fixture; the orchestration proceed rule quoted against the addendum). **(4)** §7's surviving no-TypeScript absolute corrected to the `src/**` boundary — the restatement record firing on this document a second time, noted in place. Awaits iteration 3 |
 | 2026-07-28 | Claude Fable 5 (non-scorer session), iteration-1 rework | **All seven missing pieces applied; the self-contradiction is resolved by admitting the corpus-test surface.** **(1)** The absolute no-TypeScript rule was impossible against the shipped corpus tests (`content-placeholders.test.ts:96,103,107,158` hardcode 20 rows, zero enumerations, nine values, and an `x` fixture the renderer rejects for an enumeration) — the boundary narrows to production code (`src/**`), and both corpus-test files become declared targets with their exact expectation moves specified in FR-6. **(2)** Enumeration coverage is mutation-checked: both legal fragments, illegal-key refusal, and a temp-copy missing-fragment case that runs the failure. **(3)** FR-1's verification reads the addendum directly with a named assertion — the digest deliberately excludes `addenda/**` (`content-prompts.test.ts:449,472`), which is why the old row was green without the addendum. **(4)** Serialization declared: PRD-026 on the bootstrap template, PRD-032 on the root bootstrap. **(5)** The chain narrative re-founded on shipped state: 029 Ship Verified (prerequisite met), 030 state-model-only with the mechanism at Draft 034, 032 parked at 4.00; none of it blocks this text-plus-tests item. **(6)** The `verify:workflow` note describes what the bundle runs; the three flagged dispositions corrected (`docs-outlive…` honestly to reviewed; `evidence-pattern…` re-grounded on identity-not-pattern; `a-rule-corrected…` names its own iteration-1 firing). **(7)** Value re-declared 3.55 (5/4/2/3/3) at the scorer's derivation — no migration of existing stores means no current-adopter reach — and a Rollback section lands: one revert restores the corpus, the adopter's stale key degrades to a render diagnostic at next install, and the addendum stays as dated provenance history. Awaits an independent re-score |
 | 2026-07-27 | owner  | **Two carried items closed.** The claim that adding `{{AUTONOMY_MODE}}` makes it required "from the moment this PRD lands" was true only while an upgrade path existed; under the one-way install nothing re-renders an existing store, so it becomes required at the adopter's next `gate init --prompts`. And `_brain/INDEX.md` is a Durable Artifact here and in PRD-030, declared by neither — the conflict gate could not see a collision the two would have while claiming parallelism. Carried since readiness iteration 5. |
 | 2026-07-27 | owner  | **Swept against PRD-029's cut.** The enumerated-token mechanism moved from PRD-029 FR-6 to FR-4 when that document was renumbered, so three references here pointed at the adapters FR. And the "fails at build time" claim survived readiness iteration 5's sweep because it is split across a line break, which `grep` misses; PRD-029 FR-4 now states the opposite explicitly and this FR matches it. |
