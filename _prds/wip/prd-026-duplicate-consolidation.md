@@ -859,6 +859,22 @@ failure. -->
 - reviewed: `two-parsers-wrong-together` — the two durable-artifact parsers agreeing on a
   corpus would not prove either correct, which is why FR-2 resolves each divergence
   deliberately instead of reconciling to whatever both happen to do.
+- not-applicable: `free-text-field-is-the-unread-drift-ledger` — its watch fires because
+  the closing diff refreshes the generated `_state/prds.json`; this PRD adds no free-text
+  field and the state change is the builder recording statuses. (Appended at close.)
+- reviewed: `state-model-before-mechanism` — its watch fires on this PRD's own file in
+  the closing diff (status-header advances and close-time appendices); the record's
+  subject shaped the wave's earlier structural exits and nothing here re-litigates it.
+  (Appended at close.)
+- applied: `docs-are-a-wiring-surface` — this PRD's own declared Memory Output, whose
+  watch covers the practices files this very diff rewrites and deletes: applied by
+  construction — FR-6 is the record's rule executed, and the record was born from
+  executing it. (Appended at close, when the newborn watch fired on the diff that
+  created it.)
+- applied: `docs-outlive-the-gate-they-promise` — its watch covers `AGENT_BOOTSTRAP.md`,
+  which FR-6 rewrites in the same change that retires the checks it described: the
+  documentation moves WITH the gate change rather than outliving it, which is this
+  record's rule applied in the direction it warns about. (Appended at close.)
 - reviewed: `strictness-added-during-extraction-is-a-behavior-change` — adopting the
   script's asterisk exclusion is added strictness reaching the package's existing callers;
   if an existing test must be edited to pass, the merge changed behavior — revert rather
