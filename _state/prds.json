@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:59:57.733Z",
+  "generatedAt": "2026-07-28T11:01:53.148Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1036,7 +1036,7 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-27"
+      "lastUpdated": "2026-07-28"
     },
     {
       "prd": "PRD-029",
@@ -1233,13 +1233,13 @@
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
