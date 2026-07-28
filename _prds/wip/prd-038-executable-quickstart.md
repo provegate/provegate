@@ -107,14 +107,16 @@ record. Every mechanism below is now closed, decided, and hermetic.
    rendering-neutral markers: one `<!-- qs:scenario -->` … `<!-- /qs:scenario -->`
    region delimits the canonical first-touch path; within it, every ` ```sh ` fence is
    executable and every ` ```text ` fence is output illustration. **Geometry,
-   decided: one region, with an explicit ignored-fence form.** A ` ```sh ` fence
-   preceded by `<!-- qs:skip -->` is documented-but-not-executed — the worktree
-   alternative block keeps its teaching position inside the flow without executing
-   (no teaching-order change, which would need the owner) and the harness asserts
-   skipped fences are SKIPPED. **Fence census, corrected at iteration 4: the two
-   currently untagged openings are the two handoff-card blocks** — both retagged
-   `text` in the same change; after that an untagged or unmarked-`sh` fence inside
-   the region is a named failure, not a guess. **The grammar is scoped to
+   single-valued everywhere:** ONE region; the worktree alternative stays INSIDE it
+   under `<!-- qs:skip -->` (documented-but-not-executed, teaching position kept);
+   the practices layer stays OUTSIDE the region entirely. A `qs:skip` marker binds
+   to exactly the next ` ```sh ` fence — a marker not immediately followed by one
+   (dangling), or two markers before one fence, is a named failure. BOTH the
+   harness and the FR-3 parity verifier exclude skipped fences identically. **Fence
+   census, corrected at iteration 4: the two currently untagged openings are the
+   two handoff-card blocks** — both retagged `text` in the same change; after that
+   an untagged fence inside the region is a named failure, not a guess (` ```sh `
+   without a marker is simply executable — no "unmarked-sh" failure class exists). **The grammar is scoped to
    `packages/provegate/QUICKSTART.md` alone**: the docs twin receives only the
    region markers FR-3's parity needs, never the execution grammar. Command splitting: one command per line;
    backslash continuations joined; `#`-prefixed and blank lines skipped; every command
@@ -165,12 +167,14 @@ record. Every mechanism below is now closed, decided, and hermetic.
      production path is single-pass; the measured stop-and-resume sequence above is
      retained as three separate negative fixtures, each pinned to an exact
      production input and the COMPLETE production reason string: (a) omit the tasks
-     file → the full "no tasks file — independent-review ledger missing" line;
+     file → `PRD-001: no tasks file — independent-review ledger missing`;
      (b) plant the literal value `main` in the review artifact's Base SHA field →
-     the full missing-`<git sha>`-metadata line (the fixture claims only that THIS
-     planted value is refused, not that symbolic refs fail generally); (c) invoke
-     the close from the scratch main → the full "current branch is 'main' — run
-     from the feature branch" line.
+     the exact missing-`> **Base SHA:** <git sha>`-metadata reason (the fixture
+     claims only that THIS planted value is refused — no statement about symbolic
+     refs generally); (c) invoke the close from the scratch main → the exact
+     `current branch is 'main' — run from the feature branch, not the base
+     checkout` reason, quoted in full including the tail the earlier draft
+     truncated.
    - **Readiness and acceptance, measured rather than assumed:** the chain gates on
      NO readiness artifact (Phases 2-3 are human phases; the prototype closed
      without one) and, with `Autonomous Close: eligible` and zero operator rows, on
@@ -181,13 +185,17 @@ record. Every mechanism below is now closed, decided, and hermetic.
      with `PROVEGATE_RUN_ACTIVE` (and every runner sentinel) removed — the
      `runner-sentinel-blocks-cli-spawning-tests` record's prescription for a
      CLI-spawning test, so the §11 rows stay green under `gate run` itself.
-   - **Remote-impossibility, asserted:** every spawned child runs with
+   - **Remote-impossibility, asserted:** every spawned child runs with a scrubbed
+     environment — `GIT_CONFIG_COUNT`, every indexed `GIT_CONFIG_KEY_n`/
+     `GIT_CONFIG_VALUE_n`, and `GIT_CONFIG_PARAMETERS` are DELETED first, then
      `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_SYSTEM=/dev/null` and
-     `GIT_CONFIG_NOSYSTEM=1` (HOME remapping alone does not silence `GIT_CONFIG_*`
-     or system config), and `git remote` is asserted EMPTY before and after every
-     step. The nothing-written-outside claim is scoped: after SETUP (the package
-     build + `npm pack`, which legitimately write `dist/` and the tarball), no step
-     writes outside the scratch root, and that is what the assertion covers.
+     `GIT_CONFIG_NOSYSTEM=1` are pinned — and `git remote` is asserted EMPTY before
+     and after every step. The external-write claim is narrowed to what the test
+     concretely observes: every child's HOME/XDG/npm/TMP root sits under scratch,
+     and the assertion is that the SCRATCH REPO's tree plus those remapped roots
+     contain every file the run created after setup (the package build + `npm
+     pack` in setup legitimately write `dist/` and the tarball and are outside the
+     claim).
    - **Cleanup:** in `finally`; deletion verified after both a passing run and a
      planted-failure run; on failure the scratch log tail is copied into the test
      failure message BEFORE deletion so diagnostics survive the cleanup.
@@ -273,7 +281,13 @@ configured, cleanup on success and failure both. The worktree-lifecycle tests
 4), so the harness carries its own small setup functions rather than importing
 test internals.
 
-**Rollback.** Test-only surface plus possible fence tags; plain revert.
+**Rollback.** One coordinated atomic set, landed and reverted together: the
+package doc's markers/retags + the docs twin's markers and relocated `--practices`
+recommendation + the e2e harness + the parity verifier + its root `package.json`
+registration + the `verify:workflow` membership + the `script-classes.json` row +
+the ADR-0004 amendment + the learning + its INDEX pointer. A revert removes all of
+it; no intermediate tree holds a registered check without its script, a marker
+grammar without its harness, or an ADR row without its verifier.
 
 **Sequencing.** `packages/provegate/test/` overlaps no active lease's declared surface,
 and lease ownership is checked at phase boundaries, never trusted from this
@@ -293,7 +307,9 @@ standing.
 
 - [ ] `packages/provegate/test/quickstart-e2e.test.ts` — new: extraction, execution,
       assertions, mutation-provable doc-sourcing
-- [ ] `packages/provegate/QUICKSTART.md` — fence language tags only, if needed (FR-1)
+- [ ] `packages/provegate/QUICKSTART.md` — the `qs:scenario` region markers, the
+      `qs:skip` marker on the worktree block, and the two handoff-card `text`
+      retags (FR-1)
 - [ ] `apps/docs/content/docs/quickstart.mdx` — canonical region converges to the
       package sequence; `--practices` recommendation moves to its own optional
       section (FR-3)
@@ -430,6 +446,7 @@ Before Phase 2 PASS, run: `gate check PRD-038`
 
 | Date       | Author | Changes                                                                                                    |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2026-07-28 | orchestrating session (author), fifth rework | **Iteration 5 (7.61) applied.** The region rule made single-valued everywhere: worktree INSIDE under `qs:skip` (binding to exactly the next fence; dangling/double markers are named failures), practices OUTSIDE, harness and parity verifier excluding skipped fences identically, no "unmarked-sh" failure class, the markers added to Implementation Scope. The two remaining production reasons quoted EXACTLY — including the `, not the base checkout` tail the earlier draft truncated — and the general symbolic-ref statement removed. Children now scrub env-injected git config (`GIT_CONFIG_COUNT`/indexed pairs/`GIT_CONFIG_PARAMETERS`) before the global/system pins, and the external-write claim narrows to what the test concretely observes. The rollback sentence replaced by the coordinated atomic set across both docs, the harness, the verifier, its wiring, the class ledger, the ADR amendment and the learning. |
 | 2026-07-28 | orchestrating session (author), fourth rework | **Iteration 4 (7.48 — the prototype broke the oscillation) applied.** Region geometry decided: one region + an explicit `qs:skip` ignored-fence form so the worktree alternative keeps its teaching position unexecuted; the fence census corrected to the two handoff-card blocks. The three negative fixtures pinned to exact production inputs and COMPLETE reason strings (omitted tasks file; the literal planted `main` in Base SHA — no general symbolic-ref claim; close-from-main). Git config neutralized properly (`GIT_CONFIG_GLOBAL/SYSTEM=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`) and the nothing-written-outside claim scoped to post-setup. The cleanup plant completed (non-empty chmod-555 dir, POSIX/Ubuntu scope stated). The docs-parity migration decided: the docs region adopts the package sequence verbatim, plain `npx gate init`, with the `--practices` recommendation moved to its own optional section; the "derivation or parity" residue, the nonexistent PRD-007 exported-helpers claim, and the stale lease-ownership wording all removed. |
 | 2026-07-28 | orchestrating session (author), third rework — PROTOTYPE-FIRST on owner decision (a) | **Iteration 3 (5.62, oscillating) stopped the wording rounds; the owner chose prototype-first.** The real scratch-close sequence was EXECUTED once (provegate-0.2.0 tarball, unreachable registry, temp repo) and reached the handoff card; the [D]/[H] table is now that run's transcript with the CLI's actual stop messages quoted. Measured facts replacing guesses: the claim SUCCEEDS on the raw template (claim-precedes-fill is the real order); `gate check` greens after only the §11 command substitution; the chain gates on NO readiness artifact and (eligible, zero rows) NO acceptance — measured absences the harness asserts; the three real stops (missing tasks/review ledger; symbolic Base SHA refused; run-from-main refused) become verbatim negative fixtures while the production path pre-seeds and runs single-pass. The install form measured working offline; the mutation pair replaced with one production actually rejects (new/open swap — nothing to claim); the cleanup plant made deterministic (chmod 555 subdir, initial failure asserted, reset+retry in finally); both untagged fences named; the grammar scoped to the package doc alone. |
 | 2026-07-28 | orchestrating session (author), second rework | **Iteration 2 (6.10) applied.** Every "all fenced commands" promise replaced by the tagged-region contract, and the one untagged output fence retagged so an untagged fence inside the region becomes a named failure. The scratch model enumerated THROUGH the real live close as a [D]/[H] table (installed-file disposition, minimal PRD fill, baseline commit, plain claim, task file, passed review row + artifact, durable evidence, feature branch/commits, clean-tree assertion, dry then live `gate run`, merged-base inspection, cleanup) — every [H] row tied to the CLI precondition it satisfies. §11's FR-3 "or" removed: `pnpm verify:quickstart-parity` directly. The mutation pair specified exactly (init/new swap; expected failing step, retained line, stderr-tail diagnostic) and the planted cleanup failure named (read-only file; permissions reset in finally). |
