@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T11:16:04.857Z",
+  "generatedAt": "2026-07-28T11:16:57.951Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -899,16 +899,16 @@
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/completed/prd-025-wiring-audit-completion.md",
-        "readiness": "_readiness/completed/readiness-025-wiring-audit-completion.md",
-        "tasks": "_tasks/completed/tasks-025-wiring-audit-completion.md",
-        "summary": "_docs/completed/summary-025-wiring-audit-completion.md"
+        "prd": "_prds/wip/prd-025-wiring-audit-completion.md",
+        "readiness": "_readiness/wip/readiness-025-wiring-audit-completion.md",
+        "tasks": "_tasks/wip/tasks-025-wiring-audit-completion.md",
+        "summary": "_docs/wip/summary-025-wiring-audit-completion.md"
       },
       "artifactStates": {
-        "prd": "completed",
-        "readiness": "completed",
-        "tasks": "completed",
-        "summary": "completed"
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "wip",
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.3,
