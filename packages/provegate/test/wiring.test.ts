@@ -378,15 +378,12 @@ describe('bundleMembers (line- and column-anchored, fail closed)', () => {
     );
     const members = bundleMembers(real);
     expect(members).not.toBeNull();
-    // assert the SHAPE (parseable, non-trivial, well-known members present)
-    // rather than pinning today's count: the count moved from ten to eleven
-    // WHILE THIS PRD WAS CLOSING (PRD-035 added verify-memory-corpus.mjs on
-    // main), which is this fixture doing its job — a pinned count would make
-    // every legitimate bundle addition red here instead of visible in the
-    // audit's surface report.
-    expect(members!.length).toBeGreaterThanOrEqual(10);
-    expect(members).toContain('verify-gates-wired.mjs');
+    // Shape, not count — the membership moved three times in two days
+    // (PRD-035 added the corpus check; PRD-026 deleted the trio and added the
+    // ledger), each move caught by this fixture doing its job.
+    expect(members!.length).toBeGreaterThanOrEqual(3);
     expect(members).toContain('verify-turbo-inputs.mjs');
+    expect(members).toContain('verify-script-classes.mjs');
   });
 });
 

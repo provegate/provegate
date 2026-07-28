@@ -9,7 +9,7 @@
 > canonical value is the contract (workflow.config statusVocab.canonical). -->
 >
 > **Created**: 2026-07-27
-> **Updated**: 2026-07-27
+> **Updated**: 2026-07-28
 > **Author**: owner
 > **Audience**: Implementing Agent
 > **Slug**: `prompt-store-dogfood`
@@ -33,8 +33,11 @@ Any PRD that produces operator-owned task rows MUST be operator-gated. -->
 The duplication audit of 2026-07-25 named the root cause of three method rules being
 implemented twice: *"this repo dogfoods the CLI's lifecycle but not its gate policy — `gate`
 appears in no `package.json` script, no CI step, and no git hook."* The same class of gap is
-about to open again. PRD-029 gives adopters a protocol store; PRD-030 gives them a check that
-keeps it honest. Neither makes this repository use either one.
+about to open again. PRD-029 gives adopters a protocol store; PRD-034 gives them the check
+that keeps it honest (`gate check --prompts`, the shared primitive, and the two
+`verify-prompts` twins — refreshed 2026-07-28: the check moved from PRD-030 to PRD-034 when
+PRD-030 narrowed to the state model, now at owner-approved Revision 2). Neither makes this
+repository use either one.
 
 That matters more here than it usually would, because **this repository is the first place
 the delivery gap was observed.** Agents working in provegate write PRDs without ever loading
@@ -43,15 +46,16 @@ leave the originating instance of the bug in place, in the repository whose own 
 it.
 
 This PRD is the smallest item in the split and the last in the chain: fill this repository's
-`prompts.values`, generate the store and the adapters with the built CLI, commit them, and
-wire the reconciliation check so the committed copy cannot drift.
+`prompts.values`, flip `prompts.enabled`, generate the store and the adapters with the built
+CLI, commit them — and the reconciliation check PRD-034 already wired (dormant here by its
+own FR-4, live at the flip) starts guarding the committed copy the same day.
 
-One trap decides the shape of the verification. The store lives outside
-`packages/provegate/`, and a `provegate#test` turbo task hashes package files. A package test
-that reads the store would replay a cached green while the store drifted — the failure
-`turbo-cache-masks-out-of-input-reads` already records, and the same reason
-`content-prompts.test.ts`'s frozen-snapshot digest sits on the deferral board today. The
-check runs from `scripts/verify/`.
+One trap decided the shape of the verification, and PRD-034 already built around it: the
+store lives outside `packages/provegate/`, `provegate#test` hashes package files, and a
+package test reading the store would replay cached green while it drifted
+(`turbo-cache-masks-out-of-input-reads`; the frozen-snapshot digest deferral is the standing
+instance). PRD-034's `scripts/verify/verify-prompts.mjs` therefore runs as a root script —
+this PRD creates no check and moves no wiring; it makes the existing, dormant check LIVE.
 
 ---
 
@@ -106,11 +110,13 @@ so that an upgrade cannot leave this repository's agents on a stale protocol.
 
 **Acceptance Criteria:**
 
-- [ ] A `scripts/verify/` check re-renders and compares, and is a member of the
-      `verify:workflow` bundle and the CI hygiene job.
-- [ ] The check fails when a store file is edited by hand without a recorded exception, per
-      whatever PRD-030's state model establishes.
-- [ ] The check does not run as a package test, and a comment says why.
+- [ ] PRD-034's `verify:prompts` (already a `verify:workflow` member and a CI hygiene
+      step, running the built CLI) reports live findings here instead of its dormant
+      disabled note.
+- [ ] A store file edited by hand with no `prompts.exceptions[]` entry fails the check as
+      `modified`, naming the path — PRD-034's contract, consumed unchanged.
+- [ ] The check stays a root script outside the turbo cache (PRD-034 built it there and
+      wrote the comment; this PRD only proves it bites on real content).
 
 ---
 
@@ -143,19 +149,25 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    - **Targets:** `.provegate/**`, `.claude/commands/**`,
      `.cursor/rules/prd-workflow.mdc`, `workflow.config.json`
 
-3. **FR-3**: A `scripts/verify/` check asserts the committed store and adapters equal a
-   fresh render of the installed package against the committed config, and delegates the
-   receipt and exception rules to PRD-030's primitive rather than reimplementing them. It
-   runs from `scripts/verify/` and **not** as a package test, with a comment naming the
-   reason: the store is outside `packages/provegate/`, `provegate#test` hashes package
-   files, and a cached green would replay while the store drifted.
-   - **Targets:** `scripts/verify/verify-prompts.mjs`
+3. **FR-3**: The existing check goes live, unmodified. PRD-034's
+   `scripts/verify/verify-prompts.mjs` runs `gate check --prompts` through the shared
+   evaluator; with `prompts.enabled` flipped and the store committed, its dormant
+   disabled note is replaced by a real reconciliation over this repository's planned
+   set. This PRD edits **no line of the check** — reimplementing or extending it would
+   be the duplication this chain exists to remove. The liveness proof is behavioural:
+   the committed store reports all-`current`; a mutation probe (hand-edit one store
+   file, run, observe the `modified` failure naming that path, revert) proves the gate
+   bites and is recorded in the Progress Log, never committed.
+   - **Targets:** none in code — the FR is a verified state transition; its §11 rows
+     execute PRD-034's surfaces as shipped
 
-4. **FR-4**: The check is wired: a member of the `verify:workflow` bundle and a step in the
-   CI hygiene job. `gate check --wiring` is green with it present. PRD-030 creates the
-   script and its packed twin; this FR only adds this repository's store to what the script
-   covers and confirms the wiring holds with real content behind it.
-   - **Targets:** `scripts/verify/verify-prompts.mjs`, `.github/workflows/ci.yml`
+4. **FR-4**: The wiring holds with real content behind it. PRD-034 registered
+   `verify:prompts`, made it a `verify:workflow` CHECKS member and a CI hygiene step
+   (after the job's provegate build); this FR asserts all three surfaces execute the
+   now-live check — `gate check --wiring` green, the bundle running it inside rather
+   than beside, CI unchanged. No wiring file is touched.
+   - **Targets:** none in code — `pnpm verify:workflow` and `gate check --wiring` are
+     the §11 rows
 
 5. **FR-5**: `AGENT_BOOTSTRAP.md`'s knowledge map and reading strategy name the store, so an
    agent reading the entrypoint learns the protocols exist and where they are. This is a
@@ -173,8 +185,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 - **Building the store mechanism.** PRD-029 owns the render, the config surface, the
   adapters and the installer. This PRD runs it.
-- **Building the reconciliation check.** PRD-030 owns the ledger, the doctor, the sync verb
-  and `verify-prompts.mjs` itself. This PRD points it at this repository's store.
+- **Building or modifying the reconciliation check.** PRD-034 owns the primitive, the
+  shared evaluator, `gate check --prompts`, the `prompts.exceptions[]` contract and both
+  `verify-prompts` twins. There is no ledger, no doctor, no sync verb and no receipt —
+  the state model's T7 forbids the receipt, and the retracted design's verbs died with
+  it (refreshed 2026-07-28; the earlier text predated PRD-030's narrowing). This PRD
+  flips the flag and commits content; the check is consumed as shipped.
 - **Changing method content.** PRD-031. This PRD renders whatever the package ships at the
   time it runs.
 - **Making `gate` this repository's gate runner.** The 2026-07-25 audit's wider finding —
@@ -191,8 +207,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   **Then** twelve rendered protocols are present and none contains an unresolved token.
 - **Given** the committed config, **When** a fresh render runs against the installed
   package, **Then** it equals the committed store byte for byte.
-- **Given** a hand-edited store file with no ledger exception, **When** `verify:prompts`
-  runs, **Then** it fails naming that path.
+- **Given** a hand-edited store file with no `prompts.exceptions[]` entry, **When**
+  `pnpm verify:prompts` runs, **Then** it fails naming that path as `modified` — the
+  probe is run-and-reverted, recorded in the Progress Log, never committed.
 - **Given** `pnpm verify:workflow`, **When** it runs, **Then** the prompts check runs inside
   the bundle rather than beside it.
 - **Given** the check, **When** its location is inspected, **Then** it is under
@@ -220,7 +237,7 @@ because of the second. FR-3 states the reason in a comment so the next person wh
 "just make it a test" reads it there.
 
 **Last in the chain, and small on purpose.** It needs the store (PRD-029) and the check
-(PRD-030). It does not need PRD-031 — but PRD-029's readiness iteration 2 showed why that
+(PRD-034). It does not need PRD-031 — but PRD-029's readiness iteration 2 showed why that
 independence has to be *built* rather than asserted: PRD-031 adds `{{AUTONOMY_MODE}}` to the
 rendered corpus, and PRD-029 derives the required-value set from that corpus, so the number
 of values this repository must supply differs before and after PRD-031 lands. A hardcoded
@@ -229,17 +246,19 @@ from the `prompts` block `gate init --prompts` prints against the installed pack
 landing later simply changes the rendered bytes, which FR-3's check requires to be
 re-committed — the mechanism working, not a conflict.
 
-**Prerequisites.** PRD-029 and PRD-030 both Ship Verified. Conflict Surface is disjoint from
-both: they own package code and the verify script's creation, this one owns the repository's
-own configuration and generated artifacts. `.github/workflows/ci.yml` and
-`scripts/verify/verify-prompts.mjs` appear in PRD-030's surface too, which is why this item
-follows rather than parallels it. Re-run `gate queue` before Phase 3 rather than trusting
+**Prerequisites.** PRD-029 Ship Verified (satisfied) and **PRD-034 Ship Verified** (the
+check, its wiring, and the `prompts.exceptions[]` contract — PASS 8.4 at readiness,
+implementation pending). Conflict Surface is disjoint by construction: PRD-034 owns the
+package code, both verify twins and `ci.yml`; this item owns only the repository's own
+configuration and generated artifacts, and touches no file PRD-034 claims — which is why
+it follows rather than parallels. Re-run `gate queue` before Phase 3 rather than trusting
 this paragraph.
 
 ### Dependencies
 
-- **PRD-029 Ship Verified** — the store mechanism.
-- **PRD-030 Ship Verified** — the reconciliation check this one wires to real content.
+- **PRD-029 Ship Verified** — the store mechanism. Satisfied.
+- **PRD-034 Ship Verified** — the reconciliation check, its exceptions contract and its
+  wiring, all consumed unchanged. The hard prerequisite; scoring this PRD waits for it.
 - No new runtime dependency; nothing reaches the network; no push code path.
 
 ---
@@ -251,7 +270,7 @@ this paragraph.
 - [ ] `workflow.config.json` — the `prompts` block with every required value answered
 - [ ] `.provegate/` — the generated store, committed
 - [ ] `.claude/commands/` and `.cursor/rules/prd-workflow.mdc` — the generated adapters
-- [ ] `scripts/verify/verify-prompts.mjs` — this repository's store added to its coverage
+- [ ] (no check edits — PRD-034's `verify:prompts` goes live via the config flip alone)
 - [ ] `AGENT_BOOTSTRAP.md` — two pointer lines
 - [ ] `.gitignore`, `turbo.json` — confirm nothing hides the store
 
@@ -268,7 +287,8 @@ this paragraph.
 - STATUS.md, 2026-07-25 duplication audit — *"this repo dogfoods the CLI's lifecycle but not its gate policy"*
 - `_brain/learnings/turbo-cache-masks-out-of-input-reads.md` — why FR-3 is not a package test
 - PRD-029 — the store mechanism; hard prerequisite
-- PRD-030 — the reconciliation check; hard prerequisite
+- PRD-034 — the reconciliation check, exceptions contract and wiring; hard prerequisite
+- `_docs/design/prompt-store-state-model.md` (Revision 2, owner-approved) — the ground truth both 034 and this item bind to
 - PRD-031 — later method-content changes simply re-render; not a prerequisite
 - `_readiness/wip/readiness-029-method-delivery-agent-binding.md` — W1, the split that produced this item
 
@@ -301,9 +321,11 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
 - applied: `durable-artifact-must-commit` — the store is a committed artifact, and FR-6
   checks that no ignore rule excludes it. An uncommitted generated tree would leave the check
   green locally and the repository's agents empty on a fresh clone.
-- reviewed: `known-red-ledger-must-expire` — the ledger and its exceptions are PRD-030's; this
-  item consumes them and adds no exception of its own. Recorded because the first exception
-  this repository writes will be written here, and it will need an owner and a date.
+- reviewed: `known-red-ledger-must-expire` — the exception contract is PRD-034's
+  `prompts.exceptions[]` (owner-authored in config, suppression scoped to `modified`,
+  UTC calendar expiry); this item consumes it and writes no entry of its own. Recorded
+  because the first exception this repository ever writes will be written here, and
+  PRD-034's contract already demands its owner and expiry date.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — FR-1's proof that every value was
   answered is the render refusing on an unset `null`, not a human reading the config. Recorded
   because "the config has the right number of keys" is exactly the satisfied-by-the-template shape.
@@ -311,7 +333,8 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   record's rule is preserved by adding nothing.
 - not-applicable: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
   `core/run/**`, which this PRD does not touch; every code target belongs to PRD-029 or
-  PRD-030.
+  PRD-034 (whose own `prompts.dir` backslash strictness this repository's forward-slash
+  config already satisfies).
 
 ---
 
@@ -330,8 +353,9 @@ Phase 7 compares against this PRD as committed on the base branch — not agains
 state.
 
 - none — every durable fact this chain produces is claimed upstream: the delivery decision
-  and its ADR by PRD-029, the recompute-over-recorded-state rule by PRD-030, and the
-  self-exempting-rule record by PRD-031. This item runs a shipped mechanism against one
+  and its ADR by PRD-029, the recompute-over-recorded-state rule by PRD-034 (relocated
+  there when PRD-030 narrowed to the state model), and the self-exempting-rule record by
+  PRD-031. This item runs a shipped mechanism against one
   repository and is expected to teach nothing the code does not already record. If executing
   it does surface a non-derivable fact, appending an output with a rationale is allowed and
   is the correct response.
@@ -364,7 +388,7 @@ Where this PRD's durable knowledge lands (Phase 7's gate checks every non-`none`
 against the merge diff). Never leave empty — write `none` explicitly. Narrow scope:
 only **this PRD's** durable knowledge.
 
-- `none` — no `_brain` record is expected; every durable fact in this chain is claimed by PRD-029, PRD-030 or PRD-031
+- `none` — no `_brain` record is expected; every durable fact in this chain is claimed by PRD-029, PRD-034 or PRD-031
 - `_docs/reviews/review-032-prompt-store-dogfood.md` — the independent Phase 6 artifact
 
 ---
@@ -378,9 +402,9 @@ single line — and never a pipe character inside a backticked command in this t
 
 | FR   | Command / Check                                      | Scope | Notes                                                                                                     |
 | ---- | ---------------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------- |
-| FR-1 | `node packages/provegate/dist/cli.js doctor --prompts` | repo  | every path reports match, which is only reachable when every required value is answered                      |
-| FR-2 | `node scripts/verify/verify-prompts.mjs`             | repo  | the committed store and adapters equal a fresh render of the installed package                              |
-| FR-3 | `node scripts/verify/verify-prompts.mjs`             | repo  | a hand-edited store file with no exception fails; the check reads paths outside the package's turbo inputs   |
+| FR-1 | `node packages/provegate/dist/cli.js check --prompts` | repo  | all planned paths `current` — reachable only when every required value is answered and the store is fresh (the doctor verb does not exist; refreshed against PRD-034's real surface) |
+| FR-2 | `pnpm verify:prompts`                                | repo  | the committed store and adapters equal a fresh render of the installed package, via PRD-034's script as shipped |
+| FR-3 | `pnpm verify:prompts`                                | repo  | live, not dormant: the disabled note is gone; the mutation probe (edit, observe `modified` naming the path, revert) is executed at Phase 5 and recorded in the Progress Log |
 | FR-4 | `pnpm verify:workflow`                               | repo  | the prompts check runs inside the bundle rather than beside it                                              |
 | FR-4 | `node packages/provegate/dist/cli.js check --wiring` | repo  | registered and executing, with real content behind it rather than an empty store                            |
 | FR-5 | `pnpm verify:doc-claims`                             | repo  | the entrypoint's new lines make no claim about a gate that does not run                                     |
@@ -413,9 +437,11 @@ rationalize.
   `.cursor/rules/prd-workflow.mdc`. Generated by the built CLI, or it is not dogfooding.
 - DO NOT verify this with a package test. The store is outside the package's turbo inputs
   and a cached green will replay while it drifts. The comment saying so is part of FR-3.
-- DO NOT reimplement the receipt or exception rules here. The check delegates to PRD-030's
-  primitive; a second implementation is the duplication this repository is already paying to
-  remove.
+- DO NOT reimplement or extend the check, the evaluator or the exception rules here —
+  and DO NOT speak of a receipt, doctor or sync verb: they do not exist (T7 forbids the
+  receipt; the retracted design's verbs died with PRD-030's narrowing). PRD-034's
+  surfaces are consumed as shipped; a second implementation is the duplication this
+  repository is already paying to remove.
 - DO NOT edit `CLAUDE.md`, `AGENTS.md` or `.cursor/rules/brain.mdc`. The generated adapters
   sit at their own paths and shadow nothing.
 - DO NOT summarize any protocol inside `AGENT_BOOTSTRAP.md`. Two pointer lines. A summary is
@@ -427,8 +453,10 @@ rationalize.
 - DO NOT hardcode the required-value set or its size. Derive it from what
   `gate init --prompts` prints against the installed package; PRD-031 changes that set,
   and a copied count makes this item's correctness depend on merge order.
-- DO NOT start before PRD-029 and PRD-030 are both Ship Verified. Without the check this is
-  a committed tree nobody reconciles, which is the drift surface the chain exists to avoid.
+- DO NOT start before PRD-029 and PRD-034 are both Ship Verified — and do not SCORE this
+  before PRD-034 ships either: the readiness scorer must run `gate check --prompts` as an
+  executed surface, not read it as paper. Without the check this is a committed tree
+  nobody reconciles, which is the drift surface the chain exists to avoid.
 - DO NOT add a runtime dependency to `packages/provegate`, and DO NOT add a code path that
   reaches a git remote.
 
@@ -438,6 +466,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                              |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-07-28 | orchestrating session, on owner direction | **Refreshed against the post-narrowing architecture before Phase 2.** Every live binding to the retracted PRD-030 design replaced: the check, evaluator, `gate check --prompts`, `prompts.exceptions[]` and both verify twins are PRD-034's (PASS 8.4), consumed as shipped — there is no ledger, doctor, sync verb or receipt (T7 forbids the receipt). FR-3/FR-4 collapse to verified state transitions: PRD-034 wired the check dormant-here by construction, so this PRD flips `prompts.enabled`, commits the generated content, and proves liveness behaviourally (mutation probe run-and-reverted, recorded in the Progress Log). §11's `doctor --prompts` row corrected to the real surface. Dependencies now name PRD-034 Ship Verified as the hard prerequisite, and the DO NOT adds: do not SCORE this item before 034 ships — the scorer must execute the check, not read it. |
 | 2026-07-27 | owner  | **Swept: three live "scaffolds" restatements and an FR-5/FR-4 pair in one sentence.** Readiness iteration 6 found the previous edit had corrected one clause and left the other two lines away — the sixth instance of `a-rule-corrected-survives-where-it-is-restated` in this chain, created by the fix for the fifth. |
 | 2026-07-27 | owner  | **PRD-029 cut to a one-way install.** FR-1's derivation now reads the `prompts` block PRD-029 **prints** rather than one it scaffolds — this repository already has a config, so nothing is scaffolded, which readiness iteration 5 found breaks the prescribed method. |
 | 2026-07-27 | owner  | **Iteration 2 remediation (W16).** FR-1 no longer hardcodes thirteen values: PRD-031 adds a token to the rendered corpus and PRD-029 derives the required set from that corpus, so a copied count would make this item wrong depending on merge order. The set is now obtained from what `gate init --prompts` scaffolds against the installed package, which removes the ordering dependency rather than documenting it. |

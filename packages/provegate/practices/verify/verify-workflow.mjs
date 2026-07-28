@@ -14,11 +14,8 @@ const SELF_DIR = dirname(fileURLToPath(import.meta.url));
 
 const CHECKS = [
   'verify-brain.mjs',
-  'verify-review-artifact.mjs',
-  'verify-durable-artifacts.mjs',
   'verify-deferred.mjs',
   'verify-test-task-coverage.mjs',
-  'verify-gates-wired.mjs',
 ];
 
 const root = targetRoot();

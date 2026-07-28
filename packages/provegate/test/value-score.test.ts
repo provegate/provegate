@@ -241,6 +241,11 @@ describe('the seam into lintPrd (FR-2)', () => {
     '',
     '- DO NOT ship a fixture that is not a valid work item.',
     '',
+    // Same rule for the declaration lint (PRD-026 FR-2): production shape.
+    '## Durable Artifacts',
+    '',
+    '- none — fixture',
+    '',
   ].join('\n');
 
   it('lintPrd surfaces the value issue', () => {

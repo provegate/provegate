@@ -14,15 +14,13 @@ const SELF_DIR = dirname(fileURLToPath(import.meta.url));
 
 const CHECKS = [
   'verify-brain.mjs',
-  'verify-review-artifact.mjs',
   'verify-doc-claims.mjs',
-  'verify-durable-artifacts.mjs',
   'verify-deferred.mjs',
   'verify-test-task-coverage.mjs',
-  'verify-gates-wired.mjs',
   'verify-pack-drift.mjs',
   'verify-acceptance-rule.mjs',
   'verify-turbo-inputs.mjs',
+  'verify-script-classes.mjs',
   'verify-memory-record-corpus.mjs',
 ];
 

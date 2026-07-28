@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T13:27:52.749Z",
+  "generatedAt": "2026-07-28T13:26:36.853Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -931,21 +931,21 @@
       "prd": "PRD-026",
       "number": 26,
       "slug": "duplicate-consolidation",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-026-duplicate-consolidation.md",
-        "readiness": "_readiness/wip/readiness-026-duplicate-consolidation.md",
-        "tasks": "_tasks/wip/tasks-026-duplicate-consolidation.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-026-duplicate-consolidation.md",
+        "readiness": "_readiness/completed/readiness-026-duplicate-consolidation.md",
+        "tasks": "_tasks/completed/tasks-026-duplicate-consolidation.md",
+        "summary": "_docs/completed/summary-026-duplicate-consolidation.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.43,
@@ -954,9 +954,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 63,
+        "status": "Ship Verified",
+        "checkedCount": 63,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -991,9 +991,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 50,
-        "uncheckedCount": 6,
+        "status": "Not Started",
+        "checkedCount": 0,
+        "uncheckedCount": 56,
         "operatorHandoffCount": 5
       },
       "summary": {
@@ -1184,7 +1184,7 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-27"
+      "lastUpdated": "2026-07-28"
     },
     {
       "prd": "PRD-033",
@@ -1234,13 +1234,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
         "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-034-prompt-store-reconciliation.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -1250,10 +1250,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "uncheckedCount": 58,
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -1307,6 +1307,117 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-036-frozen-snapshot-digest-gate.md",
+        "readiness": "",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "missing",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": null,
+        "verdict": null,
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-037",
+      "number": 37,
+      "slug": "case-study-self-hosting",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-037-case-study-self-hosting.md",
+        "readiness": "_readiness/wip/readiness-037-case-study-self-hosting.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 6.28,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-038",
+      "number": 38,
+      "slug": "executable-quickstart",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "eligible",
+      "artifacts": {
+        "prd": "_prds/wip/prd-038-executable-quickstart.md",
+        "readiness": "_readiness/wip/readiness-038-executable-quickstart.md",
+        "tasks": "",
+        "summary": ""
+      },
+      "artifactStates": {
+        "prd": "wip",
+        "readiness": "wip",
+        "tasks": "missing",
+        "summary": "missing"
+      },
+      "readiness": {
+        "score": 6.1,
+        "verdict": "ITERATE",
+        "modelTierExecution": null,
+        "modelTierAudit": null
+      },
+      "task": {
+        "status": "Unknown",
+        "checkedCount": 0,
+        "uncheckedCount": 0,
+        "operatorHandoffCount": 0
+      },
+      "summary": {
+        "shipReadiness": "Unknown"
+      },
+      "lastUpdated": "2026-07-28"
+    },
+    {
+      "prd": "PRD-039",
+      "number": 39,
+      "slug": "landscape-verification",
+      "status": "Draft",
+      "cyclePhase": "1 (PRD Generation)",
+      "operatorAcceptance": null,
+      "autonomousClose": "operator-gated",
+      "artifacts": {
+        "prd": "_prds/wip/prd-039-landscape-verification.md",
         "readiness": "",
         "tasks": "",
         "summary": ""

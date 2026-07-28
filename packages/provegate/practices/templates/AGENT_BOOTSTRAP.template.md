@@ -104,8 +104,9 @@ knowledge base — never duplicated per agent (it drifts).
 
 **Durable Artifacts rule (gated):** each work item declares up front which durable paths
 its close must touch (a `_brain` learning or `Learning: none`, the review artifact, any
-ADR). The close is invalid if a declared path is absent from the merge diff
-(`verify:durable-artifacts`).
+ADR). The close is invalid if a declared path is absent from the merge diff — the close
+chain enforces it, and `gate check --durable-artifacts` sweeps the declarations
+corpus-wide.
 
 ## Memory contract (memory-enabled repositories)
 
