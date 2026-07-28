@@ -868,6 +868,12 @@ failure. -->
   scope or write the state model — is what produced the 2026-07-28 narrowing, and that
   application is already carried by `scope-out-the-layer-the-rounds-keep-hitting` above.
   (Appended at close.)
+- reviewed: `score-band-prescribes-the-action` — its watch names this PRD's readiness
+  artifact, which the closing diff touches only by ARCHIVING it (wip → completed). The
+  record's rule was honored across this item's five scoring rounds: the 7-point band's
+  iterate action ran four times and the structural exit came from its sibling record,
+  not from ignoring the band. (Appended at close, when the archive rename fired the
+  watch.)
 - applied: `surface-set-without-its-predicate` — this PRD's own declared Memory Output,
   whose watch covers `gates/wiring.ts` and therefore fires on the very diff that creates
   it. Applied by construction: the two halves it names are FR-1/FR-3's surfaces and
