@@ -603,6 +603,7 @@ describe('FR-5 base-ref weakening', () => {
             reason: 'the decision moved to PRD-022',
             date: '2026-07-25',
             method: 'interactive',
+            authorship: 'owner-written',
           },
         ],
       }),
@@ -657,6 +658,7 @@ describe('phase 6 round 1 regressions', () => {
           reason: 'the decision moved to PRD-022',
           date: '2026-07-25',
           method: 'interactive',
+          authorship: 'owner-written',
         },
       ],
     });
@@ -801,6 +803,7 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
               reason: 'unrelated cleanup of a backup file',
               date: '2026-07-25',
               method: 'interactive',
+              authorship: 'owner-written',
             },
           ],
         }),
@@ -837,6 +840,7 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
                 reason: 'the decision moved to PRD-022',
                 date: '2026-07-25',
                 method: 'interactive',
+                authorship: 'owner-written',
               },
             ],
           }),
@@ -969,6 +973,7 @@ describe('phase 6 round 2 regressions', () => {
               reason: 'moved to PRD-022',
               date: '2026-07-25',
               method: 'interactive',
+              authorship: 'owner-written',
             },
           ],
         }),
@@ -1161,6 +1166,7 @@ describe('phase 6 round 3 regressions', () => {
               reason: 'a different file entirely',
               date: '2026-07-25',
               method: 'interactive',
+              authorship: 'owner-written',
             },
           ],
         }),
@@ -1384,6 +1390,7 @@ describe('phase 6 round 20 regressions — the enforcement machinery', () => {
       reason: 'the decision moved to PRD-022',
       date: '2026-07-25',
       method: 'interactive',
+      authorship: 'owner-written',
     };
     // No `schemaVersion` — the store the documented schema rejects.
     const noVersion = gitRepo({
@@ -1569,6 +1576,7 @@ describe('phase 6 round 21 regressions — what the round-20 fixes did not reach
       reason: 'the decision moved to PRD-022',
       date: '2026-07-25',
       method: 'interactive',
+      authorship: 'owner-written',
     };
     const store = (acceptances: unknown[]): Record<string, string> => ({
       '_prds/wip/p.md': baseline,
@@ -1653,6 +1661,7 @@ describe('phase 6 round 22 regressions — one step over each round-21 fix', () 
     reason: 'the decision moved to PRD-022',
     date: '2026-07-25',
     method: 'interactive',
+    authorship: 'owner-written',
   };
 
   it('[R22-1] an uncommitted acceptance cannot authorize the weakening either', () => {
@@ -1817,6 +1826,7 @@ describe('phase 6 round 23 — the enforcement machinery, one step over', () => 
     reason: 'the decision moved to PRD-022',
     date: '2026-07-25',
     method: 'interactive',
+    authorship: 'owner-written',
   };
 
   it('[R23-2] a base config with `memory: null` fails closed, not open', () => {
@@ -2050,6 +2060,7 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
               reason: 'linting moved to phase 4',
               date: '2026-07-26',
               method: 'interactive',
+              authorship: 'owner-written',
             },
           ],
         }),
@@ -2114,6 +2125,7 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
             reason: 'the decision moved to PRD-022',
             date: '2026-07-25',
             method: 'interactive',
+            authorship: 'owner-written',
           },
         ],
       }),
