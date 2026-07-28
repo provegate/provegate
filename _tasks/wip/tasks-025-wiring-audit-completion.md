@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-025-wiring-audit-completion.md](../../_prds/wip/prd-025-wiring-audit-completion.md)
 > **Readiness**: [readiness-025-wiring-audit-completion.md](../../_readiness/wip/readiness-025-wiring-audit-completion.md)
-> **Status**: Not Started
+> **Status**: Code Complete
 > **Readiness Score**: 8.30/10 (PASS, iteration 5)
 > **Model Tier (Execution)**: high
 > **Created**: 2026-07-28
@@ -254,34 +254,34 @@ a record is evidence only while it is true.
         ambiguity refusal one at a time; assert in each case exactly the paired fixture
         goes red (`assert-absent-needs-an-independent-cause` made mechanical). Restore.
   - [x] 7.6 Update the Verification Ledger with evidence per row.
-- [ ] 8.0 Phase 6 — Final Auditing
-  - [ ] 8.1 Commission the independent review (different model or human; never this
+- [x] 8.0 Phase 6 — Final Auditing
+  - [x] 8.1 Commission the independent review (different model or human; never this
         session): scope = the diff; brief = sweep-first (the rules that changed:
         scanner, dash rule, bundle anchors, selector discriminators), then hunt; W1 and
         W4 named as first attention; verdict `pass` requires `Critical: 0`.
-  - [ ] 8.2 W2 check in review: the preload reversal row still names the reversal; no
+  - [x] 8.2 W2 check in review: the preload reversal row still names the reversal; no
         fixture asserts the deleted arity table's verdict.
-  - [ ] 8.3 W5 check in review: the `bun run` false negative is stated in FR-3(b), its
+  - [x] 8.3 W5 check in review: the `bun run` false negative is stated in FR-3(b), its
         deny row and §6 — intact, not silently widened.
-  - [ ] 8.4 Spec-vs-code audit: walk FR-3's grammar clause by clause against the shipped
+  - [x] 8.4 Spec-vs-code audit: walk FR-3's grammar clause by clause against the shipped
         scanner; walk the deny matrix row by row against the fixtures; any divergence is
         a finding, not an adjustment.
-  - [ ] 8.5 Write `_docs/reviews/review-025-wiring-audit-completion.md` (template
+  - [x] 8.5 Write `_docs/reviews/review-025-wiring-audit-completion.md` (template
         `_docs/review-artifact.template.md`, Quorum row REQUIRED — the template's
         "optional" note contradicts the gate; see the standing deferral).
-  - [ ] 8.6 Remediate findings; re-run 7.x after every fix; loop until `Critical: 0`.
+  - [x] 8.6 Remediate findings; re-run 7.x after every fix; loop until `Critical: 0`.
 - [ ] 9.0 Phase 7 — Learning & close
-  - [ ] 9.1 Write `_brain/learnings/surface-set-without-its-predicate.md` (the declared
+  - [x] 9.1 Write `_brain/learnings/surface-set-without-its-predicate.md` (the declared
         Memory Output: porting inputs without their predicate registers nothing;
         replacing an unsafe predicate with an open-ended one is the same defect in a
         stricter costume — measured twice in one wave on one function). Add the
         `_brain/INDEX.md` one-line pointer.
-  - [ ] 9.2 Confirm Durable Artifacts vs the merge diff: the review artifact, the
+  - [x] 9.2 Confirm Durable Artifacts vs the merge diff: the review artifact, the
         learning, `Decision: none` — and Memory Outputs on the PRD as committed on main
         (no weakening).
-  - [ ] 9.3 Run the `_brain` capture protocol (`_brain/PROTOCOL.md` §7) for anything
+  - [x] 9.3 Run the `_brain` capture protocol (`_brain/PROTOCOL.md` §7) for anything
         non-derivable hit during implementation.
-  - [ ] 9.4 Write `_docs/wip/summary-025-wiring-audit-completion.md`; advance PRD/tasks
+  - [x] 9.4 Write `_docs/wip/summary-025-wiring-audit-completion.md`; advance PRD/tasks
         Status headers; `gate status`.
   - [ ] 9.5 Operator acceptance (operator-gated close): STOP and hand to the owner —
         an agent never originates the acceptance. On the owner's explicit in-session
@@ -309,7 +309,7 @@ it must be `passed` and name the review artifact path.
 | test               | `pnpm test`                                                 | repo  | passed  | provegate 51 files / 1152 tests (baseline 1110 + 42) | existing tests unchanged except two exact-shape report assertions — see Deferrals |
 | build              | `pnpm build`                                                | repo  | passed  | clean |                            |
 | gates-wired        | `pnpm verify:gates-wired`                                   | repo  | passed  | 13 registered, 12 on disk, PASS | the replaced script still agrees while both exist |
-| independent-review | `_docs/reviews/review-025-wiring-audit-completion.md`       | repo  | pending |          | verdict pass, critical = 0 |
+| independent-review | `_docs/reviews/review-025-wiring-audit-completion.md`       | repo  | passed  | 6 Codex rounds; final adjudication verbatim: REJECTION UPHELD — Critical: 0 | verdict pass, critical = 0 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -337,6 +337,18 @@ sentence rationale>`. Never inline on sub-task lines.
 - 2.11 (W3) — deno's own CLI reference states the `run` subcommand is optional
   (`deno main.ts` executes; docs.deno.com/runtime/reference/cli/run, read 2026-07-28),
   so both forms wire exactly as FR-3(b) specifies; no narrowing, no stop needed.
+- 8.x — the real-bundle fixture reads `scripts/verify/verify-workflow.mjs` from a package
+  test: an out-of-package read RECORDED for PRD-036's input census rather than declared
+  here, because `turbo.json` sits inside in-flight PRD-024's Conflict Surface; CI checks
+  out fresh, the local cache gap is PRD-036's subject, and the round-3 reviewer judged
+  the disposition adequate.
+- 8.x — `gate check --wiring` now prints the surfaces-read list: a one-line `cli.ts`
+  edit outside the Conflict Surface, taken with recorded rationale (the FR's visibility
+  promise must reach the shipped command; same consumer class as the init.test
+  assertion).
+- 8.x — round 5's Windows rooted-backslash finding was REJECTED against FR-3(b)'s
+  declared POSIX-subset grammar and the rejection put back to the reviewer, who upheld
+  it in an adjudication round; the artifact quotes the verdict verbatim.
 - 7.5 (W4) — the bundle-ambiguity mutation is killed by the duplicate-declaration row;
   the impostor fixture places the impostor BEFORE the real declaration, so under a
   first-wins mutation the empty impostor is read and that fixture's `[]` expectation

@@ -1,13 +1,13 @@
 # PRD-025: Wiring Audit Completion — The Meta-Gate That Makes a Fourth Duplicate Fail
 
-> **Status**: Draft
+> **Status**: Operator Verification
 >
 > **Created**: 2026-07-27
 > **Updated**: 2026-07-28
 > **Author**: Claude Opus 5, for owner review
 > **Audience**: Implementing Agent
 > **Slug**: `wiring-audit-completion`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Operator Verification)
 > **PRD Class**: infra
 > **Class Rationale**: Workflow tooling. It adds public config keys (`wiring.*`) and
 > strengthens a shipped gate, so it is user-facing enough to need a changeset, but it adds

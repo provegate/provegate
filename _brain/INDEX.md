@@ -25,6 +25,7 @@
 - [narrow the grammar not the parser](learnings/narrow-the-grammar-not-the-parser.md) — a hand-rolled Markdown reader never reaches renderer parity; restrict what the document may contain instead
 - [free-text field is the unread drift ledger](learnings/free-text-field-is-the-unread-drift-ledger.md) — a rule only documentation enforces drifts into the unenumerated field beside it, where nobody can read it
 - [state model before mechanism](learnings/state-model-before-mechanism.md) — flat readiness trajectory: cut the scope or write the state model; remediating again just resamples it
+- [surface set without its predicate](learnings/surface-set-without-its-predicate.md) — porting a check's inputs without the predicate that reads them registers nothing; an open-ended predicate is the same defect
 
 ## Orchestration & close gotchas
 

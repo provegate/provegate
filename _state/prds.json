@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-28T10:23:36.349Z",
+  "generatedAt": "2026-07-28T11:09:30.523Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -894,21 +894,21 @@
       "prd": "PRD-025",
       "number": 25,
       "slug": "wiring-audit-completion",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Operator Verification",
+      "cyclePhase": "7 (Operator Verification)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
         "prd": "_prds/wip/prd-025-wiring-audit-completion.md",
         "readiness": "_readiness/wip/readiness-025-wiring-audit-completion.md",
         "tasks": "_tasks/wip/tasks-025-wiring-audit-completion.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-025-wiring-audit-completion.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.3,
@@ -917,9 +917,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 52,
-        "uncheckedCount": 14,
+        "status": "Code Complete",
+        "checkedCount": 63,
+        "uncheckedCount": 3,
         "operatorHandoffCount": 1
       },
       "summary": {
