@@ -66,6 +66,7 @@ const COMPAT = /upgrade the cli first|upgrade the cli, then add|older cli reject
  */
 const VALUE_SCORING = /valueScoring/;
 const WIRING_KEYS = /wiring\.(scriptsDir|hooksDir|bundlePath)/;
+const CONSOLIDATION = /--review-artifacts[\s\S]{0,80}--durable-artifacts|check --review-artifacts/;
 const qualifying = (own: RegExp): Entry | undefined =>
   entries().find(
     (e) => e.bumps.get('provegate') === 'minor' && COMPAT.test(e.body) && own.test(e.body),
@@ -138,6 +139,28 @@ describe('the release entry for the config-surface change (FR-12, W9)', () => {
     expect(wiring).toBeDefined();
     // readdirSync order can never decide which entry a group reads
     expect(valueScoring!.file).not.toBe(wiring!.file);
+  });
+
+  it('the consolidation entry (PRD-026) carries all five migration steps', () => {
+    const entry = qualifying(CONSOLIDATION);
+    expect(entry, 'no consolidation entry').toBeDefined();
+    const body = entry!.body;
+    // the five steps, each anchored on its own irreplaceable token
+    expect(body).toMatch(/verify-review-artifact\.mjs/); // 1: the deletions by name
+    expect(body).toMatch(/package\.json` script entries/); // 2
+    expect(body).toMatch(/`CHECKS` array/); // 3
+    expect(body).toMatch(/check --wiring/); // 4: the replacing surfaces
+    expect(body).toMatch(/DROP every survivor[\s\S]{0,20}already wired/); // 5 — windowed: the note wraps lines and a dot never crosses a newline
+    expect(body).toMatch(/wiringExceptions/); // 5: the destination store
+    // and the manual-migration honesty
+    expect(body).toMatch(/BY HAND|additive-only/i);
+  });
+
+  it('the three qualifying entries are distinct files, each found by its own discriminator', () => {
+    const found = [qualifying(VALUE_SCORING), qualifying(WIRING_KEYS), qualifying(CONSOLIDATION)];
+    for (const entry of found) expect(entry).toBeDefined();
+    const files = found.map((e) => e!.file);
+    expect(new Set(files).size).toBe(3); // readdirSync order can never decide
   });
 
   it('the front-matter parser tolerates the quote styles changesets emit', () => {

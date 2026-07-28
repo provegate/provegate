@@ -1,3 +1,5 @@
+import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { auditWiring, defaultManifest, validateManifest } from '../src/core/gates/index.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -688,5 +690,83 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
     const beforeBroken = treeHash(broken);
     expect(doctor(broken).code).toBe(1);
     expect(treeHash(broken)).toBe(beforeBroken);
+  });
+});
+
+describe('the exceptions conversion (PRD-026 FR-5, step by step, proved through the audit)', () => {
+  // The RETAINED fixture: the deletion removed the live packed file, so the
+  // eight-entry data it shipped lives here — a migration whose only validation
+  // is that it was written down is not a migration.
+  const RETAINED_PACKED_EXCEPTIONS = [
+    'verify-brain.mjs',
+    'verify-review-artifact.mjs',
+    'verify-durable-artifacts.mjs',
+    'verify-deferred.mjs',
+    'verify-test-task-coverage.mjs',
+    'verify-gates-wired.mjs',
+    'verify-dependency-audit.mjs',
+    'verify-workflow.mjs',
+  ];
+  const REMOVED = new Set([
+    'verify-review-artifact.mjs',
+    'verify-durable-artifacts.mjs',
+    'verify-gates-wired.mjs',
+  ]);
+  // filename -> package script name, this repository's mapping
+  const SCRIPT_OF: Record<string, string> = {
+    'verify-brain.mjs': 'verify:brain',
+    'verify-deferred.mjs': 'verify:deferred',
+    'verify-test-task-coverage.mjs': 'verify:test-task-coverage',
+    'verify-dependency-audit.mjs': 'verify:dependency-audit',
+    'verify-workflow.mjs': 'verify:workflow',
+  };
+
+  it('the four-step rule over the retained data yields an audit-accepted (here: empty) store', () => {
+    // step 1: drop the removed trio; step 2: map survivors to script names
+    const survivors = RETAINED_PACKED_EXCEPTIONS.filter((f) => !REMOVED.has(f)).map(
+      (f) => SCRIPT_OF[f]!,
+    );
+    expect(survivors).toEqual([
+      'verify:brain',
+      'verify:deferred',
+      'verify:test-task-coverage',
+      'verify:dependency-audit',
+      'verify:workflow',
+    ]);
+    // step 3: drop every survivor that is already wired — measured HERE by the
+    // audit itself: keeping them is the three-step conversion the reviewer
+    // executed, and auditWiring rejected all five as stale.
+    const repoRootDir = fileURLToPath(new URL('../../..', import.meta.url));
+    const keepThem = {
+      ...defaultManifest(DEFAULT_CONFIG),
+      wiringExceptions: Object.fromEntries(survivors.map((s) => [s, 'migrated from the packed array'])),
+    };
+    const rejected = auditWiring(DEFAULT_CONFIG, keepThem, repoRootDir);
+    for (const s of survivors) {
+      expect(rejected.issues).toContainEqual(
+        expect.stringContaining(`stale wiring exception: "${s}" is wired now`),
+      );
+    }
+    // the four-step result: all five dropped -> the converted store is EMPTY,
+    // and the audit accepts it (not merely the manifest loader).
+    const converted = { ...defaultManifest(DEFAULT_CONFIG), wiringExceptions: {} };
+    expect(validateManifest(DEFAULT_CONFIG, converted).length).toBe(0);
+    expect(auditWiring(DEFAULT_CONFIG, converted, repoRootDir).ok).toBe(true);
+  });
+
+  it('step 4: a whitespace justification is refused — trimmed non-empty is the contract', () => {
+    const stub = {
+      ...defaultManifest(DEFAULT_CONFIG),
+      wiringExceptions: { 'verify:brain': '   ' },
+    };
+    expect(validateManifest(DEFAULT_CONFIG, stub)).toContainEqual(
+      expect.objectContaining({ path: 'wiringExceptions' }),
+    );
+    // control: a real justification loads
+    const real = {
+      ...defaultManifest(DEFAULT_CONFIG),
+      wiringExceptions: { 'verify:brain': 'wired by the next PRD, tracked on the board' },
+    };
+    expect(validateManifest(DEFAULT_CONFIG, real).length).toBe(0);
   });
 });

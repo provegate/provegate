@@ -462,3 +462,57 @@ describe('PRD-029 migration and rollback', () => {
     expect(next).toMatch(/delete \*\*every\s*\n?path in that set\*\*|every\s+path in that set/);
   });
 });
+
+describe('the pack upgrade over an old-shape install (PRD-026 FR-5)', () => {
+  const REMOVED = [
+    'scripts/verify/verify-review-artifact.mjs',
+    'scripts/verify/verify-durable-artifacts.mjs',
+    'scripts/verify/verify-gates-wired.mjs',
+    'scripts/verify/gates-wired-exceptions.json',
+  ];
+
+  function oldShapeRepo(): string {
+    const root = tempRoot();
+    mkdirSync(join(root, 'scripts/verify'), { recursive: true });
+    for (const rel of REMOVED) writeFileSync(join(root, rel), `// old pack: ${rel}\n`);
+    return root;
+  }
+
+  it('removed paths appear in NEITHER list, and the seeded files are byte-identical', () => {
+    const root = oldShapeRepo();
+    // (c) positive control, skipped branch: a RETAINED pack file pre-seeded
+    // with modified content proves the run processed the pack at all.
+    writeFileSync(join(root, 'scripts/verify/lib.mjs'), '// locally modified\n');
+    const report = initWorkspace(cfg, root, { extra: planPractices(practicesPackDir()) });
+
+    for (const rel of REMOVED) {
+      // Not "reported skipped": a path absent from PACK_MAP is absent from the
+      // plan entirely, so it appears in NEITHER list — asserting `skipped`
+      // would pass for the wrong reason.
+      expect(report.created, rel).not.toContain(rel);
+      expect(report.skipped, rel).not.toContain(rel);
+      // (b) non-mutation
+      expect(readFileSync(join(root, rel), 'utf8')).toBe(`// old pack: ${rel}\n`);
+    }
+    // (c) the pre-seeded retained file is skipped and byte-identical
+    expect(report.skipped).toContain('scripts/verify/lib.mjs');
+    expect(readFileSync(join(root, 'scripts/verify/lib.mjs'), 'utf8')).toBe('// locally modified\n');
+    // (d) positive control, created branch: a retained absent file is created
+    expect(report.created).toContain('scripts/verify/verify-workflow.mjs');
+  });
+
+  it('the contract assertion is sensitive: an injected removed-path action surfaces', () => {
+    // The mutation check, written so it fails on the created/skipped CONTRACT
+    // rather than on pack readability: injecting an action for a removed path
+    // (with readable content, as a restored PACK_MAP entry would carry) makes
+    // that path appear in the report — which is exactly what the assertions
+    // above would catch as a regression.
+    const root = oldShapeRepo();
+    const injected = [
+      ...planPractices(practicesPackDir()),
+      { path: REMOVED[0]!, kind: 'file' as const, content: '// resurrected' },
+    ];
+    const report = initWorkspace(cfg, root, { extra: injected });
+    expect([...report.created, ...report.skipped]).toContain(REMOVED[0]!);
+  });
+});
