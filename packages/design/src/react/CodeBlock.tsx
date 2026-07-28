@@ -82,7 +82,11 @@ export function CodeBlockBase({
   );
 }
 
-/** The public server-safe renderer: no copy affordance, no header slot. */
+/** The public server-safe renderer: no copy affordance, no header slot. The
+ * explicit `headerControl={undefined}` AFTER the spread is load-bearing: a
+ * JS caller (or a structural spread) could otherwise smuggle the internal
+ * slot through the public surface — Codex round 2 reproduced exactly that
+ * against the built barrel. */
 export function CodeBlock(props: CodeBlockProps): React.JSX.Element {
-  return <CodeBlockBase {...props} />;
+  return <CodeBlockBase {...props} headerControl={undefined} />;
 }

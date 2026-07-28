@@ -210,6 +210,14 @@ describe('CopyableCodeBlock (FR-9)', () => {
     expect(bad).toBeTruthy(); // the assertion is the @ts-expect-error above
   });
 
+  it('a spread cannot smuggle the slot through the public surface — Codex round-2 [P1]', () => {
+    const sneak = { headerControl: <span>copy</span> } as Record<string, unknown>;
+    const { container } = render(<DS.CodeBlock filename="x" {...sneak}>gate init</DS.CodeBlock>);
+    // the wrapper drops the field after the spread: no control, no span
+    expect(container.querySelector('button')).toBeNull();
+    expect(container.textContent).not.toContain('copy');
+  });
+
   it('the public surface carries no headerControl slot either — Codex round-1 [P1]', () => {
     // @ts-expect-error — the slot is internal to the client wrapper; a public
     // slot would let any caller render a handlerless copy affordance.

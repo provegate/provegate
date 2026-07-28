@@ -128,7 +128,7 @@ describe('FR-7 — no landing content export is unreferenced', () => {
     );
     // an export form the scanner does not recognize must fail loudly, never
     // silently escape the census (Codex round-1 [P2])
-    const allExports = decl.match(/^export .*/gm) ?? [];
+    const allExports = decl.match(/^export\b.*/gm) ?? [];
     const unrecognized = allExports.filter(
       (l) => !/^export (?:const|function|type|interface) \w+/.test(l),
     );

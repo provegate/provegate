@@ -69,7 +69,12 @@ describe('FR-8 — /alt stops competing, in search and in unfurls', () => {
     const title = /<title>([^<]*)<\/title>/.exec(html);
     expect(title?.[1]).toBe(PINNED);
     expect(html).toMatch(new RegExp(`property="og:title"[^>]*content="${PINNED}"|content="${PINNED}"[^>]*property="og:title"`));
-    expect(html).toContain('internal comparison');
+    const PINNED_DESC =
+      'An alternative landing concept for internal comparison — denser, terminal-forward, docs-style. Not the product page.';
+    const desc = /name="description"[^>]*content="([^"]+)"/.exec(html) ?? /content="([^"]+)"[^>]*name="description"/.exec(html);
+    expect(desc?.[1]).toBe(PINNED_DESC);
+    const ogDesc = /property="og:description"[^>]*content="([^"]+)"/.exec(html) ?? /content="([^"]+)"[^>]*property="og:description"/.exec(html);
+    expect(ogDesc?.[1]).toBe(PINNED_DESC);
     // and the product description does NOT leak onto the concept page
     expect(html).not.toContain('is not evidence. Seven phases');
   });

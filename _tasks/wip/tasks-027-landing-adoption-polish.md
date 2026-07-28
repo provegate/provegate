@@ -248,10 +248,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- 2.2 — the server `CodeBlock` gained a neutral `headerControl?: ReactNode` slot (a node,
-  never a handler) so the client wrapper's button lands in the one existing header markup;
-  without it the wrapper would duplicate the header. Server-safety preserved — the docs
-  MDX consumer passes nothing and renders identically.
+- 2.2 — the header slot lives on `CodeBlockBase`, the INTERNAL renderer (not
+  barrel-exported): the client wrapper's button lands in the one existing header markup
+  without duplicating it, while the public `CodeBlock` carries no slot at type level and
+  hard-drops it at runtime after the spread. Server-safety preserved — the docs MDX
+  consumer renders identically. (Recorded as corrected across Codex rounds 1–2; the
+  earlier public-slot version was both rounds' [P1].)
 - 2.2 — `client.ts` became `client.tsx` (the component is JSX); the shipped entry path
   `dist/react/client.js` is unchanged, which is the contract.
 - 2.1 (Codex round 1 [P1]) — the header slot moved off the public surface: `CodeBlockBase`
