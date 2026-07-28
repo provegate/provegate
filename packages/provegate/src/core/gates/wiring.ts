@@ -538,6 +538,10 @@ export function auditWiring(
       const file = interpreterInvokedFile(tokens);
       if (file === null || !file.endsWith('.mjs')) continue;
       const normalized = normLexical(file);
+      // An absolute or drive-qualified invocation is never "under scriptsDir",
+      // and with scriptsDir '.' the prefix is empty, so the prefix test alone
+      // cannot say so (round-4 [P1]). Refused before the prefix is consulted.
+      if (normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized)) continue;
       if (normalized.split('/').includes('..')) continue; // a traversal is no key
       if (!normalized.startsWith(scriptsDirPrefix)) {
         continue; // invokes a file outside wiring.scriptsDir — not a key

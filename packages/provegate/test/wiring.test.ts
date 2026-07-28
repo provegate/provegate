@@ -709,6 +709,33 @@ describe('auditWiring round-3 hardening', () => {
   });
 });
 
+describe('auditWiring round-4 hardening', () => {
+  it('an absolute invocation derives no key even when scriptsDir is "." (empty prefix)', () => {
+    const dotCfg = { ...cfg, wiring: { ...cfg.wiring, scriptsDir: '.' } };
+    const root = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node /tmp/verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node verify-foo.mjs\n' },
+    });
+    writeFileSync(resolve(root, 'verify-foo.mjs'), '// local file with the same basename');
+    const report = auditWiring(dotCfg, defaultManifest(dotCfg), root);
+    // no key from the absolute body → the hook cannot wire it
+    expect(report.issues).toContainEqual(
+      expect.stringContaining('"verify:foo" is wired nowhere'),
+    );
+    // control: the same body written repo-relative derives the key and wires
+    const rel = repo({
+      scripts: { ...FLOOR, 'verify:foo': 'node verify-foo.mjs' },
+      hooks: { 'pre-commit': 'node verify-foo.mjs\n' },
+    });
+    writeFileSync(resolve(rel, 'verify-foo.mjs'), '// fixture');
+    expect(
+      auditWiring(dotCfg, defaultManifest(dotCfg), rel).issues.some((i) =>
+        i.includes('"verify:foo" is wired nowhere'),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('auditWiring on-disk direction (FR-1)', () => {
   it('an unregistered on-disk verify script fails, naming the file', () => {
     const root = repo({
