@@ -87,8 +87,9 @@ so that a method upgrade does not leave my agents on the old protocol without te
 
 ```
 As an adopter who deliberately changed one protocol for my project,
-I want that edit to survive upgrades and still be visible as a decision,
-so that my change is neither silently reverted nor silently forgotten.
+I want that edit never overwritten by any tool and visible as a recorded decision,
+so that my change is neither silently reverted nor silently forgotten — knowing an
+upgrade reports it and I rebase it by hand, because no exception authorizes a write.
 ```
 
 **Acceptance Criteria:**
@@ -132,31 +133,21 @@ inside declared roots.
      Per Revision 2: detection still works for the unattributable arm — the fresh
      render is the expected content (`PLACEHOLDERS.md`'s is its packaged source,
      verbatim) — only the stale-versus-modified split is lost;
-   - every **unplanned** file carrying the generated banner inside the **walked
-     domain** — the planned-dirname set defined under the declared limits below,
-     spanning the store directories, `.claude/commands/` and `.cursor/rules/` — is
-     `orphaned` (T4's removed adapter; T5's abandoned tree only where it overlaps
-     that domain).
-   **Declared limits, restated from the model rather than claimed away:** a tree
-   renamed **outside** the scan roots is not discovered — limit 5's honest form is "no
-   lookup, only a search", the search must be told where to look, and this check is
-   deliberately bounded — and the bound is an exact traversal domain, not a phrase:
-   **the walk visits the dirname set of `generatedPaths()`'s members PLUS,
-   unconditionally, the two fixed adapter roots `.claude/commands/` and
-   `.cursor/rules/`** — the adapter roots are constants of the adapter system, never a
-   function of current membership, because deriving them from the live config would
-   silently drop a REMOVED adapter's root and make T4's central orphan (the removed
-   adapter's surviving file) undiscoverable the moment its adapter left the config
-   (iteration 4's find). Each visited directory's immediate entries are listed; the
-   walk descends nowhere else. Orphan discovery covers exactly that domain, and the
-   bound survives `prompts.dir: "."` because the store-side dirname set under `.` is
-   still only the planned directories, never the repository. Within the domain:
-   directory symlinks are not followed, every visited path must stay inside the
-   repository's canonical containment (realpath-compared against the root), and an
-   unreadable entry is a named failure rather than a skip; and unbannered or
-   stripped files that are **unplanned** are invisible to content discovery (limit 6,
-   Revision 2). The check therefore claims neither rename-discovery nor absence-scoped
-   reporting. The primitive returns typed findings and writes **nothing** (T7; the T3
+   **And nothing else: this check reads no directory it did not plan** (narrowed by
+   owner decision after iteration 5 — three consecutive rounds landed every finding
+   in the orphan-walk layer, which `scope-out-the-layer-the-rounds-keep-hitting`
+   names a scope error). The primitive touches exactly the planned paths — a
+   `readFileSync` per member of `generatedPaths()`, no directory listing, no walk,
+   no filesystem contract to specify. **Orphan discovery is not performed, and the
+   consequences are stated as the model's limits rather than solved:** a removed
+   adapter's surviving file produces no finding (model limit 4 — it keeps working
+   until a human deletes it, and T5's adapter-staleness signal still fires through
+   the planned set because the CURRENT adapters' bytes embed the old store path); a
+   tree renamed away produces no finding (limit 5: no lookup, only a search — and
+   this check runs no search); unplanned bannered or unbannered files anywhere
+   produce no finding (limit 6). A future item may add bounded content discovery;
+   its design owes answers this PRD deliberately does not (symlinks, unreadable
+   roots, never-enabled adapters, cost) — recorded in §5 as the follow-up seam. The primitive returns typed findings and writes **nothing** (T7; the T3
    boundary). It is exported through the package's explicit export list — an API-export
    test asserts `import { reconcilePrompts } from 'provegate'` resolves, because
    `core/run/index.ts` re-exports by name and a new symbol does not travel for free.
@@ -200,7 +191,7 @@ inside declared roots.
    exactly this clause.
    A valid, unexpired entry suppresses the `modified` finding for its exact path and
    reports `excepted (expires <date>)`. It suppresses **nothing else**: `stale`,
-   `missing`, `orphaned` and `unattributable` are never exceptable — an unattributable
+   `missing` and `unattributable` are never exceptable — an unattributable
    divergence might be an undelivered upgrade, and suppressing it would hide T2. An
    entry whose path is not currently `modified` is a stale entry and fails the run. No
    entry ever authorizes a write (the model's boundary). The config surface is typed in
@@ -221,7 +212,7 @@ inside declared roots.
    and re-runs `gate init --prompts`; the command performs neither step (constraint 2).
    Fail-closed rules: `prompts.enabled` false → exit 0 with a note whose text is a
    **named production surface, tested verbatim** (iteration 3): it names what was not
-   exercised — reconciliation and the bannered-orphan search — and carries T6's two
+   exercised — the planned-set reconciliation — and carries T6's two
    adopter consequences, one sentence each: clear `templates.prd` in the same change
    that removes the block, and the generated files remain on disk, readable by
    agents, until a human deletes them. T6's content-search capability still exists
@@ -273,9 +264,11 @@ inside declared roots.
    (`derive-the-requirement-from-the-consumer`):
    classes — `current`; `stale`; `modified` by byte edit; `modified` by a
    `prompts.values` change at the same version (derivation note 1, its own case);
-   `missing`; `orphaned` via an adapter removed from config; `unattributable` via a
-   stripped banner (both halves asserted: detected through the planned set, absent
-   from the orphan scan); `unattributable` via an edited `PLACEHOLDERS.md`; the codex
+   `missing`; the T4 LIMIT pinned — an adapter removed from config with its file
+   left produces NO finding (a future discovery item must flip this assertion
+   consciously); `unattributable` via a
+   stripped banner (detected through the planned set — and its unplanned twin
+   produces no finding, the limit-6 pin); `unattributable` via an edited `PLACEHOLDERS.md`; the codex
    snippet edited (`unattributable`) and removed (`missing`);
    limits — a T5 rename fixture with two trees, asserting three things: the new
    store reconciles, the renamed-away tree produces no finding (the limit is the
@@ -283,8 +276,8 @@ inside declared roots.
    their content embeds the old store path** — T5's adapter-staleness consequence,
    detectable without any search; a T6 fixture with the config block removed and
    bannered files left, asserting the disabled note's **exact production text** — the
-   unexercised-search naming and both T6 consequences — against the CLI's real output,
-   never against fixture-local prose;
+   unexercised-reconciliation naming and both T6 consequences — against the CLI's real
+   output, never against fixture-local prose;
    exceptions — valid; expiry boundary (an entry expiring **today** passes, yesterday
    fails); duplicate path refused at load; malformed date refused; non-normalized path
    refused; stale entry fails the run;
@@ -310,6 +303,14 @@ inside declared roots.
 - **This repository adopting a store.** PRD-032, which needs this check to exist first.
 - **Migrating repositories that installed the pack before PRD-029.** They have no store, so
   there is nothing to reconcile.
+- **Orphan / content discovery — cut by owner decision after iteration 5.** Three
+  consecutive readiness rounds landed every finding in the walk layer's operational
+  contract (symlinks, unreadable roots, never-enabled adapters, cost bounds), which
+  `scope-out-the-layer-the-rounds-keep-hitting` names a scope error. This check reads
+  only planned paths; the model's limits 4-6 are pinned as behaviour (fixtures assert
+  NO finding). A future item owning bounded content discovery inherits the walk-contract
+  questions this PRD refused, with the iteration 2-5 readiness reports as its design
+  input.
 - **A remote or shared ledger.** Local files only; nothing here reaches the network.
 
 ---
@@ -330,15 +331,17 @@ inside declared roots.
   a newer installed version, **Then** those paths report `stale` naming both versions,
   and the printed remedy is the model's T2 procedure — the command deletes nothing.
 - **Given** an adapter removed from `config.prompts.adapters` with its file on disk,
-  **When** the check runs, **Then** the file reports `orphaned` via its banner.
+  **When** the check runs, **Then** the file produces NO finding — the T4 limit
+  pinned as behaviour: this check performs no orphan discovery, and the surviving
+  file's invisibility is the recorded consequence, not an oversight.
 - **Given** an edited codex snippet or an edited `prompts/PLACEHOLDERS.md`, **When**
   the check runs, **Then** the path reports `unattributable` — detected by bytes
   against the fresh render, with no stale-versus-modified claim; byte-identical copies
   of both report `current`.
 - **Given** a planned file whose banner was stripped and whose bytes were edited,
   **When** the check runs, **Then** it reports `unattributable` through the planned
-  set — and the same file, made unplanned, is absent from the orphan report (the
-  Revision 2 limit, asserted as behaviour).
+  set — and the same file, made unplanned, produces no finding (the limit-6 pin:
+  no content discovery exists to see it).
 - **Given** a store renamed to a directory outside the walked domain with the config
   updated, **When** the check runs, **Then** the new store reconciles, the abandoned
   tree produces no finding (the declared limit-5 restatement, asserted so a future
@@ -346,8 +349,9 @@ inside declared roots.
   report as diverged**, because their content embeds the old store path: T5's
   adapter-staleness consequence, visible without any search.
 - **Given** `prompts.enabled` false with bannered files left on disk, **When** the
-  check runs, **Then** its note carries the exact T6 text — the unexercised search and
-  both adopter consequences — asserted verbatim against the CLI output.
+  check runs, **Then** its note carries the exact T6 text — the unexercised
+  reconciliation and both adopter consequences — asserted verbatim against the CLI
+  output; the files on disk produce no finding in any configuration (limits 4-6).
 - **Given** a valid unexpired `prompts.exceptions[]` entry for a `modified` path,
   **When** the check runs, **Then** that path reports `excepted (expires <date>)` and
   does not fail the run — and a write is never performed on its behalf.
@@ -412,6 +416,17 @@ honest consequences, both specified rather than hoped:
 Ordering constraints, stated because the config and the package version move
 independently:
 
+- **The backslash-dir migration, executable order** (FR-2's strictness clause; the
+  changeset carries these steps verbatim): (1) pick the new backslash-free directory
+  name and, on POSIX where the old spelling is a literal filename, `git mv` the store
+  directory to it (on Windows the same value already named the forward-slash-equivalent
+  path — only the config spelling changes); (2) edit `prompts.dir` to the new value;
+  (3) delete the two generated adapter files and re-run `gate init --prompts`, because
+  their CONTENT embeds the old directory spelling and the additive installer will not
+  rewrite them in place. Blast-radius evidence is scoped to what is measurable: this
+  repository's config and every shipped default and fixture are backslash-free; an
+  adopter population cannot be enumerated, so the changeset states the procedure
+  rather than asserting nobody needs it.
 - **Upgrade before excepting:** `prompts.exceptions` is an unknown key to every
   pre-034 validator, so the package upgrade lands before any exception entry is
   written; an adopter who writes the entry first gets a config refusal naming the key.
@@ -487,10 +502,10 @@ rationale.
   packed twin of this check must appear in the installer's map, not merely in the package.
 - applied: `derive-the-requirement-from-the-consumer` — its watch covers
   `packages/provegate/src/core/run/prompts.ts`. Two domains, kept distinct so the record
-  is applied precisely: the **planned** domain is computed from `generatedPaths()` — what
-  the consumer reads, never a catalogue or a walk; **orphan discovery** is a separate,
-  deliberately bounded banner-search over three declared roots, which is not the planned
-  domain widening but its own mechanism with its own declared limits (FR-1).
+  is applied precisely: the check's entire path domain is computed from
+  `generatedPaths()` — what the consumer reads, never a catalogue or a walk. After the
+  iteration-5 narrowing there is no second domain: orphan discovery is not performed,
+  and the record is what forbids re-adding it as a casual directory walk later (FR-1).
 - applied: `known-red-ledger-must-expire` — any recorded local exception is an
   acknowledged-failure allowlist and must fail on stale, unknown or malformed entries, or
   it becomes a permanent bypass. The record prescribes that failure; the **calendar
@@ -599,9 +614,9 @@ Phase 5 unable to report which requirement failed.
 
 | FR   | Command / Check                                                                 | Scope | Notes                                                                                     |
 | ---- | -------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | total five-class arm over planned paths + orphan roots; the same-version values-change case; the two limit fixtures (T5 rename, stripped-unplanned) |
+| FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`   | pkg   | total five-class arm over planned paths only; the same-version values-change case; the three limit pins (T4 removed-adapter, T5 rename, stripped-unplanned) |
 | FR-1 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export`       | pkg   | `reconcilePrompts` and `evaluatePromptReconciliation` import from the package root         |
-| FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expiry-boundary / duplicate / malformed date / non-normalized path / stale entry; suppression scoped to `modified` only |
+| FR-2 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`        | pkg   | valid / expiry-boundary / duplicate / malformed date / non-normalized path / stale entry / backslash-dir load refusal; suppression scoped to `modified` only |
 | FR-3 | `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`          | pkg   | summary-line counts, per-path lines only for findings, disabled note names the unexercised search, enabled-but-absent failure, T2 remedy text |
 | FR-4 | `pnpm verify:prompts`                                                             | repo  | dormant note + exit 0 here until PRD-032 enables; executes the built CLI                   |
 | FR-4 | `pnpm verify:workflow`                                                            | repo  | the bundle executes the new member; wire-or-delete sees the surface                        |
@@ -643,6 +658,7 @@ Before Phase 2 PASS, run: `gate check PRD-034`
 
 | Date       | Author | Changes                                                                                                                              |
 | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-28 | owner decision + orchestrating session, sixth pass | **Narrowed radically after iteration 5 (7.5; trajectory flat at 7.4/7.6/7.5 with every round in the walk layer — the owner chose option (a) per `scope-out-the-layer-the-rounds-keep-hitting` and the PRD-025 precedent).** Orphan/content discovery is CUT: the primitive reads exactly the planned paths (one readFileSync per `generatedPaths()` member — no listing, no walk, no filesystem contract), the `orphaned` class is gone, and the model's limits 4-6 are pinned as fixtures asserting NO finding (T4 removed-adapter file, T5 renamed-away tree, unplanned stripped/bannered files). T5's adapter-staleness signal survives through the planned set. The two small iteration-5 pieces landed with it: the backslash-dir migration gains its executable three-step order in §7 and the changeset (git mv on POSIX, config edit, delete + re-init the two adapters whose content embeds the old spelling; blast-radius claims scoped to measurable configs), and User Story 2 narrows to the actual guarantee (never overwritten, reported on upgrade, rebased by hand). A future discovery item inherits the walk-contract questions with iterations 2-5 as design input (§5). |
 | 2026-07-28 | orchestrating session (non-scorer), fifth pass | **Iteration-4 seams closed (7.6 ITERATE; three pieces confirmed genuinely closed).** The walk domain now includes the two fixed adapter roots UNCONDITIONALLY — deriving them from live membership would have made T4's removed-adapter orphan undiscoverable exactly when it matters; the store side stays planned-dirname-derived so the `.` bound holds. And the backslash seam is closed at the config surface: `prompts.dir` refuses backslashes at load — this PRD's one strictness addition to an existing key, stated as a behavior change with its changeset migration line and an empty measured blast radius (the feature shipped this week), with `strictness-added-during-extraction-is-a-behavior-change` moved to `applied`; the canonical-spelling claim is now conditioned on it, and a backslash-dir fixture proves the refusal at the seam an entry fixture cannot reach. |
 | 2026-07-28 | orchestrating session (non-scorer), fourth pass | **Iteration-3 findings applied (7.4 ITERATE), with a confession the scorer forced:** two iteration-2 closures this changelog previously claimed were never applied — the remediation script died on a mismatch and the retry dropped the Memory Output T7 rewrite and the pack-manifest Scope/Surface sweep while the row still said "applied" (`a-rule-corrected-survives-where-it-is-restated`, operating on the remediation itself; every chunk in this pass wrote and verified per-edit). Now actually landed: the Memory Output and Durable Artifact reworded to banner-version attribution; `pack-manifest.json` in §8 and the Conflict Surface. New decisions closing iteration 3's real find: **findings report one canonical POSIX spelling** (primitive normalizes the joined path; report-format only, nothing on disk moves) so the rejection-only exception contract is provably compatible with every legal `prompts.dir` incl. `.`; the orphan **walk domain is exact** — the dirname set of `generatedPaths()` plus each directory's immediate entries, nothing else — and FR-1's orphan claim is scoped to it; T6's consequences bound to the FR-3 note as a verbatim-tested production surface, restated in §6 with the T5 adapter-staleness criterion. |
 | 2026-07-28 | orchestrating session (non-scorer), third pass | **Iteration-2 findings applied (7.3 ITERATE — six precision pieces, five prior closures confirmed).** T5 fixture now asserts the adapter-staleness consequence (embedded old store path reports diverged) and T6 guidance repeats the model's two consequences. The orphan walk gains its bounded contract (no symlink follow, canonical containment, unreadable-entry failure, `.`-safe bound). The exception path contract becomes rejection-only (backslash refuses; dot/empty segments enumerated in this PRD's own validator; byte-exact case-sensitive match against the spelling `generatedPaths()` produces). `pack-manifest.json` joins FR-5 everywhere it must. The migration instruction becomes three verbatim steps incl. `gate init --practices` as the file-creating action, proven by the fixture and the release-note assertion. Rollback: the whole `prompts.exceptions` key removed before downgrade, the fresh-adopter script entry named, atomicity restated over the sequence not a commit count, the CI-order assertion scoped to the hygiene job's own step list. The Memory Output reworded from stored-hash to banner-version attribution — iteration 2 caught the phrasing contradicting T7. |
