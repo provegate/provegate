@@ -199,8 +199,13 @@ function deferralIssue(
   // is a separator on one platform and a name character on another, `:` opens
   // a URL scheme — each makes two readers disagree about the referent, so all
   // six are refused outright.
-  if (/[#\\:?%&]/.test(target)) {
-    return 'the target path carries a character the link and the filesystem read differently (`#`, `?`, `%`, `&`, `\\`, `:`)';
+  // Round 5: an ASCII control character (U+0000–U+001F, U+007F) is legal in a
+  // POSIX filename but CommonMark refuses to parse a destination carrying one
+  // — the "link" renders as prose, so the deferral would pass without the
+  // required link existing on the page.
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f#\\:?%&]/.test(target)) {
+    return 'the target path carries a character the link and the filesystem read differently (`#`, `?`, `%`, `&`, `\\`, `:`, controls)';
   }
   // Rule 2 — containment inside the configured artifact root, path-boundary
   // safe (never a string prefix), and repository-relative to begin with.

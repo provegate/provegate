@@ -327,6 +327,7 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     writeFileSync(join(root, '_prds/wip/prd-133-a#b.md'), '# PRD-133: Fragmented\n');
     writeFileSync(join(root, '_prds/wip/prd-133-a?x.md'), '# PRD-133: Queried\n');
     writeFileSync(join(root, '_prds/wip/prd-133-a&quest;b.md'), '# PRD-133: Entity\n');
+    writeFileSync(join(root, '_prds/wip/prd-133-a\u0007b.md'), '# PRD-133: Control\n');
     for (const target of [
       '_prds/wip/prd-133-a#b.md',
       '_prds/wip/prd-133-a?x.md',
@@ -334,6 +335,7 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
       '_prds/wip/prd-133-a&quest;b.md',
       '_prds\\wip\\prd-123-followup.md',
       'file:_prds/wip/prd-123-followup.md',
+      '_prds/wip/prd-133-a\u0007b.md',
     ]) {
       expect(oq(doc([`- Deferred to [PRD-133](${target})`]), root).join('; '), target).toContain(
         'read differently',
