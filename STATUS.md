@@ -11,6 +11,8 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent | Work item | Phase | Started |
 | ----- | --------- | ----- | ------- |
+| Claude Fable 5 (this session) | PRD-026 — phases 4-7 on owner Go (worktree per task 0.4) | 4 (Implement) | 2026-07-28 |
+| Claude Fable 5 (Claude Code) | PRD-031 — iteration-1 Phase-1 rework (non-scorer session) | 1 (PRD rework) | 2026-07-28 |
 
 ## Current state
 
