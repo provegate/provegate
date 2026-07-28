@@ -1,6 +1,6 @@
 # Prompt Store State Model
 
-> **Owner**: owner · **Status**: owner-approved 2026-07-28 (`_state/acceptances.json`, PRD-030, items 4.1 T1–T7 and 4.3) · **Created**: 2026-07-28
+> **Owner**: owner · **Status**: Revision 1 owner-approved 2026-07-28 (`_state/acceptances.json`, PRD-030, items 4.1 T1–T7 and 4.3); **Revision 2 awaiting owner approval** — supersedes Revision 1's banner-uniqueness claim, consequences enumerated in the closing section · **Created**: 2026-07-28
 > **PRD**: [prd-030-prompt-store-integrity.md](../../_prds/completed/prd-030-prompt-store-integrity.md)
 > **Consumed by**: PRD-034, whose functional requirements are written against this document
 > and are blocked until it is approved.
@@ -43,13 +43,32 @@ a mechanism. A recorded limit is a finished transition.
   and inlined for the `claude-code` and `cursor` adapters. `<version>` is the installed
   package's, or the literal `unknown` when the manifest cannot be read.
 
-  **It is not universal, and every answer below that leans on it carries the exception.** The
-  `codex` adapter's `<dir>/AGENTS.md.provegate.snippet` is emitted as `## Phase protocols` plus
-  the phase table and **carries no banner and no version** (`core/run/prompts.ts::renderAdapters`);
-  PRD-029's review recorded that omission as knowingly accepted. The store `README.md` carries a
-  shorter one-line banner inlined by `storeReadme` rather than the `bannerFor` form. So the
-  provenance signature covers the store and two of the three adapters — the one file the adopter
-  is expected to paste by hand is the one with no provenance at all.
+  **It is not universal, and every answer below that leans on it carries the exceptions —
+  there are TWO unbannered generated paths, not one (Revision 2).** The `codex` adapter's
+  `<dir>/AGENTS.md.provegate.snippet` is emitted as `## Phase protocols` plus the phase
+  table and **carries no banner and no version** (`core/run/prompts.ts::renderAdapters`);
+  PRD-029's review recorded that omission as knowingly accepted. **And the store's own
+  `prompts/PLACEHOLDERS.md` is copied verbatim with no banner and no substitution — a
+  deliberate `verbatim` disposition (`core/run/prompts.ts:656-661`): the registry documents
+  the very tokens substitution would consume, so bannering or rendering it would destroy
+  what it exists to say.** Revision 1 claimed the codex snippet was unique; an independent
+  reading of the shipped renderer against `generatedPaths()` refuted that. The store
+  `README.md` carries a shorter one-line banner inlined by `storeReadme` rather than the
+  `bannerFor` form. So the provenance signature covers the store **minus PLACEHOLDERS.md**
+  and two of the three adapters.
+
+  **What an unbannered PLANNED path still permits (Revision 2's structural consequence):**
+  both unbannered paths are members of `generatedPaths()`, so **divergence detection by
+  byte comparison against a fresh render works for them exactly as for every planned
+  path**. What is lost is **attribution only** — with no banner there is no recorded
+  version, so a byte difference cannot be split into "package upgraded" (stale) versus
+  "edited at the current version" (modified). The same holds for any planned file whose
+  banner a human has stripped or mangled: detectable by bytes, unattributable by banner.
+  A classification over planned paths must therefore be total in three arms — bytes
+  equal; bytes differ with a parseable banner (attributable); bytes differ or banner
+  unparseable/absent (unattributable) — and content-based discovery of UNPLANNED files
+  (T4/T5/T6) finds only the bannered ones; both unbannered paths, and any stripped file,
+  are invisible to it.
 - **Activation record** — the `prompts` block in `workflow.config.json`. The tool prints it
   (`promptsConfigBlock`); the adopter pastes it. The installer never edits that file, and
   `prompts.enabled` defaults to `false`.
@@ -113,9 +132,11 @@ convergence.
 
 The banner makes a partial upgrade **visible**: a file at version A next to a file at version B
 is a readable state, not an ambiguous one. That is the whole of what the banner buys, and it is
-enough to report on — **except for the codex snippet**, which carries no version, so a mixed
-state including it is readable everywhere but there. A report has to name that path as
-unknowable rather than as current.
+enough to report on — **except for the two unbannered paths (the codex snippet and
+`prompts/PLACEHOLDERS.md`, Revision 2)**, which carry no version, so a mixed state including
+them is readable everywhere but there. A report has to name those paths as version-unattributable
+rather than as current — though their bytes still compare against a fresh render like any
+planned path.
 
 An interrupted upgrade leaves exactly that mixed state. It is safe: nothing was overwritten,
 nothing was deleted by a tool, and re-running the deletion for the remaining paths resumes it.
@@ -183,12 +204,13 @@ adapter**, or by recognising the generated banner in a file the current plan doe
 The banner is what makes the second possible, and it is why a report of this state can exist at
 all without a receipt.
 
-**The second route does not cover the `codex` adapter.** Its snippet carries no banner, so a
-leftover `AGENTS.md.provegate.snippet` is indistinguishable by content from a file the adopter
-wrote. For that one path the first route — re-rendering with the adapter still listed — is the
-only one, and if the adopter has already removed it from the config, nothing recovers it. That
-is a consequence of the banner gap named in the Vocabulary, and it is where a divergence
-detector built on this model will have a hole unless PRD-034 is told about it here.
+**The second route does not cover the unbannered paths (Revision 2: both of them).** The
+codex snippet and a leftover `PLACEHOLDERS.md` carry no banner, so once abandoned they are
+indistinguishable by content from files the adopter wrote. For those paths the first route —
+re-rendering with the config that still produces them — is the only one, and if the adopter
+has already removed the producing config, nothing recovers them. That is a consequence of
+the banner gaps named in the Vocabulary, and it is where a divergence detector built on
+this model will have holes unless PRD-034 is told about them here.
 
 - T4 resolved: reads=config.prompts.adapters+render-plan+on-disk-banners writes=new-adapter-paths-on-add/nothing-on-remove actor=installer-writes/adopter-deletes interrupt=partial-adapter-set-recover-by-reinstall
 
@@ -259,9 +281,11 @@ because it is written by the same action that writes the file.
 A receipt would add exactly one capability the banner cannot: **scope across absence** —
 naming a path that was generated once and is no longer produced, so that a report can mention it
 without finding it. T4 and T5 are the two transitions that would benefit, and both were answered
-above from content instead. The `codex` snippet is the case where that substitution genuinely
-fails rather than merely costing a search: with no banner, content answers nothing about it, so
-it is the one path a receipt would cover and the current design cannot.
+above from content instead. The unbannered paths — the `codex` snippet and
+`prompts/PLACEHOLDERS.md` (Revision 2) — are the cases where that substitution genuinely
+fails rather than merely costing a search: with no banner, content answers nothing about
+them once they are unplanned, so they are the paths a receipt would cover and the current
+design cannot.
 
 If a later item revisits this, the constraint this model fixes is the one that broke the earlier
 design: a receipt is written by **`init` and by nothing else**, and it is **not itself a
@@ -286,7 +310,7 @@ from:
 | 3 | An intentional edit has no representation on disk                    | C1 + no tool-owned durable state                           | design |
 | 4 | A removed adapter's file keeps working until a human deletes it      | C2 — no command deletes                                    | design |
 | 5 | After a config removal there is no durable **pointer**; a content search still works | C1 + no tool-owned durable state           | design |
-| 6 | Absence-scoped reporting is impossible without a receipt; the unbannered `codex` snippet is the case content cannot substitute for | the T7 decision | design |
+| 6 | Absence-scoped reporting is impossible without a receipt; the two unbannered paths — the `codex` snippet and `prompts/PLACEHOLDERS.md` (Revision 2) — are the cases content cannot substitute for, and a banner-stripped file joins them for discovery (never for planned-path byte comparison) | the T7 decision | design |
 
 Set-level atomicity is not available to row 2 by any staged-write trick: the generated set spans
 three unrelated destination roots (`<dir>/`, `.claude/commands/`, `.cursor/rules/`), so no single
@@ -321,3 +345,57 @@ the largest share, since both are load-bearing for what any reporting command ma
 correction is then a **superseding revision of this document with its consequences enumerated**,
 not an edit in place: an edit in place would leave PRD-034's FRs stating a rule this document no
 longer holds, which is the restatement failure both parent items were narrowed to stop.
+
+---
+
+## Revision 2 — 2026-07-28, awaiting owner approval
+
+**Trigger.** PRD-034's iteration-1 independent readiness score (Codex, 5.1 ITERATE) proved
+against the shipped renderer that Revision 1's uniqueness claim is false:
+`renderPrompts` copies `prompts/PLACEHOLDERS.md` **verbatim, with no banner**, under a
+deliberate `verbatim` disposition (`core/run/prompts.ts:656-661` — the registry documents
+the tokens substitution would consume), while `generatedPaths()` includes it in the
+generated set. The transcribing session re-verified the claim before this revision was
+drafted. Missing Piece 1 of that score requires this supersession before the FRs are
+re-derived.
+
+**Statements superseded, old → new, with the section carrying each change:**
+
+1. *Vocabulary → Banner.* "the one file the adopter is expected to paste by hand is the
+   one with no provenance at all" → **two unbannered generated paths**: the codex snippet
+   and `PLACEHOLDERS.md`, the latter deliberate with its reason in code. Added: the
+   detection/attribution split — unbannered **planned** paths remain byte-comparable
+   against a fresh render; only stale-versus-modified attribution is lost, and the same
+   holds for a banner-stripped file.
+2. *T2.* "except for the codex snippet … unknowable" → both unbannered paths are
+   version-unattributable in a mixed state; their bytes still compare.
+3. *T4 (and by reference T5/T6).* "The second route does not cover the codex adapter" →
+   content discovery misses **both** unbannered paths once unplanned; nothing recovers
+   them after the producing config is gone.
+4. *T7.* "it is the one path a receipt would cover and the current design cannot" →
+   they are the **paths**, plural.
+5. *Recorded limit 6.* Rewritten to name both paths and to bound the banner-stripped
+   case: stripped files leave content discovery, never planned-path byte comparison.
+
+**What Revision 2 does NOT change:** every constraint (1–4), every actor answer, T3's
+suppress-but-never-write boundary, T7's no-receipt decision, limits 1–5, and the
+design/mixed classification of limit 2. No transition's actor moves.
+
+**Consequences enumerated for PRD-034's re-derivation:**
+
+- The classification over planned paths must be total in three arms — bytes equal;
+  diverged with parseable banner (attributable: stale | modified); diverged or
+  banner-absent/unparseable (unattributable) — with the two deliberately unbannered
+  paths and any stripped file landing in the third arm by construction, never in a
+  class requiring a version.
+- Orphan discovery claims must be scoped to bannered files inside declared scan roots;
+  a check that does not implement a bounded wider search must restate limits 5 and 6
+  honestly rather than claim T5/T6 coverage (and limit 5's honest form is "no lookup,
+  only a search" — a renamed-away tree is findable only by a search the check must be
+  told to run, wherever it is told to look).
+- A T6-disabled configuration still leaves the content-search **capability** available;
+  a check that exits silently on `enabled: false` must say it is not exercising that
+  capability rather than implying nothing is discoverable.
+- The `PLACEHOLDERS.md` expected content for byte comparison is the packaged source
+  file itself (verbatim disposition): the fresh render already produces it, so no new
+  mechanism is needed — only the class assignment above.
