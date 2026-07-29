@@ -13,6 +13,7 @@ import {
   renderPrompts,
   requiredValues,
 } from '../src/core/run/prompts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /** FR-1: every {{TOKEN}} used in prompts/, templates/ and practices/templates/ is
  * declared in PLACEHOLDERS.md; the registry carries no orphans; tokens are UPPER_SNAKE.
@@ -277,7 +278,7 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
 
   it('the autonomous rendering reproduces the snapshot exception text, parenthetical included', () => {
     const snapshot = readFileSync(
-      join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md'),
+      repoPath('docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md'),
       'utf8',
     );
     const m = snapshot.replace(/\s+/g, ' ').includes(

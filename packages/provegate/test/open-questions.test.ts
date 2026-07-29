@@ -10,13 +10,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join,  } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js';
 import { loadConfig } from '../src/core/config/load.js';
 import { defaultManifest, loadManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { parseArtifactName } from '../src/core/state/artifacts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-028: the closed §9 grammar. Eight successive exemption rules produced
@@ -509,7 +510,7 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
 });
 
 describe('FR-3 — the wip corpus under the closed grammar, five production arguments', () => {
-  const repoRoot = resolve(import.meta.dirname, '../../..');
+  const repoRoot = repoPath('.');
   const { config } = loadConfig(repoRoot);
   const repoManifest = loadManifest(config, repoRoot);
 
@@ -539,7 +540,7 @@ describe('FR-3 — the wip corpus under the closed grammar, five production argu
   });
 
   it('the test task declares all four root surfaces the lint reads (FR-3, `_brain` included)', () => {
-    const turbo = JSON.parse(readFileSync(join(repoRoot, 'turbo.json'), 'utf8')) as {
+    const turbo = JSON.parse(readFileSync(repoPath('turbo.json'), 'utf8')) as {
       tasks: Record<string, { inputs?: string[] }>;
     };
     const inputs = turbo.tasks['test']?.inputs ?? [];

@@ -21,6 +21,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { practicesPackDir } from '../src/core/run/init.js';
 import type { DoctorReport } from '../src/core/memory/doctor.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const CLI = resolve(dirname(fileURLToPath(import.meta.url)), '../dist/cli.js');
 
@@ -746,7 +747,7 @@ describe('the exceptions conversion (PRD-026 FR-5, step by step, proved through 
     // step 3: drop every survivor that is already wired — measured HERE by the
     // audit itself: keeping them is the three-step conversion the reviewer
     // executed, and auditWiring rejected all five as stale.
-    const repoRootDir = fileURLToPath(new URL('../../..', import.meta.url));
+    const repoRootDir = repoPath('.');
     const keepThem = {
       ...defaultManifest(DEFAULT_CONFIG),
       wiringExceptions: Object.fromEntries(survivors.map((s) => [s, 'migrated from the packed array'])),

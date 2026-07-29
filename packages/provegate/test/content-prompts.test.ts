@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { contractView } from '../src/core/memory/artifacts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /** FR-2..5 + W3: prompt census, calibrated-number spot checks vs the snapshot
  * values, codex-starter drift fix, CLI-mention audit. */
@@ -315,8 +316,7 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
   const addendumText = (): string =>
     readFileSync(
       join(
-        pkgRoot,
-        '../../docs/research/provegate-bootstrap/source-snapshot',
+        repoPath('docs/research/provegate-bootstrap/source-snapshot'),
         'addenda/agent-memory-closed-loop-2026-07-25.md',
       ),
       'utf8',
@@ -455,8 +455,7 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
  * out fresh with no restored turbo cache, so the gate is real there.
  */
 describe('frozen source snapshot (PRD-017 FR-1)', () => {
-  const repoRoot = join(pkgRoot, '..', '..');
-  const snapshot = join(repoRoot, 'docs/research/provegate-bootstrap/source-snapshot');
+  const snapshot = repoPath('docs/research/provegate-bootstrap/source-snapshot');
   const ADDENDUM = 'addenda/agent-memory-closed-loop-2026-07-25.md';
 
   /** Every frozen file, path and content, folded into one digest. */
@@ -499,7 +498,7 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
     expect(existsSync(join(snapshot, ADDENDUM))).toBe(true);
     expect(readFileSync(join(snapshot, 'MANIFEST.md'), 'utf8')).toContain(ADDENDUM);
     const decisions = readFileSync(
-      join(repoRoot, 'docs/research/provegate-bootstrap/DECISIONS.md'),
+      repoPath('docs/research/provegate-bootstrap/DECISIONS.md'),
       'utf8',
     );
     expect(decisions).toContain('Post-bootstrap method extensions');
@@ -564,7 +563,7 @@ describe('phase 6 round 8 — the constraint count is discriminating', () => {
 // rule (FR-4), and the two-copy bootstrap identity (FR-5).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SNAPSHOT_ROOT = join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot');
+const SNAPSHOT_ROOT = repoPath('docs/research/provegate-bootstrap/source-snapshot');
 const A2 = join(SNAPSHOT_ROOT, 'addenda/autonomy-mode-and-proceed-rule-2026-07-27.md');
 
 describe('the autonomy addendum — shape and clauses, never approval (PRD-031 FR-1)', () => {
@@ -634,7 +633,7 @@ describe('the proceed rule (PRD-031 FR-4/FR-5)', () => {
   });
 
   it('both bootstrap copies carry the proceed rule IDENTICALLY — a pattern in each would be satisfied by the template alone', () => {
-    const live = readFileSync(join(pkgRoot, '../../AGENT_BOOTSTRAP.md'), 'utf8');
+    const live = readFileSync(repoPath('AGENT_BOOTSTRAP.md'), 'utf8');
     const tmpl = readFileSync(join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'), 'utf8');
     const block = (s: string): string => {
       const i = s.indexOf(PROCEED_HEAD);

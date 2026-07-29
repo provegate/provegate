@@ -29,6 +29,7 @@ import {
   validateRecord,
 } from '../src/core/memory/index.js';
 import { watchMatches } from '../src/core/memory/artifacts.js';
+import { pkgRoot } from './helpers/repo-reads.js';
 
 const fixturesDir = fileURLToPath(new URL('./fixtures', import.meta.url));
 
@@ -458,7 +459,7 @@ describe('record conformance corpus (FR-4, W12)', () => {
     // Spawned rather than imported: the validator is untyped `.mjs` on purpose —
     // it must run in a repository with no TypeScript and no package installed —
     // so the test exercises it the way an adopter does, as a real module.
-    const libPath = join(fixturesDir, '..', '..', 'practices', 'verify', 'lib.mjs');
+    const libPath = join(pkgRoot, 'practices/verify/lib.mjs');
     const corpusPath = join(fixturesDir, 'memory-record-cases.json');
     const script = [
       `import { validateMemoryRecord } from ${JSON.stringify(libPath)};`,

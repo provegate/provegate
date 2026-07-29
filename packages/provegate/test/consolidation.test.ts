@@ -2,12 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { loadManifest } from '../src/core/gates/index.js';
 import { sweepReviewArtifacts } from '../src/core/gates/review.js';
 import { declaredArtifacts, durableDeclarationIssue } from '../src/core/run/durable.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 // PRD-026: the consolidation's own proofs — the review sweep's selection and
 // binding predicates, the declaration lint, the manifest-resolution rule, the
@@ -15,7 +15,7 @@ import { declaredArtifacts, durableDeclarationIssue } from '../src/core/run/dura
 // mutate-one-green-baseline fixtures.
 
 const cfg = DEFAULT_CONFIG;
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
+const repoRoot = repoPath('.');
 const roots: string[] = [];
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
@@ -163,7 +163,7 @@ describe('manifest resolution after the consolidation (FR-4)', () => {
   it('every manifest command naming a package script resolves, and none names a deleted one', () => {
     const manifest = loadManifest(cfg, repoRoot);
     const scripts = (
-      JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as {
+      JSON.parse(readFileSync(repoPath('package.json'), 'utf8')) as {
         scripts: Record<string, string>;
       }
     ).scripts;
@@ -276,7 +276,7 @@ describe('no live document names a deleted check (FR-6)', () => {
   });
 
   it('the exclusions do not swallow the board’s live sections', () => {
-    const status = readFileSync(resolve(repoRoot, 'STATUS.md'), 'utf8');
+    const status = readFileSync(repoPath('STATUS.md'), 'utf8');
     const live = statusLiveText(status);
     expect(live).toContain('## Active Agents'); // the live part survives the boundary
     expect(live).toContain('## Deferrals'); // the table's live columns stay scannable
@@ -479,9 +479,9 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
     const { status, output } = runLedger(repoRoot);
     expect(output).toContain('PASS');
     expect(status).toBe(0);
-    const ledger = readFileSync(resolve(repoRoot, 'scripts/verify/script-classes.json'), 'utf8');
+    const ledger = readFileSync(repoPath('scripts/verify/script-classes.json'), 'utf8');
     const adr = readFileSync(
-      resolve(repoRoot, '_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'),
+      repoPath('_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'),
       'utf8',
     );
     // The ADR's PROSE names the trio once, deliberately — the born-agreeing

@@ -1,8 +1,8 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-021 FR-12 / W9 — ONE semantic assertion over ONE entry.
@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest';
  * than merely red.
  */
 
-const changesetDir = fileURLToPath(new URL('../../../.changeset', import.meta.url));
+const changesetDir = repoPath('.changeset');
 
 interface Entry {
   file: string;

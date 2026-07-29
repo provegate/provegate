@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { pkgRoot, repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-021 FR-9 / FR-11 — the two weight tables are projections of one authority,
@@ -14,8 +14,7 @@ import { DEFAULT_CONFIG } from '../src/core/config/index.js';
  * checks is just a second authority that has not disagreed yet.
  */
 
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const pkgRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = repoPath('.');
 const read = (path: string): string => readFileSync(path, 'utf8');
 
 /** The `| DIM — name | meaning | weight |` rows of a triage table, as

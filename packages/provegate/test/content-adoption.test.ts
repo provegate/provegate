@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { pkgRoot, repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-020 FR-7 — the adoption pages, asserted SEMANTICALLY.
@@ -19,8 +19,7 @@ import { describe, expect, it } from 'vitest';
  * row runs the package script directly and is the uncached authority.
  */
 
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const pkgRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = repoPath('.');
 const read = (rel: string): string => readFileSync(join(repoRoot, rel), 'utf8');
 const docs = (name: string): string => read(`apps/docs/content/docs/${name}`);
 

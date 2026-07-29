@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-021 FR-7 — `verify:doc-claims`.
@@ -14,9 +14,8 @@ import { afterEach, describe, expect, it } from 'vitest';
  * would test a grammar; running it tests the check.
  */
 
-const here = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = resolve(here, '../../../scripts/verify/verify-doc-claims.mjs');
-const LIB = resolve(here, '../../../scripts/verify/lib.mjs');
+const SCRIPT = repoPath('scripts/verify/verify-doc-claims.mjs');
+const LIB = repoPath('scripts/verify/lib.mjs');
 
 const roots: string[] = [];
 afterEach(() => {

@@ -15,6 +15,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { repoPath } from './helpers/repo-reads.js';
+import { QUICKSTART_TASKS_FIXTURE } from './helpers/escape-fixtures.js';
 
 const PKG_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DOC_PATH = join(PKG_DIR, 'QUICKSTART.md');
@@ -241,23 +243,7 @@ function seedPrd(repo: string) {
 function seedTasks(repo: string) {
   // [H] the phase-6 gate demands a tasks file whose ledger carries the
   // independent-review row naming the artifact path (measured stop (a)).
-  writeFileSync(join(repo, '_tasks/wip/tasks-001-fix-login-timeout.md'), `# Tasks: Fix Login Timeout
-
-> **PRD**: [prd-001-fix-login-timeout.md](../../_prds/wip/prd-001-fix-login-timeout.md)
-> **Status**: Code Complete
-
-## Tasks
-
-- [x] 1.0 Fix
-  - [x] 1.1 the fix
-
-## Verification Ledger
-
-| Gate | Command / Check | Scope | Result | Evidence | Notes |
-| ---- | --------------- | ----- | ------ | -------- | ----- |
-| test | \`node -e "process.exit(0)"\` | repo | passed | exit 0 | |
-| independent-review | \`_docs/reviews/review-001-fix-login-timeout.md\` | review | passed | Critical: 0 | |
-`);
+  writeFileSync(join(repo, '_tasks/wip/tasks-001-fix-login-timeout.md'), QUICKSTART_TASKS_FIXTURE);
 }
 function seedReview(repo: string, sha: string) {
   // [H] the review gate validates six metadata fields; a symbolic Base SHA is
@@ -305,7 +291,7 @@ beforeAll(() => {
   // a current dist; an ad-hoc run with no dist at all still self-heals.
   if (!existsSync(join(PKG_DIR, 'dist', 'cli.js'))) {
     execFileSync('pnpm', ['--filter', 'provegate', 'build'], {
-      cwd: join(PKG_DIR, '..', '..'), stdio: 'pipe',
+      cwd: repoPath('.'), stdio: 'pipe',
     });
   }
   execFileSync('npm', ['pack', '--pack-destination', scratchRoot], {

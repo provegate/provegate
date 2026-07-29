@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
@@ -19,6 +19,7 @@ import {
   initWorkspace,
   revalidateControlArtifacts,
 } from '../src/core/run/index.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-022 — a worktree must still carry the control artifacts base carries.
@@ -480,10 +481,7 @@ describe('the boundary is stated where the mechanism is described (FR-5)', () =>
   it('method.mdx names all three exclusions', () => {
     // Read the file DIRECTLY: `content-launch.test.ts` never opens method.mdx,
     // so an assertion added there would be a green that proves nothing.
-    const mdx = readFileSync(
-      resolve(dirname(fileURLToPath(import.meta.url)), '../../../apps/docs/content/docs/method.mdx'),
-      'utf8',
-    );
+    const mdx = readFileSync(repoPath('apps/docs/content/docs/method.mdx'), 'utf8');
     // Anchor on the SECTION HEADING, not any mention: an earlier paragraph in
     // this file already says `git merge` bypasses the gates, and a slice that
     // started before it would satisfy the first exclusion without the new

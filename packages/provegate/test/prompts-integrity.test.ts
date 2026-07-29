@@ -33,13 +33,12 @@ import {
   type PromptFinding,
   type RenderConfig,
 } from '../src/core/run/prompts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const run = promisify(execFile);
 const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const twinPath = fileURLToPath(new URL('../practices/verify/verify-prompts.mjs', import.meta.url));
-const changesetPath = fileURLToPath(
-  new URL('../../../.changeset/prompt-store-reconciliation.md', import.meta.url),
-);
+const changesetPath = repoPath('.changeset/prompt-store-reconciliation.md');
 const packageDir = promptsPackageDir();
 const installed = packageVersion(packageDir);
 

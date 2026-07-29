@@ -20,6 +20,7 @@ import { memoryFind } from '../src/core/memory/index.js';
 import { symlinkSync } from 'node:fs';
 import { mergeToLocalBase, mergeMessage } from '../src/core/run/merge.js';
 import type { StateRecord } from '../src/core/state/build.js';
+import { TRAVERSAL_SELECTOR } from './helpers/escape-fixtures.js';
 
 // PRD-015 — proves the gated workflow runs in a PLAIN single-package repo (one
 // package.json, no pnpm-workspace.yaml, no turbo), with commands that are not
@@ -347,7 +348,7 @@ describe('FR-4 — find bounds, portability, and safety', () => {
     const { root, config } = storeOf([
       ['watcher', rec('watcher', { watch: 'packages/x/**', description: 'about caching' })],
     ]);
-    for (const bad of ['/etc/passwd', '../outside/a.ts', 'C:\\x\\a.ts', 'packages/../../x']) {
+    for (const bad of ['/etc/passwd', '../outside/a.ts', 'C:\\x\\a.ts', TRAVERSAL_SELECTOR]) {
       const result = memoryFind(config, root, { paths: ['packages/x/a.ts', bad], query: 'caching' });
       expect(result.ok, bad).toBe(false);
       expect(result.hits, bad).toEqual([]);

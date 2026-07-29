@@ -26,6 +26,7 @@ import {
   mergeToLocalBase,
   removeWorktree,
 } from '../src/core/run/index.js';
+import { TRAVERSAL_SLUG } from './helpers/escape-fixtures.js';
 
 const run = promisify(execFile);
 const cfg = DEFAULT_CONFIG;
@@ -569,7 +570,7 @@ describe('codex r9 regressions', () => {
   it('a hostile slug through the public API cannot escape worktree.dir (P2)', async () => {
     const root = await gitRoot();
     const flat = { ...cfg, branches: { ...cfg.branches, featurePattern: 'feat/static-{id}' } };
-    expect(() => createWorktree(flat, root, { id: 'PRD-001', slug: '../../../escaped' })).toThrow(
+    expect(() => createWorktree(flat, root, { id: 'PRD-001', slug: TRAVERSAL_SLUG })).toThrow(
       /escapes \.worktrees/,
     );
     expect(existsSync(join(root, 'escaped'))).toBe(false);

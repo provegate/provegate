@@ -1,7 +1,6 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
@@ -12,6 +11,8 @@ import {
   scanCommandSurface,
   yamlRunText,
 } from '../src/core/gates/wiring.js';
+import { repoPath } from './helpers/repo-reads.js';
+import { TRAVERSAL_COMMAND } from './helpers/escape-fixtures.js';
 
 const cfg = DEFAULT_CONFIG;
 const roots: string[] = [];
@@ -373,7 +374,7 @@ describe('bundleMembers (line- and column-anchored, fail closed)', () => {
     // to PRD-036's input census (CI checks out fresh; the local cache gap is
     // that PRD's subject).
     const real = readFileSync(
-      fileURLToPath(new URL('../../../scripts/verify/verify-workflow.mjs', import.meta.url)),
+      repoPath('scripts/verify/verify-workflow.mjs'),
       'utf8',
     );
     const members = bundleMembers(real);
@@ -510,7 +511,7 @@ describe('auditWiring key derivation hardening (review round 1)', () => {
     const root = repo({
       scripts: {
         ...FLOOR,
-        'verify:foo': 'node scripts/verify/../../outside/verify-foo.mjs',
+        'verify:foo': TRAVERSAL_COMMAND,
       },
       hooks: { 'pre-commit': 'node scripts/verify/verify-foo.mjs\n' },
       scriptFiles: ['verify-foo.mjs'],

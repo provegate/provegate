@@ -19,7 +19,19 @@
         "$TURBO_ROOT$/_prds/**",
         "$TURBO_ROOT$/_brain/**",
         "$TURBO_ROOT$/workflow.config.json",
-        "$TURBO_ROOT$/gates.manifest.json"
+        "$TURBO_ROOT$/gates.manifest.json",
+        "$TURBO_ROOT$/**/*.md",
+        "$TURBO_ROOT$/docs/research/provegate-bootstrap/**",
+        "$TURBO_ROOT$/scripts/verify/**",
+        "$TURBO_ROOT$/_docs/reviews/**",
+        "$TURBO_ROOT$/apps/docs/content/docs/**",
+        "$TURBO_ROOT$/.changeset/**",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/turbo.json",
+        "$TURBO_ROOT$/LICENSE",
+        "$TURBO_ROOT$/apps/web/app/page.tsx",
+        "$TURBO_ROOT$/.github/workflows/**",
+        "$TURBO_ROOT$/.githooks/**"
       ]
     },
     "dev": {

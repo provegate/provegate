@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { validateReviewArtifact } from '../src/core/gates/review.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /** FR-1 / W3: quorum arithmetic — integer math, N*5 >= M*3 for a pass verdict. */
 
@@ -67,7 +67,7 @@ describe('quorum arithmetic (W3 boundaries)', () => {
 });
 
 describe('historical review artifacts remain valid (no retro-breakage)', () => {
-  const reviewsDir = fileURLToPath(new URL('../../../_docs/reviews', import.meta.url));
+  const reviewsDir = repoPath('_docs/reviews');
 
   it('every archived review artifact still validates under the new arithmetic', () => {
     const files = readdirSync(reviewsDir).filter((f) => f.endsWith('.md'));

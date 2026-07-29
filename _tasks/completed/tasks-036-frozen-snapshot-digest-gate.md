@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-036-frozen-snapshot-digest-gate.md](../../_prds/wip/prd-036-frozen-snapshot-digest-gate.md)
 > **Readiness**: [readiness-036-frozen-snapshot-digest-gate.md](../../_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md)
-> **Status**: Tasks Generated
+> **Status**: Code Complete
 > **Readiness Score**: 8.18/10 (iteration 8, PASS — eight independent Codex rounds; TL settled at iteration 4; measure-first pivot at iteration 3)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -85,20 +85,20 @@
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight (gates W2 and W3 before any edit)
-  - [ ] 0.1 **W3:** `pnpm verify:workflow` on fresh main — MUST be green before
+- [x] 0.0 Pre-flight (gates W2 and W3 before any edit)
+  - [x] 0.1 **W3:** `pnpm verify:workflow` on fresh main — MUST be green before
         implementation. If red on the case-study sentinel (34→35 at Phase-3 time),
         STOP: the refresh belongs to the sentinel's own `--print` mechanism
         (PRD-037's), not this PRD; surface to the owner and wait.
-  - [ ] 0.2 **W2:** `gate queue` — serialize if PRD-032 or PRD-039 has entered an
+  - [x] 0.2 **W2:** `gate queue` — serialize if PRD-032 or PRD-039 has entered an
         execution phase (their Draft surfaces overlap `turbo.json` /
         `content-launch.test.ts` / `script-classes.json` / `verify-workflow.mjs`).
-  - [ ] 0.3 `node packages/provegate/dist/cli.js open PRD-036 --worktree` — the
+  - [x] 0.3 `node packages/provegate/dist/cli.js open PRD-036 --worktree` — the
         lease carries the surface incl. the test-tree glob; board row added;
         `pnpm install --frozen-lockfile` + `pnpm --filter provegate build` in the
         worktree.
-- [ ] 1.0 FR-3 scanner core — red-first against the live corpus
-  - [ ] 1.1 **W2 (binding census):** port the prototype grammar (A1 multi-parent
+- [x] 1.0 FR-3 scanner core — red-first against the live corpus
+  - [x] 1.1 **W2 (binding census):** port the prototype grammar (A1 multi-parent
         literal; A2 ≥2 parent-carrying string args per call; A3 nested `dirname`;
         A4 nested URL; C `process.cwd()`/`homedir(`; template heads and spans
         scanned; module specifiers included) into
@@ -109,57 +109,57 @@
         the twelve declared globs) triggers FR-1's discovery clause: glob +
         `REPO_READ_GLOBS` entry + exception reason join atomically, decision
         recorded below.
-  - [ ] 1.2 Checks b1 (every `repoPath(` first arg a string literal, ledgered;
+  - [x] 1.2 Checks b1 (every `repoPath(` first arg a string literal, ledgered;
         non-literal fails closed by file:line), b2 (every `REPO_READ_GLOBS` entry
         covered by a `test`-task input glob; fail names the path), b3 (helper
         shapes: `repo-reads.ts` exports exactly `repoPath`/`pkgRoot`/
         `REPO_READ_GLOBS`, imports only `node:path`+`node:url`, no read/spawn
         calls; `escape-fixtures.ts` zero imports, zero calls, exactly the four
         named constants).
-  - [ ] 1.3 Red-first proof: the scan against the unmigrated corpus fails naming
+  - [x] 1.3 Red-first proof: the scan against the unmigrated corpus fails naming
         exactly the 1.1 list — no more, no fewer (the paired positive control
         arrives at 2.4).
-- [ ] 2.0 FR-2 — helpers and the mechanical migration
-  - [ ] 2.1 `test/helpers/repo-reads.ts` (`repoPath(rel)` against the repo root;
+- [x] 2.0 FR-2 — helpers and the mechanical migration
+  - [x] 2.1 `test/helpers/repo-reads.ts` (`repoPath(rel)` against the repo root;
         `pkgRoot`; `REPO_READ_GLOBS` = the twelve new + four declared globs) and
         `test/helpers/escape-fixtures.ts` (`TRAVERSAL_SELECTOR`,
         `TRAVERSAL_COMMAND`, `TRAVERSAL_SLUG`, `QUICKSTART_TASKS_FIXTURE` —
         byte-identical values, no imports, no calls).
-  - [ ] 2.2 Migrate every 1.1-listed out-of-package escape site through `repoPath`
+  - [x] 2.2 Migrate every 1.1-listed out-of-package escape site through `repoPath`
         (incl. `doc-claims-script`'s `cpSync` sources, `consolidation`'s
         `execFileSync` script path, `quickstart-e2e:308`'s spawn `cwd`);
         `memory.test.ts:461` rewritten against `pkgRoot`
         (`join(pkgRoot, 'practices/verify/lib.mjs')`). Resolution expressions and
         constant homes ONLY — no assertion, read-API, or fixture-value change
         (W5's audit subject).
-  - [ ] 2.3 The four fixture sites import from `escape-fixtures.ts`; values
+  - [x] 2.3 The four fixture sites import from `escape-fixtures.ts`; values
         byte-diffed against the originals in the Progress Log.
-  - [ ] 2.4 Boundary scan green on the migrated corpus (the positive control);
+  - [x] 2.4 Boundary scan green on the migrated corpus (the positive control);
         `pnpm test` green through turbo — zero behavior change.
-- [ ] 3.0 FR-1 — the cache key
-  - [ ] 3.1 `turbo.json` `test.inputs`: append the twelve globs (`**/*.md`;
+- [x] 3.0 FR-1 — the cache key
+  - [x] 3.1 `turbo.json` `test.inputs`: append the twelve globs (`**/*.md`;
         `docs/research/provegate-bootstrap/**`; `scripts/verify/**`;
         `_docs/reviews/**`; `apps/docs/content/docs/**`; `.changeset/**`;
         `package.json`; `turbo.json`; `LICENSE`; `apps/web/app/page.tsx`;
         `.github/workflows/**`; `.githooks/**` — all `$TURBO_ROOT$`-prefixed);
         keep `$TURBO_DEFAULT$` and the four existing globs untouched.
-  - [ ] 3.2 `turbo-inputs-exceptions.json` `test` reason extended to enumerate the
+  - [x] 3.2 `turbo-inputs-exceptions.json` `test` reason extended to enumerate the
         census groups; `pnpm verify:turbo-inputs` green; b2 green.
-- [ ] 4.0 FR-4 — the failure-safe Turbo probe
-  - [ ] 4.1 In the census default pass: stale `.probe-*` pre-scan (fail naming
+- [x] 4.0 FR-4 — the failure-safe Turbo probe
+  - [x] 4.1 In the census default pass: stale `.probe-*` pre-scan (fail naming
         them) → capture `turbo run test --filter=provegate --dry=json` task hash →
         exclusive-create (`wx`) `.probe-<pid>-<hrtime>.tmp` under the snapshot
         root → re-capture, assert hash CHANGED → `finally`: unlink unconditionally
         → re-capture, assert hash RESTORED. `--dry=json` only; no task execution,
         no gate-CLI spawn.
-- [ ] 5.0 FR-3 wiring, classification, and the deny harness
-  - [ ] 5.1 Root `package.json` alias `verify:test-inputs`;
+- [x] 5.0 FR-3 wiring, classification, and the deny harness
+  - [x] 5.1 Root `package.json` alias `verify:test-inputs`;
         `verify-workflow.mjs` `CHECKS` member; `script-classes.json` repo row.
-  - [ ] 5.2 `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`: the
+  - [x] 5.2 `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`: the
         `verify-test-inputs.mjs | repo` Classification row, HAND-PLACED in the
         existing table shape — no `pnpm format` over the ADR;
         `pnpm verify:brain` and `pnpm verify:script-classes` green after.
-  - [ ] 5.3 `test/verify-test-inputs.test.ts` — the harness runs the PRODUCTION
+  - [x] 5.3 `test/verify-test-inputs.test.ts` — the harness runs the PRODUCTION
         script with a target-root argument (the `runLedger` pattern; never a
         temp-root copy). Ten planted deny causes, each failing BY NAME from its
         own independent cause: (1) multi-parent literal; (2) split-join
@@ -170,35 +170,35 @@
         call in `repo-reads.ts`. Plus the documented limit: a string-concatenation
         traversal asserted NOT flagged (the boundary's edge tested, not implied).
         Positive control: the live corpus passes.
-- [ ] 6.0 Migration & Rollback verification (infra parent; W1)
-  - [ ] 6.1 Atomicity check: the full set stages as one commit; no intermediate
+- [x] 6.0 Migration & Rollback verification (infra parent; W1)
+  - [x] 6.1 Atomicity check: the full set stages as one commit; no intermediate
         tree holds a registered-without-script or script-without-ledger state
         (`verify:script-classes` diffs the ADR both ways).
-  - [ ] 6.2 Rollback prova in a scratch worktree: revert restores the PRD-028
+  - [x] 6.2 Rollback prova in a scratch worktree: revert restores the PRD-028
         turbo state and a census-free green
         (`pnpm verify:script-classes && pnpm verify:turbo-inputs &&
-    pnpm verify:workflow && pnpm test` at each of the three documented steps).
-- [ ] 7.0 Phase 5 — Testing: every §11 row, then the floor
-  - [ ] 7.1 `pnpm verify:turbo-inputs`
-  - [ ] 7.2 `pnpm verify:test-inputs` (census + coverage + probe in one pass)
-  - [ ] 7.3 `pnpm --filter provegate test test/verify-test-inputs.test.ts`
-  - [ ] 7.4 `pnpm verify:script-classes`
-  - [ ] 7.5 `pnpm test` (turbo-routed; cache-miss observed after the FR-1 edit,
+pnpm verify:workflow && pnpm test` at each of the three documented steps).
+- [x] 7.0 Phase 5 — Testing: every §11 row, then the floor
+  - [x] 7.1 `pnpm verify:turbo-inputs`
+  - [x] 7.2 `pnpm verify:test-inputs` (census + coverage + probe in one pass)
+  - [x] 7.3 `pnpm --filter provegate test test/verify-test-inputs.test.ts`
+  - [x] 7.4 `pnpm verify:script-classes`
+  - [x] 7.5 `pnpm test` (turbo-routed; cache-miss observed after the FR-1 edit,
         then warm-cache behavior confirmed unchanged on a no-edit re-run)
-  - [ ] 7.6 Floor: `pnpm check-types` && `pnpm lint` && `pnpm build` &&
+  - [x] 7.6 Floor: `pnpm check-types` && `pnpm lint` && `pnpm build` &&
         `pnpm verify:workflow`
-  - [ ] 7.7 Re-read PRD §12 DO NOT — wrap-tolerant sweep for each (no second pin
+  - [x] 7.7 Re-read PRD §12 DO NOT — wrap-tolerant sweep for each (no second pin
         comparison, no glob narrowing, no hardcoded site list, no suppression
         marker, no fixture-value change, no specifier exemption, no partial
         ledger/ADR subset, no census in the shipped package).
-- [ ] 8.0 Phase 6 — Final Auditing (W5)
-  - [ ] 8.1 Independent adversarial review (different model/session; `Critical: 0`;
+- [x] 8.0 Phase 6 — Final Auditing (W5)
+  - [x] 8.1 Independent adversarial review (different model/session; `Critical: 0`;
         Quorum per config; real Base SHA; artifact path named in the ledger row) →
         `_docs/reviews/review-036-frozen-snapshot-digest-gate.md`. Brief the
         reviewer to SWEEP the W5 subjects: migrations changed no assertion/read
         API/fixture value; helper exports/imports/calls exactly match FR-3(b3);
         the ADR received only the table-row append.
-  - [ ] 8.2 `pnpm verify:workflow` green after any fix; draft
+  - [x] 8.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-036-frozen-snapshot-digest-gate.md`.
 - [ ] 9.0 Phase 7 — Learning and close (eligible)
   - [ ] 9.1 Memory Outputs: reasoned `none` (declared in the PRD) — if
@@ -219,19 +219,19 @@
 
 ## Verification Ledger
 
-| Gate                  | Command / Check                                                           | Scope    | Result  | Evidence | Notes                                                                                              |
-| --------------------- | ------------------------------------------------------------------------- | -------- | ------- | -------- | -------------------------------------------------------------------------------------------------- |
-| FR-1                  | `pnpm verify:turbo-inputs`                                                | repo     | pending |          | exceptions entry valid; no undeclared narrowing                                                    |
-| FR-1                  | `pnpm verify:test-inputs`                                                 | repo     | pending |          | ledger→turbo coverage                                                                              |
-| FR-2                  | `pnpm verify:test-inputs`                                                 | repo     | pending |          | boundary scan zero violations; usage ledgered; helper shapes valid                                 |
-| FR-2                  | `pnpm test`                                                               | repo     | pending |          | migrated suite green through turbo; zero behavior change                                           |
-| FR-3                  | `pnpm --filter provegate test test/verify-test-inputs.test.ts`            | pkg      | pending |          | ten deny causes by name; concatenation non-catch documented; positive control                      |
-| FR-3                  | `pnpm verify:script-classes`                                              | repo     | pending |          | ledger row and ADR table row agree both ways                                                       |
-| FR-4                  | `pnpm verify:test-inputs`                                                 | repo     | pending |          | probe: hash changed on `wx` snapshot probe, restored after `finally` cleanup, stale probes refused |
-| atomicity             | rollback prova                                                            | repo     | pending |          | three-step reverse order, each step verified                                                       |
-| types/lint/test/build | the floor                                                                 | monorepo | pending |          | plus `pnpm verify:workflow` with the new bundle member                                             |
-| independent-review    | `_docs/reviews/review-036-frozen-snapshot-digest-gate.md` — `Critical: 0` | review   | pending |          | W5 sweep briefed                                                                                   |
-| durable               | `pnpm check:durable-artifacts`                                            | repo     | pending |          | review artifact in the merge diff                                                                  |
+| Gate                  | Command / Check                                                           | Scope    | Result  | Evidence                                        | Notes                                                                                              |
+| --------------------- | ------------------------------------------------------------------------- | -------- | ------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| FR-1                  | `pnpm verify:turbo-inputs`                                                | repo     | passed  | 6 tasks checked                                 | exceptions entry valid; no undeclared narrowing                                                    |
+| FR-1                  | `pnpm verify:test-inputs`                                                 | repo     | passed  | 16 entries covered                              | ledger→turbo coverage                                                                              |
+| FR-2                  | `pnpm verify:test-inputs`                                                 | repo     | passed  | 59 sources, 0 violations; 33 usages ledgered | boundary scan zero violations; usage ledgered; helper shapes valid                                 |
+| FR-2                  | `pnpm test`                                                               | repo     | passed  | 1371 tests, 57 files (post-review r5; updated per round by measurement)                            | migrated suite green through turbo; zero behavior change                                           |
+| FR-3                  | `pnpm --filter provegate test test/verify-test-inputs.test.ts`            | pkg      | passed  | 25/25 incl. the review round-1..5 closures | ten deny causes by name; concatenation non-catch documented; positive control                      |
+| FR-3                  | `pnpm verify:script-classes`                                              | repo     | passed  | both directions agree                           | ledger row and ADR table row agree both ways                                                       |
+| FR-4                  | `pnpm verify:test-inputs`                                                 | repo     | passed  | proven live in the worktree                     | probe: hash changed on `wx` snapshot probe, restored after `finally` cleanup, stale probes refused |
+| atomicity             | rollback prova                                                            | repo     | passed  | HEAD~1: zero set members, gates green           | three-step reverse order, each step verified                                                       |
+| types/lint/test/build | the floor                                                                 | monorepo | passed  | 5/5 4/4 7/7 4/4; workflow PASS; FULL TURBO warm | plus `pnpm verify:workflow` with the new bundle member                                             |
+| independent-review    | `_docs/reviews/review-036-frozen-snapshot-digest-gate.md` — `Critical: 0` | review   | passed | 6 rounds, C:1→1→3→1→1→0; quorum 1/1; Base SHA 5a2a64a; artifact committed | W5 sweep briefed                                                                                   |
+| durable               | `pnpm check:durable-artifacts`                                            | repo     | pending |                                                 | review artifact in the merge diff                                                                  |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -245,10 +245,42 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   recorded here per the protocol's autonomous-execution clause. Phase 4 starts on
   the owner's next Go; the claim itself happens at task 0.3.
 
+- 0.1 — W3 fired as designed: `verify:workflow` red on the sentinel (34→35). The
+  owner approved the DOCUMENTED refresh in-session (the two same-day precedents'
+  exact procedure): the generated region only, committed on main via the
+  sanctioned ALLOW_BASE_COMMIT one-off (`5a2a64a`). Aggregate green before claim.
+- 1.1 — the binding census re-run reproduced the §1 baseline EXACTLY (28
+  violations in 21 files; zero corpus drift). No new input group — the discovery
+  clause did not trigger.
+- b1 implementation decision — `repoPath('.')` is the sanctioned BASE accessor
+  (exempt from ledger coverage by exact-literal match): nine files need a base
+  for config-derived subpaths that cannot be literals; their input groups are
+  census-declared at the glob level. Documented in the script; recorded for the
+  reviewer's judgment (W5).
+- prd-ready migration — the `${state}` template URL became two literal
+  `repoPath` candidates (wip/completed), behavior identical, keeping b1
+  literal-only without a template carve-out.
+- pack-drift — the CHECKS edit tripped the twin ledger; reconciled WITHOUT
+  porting: the packed twin deliberately does not gain `verify-test-inputs`
+  (repo-class per ADR-0004, never ships).
+
 ## Progress Log
 
-| Date | Task | Notes |
-| ---- | ---- | ----- |
+| Date       | Task    | Notes                                                                                                                                                                                                                           |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-29 | 0.1-0.3 | W3 red→refresh→green (`5a2a64a`); queue clear; lease 8 globs; worktree + design-then-provegate build (the PRD-014 dist trap)                                                                                                    |
+| 2026-07-29 | 1.1-1.3 | red-first: 28 violations in 21 files named — §1 baseline byte-exact; +2 fail-closed helper-missing by design                                                                                                                    |
+| 2026-07-29 | 2.x     | 21 files migrated (20 escape sites via repoPath, memory:461 via pkgRoot, 4 byte-identical fixture constants incl. the 517-escaped-source-byte (513 runtime) quickstart template value); one leftover repoRoot ref (content-prompts:501) caught by the suite, fixed |
+| 2026-07-29 | 3.x     | twelve globs appended (17 inputs total); exceptions reason enumerates every group                                                                                                                                               |
+| 2026-07-29 | 4.1     | probe PROVEN LIVE: hash changed on the wx snapshot probe, restored after finally cleanup                                                                                                                                        |
+| 2026-07-29 | 5.x     | four surfaces one move; ADR row hand-placed (pre-existing ADR prettier-warn confirmed on main, untouched); harness grown to 25/25 across the review rounds                                                                                                        |
+| 2026-07-29 | 6.x     | atomic commit `9018d3d` (32 files); prova: HEAD~1 zero members, gates green there                                                                                                                                               |
+| 2026-07-29 | 7.x     | floor green; verify:workflow PASS post pack-drift reconcile; warm cache FULL TURBO 511ms                                                                                                                                        |
+| 2026-07-29 | review r1 | GATE FAIL 1C/1H/3M — closed same-session: B4 rule (base+literal read → violation; the reviewer's probe now fails by name; 5 live base-literal reads migrated to literal repoPath), b3 refuses aliased re-exports + non-string-literal fixture constants, deny-10 made independent, the 16-file formatter churn reverted (re-migrated from main without prettier — diffs semantic-only), counts re-measured |
+| 2026-07-29 | review r2 | GATE FAIL 1C/1H/2M — closed same-session: B4 recognizes template literals (backtick probe fails by name), exported declaration KINDS closed in both helpers (enum probe fails; const required), scope-aware shadow tracking (parameter shadowing the base name is a positive control), the ledger corrected with measured values (59 sources / 33 usages / 19-case harness / 517-escaped-source-byte fixture) — this row |
+| 2026-07-29 | review r3 | GATE FAIL 3C/1M — all B4 edges, closed same-session: nearest-lexical-binding resolution (an inner `repoPath('.')` shadowing an outer ordinary variable is a live base — planted), template TAIL leaves recognized (`${base}/file` planted), the promises read-API twins added (`readFile` et al. — planted); suite count updated by measurement (1368; harness 22/22) |
+| 2026-07-29 | review r4 | GATE FAIL 1C — the template-tail fix over-reached: separator-only spans counted as literal leaves, false-positiving the legal `${base}/${rel}` pure-dynamic shape; closed with the name-content rule (a part is a leaf only when stripping separators leaves content) + the 19/19b positive-negative pair; harness 24/24 |
+| 2026-07-29 | review r5 | GATE FAIL 1C/1M — the name-content rule compared '.' against the UN-stripped text, so `${base}/./${rel}` false-positived; fixed on the stripped value (dots-only content is not a name), case 20 positive control; counts re-measured (1371; harness 25/25) |
 
 ## Blockers / Open Questions
 
