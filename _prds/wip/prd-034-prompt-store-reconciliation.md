@@ -613,6 +613,20 @@ rationale.
   also changes (the 025-precedent newborn-watch case). The record's rule IS FR-1's
   design — the check recomputes and stores nothing; the banner version is the one
   recorded provenance, doing the attribution job recomputation cannot.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — close-time watch fire on this
+  PRD file itself (the disposition edits changed it). The record is the diagnosis
+  behind this document's own §5 narrowing: three readiness rounds landed every finding
+  in the orphan-walk layer, the owner cut the layer, and the FRs read exactly the
+  planned set — the record is applied in the design, restated here as a disposition.
+- applied: `state-model-before-mechanism` — close-time watch fire on this PRD file. The
+  record is why this PRD exists in its current form: PRD-030's flat trajectory forced
+  the state model first, and every FR here is derived from that model at Revision 2 —
+  no mechanism sentence predates its transition.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — close-time watch fire on
+  this PRD file. Applied twice over: the FR-3 six-surface prose sweep is this record
+  operating on shipped text, and the Phase 6 protocol briefed every review round to
+  sweep prior closures rather than trust the changelog — which caught three findings
+  created by the previous round's fix.
 
 ---
 
