@@ -398,9 +398,13 @@ standing.
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/quickstart.mdx`
 - `scripts/verify/verify-quickstart-parity.mjs`
-- `scripts/verify/verify-workflow.mjs`
 - `scripts/verify/script-classes.json`
 - `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`
+
+> `scripts/verify/verify-workflow.mjs` is deliberately NOT claimed: PRD-034's active
+> lease holds it (both items append one CHECKS member). The one-line append
+> serializes behind 034's release — claimed then, landed before this PRD's close,
+> so the wiring gate still sees the member. Recorded 2026-07-29 at claim time.
 
 ---
 
