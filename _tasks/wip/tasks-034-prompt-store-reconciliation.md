@@ -302,6 +302,15 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `node_modules` like `.git`; the dry-run root assertion admits the link. No assertion
   was weakened — the bundle-green claim now runs one check stronger. Forced by the
   in-scope CHECKS change; taken under the proceed rule, recorded.
+- **TOCTOU residue in `reconcilePrompts`, accepted as the adversarial class
+  (review round 3):** the read now targets the VALIDATED realpath and a mid-run
+  vanish fails closed ("changed during the run"), so a symlink swap at the
+  planned path can no longer redirect the read. What remains — the resolved
+  target itself being swapped between `realpathSync` and `readFileSync(real)` —
+  requires a concurrent writer racing inside one process's own execution: the
+  same class the PRD-022 "manifest absent-then-restored race" deferral records,
+  and the same posture is taken (recorded, not built against). A read-only
+  check on a stable tree cannot hit it.
 - **Evaluator signature:** `evaluatePromptReconciliation(findings, { exceptions,
   todayUtc })` — the PRD names the first argument; exceptions and the day arrive as
   options because the module's no-clock purity rule (its own header) forbids reading

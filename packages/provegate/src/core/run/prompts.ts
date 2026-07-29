@@ -1015,11 +1015,21 @@ export function reconcilePrompts(
 
     let onDisk: Buffer;
     try {
-      onDisk = readFileSync(abs);
+      // Read the VALIDATED resolution, not the mutable planned path: between
+      // the containment check and this read, a symlink swap at `abs` would
+      // redirect a re-open — reading `real` keeps the bytes bound to the
+      // location containment approved. (The residual swap-of-`real` race is
+      // the adversarial concurrent-writer class the PRD-022 deferral records;
+      // same posture here, noted in the task file.)
+      onDisk = readFileSync(real);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        findings.push({ path: canonical, kind: 'missing', bannerVersion: null, installedVersion: version });
-        continue;
+        // It existed when realpath resolved it and is gone at read time:
+        // concurrent mutation mid-run. Never classified — fail closed; a
+        // stable tree cannot produce this.
+        throw new PromptsError('a planned path changed during the run', [
+          `${canonical} — resolved to ${real}, which vanished before it could be read`,
+        ]);
       }
       // A directory where a file was planned, a permission failure, an I/O
       // error — never skipped into a class.

@@ -41,12 +41,13 @@ if (process.argv.includes('--assert-ci-order')) {
     }
   }
   const job = lines.slice(start, end);
-  // Only `run:` lines count — a COMMENT quoting the build command must never
-  // satisfy the order assertion (that is a silent false-green: delete the real
-  // step and the quoted command still matches).
-  const isRunLine = (l) => /^\s*run:/.test(l);
-  const buildAt = job.findIndex((l) => isRunLine(l) && l.includes('pnpm --filter provegate build'));
-  const aggregateAt = job.findIndex((l) => isRunLine(l) && l.includes('pnpm verify:workflow'));
+  // EXACT step commands, not substrings. A comment quoting the command, an
+  // `echo '…build'`, or a `false && …build` compound must never satisfy the
+  // assertion — substring presence is not execution. Anything other than the
+  // exact one-command run line fails to match and the gate goes loud.
+  const isExactRun = (l, cmd) => l.trim() === `run: ${cmd}`;
+  const buildAt = job.findIndex((l) => isExactRun(l, 'pnpm --filter provegate build'));
+  const aggregateAt = job.findIndex((l) => isExactRun(l, 'pnpm verify:workflow'));
   if (aggregateAt === -1) {
     console.error('verify:prompts: FAIL — the hygiene job has no verify:workflow step');
     process.exit(1);
