@@ -1,8 +1,8 @@
 # Summary: PRD-032 — Prompt-Store Dogfood
 
 > **PRD**: [prd-032-prompt-store-dogfood.md](../../_prds/wip/prd-032-prompt-store-dogfood.md)
-> **Status**: Code Complete — review passed; operator observation + acceptance pending
-> **Ship Readiness**: Review Complete
+> **Status**: Ship Verified
+> **Ship Readiness**: Ship Verified
 > **Date**: 2026-07-29
 
 ## What shipped

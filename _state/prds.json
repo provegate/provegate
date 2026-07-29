@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T13:23:09.268Z",
+  "generatedAt": "2026-07-29T13:24:28.098Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1153,21 +1153,21 @@
       "prd": "PRD-032",
       "number": 32,
       "slug": "prompt-store-dogfood",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-032-prompt-store-dogfood.md",
-        "readiness": "_readiness/wip/readiness-032-prompt-store-dogfood.md",
-        "tasks": "_tasks/wip/tasks-032-prompt-store-dogfood.md",
-        "summary": "_docs/wip/summary-032-prompt-store-dogfood.md"
+        "prd": "_prds/completed/prd-032-prompt-store-dogfood.md",
+        "readiness": "_readiness/completed/readiness-032-prompt-store-dogfood.md",
+        "tasks": "_tasks/completed/tasks-032-prompt-store-dogfood.md",
+        "summary": "_docs/completed/summary-032-prompt-store-dogfood.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.1,
@@ -1176,9 +1176,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
-        "checkedCount": 46,
-        "uncheckedCount": 3,
+        "status": "Ship Verified",
+        "checkedCount": 49,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 1
       },
       "summary": {

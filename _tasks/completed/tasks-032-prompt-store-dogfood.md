@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-032-prompt-store-dogfood.md](../../_prds/wip/prd-032-prompt-store-dogfood.md)
 > **Readiness**: [readiness-032-prompt-store-dogfood.md](../../_readiness/wip/readiness-032-prompt-store-dogfood.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.10/10 (iteration 7, PASS — zero findings; seven iterations, trajectory 4.00 → 8.10)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -181,7 +181,7 @@
   - [x] 8.9 `pnpm verify:script-classes` + `gate check --wiring` (FR-9)
   - [x] 8.10 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` &&
         `pnpm build`
-  - [ ] 8.11 **OPERATOR (W4):** the live Claude command-listing observation — open
+  - [x] 8.11 **OPERATOR (W4):** the live Claude command-listing observation — open
         Claude Code in this repository, observe every generated `/prd-*` command
         listing phase-descriptively (not as a banner comment). Operator row below.
   - [x] 8.12 Re-read PRD §12 DO NOT — wrap-tolerant sweep.
@@ -203,12 +203,12 @@
   - [x] 10.3 **OPERATOR:** owner-signed acceptance in `_state/acceptances.json`
         naming the 8.11 observation (agent transcribes ONLY on explicit in-session
         owner direction, `authorship: "agent-transcribed"`).
-  - [ ] 10.4 `node packages/provegate/dist/cli.js run PRD-032` — §11 rows run from
+  - [x] 10.4 `node packages/provegate/dist/cli.js run PRD-032` — §11 rows run from
         the WORKTREE if a new alias stops the primary-root chain
         (`--from-phase=5`, the 036/037 recipe); preemptive close-time watch
         dispositions; on an archive stop: `gate-run-resume-after-archive`. Push
         stays the owner's.
-  - [ ] 10.5 Release the lease, drop the board row, remove the worktree.
+  - [x] 10.5 Release the lease, drop the board row, remove the worktree.
 
 ---
 
@@ -231,7 +231,7 @@
 | types/lint/test/build | the floor                                                          | monorepo | passed | 5/5 4/4 7/7 4/4 |                                                                                   |
 | operator              | live Claude command-listing observation (8.11)                     | operator | operator |          | W4; bound to the Phase-7 acceptance                                               |
 | independent-review    | `_docs/reviews/review-032-prompt-store-dogfood.md` — `Critical: 0` | review   | passed | 2 rounds, C:0 both (1 High closed r1); quorum 1/1 | W2 sweep briefed                                                                  |
-| durable               | `pnpm check:durable-artifacts`                                     | repo     | pending  |          | review artifact in the merge diff                                                 |
+| durable               | `pnpm check:durable-artifacts`                                     | repo     | passed | gate chain: review artifact in the merge diff | review artifact in the merge diff                                                 |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

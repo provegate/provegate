@@ -1,6 +1,6 @@
 # PRD-032: This Repository Consumes Its Own Protocol Store
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
