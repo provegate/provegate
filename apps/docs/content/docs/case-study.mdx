@@ -6,6 +6,10 @@ description: ~390 production work items, one calibration study, and what the num
 Everything below is **observational, single-project data** from the production SaaS
 platform where this method was developed — with one exception, labeled where it
 appears: the cross-model review figures, which come from an external published study.
+Two evidence classes live on this page: the origin figures here are **externally
+sourced** (you must trust our reporting), while part two below is **locally
+recomputable** — every number there reproduces from this repository's committed
+state, by a script you can run in your clone.
 We publish all of it with the caveats attached to every figure because miscalibrated
 claims are precisely the failure mode this method exists to gate. It is still more
 published calibration data than we have found anywhere else in this space.
@@ -65,3 +69,51 @@ No controlled trial. No speedup percentage. No defect-reduction percentage. No
 "prevents all agent failures." The claim is narrower and, we think, more defensible:
 **shifting trust from agent claims to executed evidence is mechanically enforceable,
 and here is one production system where it has been running for ~390 items.**
+
+
+## Part two: the tool's own ledger [#self-hosting-ledger]
+
+The claim above would be easy to make and hard to check. This section is the half
+you can check: ProveGate develops itself through the same gated workflow it ships,
+and the figures below are not typed into this page — they are derived from the
+repository's committed workflow state by
+`scripts/derive-self-hosting-figures.mjs`, embedded between generated-region
+markers, and byte-compared against a fresh derivation by the `verify:doc-claims`
+gate — a member of the repository's `verify:workflow` bundle and its CI step. Clone
+the repository, run the script with `--print`, and watch the region reproduce. A
+drifted digit fails that gate naming the differing line.
+
+What the ledger cannot count, we say in words instead of estimating: items here
+routinely took multiple independent readiness scorers and many failing rounds
+before passing; review rounds produced findings that forced reworks; closure runs
+were stopped by the gate chain and resumed; and remediation changelogs have
+claimed edits an independent scorer then proved absent — caught precisely because
+the process double-checks its own claims. The ledger cuts both ways, or it
+is not a ledger.
+
+{/* self-hosting-figures:start */}
+```json
+{
+  "shipVerified": 32,
+  "closeModes": {
+    "operator-gated": 30,
+    "eligible": 2
+  },
+  "unclassified": {
+    "count": 0,
+    "ids": []
+  }
+}
+```
+
+| Figure | Value |
+| ------ | ----- |
+| PRDs Ship Verified | 32 |
+| Closes: operator-gated | 30 |
+| Closes: eligible | 2 |
+| Closes: unclassified (listed) | 0 |
+{/* self-hosting-figures:end */}
+
+Regeneration rule: after any close that changes the counted state, re-run
+`node scripts/derive-self-hosting-figures.mjs --write`; the `--check` invocation
+wired into `verify:doc-claims` catches a forgotten regeneration.

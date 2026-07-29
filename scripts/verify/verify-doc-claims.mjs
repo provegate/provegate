@@ -35,10 +35,41 @@
 // stopped seeing.
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { targetRoot, read, makeReporter } from './lib.mjs';
 
 const root = targetRoot();
 const r = makeReporter('verify:doc-claims');
+
+// PRD-037: the case study's self-hosting region is a byte-checked projection of
+// `derive-self-hosting-figures.mjs` — a drifted figure fails here, naming the
+// first differing line; and the H2 span carries no digit outside the region.
+{
+  const script = join(root, 'scripts', 'derive-self-hosting-figures.mjs');
+  const doc = join(root, 'apps', 'docs', 'content', 'docs', 'case-study.mdx');
+  // Scoped to roots that HAVE the feature: a fixture or adopter root with neither
+  // file carries no self-hosting claim, so there is nothing to fail. Exactly one
+  // of the pair present IS a broken contract and fails loudly.
+  if (!existsSync(script) && !existsSync(doc)) {
+    // no claim in this root
+  } else if (!existsSync(script) || !existsSync(doc)) {
+    r.fail('self-hosting figures: script and case-study.mdx must exist together — the region contract is broken');
+  } else {
+    try {
+      execFileSync(process.execPath, [script, '--check'], { stdio: 'pipe' });
+    } catch (error) {
+      r.fail(`self-hosting figures drifted: ${String(error.stderr ?? error.message).trim()}`);
+    }
+    const mod = await import(script);
+    const docText = read(doc);
+    if (!mod.hasHeadingToken(docText)) {
+      r.fail('self-hosting figures: the [#self-hosting-ledger] heading token is missing from the MDX source');
+    }
+    for (const v of mod.spanDigitViolations(docText)) {
+      r.fail(`self-hosting section: ${v}`);
+    }
+  }
+}
 
 /** The governance set: the documents that describe how this repository works,
  * plus the practices copies an adopter receives. A claim is only misleading
