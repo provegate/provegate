@@ -56,6 +56,12 @@ export function extractScenario(doc: string): Extraction {
     const line = lines[i] ?? '';
     if (line.trim() === SKIP_MARK) {
       if (pendingSkip) throw new Error(`qs:skip — two markers before one fence (line ${i + 1})`);
+      // binds to the IMMEDIATELY next ```sh fence: only blank lines may intervene
+      let j = i + 1;
+      while (j < endIdx && (lines[j] ?? '').trim() === '') j++;
+      if (!/^```sh\s*$/.test(lines[j] ?? '')) {
+        throw new Error(`qs:skip — marker must be immediately followed by a \`\`\`sh fence (line ${i + 1})`);
+      }
       pendingSkip = true;
       i++;
       continue;
@@ -81,6 +87,9 @@ export function extractScenario(doc: string): Extraction {
             commands.push({ line: j + 1, command: (joined + t).trim() });
             joined = '';
           }
+          if (joined !== '') {
+            throw new Error(`unterminated backslash continuation in the fence closing at line ${close + 1}`);
+          }
         }
       } else if (lang === 'text' || lang === 'json') {
         // illustration — never executed
@@ -89,9 +98,6 @@ export function extractScenario(doc: string): Extraction {
       }
       i = close + 1;
       continue;
-    }
-    if (pendingSkip && line.trim() !== '') {
-      throw new Error(`qs:skip — dangling marker not followed by a \`\`\`sh fence (line ${i + 1})`);
     }
     i++;
   }
@@ -126,7 +132,18 @@ describe('quickstart extraction', () => {
 
   it('a dangling qs:skip is a named failure', () => {
     const broken = doc.replace(SCENARIO_END, `${SKIP_MARK}\n\nprose\n${SCENARIO_END}`);
-    expect(() => extractScenario(broken)).toThrow(/dangling/);
+    expect(() => extractScenario(broken)).toThrow(/immediately followed/);
+  });
+
+  it('qs:skip with an intervening non-sh fence is a named failure (round-1 P1)', () => {
+    const broken = doc.replace(SKIP_MARK, `${SKIP_MARK}\n\n\`\`\`text\nx\n\`\`\``);
+    expect(() => extractScenario(broken)).toThrow(/immediately followed/);
+  });
+
+  it('an unterminated backslash continuation is a named failure (round-1 P1)', () => {
+    // the continuation must sit on the fence's LAST command line to stay open
+    const broken = doc.replace('npx gate init\n```', 'npx gate init \\\n```');
+    expect(() => extractScenario(broken)).toThrow(/unterminated backslash/);
   });
 
   it('two regions are a named failure', () => {
@@ -160,7 +177,8 @@ function childEnv(): NodeJS.ProcessEnv {
   for (const [k, v] of Object.entries(process.env)) {
     if (k.startsWith('GIT_CONFIG')) continue; // COUNT, KEY_n, VALUE_n, PARAMETERS
     if (k.startsWith('PROVEGATE_')) continue; // runner sentinels
-    if (['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'TMPDIR', 'npm_config_userconfig'].includes(k)) continue;
+    if (/^npm_config_/i.test(k) || /^NPM_CONFIG_/.test(k)) continue; // registry/cache/prefix overrides
+    if (['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'TMPDIR'].includes(k)) continue;
     env[k] = v;
   }
   const home = join(scratchRoot, 'home');
@@ -172,7 +190,13 @@ function childEnv(): NodeJS.ProcessEnv {
   env.XDG_STATE_HOME = join(home, '.state');
   env.TMPDIR = join(scratchRoot, 'tmp');
   mkdirSync(env.TMPDIR, { recursive: true });
-  env.npm_config_userconfig = join(home, '.npmrc');
+  // every npm/npx invocation — not only the install — is pinned to the
+  // unreachable registry and a scratch cache via the child's own .npmrc
+  const npmrc = join(home, '.npmrc');
+  if (!existsSync(npmrc)) {
+    writeFileSync(npmrc, `registry=http://127.0.0.1:9\ncache=${join(scratchRoot, 'npm-cache')}\nupdate-notifier=false\naudit=false\nfund=false\n`);
+  }
+  env.npm_config_userconfig = npmrc;
   env.GIT_CONFIG_GLOBAL = '/dev/null';
   env.GIT_CONFIG_SYSTEM = '/dev/null';
   env.GIT_CONFIG_NOSYSTEM = '1';
@@ -274,7 +298,16 @@ function setupScratchRepo(): string {
 
 beforeAll(() => {
   scratchRoot = mkdtempSync(join(tmpdir(), 'qs-e2e-'));
-  // setup (outside the write-boundary claim): pack the tarball from the built package
+  // setup (outside the write-boundary claim): build ONLY when dist is absent —
+  // an unconditional rebuild here raced sibling test files over the shared dist
+  // (pack.test packs while tsup cleans). Freshness is the floor's job: the
+  // phase-4 chain runs `pnpm build` before `pnpm test`, so the gated run packs
+  // a current dist; an ad-hoc run with no dist at all still self-heals.
+  if (!existsSync(join(PKG_DIR, 'dist', 'cli.js'))) {
+    execFileSync('pnpm', ['--filter', 'provegate', 'build'], {
+      cwd: join(PKG_DIR, '..', '..'), stdio: 'pipe',
+    });
+  }
   execFileSync('npm', ['pack', '--pack-destination', scratchRoot], {
     cwd: PKG_DIR, stdio: 'pipe',
   });
@@ -283,8 +316,32 @@ beforeAll(() => {
   tarballPath = join(scratchRoot, tgz);
 }, 240_000);
 
+/** The one cleanup path: first attempt may fail on a permission plant; reset
+ * modes and retry, then verify deletion. Used by afterAll AND the plant test —
+ * the plant exercises THIS code, not a lookalike. */
+export function cleanupScratch(root: string): { initialFailure: boolean; diagnostic: string } {
+  let initialFailure = false;
+  let diagnostic = '';
+  try {
+    rmSync(root, { recursive: true });
+  } catch (e) {
+    initialFailure = true;
+    diagnostic = String(e).slice(0, 200);
+    const relax = (dir: string): void => {
+      chmodSync(dir, 0o755);
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) relax(join(dir, entry.name));
+      }
+    };
+    relax(root);
+    rmSync(root, { recursive: true, force: true });
+  }
+  if (existsSync(root)) throw new Error(`cleanup failed to delete ${root}`);
+  return { initialFailure, diagnostic };
+}
+
 afterAll(() => {
-  if (scratchRoot) rmSync(scratchRoot, { recursive: true, force: true });
+  if (scratchRoot) cleanupScratch(scratchRoot);
 });
 
 // ------------------------------------------------------------------ sequence
@@ -323,11 +380,16 @@ describe.skipIf(!IS_POSIX)('quickstart sequence (hermetic, single-pass)', () => 
     expect(existsSync(join(repo, '_prds/completed/prd-001-fix-login-timeout.md'))).toBe(true);
   }, 600_000);
 
-  it('post-setup writes stay inside the scratch tree and remapped roots', () => {
-    // the observation boundary (FR-2): the assertion covers the scratch repo
-    // tree plus the remapped HOME/XDG/npm/TMP roots — all under scratchRoot.
-    expect(existsSync(scratchRoot)).toBe(true);
-    expect(existsSync(join(scratchRoot, 'home'))).toBe(true);
+  it('post-setup writes land under the scratch root (positive containment evidence)', () => {
+    // the observation boundary (FR-2): every artifact class the run creates is
+    // FOUND under scratchRoot — repo trees, the remapped home (npm userconfig,
+    // caches), the remapped tmp. This is the observable half of the claim; no
+    // global-filesystem proof is pretended.
+    const entries = readdirSync(scratchRoot);
+    expect(entries.some((e) => e.startsWith('repo-'))).toBe(true);
+    expect(existsSync(join(scratchRoot, 'home', '.npmrc'))).toBe(true);
+    expect(entries).toContain('tmp');
+    expect(entries.some((e) => e.endsWith('.tgz'))).toBe(true);
   });
 });
 
@@ -406,21 +468,10 @@ describe.skipIf(!IS_POSIX)('cleanup plant (POSIX/Ubuntu scope)', () => {
     mkdirSync(locked);
     writeFileSync(join(locked, 'file.txt'), 'x');
     chmodSync(locked, 0o555);
-    let initialFailure = false;
-    let diagnostic = '';
-    try {
-      try {
-        rmSync(plantRoot, { recursive: true });
-      } catch (e) {
-        initialFailure = true;
-        diagnostic = String(e).slice(0, 200);
-      }
-      expect(initialFailure).toBe(true); // the plant bit
-      expect(diagnostic.length).toBeGreaterThan(0); // captured before deletion
-    } finally {
-      chmodSync(locked, 0o755);
-      rmSync(plantRoot, { recursive: true, force: true });
-    }
-    expect(existsSync(plantRoot)).toBe(false); // deletion verified
+    // the HARNESS cleanup path, not a lookalike (review round-1 P2)
+    const result = cleanupScratch(plantRoot);
+    expect(result.initialFailure).toBe(true); // the plant bit the first attempt
+    expect(result.diagnostic.length).toBeGreaterThan(0); // captured before reset
+    expect(existsSync(plantRoot)).toBe(false); // reset + retry deleted it
   });
 });

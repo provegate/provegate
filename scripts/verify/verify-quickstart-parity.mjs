@@ -51,6 +51,11 @@ function extract(doc, { start, end, skip }, label) {
     const line = lines[i];
     if (line.trim() === skip) {
       if (pendingSkip) throw new Error(`${label}: two qs:skip markers before one fence (line ${i + 1})`);
+      let j = i + 1;
+      while (j < ends[0] && (lines[j] ?? '').trim() === '') j++;
+      if (!/^```sh\s*$/.test(lines[j] ?? '')) {
+        throw new Error(`${label}: qs:skip must be immediately followed by a \`\`\`sh fence (line ${i + 1})`);
+      }
       pendingSkip = true;
       i++;
       continue;
@@ -72,15 +77,15 @@ function extract(doc, { start, end, skip }, label) {
             commands.push((joined + t).trim());
             joined = '';
           }
+          if (joined !== '') {
+            throw new Error(`${label}: unterminated backslash continuation in the fence closing at line ${close + 1}`);
+          }
         }
       } else if (lang !== 'text' && lang !== 'json') {
         throw new Error(`${label}: untagged fence inside the region at line ${i + 1}`);
       }
       i = close + 1;
       continue;
-    }
-    if (pendingSkip && line.trim() !== '') {
-      throw new Error(`${label}: dangling qs:skip (line ${i + 1})`);
     }
     i++;
   }

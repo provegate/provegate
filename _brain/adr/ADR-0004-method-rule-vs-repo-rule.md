@@ -54,13 +54,13 @@ born agreeing at that PRD's close, and neither store ever contains the deleted t
 | verify-acceptance-rule.mjs | repo |
 | verify-turbo-inputs.mjs | repo |
 | verify-quickstart-parity.mjs | repo |
+| verify-dependency-audit.mjs | repo |
+| verify-workflow.mjs | repo |
+| verify-script-classes.mjs | repo |
 
 `verify-quickstart-parity.mjs` (PRD-038) is repo-class by the Decision's own test: it
 READS this repository's two quickstart documents — a doc-consistency rule for this
 repo, not a method artifact — and never ships in the package or the pack.
-| verify-dependency-audit.mjs | repo |
-| verify-workflow.mjs | repo |
-| verify-script-classes.mjs | repo |
 
 ## Alternatives
 
