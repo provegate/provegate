@@ -1,41 +1,44 @@
 {
-  "verify-brain.mjs": {
-    "class": "method-pending",
-    "owner": "owner",
-    "reviewBy": "2026-10-01"
-  },
-  "verify-deferred.mjs": {
-    "class": "method-pending",
-    "owner": "owner",
-    "reviewBy": "2026-10-01"
-  },
-  "verify-memory-record-corpus.mjs": {
-    "class": "method-pending",
-    "owner": "owner",
-    "reviewBy": "2026-10-01"
-  },
-  "verify-doc-claims.mjs": {
-    "class": "repo"
-  },
-  "verify-test-task-coverage.mjs": {
-    "class": "repo"
-  },
-  "verify-pack-drift.mjs": {
-    "class": "repo"
-  },
-  "verify-acceptance-rule.mjs": {
-    "class": "repo"
-  },
-  "verify-turbo-inputs.mjs": {
-    "class": "repo"
-  },
-  "verify-dependency-audit.mjs": {
-    "class": "repo"
-  },
-  "verify-workflow.mjs": {
-    "class": "repo"
-  },
-  "verify-script-classes.mjs": {
-    "class": "repo"
-  }
+ "verify-brain.mjs": {
+  "class": "method-pending",
+  "owner": "owner",
+  "reviewBy": "2026-10-01"
+ },
+ "verify-deferred.mjs": {
+  "class": "method-pending",
+  "owner": "owner",
+  "reviewBy": "2026-10-01"
+ },
+ "verify-memory-record-corpus.mjs": {
+  "class": "method-pending",
+  "owner": "owner",
+  "reviewBy": "2026-10-01"
+ },
+ "verify-doc-claims.mjs": {
+  "class": "repo"
+ },
+ "verify-test-task-coverage.mjs": {
+  "class": "repo"
+ },
+ "verify-pack-drift.mjs": {
+  "class": "repo"
+ },
+ "verify-acceptance-rule.mjs": {
+  "class": "repo"
+ },
+ "verify-turbo-inputs.mjs": {
+  "class": "repo"
+ },
+ "verify-dependency-audit.mjs": {
+  "class": "repo"
+ },
+ "verify-workflow.mjs": {
+  "class": "repo"
+ },
+ "verify-script-classes.mjs": {
+  "class": "repo"
+ },
+ "verify-quickstart-parity.mjs": {
+  "class": "repo"
+ }
 }
