@@ -1,153 +1,127 @@
 # Readiness Assessment: PRD-038 — Executable Quickstart
 
-**ITERATE — 7.61/10. Three claimed closures remain false against production: the region contract contradicts itself, one “complete” stop reason is still truncated, and inherited `GIT_CONFIG_COUNT` still injects remotes.**
+**ITERATE — 7.88/10. The Git-environment and rollback closures hold, but active requirements still contradict the intended region geometry and still preserve the production assertions iteration 5 required removed.**
 
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
 | PRD | `_prds/wip/prd-038-executable-quickstart.md` |
-| Score | 7.61/10 |
+| Score | 7.88/10 |
 | Verdict | ITERATE |
-| Iteration | 5 |
+| Iteration | 6 |
 | PRD Class | infra |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit) | — |
 | Scored by | Codex (GPT-5), fresh independent re-scorer |
 | Self-scored | no |
-| Date | 2026-07-28 |
-| PRD Lint | Waived for the documented sandbox state-write restriction. `node packages/provegate/dist/cli.js check PRD-038` failed with `EPERM: operation not permitted, open '.../_state/prds.json.79542.tmp'`. The read-only production equivalent `lintPrd(config, manifest, content, root, 38)` returned `{ "ok": true, "issues": [] }`. Relied additionally on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
+| Date | 2026-07-29 |
+| PRD Lint | Waived for the documented sandbox state-write restriction. `node packages/provegate/dist/cli.js check PRD-038` failed with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.96289.tmp'`. The read-only production equivalent `lintPrd(config, manifest, content, root, 38)` returned `{ "ok": true, "issues": [] }`. Relied additionally on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
 | State Record | pending |
 
 ---
 
-## Iteration 5 — Closure Review
+## Iteration 6 — Closure Review
 
-### 1. Region geometry — DECISION PRESENT, CONTRACT STILL CONTRADICTORY
+### 1. Region rule — PARTIALLY CLOSED, STILL MULTI-VALUED
 
-The intended decision is now clear in its owning paragraph:
+The intended rule is now explicit:
 
-> “one region, with an explicit ignored-fence form”
+> “the worktree alternative stays INSIDE it under `<!-- qs:skip -->`”
 
 and:
 
-> “the worktree alternative block keeps its teaching position inside the flow without executing”
+> “the practices layer stays OUTSIDE the region entirely”
 
-That fits the real package corpus. The optional worktree block is a `sh` fence between `gate open` and `gate check`, containing:
+The skip grammar also closes the requested mechanics: a marker binds to the next `sh` fence; dangling and doubled markers are failures; both readers exclude skipped fences; ordinary unmarked `sh` fences execute.
 
-```text
-git add ...
-git commit ...
-npx gate open PRD-001 --worktree
-```
-
-The fence census is also corrected. The only untagged opening fences relevant to the migration are the two handoff-card blocks:
-
-- `packages/provegate/QUICKSTART.md:108`
-- `apps/docs/content/docs/quickstart.mdx:101`
-
-Both can feasibly become `text`.
-
-However, FR-1 later says:
+However, the same FR later retains the opposite placement:
 
 > “Package-only extras (worktree, practices) live OUTSIDE the region”
 
-The worktree alternative cannot both retain its present teaching position inside the install-to-close region under `qs:skip` and live outside that region. FR-3 compounds this by saying package-only optional sections are “unmeasured” without explicitly stating that the parity verifier excludes package-side `qs:skip` fences.
+The top-level metric and §6 also contradict the skip rule:
 
-A second grammar sentence is also inconsistent:
+> “every command in the tagged `qs:scenario` region, in sequence”
 
-> “an untagged or unmarked-`sh` fence inside the region is a named failure”
+> “every command in the tagged `qs:scenario` region executes in order”
 
-Normal canonical commands are precisely unmarked `sh` fences under the grammar just defined. The failure condition should instead name unsupported/untagged fences and malformed or dangling `qs:skip` markers.
+A three-command worktree fence cannot simultaneously remain inside the region, be excluded by `qs:skip`, and satisfy “every command … executes.”
 
-Implementation Scope additionally limits the package-doc change to “fence language tags only,” although FR-1 requires two region markers and a `qs:skip` marker.
+The real corpus makes the intended migration feasible:
 
-These are readily repairable residues, but they still force an implementer to choose which instruction wins.
+- Package quickstart: 14 non-comment shell-command lines overall.
+- Docs quickstart: 8.
+- Package install-to-handoff span: 8 canonical executable commands plus the three-command worktree fence.
+- Docs install-to-handoff span: 8 executable commands after changing init to plain `npx gate init`.
+- The only untagged openings are the handoff cards at `packages/provegate/QUICKSTART.md:108` and `apps/docs/content/docs/quickstart.mdx:101`.
 
-### 2. Negative fixtures — INPUTS PINNED, ACTIVE TEXT STILL FALSE
+Filtering the worktree fence therefore yields parity. The PRD merely needs to say that consistently.
 
-The omitted-tasks fixture is exact:
+Implementation Scope also assigns:
 
-> `no tasks file — independent-review ledger missing`
+> “the two handoff-card `text` retags”
 
-The Base SHA input is now correctly pinned to the literal `main`. Production rejects it because `validateReviewArtifact` accepts any parsed value of at least seven characters and returns:
+to `packages/provegate/QUICKSTART.md`, although only one block exists there; the other belongs to the docs file. The docs Scope row does not name its marker or retag. This can cause an implementing agent to omit the docs retag while believing scope is complete.
 
-> `missing \`> **Base SHA:** <git sha>\` metadata`
+### 2. Production reasons — EXACT FIXTURE PARAGRAPH CLOSED, ACTIVE TRANSCRIPT STILL FALSE
 
-That correct fixture conflicts with the retained active prototype transcript:
+The negative-fixture paragraph now quotes the two requested visible runner reasons correctly:
 
-> “the template's symbolic ref is refused; a real sha is required”
-
-The shipped placeholder, `[git merge-base or base tip]`, is long enough to pass. This false statement is outside the exempt dated Changelog.
-
-The close-from-main fixture remains truncated despite being labelled complete. The PRD requires:
-
-> `current branch is 'main' — run from the feature branch`
-
-Production returns:
+> `PRD-001: no tasks file — independent-review ledger missing`
 
 > `current branch is 'main' — run from the feature branch, not the base checkout`
 
-An implementer following the PRD can therefore write a substring assertion while believing it is pinned to the complete reason.
+Production confirms them:
 
-### 3. Git isolation — REMOTE ASSERTION STRONG, NEUTRALIZATION INCOMPLETE
+- `chain.ts:523` supplies `no tasks file — independent-review ledger missing`, while `cards.ts:21` prefixes `PRD-001:`.
+- `merge.ts:177` supplies the complete main-branch reason, including `, not the base checkout`.
 
-The three declared settings correctly disable global and system configuration:
+The Base SHA fixture is also valid when it plants literal `main`: `review.ts:57` rejects values shorter than seven characters.
 
-```text
-GIT_CONFIG_GLOBAL=/dev/null
-GIT_CONFIG_SYSTEM=/dev/null
-GIT_CONFIG_NOSYSTEM=1
-```
+But the active measured transcript immediately above the fixtures still says:
 
-They do not neutralize environment-injected configuration. A read-only probe using all three required settings plus:
+> “no tasks file — independent-review ledger missing”
 
-```text
-GIT_CONFIG_COUNT=1
-GIT_CONFIG_KEY_0=remote.provegate-injected.url
-GIT_CONFIG_VALUE_0=https://invalid.example
-```
+> “the template's symbolic ref is refused; a real sha is required”
 
-still made `git remote` report `provegate-injected`.
+> “current branch is 'main' — run from the feature branch”
 
-The before/after assertions prevent an unnoticed remote, but the test remains dependent on its parent environment rather than hermetic. Child environments must remove `GIT_CONFIG_COUNT`, indexed `GIT_CONFIG_KEY_*`/`GIT_CONFIG_VALUE_*`, and `GIT_CONFIG_PARAMETERS` before applying the three fixed settings.
+The first omits the visible `PRD-001:` prefix, the third truncates the required tail, and the middle statement is false. `validateReviewArtifact` checks only that Base SHA has at least seven characters; a direct read-only call confirmed that the shipped `[git merge-base or base tip]` placeholder passes with no issues.
 
-The post-setup write scope is improved, but “nothing outside the scratch root” also needs the active contract to remap temporary/cache roots or state the concrete observation mechanism. Remapping HOME alone does not establish that all child temporary writes stay inside the scratch root.
+These are active technical assertions, not exempt dated history. An implementer still receives two incompatible fixture specifications.
 
-### 4. Cleanup failure plant — CLOSED
+### 3. Child environment and write boundary — CLOSED
 
-The acceptance criterion now specifies:
+The PRD now requires deletion of:
 
-> “a NON-EMPTY subdirectory (one file inside) chmod 555”
+> “`GIT_CONFIG_COUNT`, every indexed `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n`, and `GIT_CONFIG_PARAMETERS`”
 
-It asserts the initial POSIX unlink failure, restores permissions, retries in `finally`, verifies deletion, and identifies Ubuntu/POSIX as the suite’s CI scope. This is executable without further design work.
+before pinning global and system Git configuration to `/dev/null`. This closes the inherited command-scope configuration channel found in iteration 5.
 
-### 5. Docs parity migration — CONTENT DECISION CLOSED, SKIP SEMANTICS NEED CONSOLIDATION
+The write claim is tied to the scratch repository and remapped HOME/XDG/npm/TMP roots, with setup-time package build and packing explicitly outside the post-setup observation. The §6 shorthand “nothing outside the temp dir” is readable through this more precise FR-2 definition and does not require a new implementation decision.
 
-The current docs page has:
+### 4. Rollback — CLOSED
 
-```text
-npx gate init --practices
-```
+The rollback now names one coordinated unit containing:
 
-followed immediately by prose calling `--practices` the recommended install. FR-3 now authorizes both necessary edits:
+- package markers and retags;
+- docs markers and relocated `--practices` recommendation;
+- e2e harness;
+- parity verifier;
+- root registration and `verify:workflow` membership;
+- class-ledger row;
+- ADR amendment;
+- learning and INDEX pointer.
 
-- canonical init becomes plain `npx gate init`;
-- the recommendation moves to a named optional section outside the canonical region.
+It also states the failure prevented by atomicity: no registered verifier without its script, marker grammar without its harness, or ADR row without its verifier.
 
-That is feasible and preserves the recommendation without contradicting the executable sequence.
+### 5. Memory-input challenge — ADEQUATE, ONE REWORK SIGNAL MISSED
 
-The remaining issue is shared with FR-1: the parity verifier must explicitly compare executable, non-skipped commands. Otherwise the package-side worktree fence inside the region conflicts with the promise that package-only optional material remains unmeasured.
+The operationally relevant inputs are applied credibly: direct test execution justifies sentinel removal; the root verifier respects Turbo boundaries; wiring and classification follow ADR-0004; the mutation changes the document rather than the harness; and the built CLI preserves production call shape.
 
-### 6. Rollback — PRIOR FINDING NOT CLOSED
+The founding use of `docs-outlive-the-gate-they-promise` is broader than that record’s specific future-tense defect, but it does not misdirect implementation.
 
-The active rollback remains:
-
-> “Test-only surface plus possible fence tags; plain revert.”
-
-The scope is no longer test-only and no longer merely possible fence tags. It includes public docs content, package markers, the parity verifier, root registration, workflow-bundle wiring, the class ledger, an ADR amendment, and a new learning/index pointer.
-
-A plain revert may be the mechanism, but the coordinated rollback unit must name those surfaces so partial rollback cannot leave a registered missing verifier or divergent canonical regions.
+The omitted record most descriptive of the current failure is `a-rule-corrected-survives-where-it-is-restated`: after five reworks, the owning rule was fixed while old versions survived in FR-1, Success Metrics, §6, and the measured transcript. Adding it is optional; performing its consistency sweep is not.
 
 ---
 
@@ -155,29 +129,27 @@ A plain revert may be the mechanism, but the coordinated rollback unit must name
 
 | # | Dimension | Weight | Score | Weighted | Notes |
 | --- | --- | ---: | ---: | ---: | --- |
-| 1 | Clarity | 15% | 7.0/10 | 1.05 | The owning geometry decision is understandable, but later text places worktree outside the same region, calls normal `sh` fences unmarked failures, and truncates a supposedly complete stop reason. |
-| 2 | Completeness | 20% | 7.8/10 | Cleanup and docs-content migration are closed. Environment-injected Git config, parity treatment of skipped fences, exact fixture text, and rollback remain incomplete. |
-| 3 | Technical Depth | 20% | 8.2/10 | Strong prototype, real CLI path, offline tarball install, mutation proof, negative fixtures, cleanup recovery, and direct parity wiring. Git’s environment-config channel was still missed. |
-| 4 | Multi-Tenancy & Security | 10% | 8.0/10 | No tenant/auth/secret/runtime-dependency/push surface. Remote assertions fail safely, but the claimed hermetic neutralization does not remove inherited command-scope Git config. |
-| 5 | Scope & Testability | 15% | 8.0/10 | The main scenarios are runnable and observable. Conflicting region placement and an unspecified outside-write observation weaken deterministic implementation. |
-| 6 | Migration & Rollback | 20% | 6.8/10 | The public `--practices` migration is now explicit and feasible, but rollback still misclassifies the change as test-only and omits the coordinated wiring/content set. |
-| **Total** | **Weighted** | **100%** |  | **7.61/10** | **ITERATE** |
+| 1 | Clarity | 15% | 6.8/10 | 1.02 | The intended rules are discoverable, but active text still gives mutually exclusive worktree placement, execution coverage, and production assertions. |
+| 2 | Completeness | 20% | 7.8/10 | Git isolation and rollback are closed. Region restatements, transcript assertions, and docs retag scope remain incomplete. |
+| 3 | Technical Depth | 20% | 8.4/10 | Strong prototype, offline tarball execution, production-shaped CLI calls, mutation proof, cleanup recovery, Git-config scrubbing, and direct parity wiring. |
+| 4 | Multi-Tenancy & Security | 10% | 8.5/10 | No tenant/auth/secret/network/push surface; remotes and inherited Git configuration are now fail-closed. |
+| 5 | Scope & Testability | 15% | 7.5/10 | The scenarios are runnable, but test authors must choose whether skipped regional commands count, and Scope misassigns the docs handoff retag. |
+| 6 | Migration & Rollback | 20% | 8.2/10 | The docs migration is corpus-feasible and rollback is atomic; the remaining deduction is the inaccurate per-file retag scope. |
+| **Total** | **Weighted** | **100%** |  | **7.88/10** | **ITERATE** |
 
-Hard caps checked: none tripped. No runtime dependency, remote-push path, protected security surface, client/server contract, or untraceable method content is introduced. The lint cap is waived only for the reproduced sandbox `EPERM`; the read-only production lint passed.
+No hard cap fires. The PRD adds no runtime dependency, protected route, client/server contract, remote-push path, or untraceable method content. The lint cap is waived only for the reproduced sandbox `EPERM`, with both a green read-only lint and the stated out-of-sandbox run.
 
-The formal Clarity ≤7 structural trigger does not independently fire: every FR has Targets, §11 maps every FR to runnable commands, DO NOT exists, and Open Questions is empty. Clarity is nevertheless 7.0 because the active requirements still encode mutually exclusive implementations.
+The mechanical Clarity ceiling does not independently fire: every FR has Targets, every FR maps to a runnable §11 command, DO NOT exists, Open Questions is empty, and no undecided token remains. The substantive Clarity score is nevertheless below 7 because active requirements still encode incompatible implementations.
 
 ---
 
 ## Missing Pieces
 
-1. Make the region rule single-valued everywhere: worktree remains inside the region under `qs:skip`; practices stays outside. State that both the harness and parity verifier exclude skipped fences, define malformed/dangling `qs:skip` behavior, remove the “unmarked-`sh`” failure wording, and update Implementation Scope to include markers.
+1. Perform one full region-rule consistency sweep. Replace the retained “worktree, practices … OUTSIDE” sentence; qualify Success Metrics and §6 as every executable, non-skipped command; assign each handoff retag and both region markers to the correct document in Implementation Scope.
 
-2. Quote both remaining production reasons exactly and remove the false active symbolic-ref statement. The main-branch reason must include “`, not the base checkout`”.
+2. Correct the active measured transcript—not only the later fixture paragraph. Include the `PRD-001:` prefix and `, not the base checkout` tail, and remove the false claim that the shipped symbolic placeholder is generally refused.
 
-3. Scrub environment-injected Git configuration before spawning children—at minimum `GIT_CONFIG_COUNT`, all indexed key/value variables, and `GIT_CONFIG_PARAMETERS`—then apply the global/system pins. Either remap all child temp/cache roots into scratch or narrow the external-write claim to something the test concretely observes.
-
-4. Replace the test-only rollback sentence with the coordinated atomic set: package/docs markers and docs recommendation, e2e harness, parity verifier, root script and workflow registration, class ledger, ADR amendment, learning, and index pointer.
+3. Re-run the active-text sweep across Introduction, Goals, FRs, §6, Technical Considerations, Implementation Scope, §11, and DO NOT after those edits. Dated Changelog rows remain exempt.
 
 ---
 
@@ -189,20 +161,20 @@ The formal Clarity ≤7 structural trigger does not independently fire: every FR
 | 2 | 2026-07-28 | 6.10 | ITERATE | Confirmed the measured baseline and closed FR-4 governance plus sentinel-memory coverage. Found that the revised state model omitted mandatory close transitions, FR-3’s §11 row violated its root boundary, and install/output-tag/external-write claims remained contradictory. |
 | 3 | 2026-07-28 | 5.62 | ITERATE | Confirmed the direct FR-3/FR-4 route and exact sentinel. Found that the claimed [D]/[H] table was absent and contradicted printed order, `gate status` and readiness were omitted, two output fences were untagged, `gate new` intentionally succeeded before `gate init`, and a read-only file did not deterministically fail cleanup. |
 | 4 | 2026-07-28 | 7.48 | ITERATE | The real prototype closed command order, raw-template claim, minimal lint, no-readiness, zero-acceptance, offline install, mutation, and single-pass close questions. Remaining findings covered region geometry, fence census, exact negative fixtures, Git config, cleanup, docs migration, and rollback. |
-| 5 | 2026-07-28 | 7.61 | ITERATE | Confirmed the corrected handoff-fence census, literal-`main` Base SHA input, complete POSIX cleanup plant, and feasible plain-init docs migration. Corpus and production verification found that worktree is still placed both inside and outside the region, the symbolic-ref claim and truncated main reason survive, the three Git settings do not clear `GIT_CONFIG_COUNT`, and rollback remains test-only. |
+| 5 | 2026-07-28 | 7.61 | ITERATE | Confirmed the corrected handoff-fence census, literal-`main` Base SHA input, complete POSIX cleanup plant, and feasible plain-init docs migration. Corpus and production verification found that worktree was still placed both inside and outside the region, the symbolic-ref claim and truncated main reason survived, the three Git settings did not clear `GIT_CONFIG_COUNT`, and rollback remained test-only. |
+| 6 | 2026-07-29 | 7.88 | ITERATE | Confirmed that environment-injected Git configuration is now scrubbed and rollback is a coordinated atomic set. Corpus and source checks found the region contradiction still active, every-command claims incompatible with `qs:skip`, the measured transcript still carrying both truncated reasons and the false symbolic-ref statement, and the two handoff retags assigned to the wrong per-file Scope row. Read-only lint passed under the documented `EPERM` waiver. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.61/10.** The prototype and the cleanup/docs decisions make the eventual implementation credible, but the current PRD still gives an agent contradictory extraction instructions and incorrect production assertions. These are precision repairs, not another redesign; nevertheless, they directly determine parser behavior, fixture strength, and hermetic execution, so the item remains below the executable-without-ambiguity threshold.
+**ITERATE — 7.88/10.** Two substantial iteration-5 gaps are genuinely closed, and the intended implementation is technically credible. The remaining defects are localized prose repairs, but they are not harmless watch items: they tell the harness author which commands execute, tell the verifier author what parity means, and tell the test author which production text to assert. Until those active contradictions are removed, the PRD is not executable without ambiguity.
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 5 transcribed
-> verbatim from a fresh independent Codex session; 7.48 → 7.61, four mechanical pieces
-> (single-valued region rule, the two production reasons quoted EXACTLY — the author had
-> truncated the base-checkout tail, env-injected git-config scrub, the coordinated
-> atomic rollback set), applied the same day. Lint EPERM is the documented sandbox
+> **Transcription note (orchestrating session, 2026-07-29).** Iteration 6 transcribed
+> verbatim from a fresh independent Codex session (the first launch of this round died
+> on an auth-expiry stream disconnect and was relaunched after the owner's /login;
+> no partial output was used). 7.61 → 7.88. Lint EPERM is the documented sandbox
 > artifact; out-of-sandbox green the same day.
