@@ -1,5 +1,118 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
+> **Iteration 6 (Codex, independent, 2026-07-29) — 7.90/10, ITERATE; one P2 finding
+> stands between this document and the PASS band.** Three of iteration-5's four
+> remedies CLOSED (the CHECKS filename literal in both FR-9 sites + the §6 meta-gate
+> criterion; the four restatements; the conflict-override disposition); the P1
+> sequencing rule is PARTIAL: FR-9 and Memory Inputs carry the correct whole-PRD rule,
+> but FR-7's Targets note and the Conflict Surface still say "serializes on this one
+> file" — and the live `candidateConflicts` probe returns FOUR shared paths (ADR-0004,
+> `prompts.test.ts`, `script-classes.json`, `verify-workflow.mjs`), so the phrase is
+> both a restatement survivor and factually false. Required correction: the total rule
+> in both sites, plus explicit whole-PRD-hold language in §7 Prerequisites, §8's FR-9
+> bullet and DO NOT. The full sweep table: 12 of 13 rule families CLEAN (CHECKS
+> literal, one-shot scoping, FR-4 ownership, authored-list, bundle membership, FR-8
+> authority everywhere, 034 classification, rollback unit, Open Questions, no TBD,
+> Targets intent — the scorer explicitly accepted the "none in code"
+> verified-transition form — and verification mapping). All probes green; the
+> ten-value render exact; Value 3.50 credible a third consecutive round, the exported
+> value scorer returning `problem: null`; all six hard caps clear; the two §11 cap
+> lines confirmed appropriate. 036's lease still live (Phase 2b lock, expiry
+> 2026-07-29T23:22:21Z). Orchestration disclosure: the orchestrating session verified
+> the two "one file" sites and the four-path probe result and authored no verdicts.
+
+---
+
+## Superseded headline — iteration 5
+
+> **Iteration 5 (Codex, independent, 2026-07-29) — 7.75/10, ITERATE; band 6–7.9,
+> climbing again (6.95 → 7.75).** FR-9's wiring/classification topology is
+> **mechanically sound against production logic** — the scorer projected it through
+> the real `auditWiring` and `verify-script-classes` and supplied the exact landing
+> shapes: CHECKS takes the FILENAME literal `'verify-review-quorum-authority.mjs'`
+> (not the package alias), `wiringExceptions` maps script name → non-empty
+> justification (`manifest.ts:247-258`), both scripts are repo-class by ADR-0004's
+> what-it-READS rule, and the stale-exception direction matches (`wiring.ts:633-643`).
+> **One P1: FR-9's "land (b) freely, hold (a)/(c)" partial start is impossible** —
+> production `candidateFromPrd`/`gate open` evaluate the WHOLE declared Conflict
+> Surface and the live probe found four PRD-036 overlaps (the three FR-9 files +
+> `prompts.test.ts`), so the entire PRD serializes behind 036's lease release, full
+> stop; `conflict-check-independent-of-override` must be dispositioned. Two P2s: four
+> fresh stale restatements (the "one-shot" verifier now standing; FR-4's "no wiring
+> file is touched"; §7's authored list omitting the probe + FR-9 rows; DO NOT's
+> "bundle is PRD-034's as shipped") — the sweep discipline held on the six mandated
+> sites but not on the edit's own new text; and FR-9 should name the exact CHECKS
+> literal + a §6 criterion so Phase 4 does not discover the filename by failure. All
+> baseline probes green; the ten-value render green again; **Value 3.50 still
+> credible**; caps clear; the production memory-overlap probe (54 records) found no
+> undispositioned watch. Orchestration disclosure: the orchestrating session verified
+> the four restatement sites and the CHECKS-filename form against source and authored
+> no verdicts.
+
+---
+
+## Superseded headline — iteration 4
+
+> **Iteration 4 (Codex, independent, 2026-07-29) — 6.95/10, ITERATE; band 6–7.9. The
+> score went DOWN (7.33 → 6.95) because the iteration-3 remedy created the next
+> defect — the chain's recurring shape, this time authored by the orchestrating
+> session.** The FR-8 topology fix is right as far as it goes (both copies, ledger,
+> snapshot trace verified — the snapshot REQUIRES Quorum,
+> `source-snapshot/templates/review-template.md:13`), and **Value 3.50 is now judged
+> CREDIBLE**. But the "deliberately NOT a CHECKS member" design for the two new
+> `verify:*` scripts cannot pass the repository's own meta-gates: `auditWiring`
+> requires every `verify:*` package script wired to an executing surface
+> (`wiring.ts:8-14,633-642`), `verify:script-classes` requires every on-disk
+> `verify-*.mjs` in the class ledger with a bidirectional ADR-0004 row
+> (`verify-script-classes.mjs:88-143`), and §11 prose is not a surface `auditWiring`
+> reads. Worse, the paths that fix it — `verify-workflow.mjs`, `script-classes.json`,
+> ADR-0004 — are ALL inside PRD-036's live Phase-4 lease
+> (`_state/locks/prd-036…json:19-27`), so the integration work must serialize behind
+> 036. The `verify:pack-drift`-suffices fallback was refuted: it proves the copies
+> AGREE, and both can regress to optional together while it stays green. Plus: the
+> FR-8 sweep missed SIX restatements (§1, §2 metric, §5 non-goals, §6 AC, §7
+> backcompat, the "creates no check and moves no wiring" identity line) — the eighth
+> instance of `a-rule-corrected-survives-where-it-is-restated` — and one live-red
+> narration survived in DO NOT. Hard caps all clear; the ten-value render green again;
+> the direct lint green. Orchestration disclosure: the orchestrating session verified
+> the load-bearing citations (the wiring auditor's verify-script rule, the class-ledger
+> bidirectional check, 036's lease inventory, the snapshot Quorum line, the six
+> restatement sites) and authored no verdicts.
+
+---
+
+## Superseded headline — iteration 3
+
+> **Iteration 3 (Codex, independent, 2026-07-29) — 7.33/10, ITERATE; band 6–7.9:
+> "Good start — iterate on identified gaps, re-score after improvements." No return to
+> Phase 1.** The same-day rework closed six of iteration-2's nine findings outright:
+> the ten owner values RENDER (the scorer ran the full in-memory render with FR-1's
+> exact table — ten keys, order-matched to the initializer, no `PromptsError`, 21 store
+> files / 30 generated paths), the Migration & Rollback section holds against T6/T7,
+> the mutation-probe spec is runnable and correctly bannered, the Conflict Surface
+> narrowing is verified by the production glob matcher, and FR-7's defect + banner
+> coherence both reproduce (`BANNER_VERSION_RE` searches anywhere; the fix is sound).
+> **One P1 remains, and it is FR-8's delivery topology:** the root
+> `_docs/review-artifact.template.md` is INSTALLED from the packed source
+> `packages/provegate/practices/templates/review-artifact.template.md`
+> (`init.ts:146-159` PACK_MAP; ledger pair `pack-drift-ledger.json:64-67`), which still
+> says Quorum optional — editing only the root copy drifts the twin or gets reverted by
+> a fresh install, and the marker-only grep is
+> `evidence-pattern-satisfied-by-the-template`'s exact failure shape. Three P2s: two
+> world-moved-under-it statements (036 took its Phase-3 Go mid-audit; the doc-claims
+> red went GREEN via external `5a2a64a` mid-audit), three memory-disposition
+> misapplications (the sentinel rationale is disproven by an executed probe —
+> `PROVEGATE_RUN_ACTIVE=1 check --prompts` exits 0), and rollback omitting the probe
+> script's own removal. Value 3.50 arithmetic exact but supportable only at 3.25 until
+> FR-8 covers the packed source — then 3.50 becomes credible. Orchestration disclosure:
+> the orchestrating session verified the load-bearing citations (PACK_MAP, the packed
+> template's optional line, the ledger pair, tasks-036 status, the green aggregate) and
+> authored no verdicts; Codex is the scorer and did not write the PRD.
+
+---
+
+## Superseded headline — iteration 2
+
 > **Iteration 2 (Codex, independent, 2026-07-29) — 5.20/10, ITERATE; still band 4–5.9:
 > "Major rework needed. Return to Phase 1" (`score-band-prescribes-the-action`).**
 > Scored the day PRD-034 went Ship Verified, exactly as iteration 1 prescribed — the
@@ -31,15 +144,15 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 5.20/10                                        |
-| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The PRD-034 chain and all wiring claims now hold on main; what remains is specification debt: 8 of the 10 required values undecided, no migration/rollback section in the class that weights it 20%, a mutation promised four times and executed zero, a `turbo.json` claim colliding with live PRD-036, and a prescribed verification baseline that is red today |
-| Iteration              | 2                                              |
+| Score                  | 7.90/10                                        |
+| Verdict                | ITERATE — one P2 stands: the whole-PRD serialization rule landed in FR-9 and Memory Inputs but two sites (FR-7 Targets, Conflict Surface) still say "serializes on this one file" — a restatement survivor that is also factually false, since the live probe returns four shared paths with PRD-036. Everything else closed: 12 of 13 sweep families clean, all probes green, Value 3.50 credible a third round, six hard caps clear, the "none in code" Targets form explicitly accepted for verified-transition FRs |
+| Iteration              | 6                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-29                                     |
-| PRD Lint               | passed — Codex's `gate check PRD-032` exited 1 only on a sandbox `EPERM` writing the state tmp file, before lint; its direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}`; the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
+| Date                   | 2026-07-29 (iteration 6; iterations 1–5 same file, below) |
+| PRD Lint               | passed — Codex's direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}` (the CLI's state write EPERMs in its read-only sandbox, known); the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -57,6 +170,152 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 5 (Codex, independent, 2026-07-29, HEAD `adbc917`)
+
+**Iteration-4 closure: live-red CLOSED; P1 and both other P2s PARTIAL** (topology right,
+sequencing wrong; six mandated sites swept, four fresh survivors; dispositions accurate,
+one new record invoked). **Scorecard (infra):** Clarity 7.0 ×15% = 1.050 · Completeness
+8.0 ×20% = 1.600 · Tech Depth 8.0 ×20% = 1.600 · MT&S 9.0 ×10% = 0.900 · Scope &
+Testability 8.0 ×15% = 1.200 · Migration & Rollback 7.0 ×20% = 1.400 → **7.75/10**.
+Hard caps: all clear. **Value 3.50: exact and still credible** (FR-9 adds integration
+rows, no new value claim).
+
+**FR-9 production projection — the topology PASSES both meta-gates when landed as:**
+CHECKS gains the filename literal `'verify-review-quorum-authority.mjs'` (the bundle
+spawns filenames from `scripts/verify/`, `verify-workflow.mjs:15-27,65-68`; appending
+the alias string would neither execute nor satisfy `auditWiring`);
+`gates.manifest.json` gains `"wiringExceptions": {"verify:prompts-mutation": "<non-empty
+justification>"}` (`manifest.ts:247-258`); `script-classes.json` gains repo-class rows
+for both scripts with matching ADR-0004 two-column rows (repo-class holds by the ADR's
+what-it-READS rule — the probe reads the dogfood tree, the verifier reads two repo
+templates; "neither ships" is not the test but the conclusion stands). Stale-exception
+direction confirmed: wired+excepted fails, missing+excepted fails
+(`wiring.ts:633-643`). The standing member is safe in the bundle — it only reads; the
+tree-mutating probe stays outside.
+
+**[P1] 1 — the partial-start instruction is impossible.** FR-9's "lands (b) freely and
+holds (a)/(c)" contradicts production: `candidateFromPrd` reads the ENTIRE declared
+Conflict Surface and `gate open` refuses on any overlap with an active execution-phase
+lease (`conflicts.ts:207-248`, `open.ts:381-420`). Live probe: four PRD-032↔PRD-036
+overlaps (ADR-0004, `prompts.test.ts`, `script-classes.json`, `verify-workflow.mjs`);
+036's lease valid until `2026-07-29T23:22:21Z`. Remedy: one enforceable rule — no
+implementation begins while the overlapping lease is active; after 036 closes, `gate
+queue` then `gate open`, then everything lands as one gate-green sequence. Disposition
+`conflict-check-independent-of-override` as applied.
+
+**[P2] 2 — four fresh stale restatements** (the iteration-4 edit's own text): FR-8
+still says "one-shot verifier" right before making it standing (`:284-292`); FR-4 says
+"No wiring file is touched" while FR-9 appends to `verify-workflow.mjs` (`:227-233`);
+§7's authored list omits the FR-3 probe and FR-9 integration rows (`:393-399`); DO NOT
+still says the bundle is "PRD-034's as shipped" (`:779-781`). Remedy: fix all four,
+then a SEPARATE post-edit sweep pass — never claimed in the edit that performs it.
+
+**[P2] 3 — FR-9 must state the exact CHECKS literal and a §6 criterion.** The FR names
+the package alias; production CHECKS takes the filename. Phase 4 should not discover
+the literal by a red `check --wiring`. Remedy: name
+`'verify-review-quorum-authority.mjs'` in FR-9 and add a §6 Gherkin row covering the
+filename member, the still-unwired-but-excepted alias, both class pairs, no stale
+exception, and both meta-gates green.
+
+**Memory overlap:** production `memoryFind` over the four new targets searched 54
+active records — only the ADR formatter-hazard watch matched, already dispositioned.
+
+### Findings — iteration 4 (Codex, independent, 2026-07-29, HEAD `e445da0`)
+
+**Iteration-3 closure: rollback-pairing CLOSED; the P1 and the other two P2s PARTIAL.**
+**Scorecard (infra):** Clarity 7.0 ×15% = 1.050 · Completeness 6.5 ×20% = 1.300 · Tech
+Depth 7.0 ×20% = 1.400 · MT&S 9.0 ×10% = 0.900 · Scope & Testability 6.0 ×15% = 0.900 ·
+Migration & Rollback 7.0 ×20% = 1.400 → **6.95/10**. Hard caps: all clear (snapshot
+doctrine confirmed: `source-snapshot/templates/review-template.md:13` requires Quorum).
+**Value 3.50 (4/4/3/3/3): arithmetic exact, credibility CREDIBLE** — FR-8 at the packed
+source makes UI 4 supportable; a scope judgment, not an execution-readiness one.
+
+**[P1] 1 — the two new verify scripts cannot pass the standing meta-gates as
+specified.** `verify:prompts-mutation` and `verify:review-quorum` are kept out of
+`verify:workflow` by design, but `auditWiring` fails any `verify:*` package script that
+is wired nowhere (manifest, CI, hooks, bundle, or another script body) and carries no
+shrink-only `wiringExceptions` entry (`wiring.ts:8-14,633-642`); §11 prose is not a
+surface it reads. `verify:script-classes` fails any on-disk `verify-*.mjs` missing from
+the class ledger, bidirectionally bound to ADR-0004
+(`verify-script-classes.mjs:88-143`). PRD-032's own §11 requires `check --wiring` and
+`verify:workflow` green — as written it reddens both. The pack-drift fallback is
+refuted: it proves the two template copies AGREE; both can regress to optional together
+while it stays green. And the fix paths — `verify-workflow.mjs` (CHECKS),
+`script-classes.json`, ADR-0004 — are all inside PRD-036's live lease
+(`_state/locks/prd-036…json:19-27`). Remedy: make `verify:review-quorum` a standing
+CHECKS member; give the one-shot mutation probe a justified shrink-only
+`wiringExceptions` entry (gates.manifest.json — NOT 036-owned) or a manifest surface;
+add ledger + ADR-0004 rows for both scripts; declare all of it in Targets / Scope /
+Conflict Surface / rollback / Memory Inputs; serialize the 036-owned paths behind 036.
+
+**[P2] 2 — six FR-8 restatements survived the remedy** (eighth instance of
+`a-rule-corrected-survives-where-it-is-restated`): §1 `:59-61` (root-only framing), the
+identity line `:68-69` ("creates no check and moves no wiring" — now false), §2 metric
+`:93` (marker-only measurement), §5 `:309-312` ("repository-local document, not a
+shipped one" — the packed template IS shipped), §6 AC `:343-345` (root + marker only),
+§7 backcompat `:433-437` ("nothing ships except FR-7"). Remedy: sweep all six; state
+FR-8 as a bounded, snapshot-traced method-content change to a shipped template.
+
+**[P2] 3 — one live-red narration survived** in DO NOT (`:719-722`, "the red doc-claims
+figure is not this PRD's to fix"). Remedy: historical phrasing.
+
+**[P2] 4 — memory selection lags the new topology.** `gate-wire-or-delete` still scoped
+to FR-4 only; `a-rule-corrected…` claims only the FR-5 application; FR-8 relies on
+`false-green-on-missing-file` with no disposition; ADR-0004 becomes an input once the
+class rows are admitted. Remedy: refresh after the P1 fix.
+
+### Findings — iteration 3 (Codex, independent, 2026-07-29, HEAD `555a9df`→`06efc01` mid-audit)
+
+**Iteration-2 closure: 1, 2, 3, 4, 5, 8 CLOSED; 6, 7, 9 PARTIAL.** Executed evidence
+highlights: the exact ten-value render succeeded (ten keys order-matched to
+`init --prompts`, 21 store files, 30 generated paths, zero unresolved tokens outside the
+deliberately verbatim `PLACEHOLDERS.md`); all seven generated Claude commands reproduce
+FR-7's banner-first defect; `BANNER_VERSION_RE` searches anywhere in the file, so the
+listing fix preserves attribution; the production glob matcher confirms
+`packages/provegate/test/**/*.ts` matches `prompts.test.ts` (036 contest real);
+`PROVEGATE_RUN_ACTIVE=1 node …cli.js check --prompts` exits 0 (sentinel does NOT block
+the FR-3 probe's spawn); `pnpm verify:pack-drift` exit 0 and the ledger pairs the two
+review-template copies; the doc-claims red resolved mid-audit via external `5a2a64a` —
+final `verify:doc-claims` and `verify:workflow` both PASS.
+
+**Scorecard (infra weights):** Clarity 7.0 ×15% = 1.050 · Completeness 7.0 ×20% = 1.400 ·
+Technical Depth 7.5 ×20% = 1.500 · MT&S 9.0 ×10% = 0.900 · Scope & Testability 6.5
+×15% = 0.975 · Migration & Rollback 7.5 ×20% = 1.500 → **7.325 → 7.33/10**. Hard caps:
+none trip.
+
+**[P1] 1 — FR-8 does not close the defect it claims to absorb.** The PRD calls FR-8 an
+adopter-facing closure but targets only `_docs/review-artifact.template.md`; the
+installer maps `packages/provegate/practices/templates/review-artifact.template.md` to
+that root path (`init.ts:146-159`), the packed source still says Quorum optional
+(`…practices/templates/review-artifact.template.md:25`), and the pair is governed by
+`scripts/verify/pack-drift-ledger.json:64-67`. The `grep quorum-is-required` §11 row is
+marker-only: it can pass while the optional sentence survives —
+`evidence-pattern-satisfied-by-the-template`'s exact shape. Remedy: add the packed
+source + ledger to FR-8/Scope/Conflict Surface; align BOTH copies to the gate's real
+behavior (`review.ts:48-65`); trace the shipped-content change to the snapshot's
+required-Quorum doctrine; add `pnpm verify:pack-drift`; replace marker-only evidence
+with a verifier that asserts required wording and rejects optional wording in both
+copies.
+
+**[P2] 2 — two current-state statements went stale mid-audit.** 036 is past its Phase-3
+Go (`tasks-036…md:5` "Tasks Generated"; Phase 4 claimed on the board `06efc01`); the
+doc-claims red went green via `5a2a64a`. Remedy: make the green-baseline rule
+conditional rather than a live-red narration; update the 036 contest wording.
+
+**[P2] 3 — three memory-disposition misapplications.** The sentinel record does not
+block `check --prompts` (probe: exit 0 under `PROVEGATE_RUN_ACTIVE=1`) — it binds the
+turbo-routed suite rows, not FR-3's placement; the strictness disposition says
+`core/run/**` is untouched while FR-7 targets `core/run/prompts.ts`; the
+evidence-pattern disposition considers only FR-1 while FR-8's marker grep is the
+record's failure shape. Remedy: correct all three rationales.
+
+**[P2] 4 — rollback omits FR-3's standing additions.** The probe script and its
+`package.json` alias (and FR-8's verifier, once added) need one removal sentence;
+generated-path deletion stays T6's human.
+
+**Value:** declared 3.50 exact; supportable 3.25 (4/3/3/3/3) until FR-8 covers the
+packed source — then 3.50 becomes credible. **Model tier:** do not assign (score < 8).
 
 ### Findings — iteration 2 (Codex, independent, 2026-07-29)
 
@@ -283,20 +542,22 @@ exit 0); method-content traceability — clear.
 | --- | ---------- | ----- | ------- | ----------- |
 | 1   | 2026-07-28 | 4.00  | ITERATE | First independent round. The document consumes a mechanism that shipped PRD-030 explicitly handed to Draft PRD-034; §11's first command is not a CLI surface and its mutation row proves nothing; the Conflict Surface misses its own FR targets while colliding with three live PRDs; an infra item carries no migration/rollback. The activation mechanics themselves verified correct by read-only probes. Band 4–5.9: Phase-1 rework, serialized behind PRD-034 — not another scoring round. Dimension scores: 4.0/4.0/4.0/8.0/4.0/2.0. |
 | 2   | 2026-07-29 | 5.20  | ITERATE | Scored the day PRD-034 went Ship Verified; every wiring claim re-verified by execution (both CLI flags, bundle member 10, CI order, full in-memory render: 10 required values, 21 store files, 30 generated paths). Finding A closed; C/D/H partial; B/E/F/G/I open. New against the final contract: the `unattributable` arm breaks the generic mutation claim; the required-value set grew to ten; `verify:doc-claims` red on main with no serialization named; PRD-036's live `turbo.json` claim still collided with. Seven stale restatements named for the sweep. Band 4–5.9 again — but the residue is owner decisions (ten values, rollback shape, value expand-or-cut), not moved dependencies. |
+| 3   | 2026-07-29 | 7.33  | ITERATE | Same-day rework re-scored: six of nine findings closed by execution-grade evidence — the owner's exact ten values RENDER, rollback holds against T6/T7, the mutation-probe spec is runnable and correctly bannered, the surface narrowing verified by the production glob matcher, FR-7's defect and banner coherence both reproduce. One P1: FR-8's delivery topology — the root template is PACK_MAP-installed from a packed source still saying Quorum optional, and the marker-only grep is the evidence-pattern trap. Three mechanical P2s (mid-audit staleness ×2 — 036 took Phase-3 Go and the doc-claims red went green under the audit; three disposition rationale fixes; one rollback sentence). Band 6–7.9: iterate and re-score, no Phase-1 return. Value 3.50 credible once FR-8 covers the packed source. |
+| 4   | 2026-07-29 | 6.95  | ITERATE | Score DOWN — the iteration-3 remedy created the next defect: the two new `verify:*` scripts are specified deliberately unwired, which `auditWiring` (wire-or-except every verify script) and `verify:script-classes` (ledger + ADR-0004 rows for every on-disk script) refuse; the PRD's own §11 would redden `check --wiring` and `verify:workflow`. Fix paths (`verify-workflow.mjs`, `script-classes.json`, ADR-0004) all inside PRD-036's live Phase-4 lease — declare and serialize. Pack-drift fallback refuted (copies can regress together). Six FR-8 restatements missed (eighth instance); one live-red DO NOT line. GAINED: Value 3.50 judged CREDIBLE; snapshot Quorum doctrine confirmed at the source; render/lint/caps all green. |
+| 5   | 2026-07-29 | 7.75  | ITERATE | Climbing again. FR-9's topology PASSES the production projection — exact landing shapes on record (CHECKS filename literal, wiringExceptions script-name→justification, repo-class by what-it-READS). One P1: the partial-start instruction is impossible — `gate open` reads the whole declared surface, live probe found four 036 overlaps, the entire PRD serializes behind 036's lease release (`conflict-check-independent-of-override` to disposition). Two P2s: four fresh restatements from the previous edit's own text (sweep held on mandated sites, not on new text — the remedy is a SEPARATE post-edit sweep pass), and the CHECKS literal + §6 criterion so Phase 4 does not learn the filename from a red gate. Value still credible; all probes green. |
+| 6   | 2026-07-29 | 7.90  | ITERATE | One P2 from the PASS band: the whole-PRD serialization rule landed in FR-9 + Memory Inputs but "serializes on this one file" survived in FR-7's Targets note and the Conflict Surface — the ninth restatement instance, and factually false (live probe: four shared paths). Everything else CLOSED: three of four iteration-5 remedies verified landed exactly; 12/13 sweep families clean; "none in code" Targets explicitly accepted for verified-transition FRs; §11 cap lines confirmed; Value 3.50 credible third round (`problem: null` from the exported scorer); all probes green. Correction ordered: the total rule in both sites plus explicit whole-PRD-hold language in §7 Prerequisites, §8's FR-9 bullet and DO NOT. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 5.20/10, iteration 2, scored independently by Codex.**
+**ITERATE — 7.90/10, iteration 6, scored independently by Codex.**
 
-The chain debt is paid: PRD-034 landed and every wiring claim PRD-032 makes now holds
-on main, verified by execution. What keeps this in the 4–5.9 band is specification
-debt that only the owner can settle — the ten exact values, the rollback contract, an
-honest Value header — plus mechanical fixes the rework can carry (the runnable
-bannered-path mutation, the narrowed Conflict Surface, the seven-restatement sweep,
-the four memory dispositions). The band's action is the instruction
-(`score-band-prescribes-the-action`): one more Phase-1 pass, then re-score. Trajectory
-4.00 → 5.20 with the blocking dependency gone; a third flat round in this band would
-trigger `state-model-before-mechanism`'s cut-or-restate rule, but the residue here is
-decisions, not design.
+Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75 → 7.90. One phrase separates this from the
+PASS band: "serializes on this one file", surviving in exactly two sites after the
+rule it contradicts landed correctly in FR-9 — the ninth restatement instance in this
+chain, and factually false against the four-path probe. The correction is two line
+edits plus three explicit reinforcements (§7, §8, DO NOT), then re-score. Nothing else
+remains: the sweep table is clean in 12 of 13 families, every probe is green, the
+value header held credible for a third consecutive independent round, and the scorer
+accepted the verified-transition Targets form on the record.

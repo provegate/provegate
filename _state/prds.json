@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T11:17:02.503Z",
+  "generatedAt": "2026-07-29T12:26:38.819Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1170,7 +1170,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 5.2,
+        "score": 7.9,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
@@ -1412,19 +1412,19 @@
       "prd": "PRD-039",
       "number": 39,
       "slug": "landscape-verification",
-      "status": "Draft",
+      "status": "Archived",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-039-landscape-verification.md",
-        "readiness": "_readiness/wip/readiness-039-landscape-verification.md",
+        "prd": "_prds/completed/prd-039-landscape-verification.md",
+        "readiness": "_readiness/completed/readiness-039-landscape-verification.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
+        "prd": "completed",
+        "readiness": "completed",
         "tasks": "missing",
         "summary": "missing"
       },
