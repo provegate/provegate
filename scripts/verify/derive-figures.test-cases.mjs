@@ -150,6 +150,11 @@ for (const mode of ['--print', '--write', '--check']) {
   ok(hasHeadingToken(clean) === true, 'the [#self-hosting-ledger] source token is asserted');
   ok(hasHeadingToken(clean.replace(' [#self-hosting-ledger]', '')) === false,
     'a missing heading token is detected');
+  const fencedOnly = clean
+    .replace("## Part two: the tool's own ledger [#self-hosting-ledger]", '## Part two renamed')
+    .replace('closing prose', "closing prose\n\n```md\n## Part two: the tool's own ledger [#self-hosting-ledger]\n```");
+  ok(hasHeadingToken(fencedOnly) === false,
+    'a token that exists only inside a fenced block is NOT a heading (review round 1 P2)');
 }
 
 rmSync(tmp, { recursive: true, force: true });

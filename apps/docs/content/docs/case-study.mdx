@@ -78,16 +78,17 @@ you can check: ProveGate develops itself through the same gated workflow it ship
 and the figures below are not typed into this page — they are derived from the
 repository's committed workflow state by
 `scripts/derive-self-hosting-figures.mjs`, embedded between generated-region
-markers, and byte-compared against a fresh derivation on every lint run. Clone the
-repository, run the script with `--print`, and watch the region reproduce. A
-drifted digit fails the build naming the differing line.
+markers, and byte-compared against a fresh derivation by the `verify:doc-claims`
+gate — a member of the repository's `verify:workflow` bundle and its CI step. Clone
+the repository, run the script with `--print`, and watch the region reproduce. A
+drifted digit fails that gate naming the differing line.
 
 What the ledger cannot count, we say in words instead of estimating: items here
 routinely took multiple independent readiness scorers and many failing rounds
 before passing; review rounds produced findings that forced reworks; closure runs
-were stopped by the gate chain and resumed; and at least twice, a remediation
-changelog claimed edits an independent scorer proved absent — caught precisely
-because the process double-checks its own claims. The ledger cuts both ways, or it
+were stopped by the gate chain and resumed; and remediation changelogs have
+claimed edits an independent scorer then proved absent — caught precisely because
+the process double-checks its own claims. The ledger cuts both ways, or it
 is not a ledger.
 
 {/* self-hosting-figures:start */}

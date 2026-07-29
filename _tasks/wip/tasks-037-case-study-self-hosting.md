@@ -167,6 +167,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-07-29 | 1.3 | mutation probe: folding unknown modes into eligible failed 2 named cases; reverted, PASS |
 | 2026-07-29 | 3.1 | drift probe: 32→33 by hand → doc-claims FAIL naming line 18; --write restored, PASS |
 | 2026-07-29 | 5.x | MDX build initially red on HTML-comment sentinels; switched to {/* */} form (see Deferrals); docs build 30/30 green after |
+| 2026-07-29 | 6.1 | review round 1 GATE: FAIL — 1 [P1] (the prose smuggled "at least twice" as a word-count, evading the digit predicate; de-counted) + 3 [P2] (fenced-token false-green in the heading guard — anchored to a real H2 line with a new harness case; "every lint run/fails the build" overstatement → workflow/CI-gate wording; the script comment's surviving "no stored number" overclaim → corrected). All fixed, all suites green |
 
 ## Blockers / Open Questions
 

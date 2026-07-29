@@ -11,8 +11,9 @@
 //               differing line
 // Sentinel validation is identical in the three flagged modes: a missing
 // sentinel, a duplicate of either, or an inverted order exits 1 naming the rule.
-// Figures recompute on every invocation — no stored number exists to go stale;
-// the committed region is a byte-checked PROJECTION of this output.
+// Figures recompute on every invocation; the committed region is a stored
+// PROJECTION of this output — it CAN drift, and the --check mode wired into
+// verify:doc-claims is what catches it.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -98,15 +99,28 @@ export function extractRegion(doc) {
   return { before: doc.slice(0, s), content: doc.slice(s, e), after: doc.slice(e) };
 }
 
-/** The heading source token, asserted against MDX source — never a build. */
+/** The heading source token, asserted against MDX source — never a build.
+ * Anchored to a REAL H2 line outside fenced code: an occurrence inside a fence
+ * is documentation of the token, not the heading. Returns the line-start index
+ * of the heading, or -1. */
+export function headingIndex(doc) {
+  let inFence = false;
+  let offset = 0;
+  for (const line of doc.split('\n')) {
+    if (/^\s*```/.test(line)) inFence = !inFence;
+    else if (!inFence && line === HEADING_TOKEN) return offset;
+    offset += line.length + 1;
+  }
+  return -1;
+}
 export function hasHeadingToken(doc) {
-  return doc.includes(HEADING_TOKEN);
+  return headingIndex(doc) >= 0;
 }
 
 /** FR-2's one no-digit predicate: within the `self-hosting-ledger` H2 span
  * (heading to next `## ` or EOF), any `[0-9]` OUTSIDE the sentinel pair fails. */
 export function spanDigitViolations(doc) {
-  const h = doc.indexOf(HEADING_TOKEN);
+  const h = headingIndex(doc);
   if (h < 0) return [];
   const afterHeading = h + HEADING_TOKEN.length;
   const next = doc.indexOf('\n## ', afterHeading);
