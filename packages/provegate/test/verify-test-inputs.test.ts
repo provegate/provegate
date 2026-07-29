@@ -376,6 +376,25 @@ describe('the round-4 review closure', () => {
   });
 });
 
+describe('the round-5 review closure', () => {
+  it('20 — a current-dir hop over the base stays a legal pure-dynamic read', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'ok.test.ts',
+      "import { readFile } from 'node:fs/promises';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const base = repoPath('.');\n" +
+        "const rel = 'anything';\n" +
+        'const p = readFile(`${base}/./${rel}`, \'utf8\');\n' +
+        'void p;\n',
+    );
+    const { status, output } = run(root);
+    expect(output).toContain('PASS');
+    expect(status).toBe(0);
+  });
+});
+
 describe('the documented limit — concatenation is outside the syntactic net', () => {
   it("a runtime-assembled traversal ('..' + '/' + '..') is NOT flagged", () => {
     const root = makeRoot();
