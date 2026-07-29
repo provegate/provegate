@@ -1,6 +1,6 @@
 # PRD-036: Frozen-Snapshot Digest — the Cache Key Must See Everything the Tests Read
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-28
 > **Updated**: 2026-07-29

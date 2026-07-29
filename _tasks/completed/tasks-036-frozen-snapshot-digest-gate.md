@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-036-frozen-snapshot-digest-gate.md](../../_prds/wip/prd-036-frozen-snapshot-digest-gate.md)
 > **Readiness**: [readiness-036-frozen-snapshot-digest-gate.md](../../_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.18/10 (iteration 8, PASS — eight independent Codex rounds; TL settled at iteration 4; measure-first pivot at iteration 3)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -200,20 +200,20 @@ pnpm verify:workflow && pnpm test` at each of the three documented steps).
         the ADR received only the table-row append.
   - [x] 8.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-036-frozen-snapshot-digest-gate.md`.
-- [ ] 9.0 Phase 7 — Learning and close (eligible)
-  - [ ] 9.1 Memory Outputs: reasoned `none` (declared in the PRD) — if
+- [x] 9.0 Phase 7 — Learning and close (eligible)
+  - [x] 9.1 Memory Outputs: reasoned `none` (declared in the PRD) — if
         implementation surfaced a non-derivable fact (e.g. an undocumented Turbo
         hashing behavior), append it to the PRD with rationale FIRST, then write
         the learning + INDEX hook.
-  - [ ] 9.2 `pnpm check:durable-artifacts` — the review artifact in the merge diff.
-  - [ ] 9.3 `node packages/provegate/dist/cli.js run PRD-036` — from the PRIMARY
+  - [x] 9.2 `pnpm check:durable-artifacts` — the review artifact in the merge diff.
+  - [x] 9.3 `node packages/provegate/dist/cli.js run PRD-036` — from the PRIMARY
         checkout (the PRD-031 close trap: a worktree-run merge cannot land while
         main is checked out there); disposition the close-time watch fires
         PREEMPTIVELY (records watching the PRD file and `_state/prds.json` fire on
         any closing diff); on a stop after "archived":
         `gate-run-resume-after-archive`. NO acceptance needed (eligible, zero
         operator rows). Push stays the owner's.
-  - [ ] 9.4 Release the lease, drop the board row, remove the worktree.
+  - [x] 9.4 Release the lease, drop the board row, remove the worktree.
 
 ---
 
@@ -231,7 +231,7 @@ pnpm verify:workflow && pnpm test` at each of the three documented steps).
 | atomicity             | rollback prova                                                            | repo     | passed  | HEAD~1: zero set members, gates green           | three-step reverse order, each step verified                                                       |
 | types/lint/test/build | the floor                                                                 | monorepo | passed  | 5/5 4/4 7/7 4/4; workflow PASS; FULL TURBO warm | plus `pnpm verify:workflow` with the new bundle member                                             |
 | independent-review    | `_docs/reviews/review-036-frozen-snapshot-digest-gate.md` — `Critical: 0` | review   | passed | 6 rounds, C:1→1→3→1→1→0; quorum 1/1; Base SHA 5a2a64a; artifact committed | W5 sweep briefed                                                                                   |
-| durable               | `pnpm check:durable-artifacts`                                            | repo     | pending |                                                 | review artifact in the merge diff                                                                  |
+| durable               | `pnpm check:durable-artifacts`                                            | repo     | passed | gate chain: all declared paths in the merge diff | review artifact in the merge diff                                                                  |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

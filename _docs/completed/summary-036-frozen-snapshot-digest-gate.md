@@ -1,8 +1,8 @@
 # Summary: PRD-036 — Frozen-Snapshot Digest Gate
 
 > **PRD**: [prd-036-frozen-snapshot-digest-gate.md](../../_prds/wip/prd-036-frozen-snapshot-digest-gate.md)
-> **Status**: Code Complete — review passed, close pending
-> **Ship Readiness**: Review Complete
+> **Status**: Ship Verified
+> **Ship Readiness**: Ship Verified
 > **Date**: 2026-07-29
 
 ## What shipped
