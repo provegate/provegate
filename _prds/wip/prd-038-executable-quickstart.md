@@ -372,6 +372,11 @@ standing.
   half of the record binds here: the ADR edit must not be swept by `pnpm format`
   (frontmatter reflow hazard), so the amendment is hand-placed in the existing
   section shape and `verify:brain` holds it.
+- applied: `quickstart-is-a-fixture` — this PRD's own Memory Output: its watch
+  covers the two quickstart documents and fires on the very diff that creates it.
+  The record IS the pattern this PRD implements; the disposition exists because
+  the gate rightly refuses an undeclared watch overlap even for a record born in
+  the closing diff.
 - reviewed: `two-parsers-wrong-together` — two independently-edited quickstart
   sequences are two implementations of one promise; FR-3 exists to keep it one.
 - reviewed: `fixture-must-reach-production-shape` — the harness invokes the BUILT CLI
