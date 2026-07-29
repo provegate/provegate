@@ -195,12 +195,12 @@
         integration set's bidirectional consistency.
   - [x] 9.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-032-prompt-store-dogfood.md`.
-- [ ] 10.0 Phase 7 — operator-gated close
-  - [ ] 10.1 Memory Outputs: reasoned `none` stands unless implementation surfaced
+- [x] 10.0 Phase 7 — operator-gated close
+  - [x] 10.1 Memory Outputs: reasoned `none` stands unless implementation surfaced
         a non-derivable fact (append with rationale first if so).
-  - [ ] 10.2 `pnpm check:durable-artifacts` — the review artifact in the merge
+  - [x] 10.2 `pnpm check:durable-artifacts` — the review artifact in the merge
         diff.
-  - [ ] 10.3 **OPERATOR:** owner-signed acceptance in `_state/acceptances.json`
+  - [x] 10.3 **OPERATOR:** owner-signed acceptance in `_state/acceptances.json`
         naming the 8.11 observation (agent transcribes ONLY on explicit in-session
         owner direction, `authorship: "agent-transcribed"`).
   - [ ] 10.4 `node packages/provegate/dist/cli.js run PRD-032` — §11 rows run from
@@ -281,4 +281,4 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Task | Category          | Owner | Required Check                                                                                                                | Status  | Notes                                                                               |
 | ---- | ----------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
-| 8.11 | live-verification | owner | every generated `/prd-*` command lists phase-descriptively in Claude Code's command palette (banner no longer the first line) | pending | closes the PRD-029 operator deferral (due 2026-09-26); bound to the 10.3 acceptance |
+| 8.11 | live-verification | owner | every generated `/prd-*` command lists phase-descriptively in Claude Code's command palette (banner no longer the first line) | accepted | owner observed 2026-07-29; acceptance transcribed (agent-transcribed) naming this row; closes the PRD-029 deferral |
