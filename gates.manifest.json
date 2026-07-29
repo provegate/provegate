@@ -9,8 +9,7 @@
    "pnpm check-egress",
    "pnpm check:review-artifacts",
    "pnpm check:durable-artifacts",
-   "pnpm check:wiring",
-   "pnpm verify:quickstart-parity"
+   "pnpm check:wiring"
   ],
   "7": [
    "pnpm verify:brain"

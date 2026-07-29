@@ -198,10 +198,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- 4.1 — the CHECKS append stayed serialized behind PRD-034's lease; the executing
-  surface is the repo's own `gates.manifest.json` phases."4" chain instead (an
-  auditWiring-recognized surface, unleased) — `check:wiring` green. The CHECKS
-  append remains a post-034 follow-up recorded in the PRD.
+- 4.1 — the CHECKS append was first serialized behind PRD-034's lease (interim:
+  the manifest phases."4" surface, `check:wiring` green). Review round 2 held the
+  [P1]: FR-4's CHECKS requirement is not lease-excusable. The OWNER chose to steal
+  the ~8h-stale 034 lease (the method's designed answer — QUICKSTART's own renew
+  teaching); the CHECKS member landed, the interim manifest surface was retired,
+  and the moved workflow pack-drift pair reconciled with an extended note.
 - 6.x — `packages/provegate/test/content-adoption.test.ts` (unleased, outside the
   declared surface): its first-init-fence assertion collided with the readiness-
   approved FR-3 convergence; updated intent-preservingly (the practices install
