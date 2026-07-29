@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, join, posix, relative, resolve, sep } from 'node:path';
+import { volumeIsCaseInsensitive } from '../config/load.js';
 
 /**
  * PRD-029 — the rendered protocol store; PRD-034 — its reconciliation.
@@ -962,6 +963,16 @@ export function reconcilePrompts(
       `${root} — ${String(error)}`,
     ]);
   }
+  // Volume-aware containment, the same probe the config resolver uses: on a
+  // case-insensitive volume an in-repository symlink target spelled with
+  // different casing is still inside — a case-sensitive compare would refuse
+  // a contained path (round-4 advisory).
+  const caseFold = volumeIsCaseInsensitive(rootReal)
+    ? (value: string): string => value.toLowerCase()
+    : (value: string): string => value;
+  const insideRoot = (candidate: string): boolean =>
+    caseFold(candidate) === caseFold(rootReal) ||
+    caseFold(candidate).startsWith(caseFold(rootReal) + sep);
 
   const findings: PromptFinding[] = [];
   for (const [joined, expected] of fresh) {
@@ -995,7 +1006,7 @@ export function reconcilePrompts(
             `${canonical} — no resolvable ancestor`,
           ]);
         }
-        if (ancestorReal !== rootReal && !ancestorReal.startsWith(rootReal + sep)) {
+        if (!insideRoot(ancestorReal)) {
           throw new PromptsError('a planned path resolves outside the repository', [
             `${canonical} — its nearest existing ancestor resolves to ${ancestorReal}`,
           ]);
@@ -1007,7 +1018,7 @@ export function reconcilePrompts(
         `${canonical} — ${String(error)}`,
       ]);
     }
-    if (real !== rootReal && !real.startsWith(rootReal + sep)) {
+    if (!insideRoot(real)) {
       throw new PromptsError('a planned path resolves outside the repository', [
         `${canonical} — resolves to ${real}`,
       ]);

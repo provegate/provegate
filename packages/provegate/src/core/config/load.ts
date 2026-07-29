@@ -48,8 +48,12 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * proxy that is wrong in both directions — a case-SENSITIVE volume on macOS, a
  * case-insensitive one mounted on Linux — and getting it wrong either accepts an
  * outside path or rejects a contained one.
+ *
+ * Exported for PRD-034's reconciliation containment — one probe implementation,
+ * per `two-parsers-wrong-together`; deliberately NOT re-exported from
+ * `config/index.ts` (same posture as `resolveContainedPaths`).
  */
-function volumeIsCaseInsensitive(root: string): boolean {
+export function volumeIsCaseInsensitive(root: string): boolean {
   const flipped = join(
     dirname(root),
     basename(root)

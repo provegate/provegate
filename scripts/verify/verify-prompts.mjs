@@ -41,13 +41,14 @@ if (process.argv.includes('--assert-ci-order')) {
     }
   }
   const job = lines.slice(start, end);
-  // EXACT step commands, not substrings. A comment quoting the command, an
-  // `echo '…build'`, or a `false && …build` compound must never satisfy the
-  // assertion — substring presence is not execution. Anything other than the
-  // exact one-command run line fails to match and the gate goes loud.
-  const isExactRun = (l, cmd) => l.trim() === `run: ${cmd}`;
-  const buildAt = job.findIndex((l) => isExactRun(l, 'pnpm --filter provegate build'));
-  const aggregateAt = job.findIndex((l) => isExactRun(l, 'pnpm verify:workflow'));
+  // EXACT step-level run lines, indentation included. Substring presence is
+  // not execution (comments, echo-wrapped and compound forms must fail), and
+  // trimming would also admit a literal `run: <cmd>` line INSIDE a `run: |`
+  // block scalar — step runs sit at exactly 8 spaces in this workflow, block
+  // content deeper. Anything else fails to match and the gate goes loud.
+  const isStepRun = (l, cmd) => l === `        run: ${cmd}`;
+  const buildAt = job.findIndex((l) => isStepRun(l, 'pnpm --filter provegate build'));
+  const aggregateAt = job.findIndex((l) => isStepRun(l, 'pnpm verify:workflow'));
   if (aggregateAt === -1) {
     console.error('verify:prompts: FAIL — the hygiene job has no verify:workflow step');
     process.exit(1);

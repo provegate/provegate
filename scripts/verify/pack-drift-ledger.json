@@ -125,7 +125,7 @@
     "verify/verify-prompts.mjs": {
       "dest": "scripts/verify/verify-prompts.mjs",
       "pack": "8b9f5c048decece2",
-      "repo": "e0e0c229f0f14153",
+      "repo": "c4cbc121b1ff7030",
       "note": "deliberately different bodies, same verdict: the packed twin imports the primitive + evaluator from the installed `provegate`; the repo side has no installed package, so it executes the built CLI and adds the --assert-ci-order mode (PRD-034 FR-4/FR-5)"
     },
     "verify/verify-workflow.mjs": {
