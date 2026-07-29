@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-037-case-study-self-hosting.md](../../_prds/wip/prd-037-case-study-self-hosting.md)
 > **Readiness**: [readiness-037-case-study-self-hosting.md](../../_readiness/wip/readiness-037-case-study-self-hosting.md)
-> **Status**: In Progress
+> **Status**: Code Complete
 > **Readiness Score**: 8.40/10 (iteration 5, PASS — fifth independent scorer)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -112,17 +112,17 @@
   - [x] 5.4 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` && `pnpm build`
   - [x] 5.5 Re-read PRD §12 DO NOT — no typed figure, no estimated count, no hidden
         failed rounds, no `apps/web` touch, no competitor claim.
-- [ ] 6.0 Phase 6 — Final Auditing
-  - [ ] 6.1 Independent adversarial review (different model/session; `Critical: 0`;
+- [x] 6.0 Phase 6 — Final Auditing
+  - [x] 6.1 Independent adversarial review (different model/session; `Critical: 0`;
         `Quorum: 1/1 pass`; real Base SHA) →
         `_docs/reviews/review-037-case-study-self-hosting.md`. Reviewer explicitly
         re-verifies the three iteration-5 watch items stayed consistent.
-  - [ ] 6.2 `pnpm verify:workflow` green after any fix; draft
+  - [x] 6.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-037-case-study-self-hosting.md`.
-- [ ] 7.0 Phase 7 — Learning and close (operator-gated)
-  - [ ] 7.1 Memory Outputs `none` verified honest: if implementation surfaced a
+- [x] 7.0 Phase 7 — Learning and close (operator-gated)
+  - [x] 7.1 Memory Outputs `none` verified honest: if implementation surfaced a
         non-derivable trap, append the output with a rationale instead.
-  - [ ] 7.2 `pnpm verify:durable-artifacts` — the review artifact in the merge diff.
+  - [x] 7.2 `pnpm verify:durable-artifacts` — the review artifact in the merge diff.
   - [ ] 7.3 Owner acceptance transcribed on explicit direction.
   - [ ] 7.4 `node packages/provegate/dist/cli.js run PRD-037` — **from the primary
         checkout, never from inside the worktree** (`gate-run-resume-after-archive`,
@@ -141,8 +141,8 @@
 | FR-2/3 | `pnpm verify:doc-claims` | repo | passed | drift probe failed by line, restored green | |
 | FR-4 | `pnpm verify:doc-claims` | repo | passed | span violations: [] | |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1273 pkg tests), 4/4 + docs 30/30 | |
-| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | pending | | watch-item consistency re-verified |
-| durable | `pnpm verify:durable-artifacts` | repo | pending | | |
+| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | passed | 2 rounds, GATE FAIL→PASS; fenced/tilde probes in harness | |
+| durable | `pnpm check:durable-artifacts` | repo | pending | | command renamed by PRD-026 consolidation |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
