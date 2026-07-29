@@ -288,6 +288,59 @@ describe('the round-2 review closures', () => {
   });
 });
 
+describe('the round-3 review closures', () => {
+  it('16 — an inner base binding shadowing an outer ordinary variable is still a base', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      "import { readFileSync } from 'node:fs';\n" +
+        "import { join } from 'node:path';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const dir = 'somewhere';\n" +
+        'function readIt(): string {\n' +
+        "  const dir = repoPath('.');\n" +
+        "  return readFileSync(join(dir, 'commitlint.config.mjs'), 'utf8');\n" +
+        '}\n' +
+        'void dir;\nvoid readIt;\n',
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:7 \[base-literal-read\]/);
+  });
+
+  it('17 — the static leaf in a template TAIL is caught', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      "import { readFileSync } from 'node:fs';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const base = repoPath('.');\n" +
+        'const t = readFileSync(`${base}/commitlint.config.mjs`, \'utf8\');\n',
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:4 \[base-literal-read\]/);
+  });
+
+  it('18 — the promises readFile twin is in the read-API set', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      "import { readFile } from 'node:fs/promises';\n" +
+        "import { join } from 'node:path';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const p = readFile(join(repoPath('.'), 'commitlint.config.mjs'), 'utf8');\n" +
+        'void p;\n',
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:4 \[base-literal-read\]/);
+  });
+});
+
 describe('the documented limit — concatenation is outside the syntactic net', () => {
   it("a runtime-assembled traversal ('..' + '/' + '..') is NOT flagged", () => {
     const root = makeRoot();

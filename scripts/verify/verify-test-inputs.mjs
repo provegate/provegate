@@ -130,6 +130,9 @@ let violations = 0;
 const READ_APIS = new Set([
   'readFileSync', 'readdirSync', 'existsSync', 'statSync', 'lstatSync',
   'cpSync', 'copyFileSync', 'openSync', 'createReadStream',
+  // promise-API twins (node:fs/promises) — the round-3 review's gap
+  'readFile', 'readdir', 'stat', 'lstat', 'access', 'cp', 'copyFile',
+  'open', 'opendir', 'realpath', 'readlink',
 ]);
 
 for (const file of files) {
@@ -160,23 +163,21 @@ for (const file of files) {
       baseNames.add(n.name.getText(sf));
     ts.forEachChild(n, collectBases);
   })(sf);
-  // A name is a live base reference only if no enclosing function/parameter/
-  // local declaration shadows it (the round-2 review's shadowing probe).
-  const shadowedAt = (node, name) => {
-    for (let p = node.parent; p !== undefined; p = p.parent) {
+  // Base-ness resolves at the NEAREST lexical binding (the round-3 review:
+  // an inner repoPath('.') binding shadowing an outer ordinary variable is a
+  // live base; an outer base shadowed by a nearer parameter/local is not).
+  const nearestBindingIsBase = (idNode, name) => {
+    for (let p = idNode.parent; p !== undefined; p = p.parent) {
       if (ts.isFunctionLike(p)) {
         for (const param of p.parameters ?? [])
-          if (param.name.getText(sf) === name) return true;
+          if (param.name.getText(sf) === name) return false;
       }
       if (ts.isBlock(p) || ts.isSourceFile(p)) {
         for (const s of p.statements ?? []) {
           if (ts.isVariableStatement(s))
             for (const d of s.declarationList.declarations)
-              if (
-                d.name.getText(sf) === name &&
-                !(d.initializer !== undefined && isBaseCall(d.initializer))
-              )
-                return true;
+              if (d.name.getText(sf) === name)
+                return d.initializer !== undefined && isBaseCall(d.initializer);
         }
       }
       if (ts.isSourceFile(p)) break;
@@ -184,7 +185,7 @@ for (const file of files) {
     return false;
   };
   const referencesBase = (n) => {
-    if (ts.isIdentifier(n) && baseNames.has(n.getText(sf)) && !shadowedAt(n, n.getText(sf)))
+    if (ts.isIdentifier(n) && baseNames.has(n.getText(sf)) && nearestBindingIsBase(n, n.getText(sf)))
       return true;
     if (isBaseCall(n)) return true;
     let found = false;
@@ -200,7 +201,11 @@ for (const file of files) {
       n.text !== '.'
     )
       return true;
-    if (ts.isTemplateExpression(n) && n.head.text.length > 0) return true;
+    if (
+      ts.isTemplateExpression(n) &&
+      (n.head.text.length > 0 || n.templateSpans.some((s) => s.literal.text.length > 0))
+    )
+      return true;
     let found = false;
     ts.forEachChild(n, (c) => {
       if (!found && containsPathLiteral(c)) found = true;
