@@ -107,7 +107,7 @@ export function headingIndex(doc) {
   let inFence = false;
   let offset = 0;
   for (const line of doc.split('\n')) {
-    if (/^\s*```/.test(line)) inFence = !inFence;
+    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence;
     else if (!inFence && line === HEADING_TOKEN) return offset;
     offset += line.length + 1;
   }

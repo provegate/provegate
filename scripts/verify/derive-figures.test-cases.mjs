@@ -155,6 +155,9 @@ for (const mode of ['--print', '--write', '--check']) {
     .replace('closing prose', "closing prose\n\n```md\n## Part two: the tool's own ledger [#self-hosting-ledger]\n```");
   ok(hasHeadingToken(fencedOnly) === false,
     'a token that exists only inside a fenced block is NOT a heading (review round 1 P2)');
+  const tildeOnly = fencedOnly.replace('```md','~~~md').replace('\n```','\n~~~');
+  ok(hasHeadingToken(tildeOnly) === false,
+    'a tilde-fenced token is not a heading either (review round 2 residue)');
 }
 
 rmSync(tmp, { recursive: true, force: true });
