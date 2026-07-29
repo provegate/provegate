@@ -253,20 +253,42 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    is phase-descriptive, and the banner is still parseable. The committed store here is
    re-rendered by the same change (FR-2's fresh-render equality makes that automatic).
    - **Targets:** `packages/provegate/src/core/run/prompts.ts`,
-     `packages/provegate/test/prompts.test.ts` — **contested, measured 2026-07-29:**
-     PRD-036 (PASS 8.18, awaiting Phase-3 Go) claims `packages/provegate/test/**/*.ts`
-     as a glob; disjoint edits, but re-run `gate queue` before Phase 3 and serialize
-     behind 036 if it goes active first.
+     `packages/provegate/test/prompts.test.ts` — **contested, measured 2026-07-29 and
+     re-measured the same day:** PRD-036 is in Phase 4 (board claim `06efc01`) and its
+     active lease owns `packages/provegate/test/**/*.ts` as a glob (the production
+     matcher confirms it covers `prompts.test.ts`); this PRD serializes behind 036 on
+     that file — disjoint edits, re-run `gate queue` at Phase 3.
 
-8. **FR-8**: One review-template authority. The root `_docs/review-artifact.template.md`
-   calls Quorum optional while the shipped template and the review gate
-   (`packages/provegate/src/core/gates/review.ts`) refuse its omission — two authorities,
-   and the wrong one is the one a repository-local reader finds first. The root template
-   is aligned to the gate's real behavior (Quorum required) and carries the greppable
-   marker `quorum-is-required`; the store copy is generated and untouched. No
-   `templates.review` config key exists today (verified 2026-07-29) — if implementation
-   finds one, it is bound in the same change and the decision recorded.
-   - **Targets:** `_docs/review-artifact.template.md`
+8. **FR-8**: One review-template authority — closed at its SOURCE, not its installed
+   copy. The root `_docs/review-artifact.template.md` calls Quorum optional while the
+   shipped store template and the review gate
+   (`packages/provegate/src/core/gates/review.ts`) refuse its omission. The root copy is
+   not authored here: `init`'s PACK_MAP installs it from the packed source
+   `packages/provegate/practices/templates/review-artifact.template.md`
+   (`init.ts:146-159`), and `scripts/verify/pack-drift-ledger.json` pins the pair —
+   editing only the root copy would drift the twin or be reverted by a fresh install
+   (iteration-3 P1). So BOTH copies are aligned to the gate's real behavior (Quorum
+   required), the ledger pair is reconciled, and the change is snapshot-faithful by
+   construction: the source snapshot's review doctrine REQUIRES the quorum (the
+   PRD-003 port that weakened it to optional was itself a caught defect class — this
+   FR removes the same weakening from the practices twin). Evidence is semantic, not
+   marker-only: a new one-shot verifier
+   `scripts/verify/verify-review-quorum-authority.mjs` (package script
+   `verify:review-quorum`) asserts in BOTH copies that the required-Quorum wording and
+   the `quorum-is-required` marker are present AND that the optional/omit wording is
+   absent, failing loudly when either file is missing
+   (`false-green-on-missing-file`). Deliberately NOT a `verify:workflow` CHECKS member:
+   PRD-036's active Phase-4 lease owns `verify-workflow.mjs`, and the standing
+   regression guard is already `verify:pack-drift` (a bundle member pinning the pair)
+   plus the review gate itself; the verifier is Phase-5 evidence. No `templates.review`
+   config key exists today (verified 2026-07-29) — if implementation finds one, it is
+   bound in the same change and the decision recorded.
+   - **Targets:** `_docs/review-artifact.template.md`,
+     `packages/provegate/practices/templates/review-artifact.template.md`,
+     `scripts/verify/pack-drift-ledger.json`,
+     `scripts/verify/verify-review-quorum-authority.mjs` (new),
+     `package.json::scripts.verify:review-quorum` (shared append-only manifest —
+     registration line only)
 
 ---
 
@@ -353,21 +375,22 @@ require to be re-committed. The mechanism working, not a conflict.
 **Prerequisites.** PRD-029 Ship Verified (satisfied) and PRD-034 Ship Verified
 (**satisfied 2026-07-29**, merge `1d14f7a` — the check, its wiring, and the
 `prompts.exceptions[]` contract, all consumed as shipped). One more, added at readiness
-iteration 2: **the verification baseline must be green before Phase 3/Phase 4 open.** On
-2026-07-29 `pnpm verify:doc-claims` is red on main (the case-study's committed
-`shipVerified` figure trails the fresh derivation), which turns `pnpm verify:workflow`
-red — surfaces this PRD's §11 requires. That figure belongs to the case-study owner
-(PRD-037's surface), NOT to this PRD: implementation here must not absorb that edit, and
-must not start while the aggregate is red. Re-run `gate queue` before Phase 3 rather
-than trusting this paragraph.
+iteration 2 and CONDITIONAL by design: **`pnpm verify:workflow` must be green on main at
+Phase 3/Phase 4 open, whatever the cause of any red.** The 2026-07-29 instance (the
+case-study's `shipVerified` figure trailing the fresh derivation) went green the same
+day via the case-study owner's `5a2a64a` — the rule outlives the instance: a red
+aggregate at open time blocks the start, its fix belongs to whoever owns the drifted
+surface, and implementation here never absorbs it. Re-run `gate queue` before Phase 3
+rather than trusting this paragraph.
 
 ### Dependencies
 
 - **PRD-029 Ship Verified** — the store mechanism. Satisfied.
 - **PRD-034 Ship Verified** — the reconciliation check, its exceptions contract and its
   wiring, all consumed unchanged. Satisfied 2026-07-29.
-- **Green `pnpm verify:workflow` on main at Phase 3/4 open** — the doc-claims figure
-  refresh is the case-study owner's, outside this Conflict Surface.
+- **Green `pnpm verify:workflow` on main at Phase 3/4 open** — conditional rule; any
+  red's fix belongs to the owner of the drifted surface, never absorbed here (the
+  2026-07-29 doc-claims instance resolved same-day via `5a2a64a`).
 - No new runtime dependency; nothing reaches the network; no push code path.
 
 ### Migration & Rollback
@@ -401,7 +424,11 @@ the state model's (`_docs/design/prompt-store-state-model.md`, Revision 2).
 4. Confirm dormant: `gate check --prompts` prints the dormant disabled note again and
    exits 0; `pnpm verify:workflow` green. FR-7/FR-8 need no rollback step — the adapter
    listing fix and the template alignment are ordinary source changes, revertable by
-   `git revert` independent of the activation state.
+   `git revert` independent of the activation state. The same revert removes FR-3's and
+   FR-8's standing additions as a unit: each probe/verifier script goes together with
+   its `package.json` alias (`verify:prompts-mutation`, `verify:review-quorum`), never
+   one without the other — a registered alias pointing at a deleted script is the
+   wire-or-delete violation in miniature.
 
 **Backward compatibility:** nothing consumes `.provegate/` before this PRD, so there is
 no reader to break; `gate new` behavior changes only at the `templates.prd` flip, which
@@ -425,7 +452,11 @@ normal release flow.
       `package.json` script registration line
 - [ ] `packages/provegate/src/core/run/prompts.ts` + `packages/provegate/test/prompts.test.ts`
       — the FR-7 Claude listing-line closure and its test
-- [ ] `_docs/review-artifact.template.md` — the FR-8 Quorum alignment
+- [ ] `_docs/review-artifact.template.md` AND its packed source
+      `packages/provegate/practices/templates/review-artifact.template.md` — the FR-8
+      Quorum alignment, both copies; `scripts/verify/pack-drift-ledger.json` reconciled
+- [ ] `scripts/verify/verify-review-quorum-authority.mjs` — the FR-8 semantic verifier,
+      plus its `package.json` script registration line
 - [ ] `AGENT_BOOTSTRAP.md` — two pointer lines
 - [ ] read-only: FR-6's ignore/turbo assertions touch no file
 
@@ -476,6 +507,12 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
 - applied: `durable-artifact-must-commit` — the store is a committed artifact, and FR-6
   checks that no ignore rule excludes it. An uncommitted generated tree would leave the check
   green locally and the repository's agents empty on a fresh clone.
+- applied: `docs-are-a-wiring-surface` — its watch covers the packed practices tree
+  FR-8 now edits. The record is FR-8's whole argument: the packed review template is a
+  SHIPPED doc that instructs every adopter's Phase 6, so a doc contradicting the gate
+  is live mis-wiring, and the fix must land at the shipped source, not the installed
+  copy — a root-only edit would leave the wiring surface still wrong for every fresh
+  install.
 - reviewed: `known-red-ledger-must-expire` — the exception contract is PRD-034's
   `prompts.exceptions[]` (owner-authored in config, suppression scoped to `modified`,
   UTC calendar expiry). This item writes NO exception entry, full stop — the store it
@@ -493,13 +530,20 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   the state model's transitions with their real actors (the atomic flip, T6's
   human-deletes rule, the coupled `templates.prd` clear); rollback is specified in the
   model's terms, not invented alongside it.
-- applied: `runner-sentinel-blocks-cli-spawning-tests` — the FR-3 probe spawns the gate
-  CLI, so it lives as a root script run via its own §11 row, never inside a package
-  test; the whole-suite floor rows stay turbo-routed, and FR-1's `CMD_TEST_SCOPED`
-  value is the turbo-routed form for the same reason.
-- reviewed: `evidence-pattern-satisfied-by-the-template` — FR-1's proof that every value was
-  answered is the render refusing on an unset `null`, not a human reading the config. Recorded
-  because "the config has the right number of keys" is exactly the satisfied-by-the-template shape.
+- applied: `runner-sentinel-blocks-cli-spawning-tests` — binds the TEST rows, not the
+  FR-3 probe's placement: `gate check --prompts` is not sentinel-blocked (iteration-3
+  probe: exit 0 under `PROVEGATE_RUN_ACTIVE=1` — the sentinel guards nested `gate run`).
+  What the record does bind: FR-7's test row and the whole-suite floor stay
+  turbo-routed, and FR-1's `CMD_TEST_SCOPED` value is the turbo-routed form. FR-3's
+  root-script placement is `turbo-cache-masks-out-of-input-reads`' doing, not this
+  record's (rationale corrected at iteration 3; the earlier form over-claimed).
+- applied: `evidence-pattern-satisfied-by-the-template` — twice. FR-1's proof that every
+  value was answered is the render refusing on an unset `null`, not a human reading the
+  config ("the config has the right number of keys" is exactly the
+  satisfied-by-the-template shape). And FR-8's evidence is a semantic verifier asserting
+  required wording present AND optional wording absent in both copies, because a
+  marker-only grep is this record's failure shape — iteration 3 caught the first draft
+  of FR-8 committing it.
 - applied: `recompute-beats-recorded-state` — its watch covers `prompts.ts`, which FR-7
   edits. The record's rule is FR-7's hard constraint: the banner is ATTRIBUTION only,
   never detection — reconciliation recomputes the fresh render, and the listing fix must
@@ -515,10 +559,13 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   checkout, un-archive + `--from-phase=7` on a resume.
 - not-applicable: `push-is-human-by-omission` — no code path here reaches a remote, and the
   record's rule is preserved by adding nothing.
-- not-applicable: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
-  `core/run/**`, which this PRD does not touch; every code target belongs to PRD-029 or
-  PRD-034 (whose own `prompts.dir` backslash strictness this repository's forward-slash
-  config already satisfies).
+- reviewed: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
+  `core/run/**`, which FR-7 DOES touch (`core/run/prompts.ts`; the earlier
+  not-applicable rationale claimed otherwise and was wrong — corrected at iteration 3).
+  Reviewed rather than applied: FR-7 is a bounded output-framing change to the Claude
+  adapter, not an extraction sharing logic between callers, so the record's trap (a
+  "safer" guard relocating a caller-owned decision) has no purchase — and the FR's
+  banner-parseability constraint forbids the adjacent strictness temptation anyway.
 
 ---
 
@@ -565,10 +612,13 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `scripts/verify/verify-prompts-mutation.mjs`
 - `packages/provegate/src/core/run/prompts.ts`
 - `packages/provegate/test/prompts.test.ts` — **contested with PRD-036's
-  `packages/provegate/test/**/*.ts` glob** (036 is PASS 8.18 awaiting Phase-3 Go as of
-  2026-07-29 and will likely go active first; this PRD serializes behind it on this one
-  file if so — disjoint edits, re-run `gate queue` at Phase 3)
+  `packages/provegate/test/**/*.ts` glob** (036 is in Phase 4 as of 2026-07-29, board
+  claim `06efc01`; this PRD serializes behind it on this one file — disjoint edits,
+  re-run `gate queue` at Phase 3)
 - `_docs/review-artifact.template.md`
+- `packages/provegate/practices/templates/review-artifact.template.md`
+- `scripts/verify/pack-drift-ledger.json`
+- `scripts/verify/verify-review-quorum-authority.mjs`
 
 Dropped at iteration 2: `turbo.json` (PRD-036 owns it live; FR-6 is read-only here),
 `.gitignore` (read-only assertion — CI's fresh-checkout `verify:prompts` is the guard).
@@ -604,7 +654,8 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-5 | `pnpm verify:doc-claims`                             | repo  | the entrypoint's new lines make no claim about a gate that does not run                                     |
 | FR-6 | `pnpm verify:turbo-inputs`                           | repo  | no task narrows its inputs in a way that hides the store from a gate that reads it; the ignore-rule arm is CI's fresh-checkout `verify:prompts` (an ignored path reports `missing` there) |
 | FR-7 | `pnpm test --filter provegate`                       | repo  | turbo-routed; the listing-line test asserts every generated Claude command lists phase-descriptively AND still carries a parseable banner |
-| FR-8 | `grep quorum-is-required _docs/review-artifact.template.md` | repo | positive presence assert (exit non-zero when marker or file is absent — `false-green-on-missing-file` safe); the marker lands with the Quorum alignment |
+| FR-8 | `pnpm verify:review-quorum`                          | repo  | semantic, both copies: required-Quorum wording + marker present AND optional/omit wording absent in the root copy and the packed source; loud failure on a missing file |
+| FR-8 | `pnpm verify:pack-drift`                             | repo  | the root/packed pair stays ledger-consistent after both edits — the standing regression guard for the twin |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -640,9 +691,13 @@ rationalize.
 - DO NOT run the FR-3 mutation probe inside a package test, and DO NOT make it a
   `verify:workflow` CHECKS member — it is Phase-5 evidence, and the bundle is PRD-034's
   as shipped.
-- DO NOT absorb the red `verify:doc-claims` figure refresh into this PRD. It is the
-  case-study owner's surface; this PRD's prerequisite is a green aggregate, not a
-  license to fix someone else's drift.
+- DO NOT absorb another surface's aggregate red into this PRD. The prerequisite is a
+  green `verify:workflow` at Phase 3/4 open; any red's fix belongs to whoever owns the
+  drifted surface (the 2026-07-29 doc-claims instance was the case-study owner's and
+  resolved as such).
+- DO NOT edit the root `_docs/review-artifact.template.md` without its packed source
+  and the drift ledger in the same change — the root copy is PACK_MAP-installed, and a
+  root-only edit is reverted by the next fresh install (iteration-3 P1).
 - DO NOT verify this with a package test. The store is outside the package's turbo inputs
   and a cached green will replay while it drifts. The comment saying so is part of FR-3.
 - DO NOT reimplement or extend the check, the evaluator or the exception rules here —
@@ -674,6 +729,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                              |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-07-29 | orchestrating session (mechanical, per iteration-3 remedies) | **Iteration-3 remediation — FR-8 closed at its source.** The one P1: FR-8 now targets the packed source `practices/templates/review-artifact.template.md` (PACK_MAP installs the root copy from it; a root-only edit drifts the twin or is reverted by a fresh install) plus the drift ledger, with a semantic verifier `verify:review-quorum` (required wording present AND optional wording absent, both copies, loud on missing files) replacing the marker-only grep — which was `evidence-pattern-satisfied-by-the-template`'s shape, now dispositioned as applied twice. The three P2s: the 036 contest re-measured (Phase 4 active, `06efc01`; serializes on `prompts.test.ts`); the green-baseline prerequisite made conditional (the 07-29 doc-claims red resolved same-day via the case-study owner's `5a2a64a`); the sentinel disposition corrected (probe: `check --prompts` exits 0 under `PROVEGATE_RUN_ACTIVE=1` — the record binds the test rows, and FR-3's placement belongs to the turbo-cache record); the strictness disposition corrected (FR-7 does touch `core/run/prompts.ts` — reviewed, bounded framing change); rollback now removes each probe/verifier script together with its package alias. |
 | 2026-07-29 | orchestrating session, on owner decisions taken in-session | **Iteration-2 rework: decisions in, rollback in, expansion in.** The owner decided the four open calls with the orchestrator (recorded here as the deciding authority; the session typed): all ten required values enumerated in FR-1's table (`AUTONOMY_MODE: human-gated`; `DOMAIN_CHECKS`/`ENV_NOTES` deliberately filled; `REVIEW_TOOL` is the codex-exec STDIN invocation), and the value expansion absorbs the two measured delivery defects as FR-7 (Claude listing line — closes the 2026-09-26 deferral) and FR-8 (one review-template authority) — `Value` re-derived to 3.50 (4/4/3/3/3). Added: the Migration & Rollback section in the state model's terms; the FR-3 probe script `verify:prompts-mutation` (bannered-path plant, `modified` assert, `finally` restore); FR-6 narrowed to read-only; Conflict Surface drops `turbo.json`/`.gitignore`, narrows `.claude/**` to `.claude/commands/**`, adds the FR-7/FR-8 targets with the PRD-036 test-glob contest noted; the green-aggregate prerequisite names the live doc-claims red as the case-study owner's. Iteration-2's seven stale restatements swept (034 "implementation pending", 031 future tense, the four generic `modified` claims re-scoped to bannered paths, the cache-comment attribution, the exception contradiction, the generated-only overstatement, and the "scaffolds" row below — corrected in place with a dated note). Four memory dispositions added. |
 | 2026-07-28 | orchestrating session, on owner direction | **Refreshed against the post-narrowing architecture before Phase 2.** Every live binding to the retracted PRD-030 design replaced: the check, evaluator, `gate check --prompts`, `prompts.exceptions[]` and both verify twins are PRD-034's (PASS 8.4), consumed as shipped — there is no ledger, doctor, sync verb or receipt (T7 forbids the receipt). FR-3/FR-4 collapse to verified state transitions: PRD-034 wired the check dormant-here by construction, so this PRD flips `prompts.enabled`, commits the generated content, and proves liveness behaviourally (mutation probe run-and-reverted, recorded in the Progress Log). §11's `doctor --prompts` row corrected to the real surface. Dependencies now name PRD-034 Ship Verified as the hard prerequisite, and the DO NOT adds: do not SCORE this item before 034 ships — the scorer must execute the check, not read it. |
 | 2026-07-27 | owner  | **Swept: three live "scaffolds" restatements and an FR-5/FR-4 pair in one sentence.** Readiness iteration 6 found the previous edit had corrected one clause and left the other two lines away — the sixth instance of `a-rule-corrected-survives-where-it-is-restated` in this chain, created by the fix for the fifth. |

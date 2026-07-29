@@ -1,5 +1,35 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
+> **Iteration 3 (Codex, independent, 2026-07-29) — 7.33/10, ITERATE; band 6–7.9:
+> "Good start — iterate on identified gaps, re-score after improvements." No return to
+> Phase 1.** The same-day rework closed six of iteration-2's nine findings outright:
+> the ten owner values RENDER (the scorer ran the full in-memory render with FR-1's
+> exact table — ten keys, order-matched to the initializer, no `PromptsError`, 21 store
+> files / 30 generated paths), the Migration & Rollback section holds against T6/T7,
+> the mutation-probe spec is runnable and correctly bannered, the Conflict Surface
+> narrowing is verified by the production glob matcher, and FR-7's defect + banner
+> coherence both reproduce (`BANNER_VERSION_RE` searches anywhere; the fix is sound).
+> **One P1 remains, and it is FR-8's delivery topology:** the root
+> `_docs/review-artifact.template.md` is INSTALLED from the packed source
+> `packages/provegate/practices/templates/review-artifact.template.md`
+> (`init.ts:146-159` PACK_MAP; ledger pair `pack-drift-ledger.json:64-67`), which still
+> says Quorum optional — editing only the root copy drifts the twin or gets reverted by
+> a fresh install, and the marker-only grep is
+> `evidence-pattern-satisfied-by-the-template`'s exact failure shape. Three P2s: two
+> world-moved-under-it statements (036 took its Phase-3 Go mid-audit; the doc-claims
+> red went GREEN via external `5a2a64a` mid-audit), three memory-disposition
+> misapplications (the sentinel rationale is disproven by an executed probe —
+> `PROVEGATE_RUN_ACTIVE=1 check --prompts` exits 0), and rollback omitting the probe
+> script's own removal. Value 3.50 arithmetic exact but supportable only at 3.25 until
+> FR-8 covers the packed source — then 3.50 becomes credible. Orchestration disclosure:
+> the orchestrating session verified the load-bearing citations (PACK_MAP, the packed
+> template's optional line, the ledger pair, tasks-036 status, the green aggregate) and
+> authored no verdicts; Codex is the scorer and did not write the PRD.
+
+---
+
+## Superseded headline — iteration 2
+
 > **Iteration 2 (Codex, independent, 2026-07-29) — 5.20/10, ITERATE; still band 4–5.9:
 > "Major rework needed. Return to Phase 1" (`score-band-prescribes-the-action`).**
 > Scored the day PRD-034 went Ship Verified, exactly as iteration 1 prescribed — the
@@ -31,15 +61,15 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 5.20/10                                        |
-| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The PRD-034 chain and all wiring claims now hold on main; what remains is specification debt: 8 of the 10 required values undecided, no migration/rollback section in the class that weights it 20%, a mutation promised four times and executed zero, a `turbo.json` claim colliding with live PRD-036, and a prescribed verification baseline that is red today |
-| Iteration              | 2                                              |
+| Score                  | 7.33/10                                        |
+| Verdict                | ITERATE — band 6–7.9: iterate on identified gaps and re-score; no Phase-1 return. Six of nine iteration-2 findings closed by the same-day rework (the ten values render, rollback holds against the state model, the mutation probe is runnable). One P1 remains: FR-8 edits only the installed root copy of the review template while the packed source that PACK_MAP installs stays optional-Quorum, and its marker-only grep proves neither semantic alignment nor packed-copy delivery. Three mechanical P2s (two statements the world moved out from under mid-audit, three memory-disposition misapplications, one missing rollback sentence) |
+| Iteration              | 3                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-29                                     |
-| PRD Lint               | passed — Codex's `gate check PRD-032` exited 1 only on a sandbox `EPERM` writing the state tmp file, before lint; its direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}`; the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
+| Date                   | 2026-07-29 (iteration 3; iterations 1–2 same file, below) |
+| PRD Lint               | passed — Codex's direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}` (the CLI's state write EPERMs in its read-only sandbox, known); the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -57,6 +87,58 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 3 (Codex, independent, 2026-07-29, HEAD `555a9df`→`06efc01` mid-audit)
+
+**Iteration-2 closure: 1, 2, 3, 4, 5, 8 CLOSED; 6, 7, 9 PARTIAL.** Executed evidence
+highlights: the exact ten-value render succeeded (ten keys order-matched to
+`init --prompts`, 21 store files, 30 generated paths, zero unresolved tokens outside the
+deliberately verbatim `PLACEHOLDERS.md`); all seven generated Claude commands reproduce
+FR-7's banner-first defect; `BANNER_VERSION_RE` searches anywhere in the file, so the
+listing fix preserves attribution; the production glob matcher confirms
+`packages/provegate/test/**/*.ts` matches `prompts.test.ts` (036 contest real);
+`PROVEGATE_RUN_ACTIVE=1 node …cli.js check --prompts` exits 0 (sentinel does NOT block
+the FR-3 probe's spawn); `pnpm verify:pack-drift` exit 0 and the ledger pairs the two
+review-template copies; the doc-claims red resolved mid-audit via external `5a2a64a` —
+final `verify:doc-claims` and `verify:workflow` both PASS.
+
+**Scorecard (infra weights):** Clarity 7.0 ×15% = 1.050 · Completeness 7.0 ×20% = 1.400 ·
+Technical Depth 7.5 ×20% = 1.500 · MT&S 9.0 ×10% = 0.900 · Scope & Testability 6.5
+×15% = 0.975 · Migration & Rollback 7.5 ×20% = 1.500 → **7.325 → 7.33/10**. Hard caps:
+none trip.
+
+**[P1] 1 — FR-8 does not close the defect it claims to absorb.** The PRD calls FR-8 an
+adopter-facing closure but targets only `_docs/review-artifact.template.md`; the
+installer maps `packages/provegate/practices/templates/review-artifact.template.md` to
+that root path (`init.ts:146-159`), the packed source still says Quorum optional
+(`…practices/templates/review-artifact.template.md:25`), and the pair is governed by
+`scripts/verify/pack-drift-ledger.json:64-67`. The `grep quorum-is-required` §11 row is
+marker-only: it can pass while the optional sentence survives —
+`evidence-pattern-satisfied-by-the-template`'s exact shape. Remedy: add the packed
+source + ledger to FR-8/Scope/Conflict Surface; align BOTH copies to the gate's real
+behavior (`review.ts:48-65`); trace the shipped-content change to the snapshot's
+required-Quorum doctrine; add `pnpm verify:pack-drift`; replace marker-only evidence
+with a verifier that asserts required wording and rejects optional wording in both
+copies.
+
+**[P2] 2 — two current-state statements went stale mid-audit.** 036 is past its Phase-3
+Go (`tasks-036…md:5` "Tasks Generated"; Phase 4 claimed on the board `06efc01`); the
+doc-claims red went green via `5a2a64a`. Remedy: make the green-baseline rule
+conditional rather than a live-red narration; update the 036 contest wording.
+
+**[P2] 3 — three memory-disposition misapplications.** The sentinel record does not
+block `check --prompts` (probe: exit 0 under `PROVEGATE_RUN_ACTIVE=1`) — it binds the
+turbo-routed suite rows, not FR-3's placement; the strictness disposition says
+`core/run/**` is untouched while FR-7 targets `core/run/prompts.ts`; the
+evidence-pattern disposition considers only FR-1 while FR-8's marker grep is the
+record's failure shape. Remedy: correct all three rationales.
+
+**[P2] 4 — rollback omits FR-3's standing additions.** The probe script and its
+`package.json` alias (and FR-8's verifier, once added) need one removal sentence;
+generated-path deletion stays T6's human.
+
+**Value:** declared 3.50 exact; supportable 3.25 (4/3/3/3/3) until FR-8 covers the
+packed source — then 3.50 becomes credible. **Model tier:** do not assign (score < 8).
 
 ### Findings — iteration 2 (Codex, independent, 2026-07-29)
 
@@ -283,20 +365,18 @@ exit 0); method-content traceability — clear.
 | --- | ---------- | ----- | ------- | ----------- |
 | 1   | 2026-07-28 | 4.00  | ITERATE | First independent round. The document consumes a mechanism that shipped PRD-030 explicitly handed to Draft PRD-034; §11's first command is not a CLI surface and its mutation row proves nothing; the Conflict Surface misses its own FR targets while colliding with three live PRDs; an infra item carries no migration/rollback. The activation mechanics themselves verified correct by read-only probes. Band 4–5.9: Phase-1 rework, serialized behind PRD-034 — not another scoring round. Dimension scores: 4.0/4.0/4.0/8.0/4.0/2.0. |
 | 2   | 2026-07-29 | 5.20  | ITERATE | Scored the day PRD-034 went Ship Verified; every wiring claim re-verified by execution (both CLI flags, bundle member 10, CI order, full in-memory render: 10 required values, 21 store files, 30 generated paths). Finding A closed; C/D/H partial; B/E/F/G/I open. New against the final contract: the `unattributable` arm breaks the generic mutation claim; the required-value set grew to ten; `verify:doc-claims` red on main with no serialization named; PRD-036's live `turbo.json` claim still collided with. Seven stale restatements named for the sweep. Band 4–5.9 again — but the residue is owner decisions (ten values, rollback shape, value expand-or-cut), not moved dependencies. |
+| 3   | 2026-07-29 | 7.33  | ITERATE | Same-day rework re-scored: six of nine findings closed by execution-grade evidence — the owner's exact ten values RENDER, rollback holds against T6/T7, the mutation-probe spec is runnable and correctly bannered, the surface narrowing verified by the production glob matcher, FR-7's defect and banner coherence both reproduce. One P1: FR-8's delivery topology — the root template is PACK_MAP-installed from a packed source still saying Quorum optional, and the marker-only grep is the evidence-pattern trap. Three mechanical P2s (mid-audit staleness ×2 — 036 took Phase-3 Go and the doc-claims red went green under the audit; three disposition rationale fixes; one rollback sentence). Band 6–7.9: iterate and re-score, no Phase-1 return. Value 3.50 credible once FR-8 covers the packed source. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 5.20/10, iteration 2, scored independently by Codex.**
+**ITERATE — 7.33/10, iteration 3, scored independently by Codex.**
 
-The chain debt is paid: PRD-034 landed and every wiring claim PRD-032 makes now holds
-on main, verified by execution. What keeps this in the 4–5.9 band is specification
-debt that only the owner can settle — the ten exact values, the rollback contract, an
-honest Value header — plus mechanical fixes the rework can carry (the runnable
-bannered-path mutation, the narrowed Conflict Surface, the seven-restatement sweep,
-the four memory dispositions). The band's action is the instruction
-(`score-band-prescribes-the-action`): one more Phase-1 pass, then re-score. Trajectory
-4.00 → 5.20 with the blocking dependency gone; a third flat round in this band would
-trigger `state-model-before-mechanism`'s cut-or-restate rule, but the residue here is
-decisions, not design.
+Trajectory 4.00 → 5.20 → 7.33, band climbed out of Phase-1 territory. The owner
+decisions landed and PROVED OUT by execution — the ten values render, the rollback is
+the state model's, the probe is runnable. What remains is one delivery-topology defect
+(FR-8 must fix the packed source it forgot, with semantic rather than marker-only
+evidence) and three mechanical P2s, all remediable without a new owner decision. The
+band's action is the instruction: close the named gaps, re-score. On the next PASS,
+assign tiers per the rubric.
