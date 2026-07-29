@@ -202,6 +202,10 @@ function excluded(rel: string): boolean {
   if (/^_docs\/(reviews|completed|wip|retros)\//.test(rel)) return true;
   if (/^_brain\//.test(rel)) return true;
   if (/^\.changeset\//.test(rel)) return true;
+  // CHANGELOG.md is generated FROM the excluded .changeset/ corpus by
+  // `changeset version` — the same historical text, relocated by the release
+  // flow (RELEASING.md forbids hand-editing it).
+  if (/(^|\/)CHANGELOG\.md$/.test(rel)) return true;
   if (/^node_modules\//.test(rel) || rel.includes('/node_modules/')) return true;
   if (/^\.worktrees\//.test(rel)) return true;
   return false;

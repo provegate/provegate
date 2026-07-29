@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { repoPath } from './helpers/repo-reads.js';
 
@@ -23,6 +24,7 @@ import { repoPath } from './helpers/repo-reads.js';
  */
 
 const changesetDir = repoPath('.changeset');
+const changelogPath = fileURLToPath(new URL('../CHANGELOG.md', import.meta.url));
 
 interface Entry {
   file: string;
@@ -35,7 +37,32 @@ interface Entry {
  * and bare all occur — so the parser tolerates all three rather than pinning
  * whichever one this repo happened to write today. */
 function entries(): Entry[] {
-  return parseEntries(changesetDir);
+  return [...parseEntries(changesetDir), ...changelogEntries()];
+}
+
+/** `pnpm changeset version` consumes each .changeset entry into CHANGELOG.md
+ * verbatim — one bullet per entry under `### Minor Changes`. The obligations
+ * this file holds must survive that boundary, so released bullets parse into
+ * the same Entry shape and join the selection set. A SELECTION-source change
+ * only: every expectation keeps its exact text, and pre-consumption the
+ * .changeset files still come first in `find` order. */
+function changelogEntries(): Entry[] {
+  const text = readFileSync(changelogPath, 'utf8');
+  const out: Entry[] = [];
+  for (const section of text.split(/^### /m)) {
+    if (!section.startsWith('Minor Changes')) continue;
+    const bullets = section.split(/^## /m)[0]!.split(/^- /m).slice(1);
+    for (const bullet of bullets) {
+      const match = /^([0-9a-f]{7,40}): ([\s\S]*)$/.exec(bullet);
+      if (match === null) continue;
+      out.push({
+        file: `CHANGELOG.md#${match[1]!}`,
+        bumps: new Map([['provegate', 'minor']]),
+        body: match[2]!,
+      });
+    }
+  }
+  return out;
 }
 
 function parseEntries(dir: string): Entry[] {

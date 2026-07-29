@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -38,7 +39,16 @@ import { repoPath } from './helpers/repo-reads.js';
 const run = promisify(execFile);
 const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const twinPath = fileURLToPath(new URL('../practices/verify/verify-prompts.mjs', import.meta.url));
+// `pnpm changeset version` consumes the changeset into CHANGELOG.md; the §7
+// migration text must be assertable on both sides of that boundary.
 const changesetPath = repoPath('.changeset/prompt-store-reconciliation.md');
+const changelogPath = fileURLToPath(new URL('../CHANGELOG.md', import.meta.url));
+function migrationBody(): { body: string; fromChangeset: boolean } {
+  if (existsSync(changesetPath)) {
+    return { body: readFileSync(changesetPath, 'utf8'), fromChangeset: true };
+  }
+  return { body: readFileSync(changelogPath, 'utf8'), fromChangeset: false };
+}
 const packageDir = promptsPackageDir();
 const installed = packageVersion(packageDir);
 
@@ -929,17 +939,21 @@ describe('migration (PRD-034 §7)', () => {
     expect(readFileSync(join(root, 'scripts/verify/verify-workflow.mjs'), 'utf8')).toBe(oldBundle);
   });
 
-  it('the changeset carries the three-step adopter migration verbatim', () => {
-    const body = readFileSync(changesetPath, 'utf8');
-    expect(body).toMatch(/provegate['"]?\s*:\s*['"]?minor/);
+  it('the shipped release notes carry the three-step adopter migration verbatim', () => {
+    const { body, fromChangeset } = migrationBody();
+    if (fromChangeset) {
+      expect(body).toMatch(/provegate['"]?\s*:\s*['"]?minor/);
+    } else {
+      expect(body).toMatch(/### Minor Changes/);
+    }
     expect(body).toMatch(/upgrade the package/i);
     expect(body).toContain('gate init --practices');
     expect(body).toContain('CHECKS');
     expect(body).toContain('verify-prompts.mjs');
   });
 
-  it('the changeset carries the backslash-dir procedure including the templates.prd step, and the downgrade order', () => {
-    const body = readFileSync(changesetPath, 'utf8');
+  it('the shipped release notes carry the backslash-dir procedure including the templates.prd step, and the downgrade order', () => {
+    const { body } = migrationBody();
     expect(body).toMatch(/git mv/);
     expect(body).toContain('templates.prd');
     expect(body).toMatch(/renderAdapters|every generated file whose content embeds/i);
