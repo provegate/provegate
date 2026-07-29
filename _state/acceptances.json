@@ -80,7 +80,7 @@
       "items": [
         "3.1 focus rings verified on nav/hero/footer interactive elements (Claude-in-Chrome tab-through)",
         "3.1 prefers-reduced-motion verified via live CSSOM (reduce branch renders finished state; OS-toggle visual deferred)",
-        "3.1 no horizontal scroll at 375px \u2014 evidence-table clip found and fixed (overflow-x:auto), re-verified in-box scroll",
+        "3.1 no horizontal scroll at 375px — evidence-table clip found and fixed (overflow-x:auto), re-verified in-box scroll",
         "2.2 visual parity both themes accepted (desktop light+dark, 375px mobile)"
       ],
       "reason": "ran operator browser QA via Claude-in-Chrome; all four handoff rows pass, one 375px evidence-table clip fixed and re-verified; accepting autonomous close via gate land",
@@ -93,7 +93,7 @@
       "owner": "owner",
       "items": [
         "8.0 codex cross-model Phase-6 review authorized and completed (R1 pass Critical 0 with 1 High + 1 Medium; both fixed in b442d96; R2 re-verified pass, 0/0/0)",
-        "2.0/4.0 operator visual rows (docs parity + OG card) WAIVED \u2014 not run in-browser this session at owner instruction",
+        "2.0/4.0 operator visual rows (docs parity + OG card) WAIVED — not run in-browser this session at owner instruction",
         "operator acceptance of autonomous close (push stays human)"
       ],
       "reason": "reviewed the codex two-round review and the fix commit; accepting autonomous close on the green machine gates + the pass review, with the two real-browser operator rows waived without an in-browser pass this session",
@@ -107,7 +107,7 @@
       "items": [
         "9.0 operator acceptance of autonomous close (method-content sign-off): packed practices/ content reviewed via the 3/3 quorum review artifact"
       ],
-      "reason": "owner directed the close in chat after the three-reviewer quorum (codex 4 rounds + two sonnet sessions; 7 criticals found and closed); accepting autonomous close via gate land \u2014 push stays human",
+      "reason": "owner directed the close in chat after the three-reviewer quorum (codex 4 rounds + two sonnet sessions; 7 criticals found and closed); accepting autonomous close via gate land — push stays human",
       "date": "2026-07-25",
       "method": "owner chat directive (recorded by agent at explicit owner instruction)",
       "authorship": "agent-transcribed"
@@ -150,7 +150,7 @@
       "prd": "PRD-022",
       "items": [
         "6.2 accept that a lease claimed before the last root control-artifact change can now be refused on its next `gate run` or `gate land`",
-        "9.4 close acceptance \u2014 Autonomous Close is operator-gated for this PRD"
+        "9.4 close acceptance — Autonomous Close is operator-gated for this PRD"
       ],
       "owner": "owner",
       "reason": "owner directed the close in chat. 6.2 was discharged by MEASUREMENT rather than judgement about hypothetical leases: `_state/locks` held exactly one lease at close time, PRD-022's own, claimed after the last control-artifact change (03a1500), and its checkout is byte-identical to base for both control files - so this merge refuses nothing in flight. The remedy the refusal prints is proven to work in the fixture, not just documented. One independent adversarial round (Codex, a different model family) returned DO NOT CLOSE with four blockers; all four remediated, the two that turned on runtime behaviour re-measured here before being accepted, 0 outstanding. Three further findings confirmed real and recorded rather than absorbed: two inherited lease-discovery holes and one adversarial race, the last deferred in STATUS.md with an owner and a due date because its fix would be a second definition of drift inside cli.ts, which the PRD forbids. 917 tests, full floor green, verify:workflow PASS",
@@ -173,7 +173,7 @@
       "prd": "PRD-021",
       "items": [
         "12.5 accept that editing the root workflow.config.json advances the control-artifact base, so any lease taken before it is refused until that worktree merges",
-        "15.4 close acceptance \u2014 this PRD changes the published config surface, so Autonomous Close is operator-gated"
+        "15.4 close acceptance — this PRD changes the published config surface, so Autonomous Close is operator-gated"
       ],
       "owner": "owner",
       "reason": "owner directed the close in chat. 12.5 was discharged by measurement rather than judgement about hypothetical leases: _state/locks held exactly one lease at close time, PRD-021's own, so no in-flight work is stopped - and the refusal path is not hypothetical here, it is the live instance FR-5 fixtures. Two independent review rounds (Codex, a different model family) both returned DO NOT CLOSE with twelve findings; two more came from the implementer's own checks. All fourteen remediated, zero outstanding. Nine of the fourteen were one defect - a rule corrected where it was owned and left standing elsewhere - which is what the review brief was written to hunt and what the _brain record now names. The value-score gate is proven at the unit, through lintPrd, and through the built CLI over a seeded corpus; the live repo sweeps green at 11 scored, 0 without a header, 15 skipped with reasons. 1024 tests across 49 files, full floor green, verify:workflow and verify:review-artifact PASS",
@@ -188,7 +188,7 @@
         "5.6 generated Cursor rule verified attaching in a live Cursor session on _prds/**, and NOT attaching on README.md",
         "5.6 generated Claude command /prd-3 verified invocable in a live Claude Code session, resolving to .provegate/prompts/phase-3-task-generator.md"
       ],
-      "reason": "owner ran both operator verifications live and read the evidence recorded in the task file; the banner-in-description finding they surfaced is a deferral, not a blocker. Owner-decided in session and transcribed by the agent at the owner's explicit direction \u2014 see the standing `Acceptance authorship rule` deferral",
+      "reason": "owner ran both operator verifications live and read the evidence recorded in the task file; the banner-in-description finding they surfaced is a deferral, not a blocker. Owner-decided in session and transcribed by the agent at the owner's explicit direction — see the standing `Acceptance authorship rule` deferral",
       "date": "2026-07-27",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
@@ -199,7 +199,7 @@
       "items": [
         "3.15 owner confirms the landed acceptance-authorship rule is the rule they decided, across the three prose sites, the memory record and its packed twin, and ADR-0003"
       ],
-      "reason": "owner directed this change, chose the structural option over the documentation-only one when the trade was put to them, and approved the close in session after reading the phase report. The agent verified the rule is consistent across eight sites and machine-checks five of them; it cannot verify the text is the rule the owner wanted, which is exactly what this row records. Written by the agent at the owner\u2019s explicit in-session direction under the rule this PRD lands \u2014 the first entry the new field governs",
+      "reason": "owner directed this change, chose the structural option over the documentation-only one when the trade was put to them, and approved the close in session after reading the phase report. The agent verified the rule is consistent across eight sites and machine-checks five of them; it cannot verify the text is the rule the owner wanted, which is exactly what this row records. Written by the agent at the owner’s explicit in-session direction under the rule this PRD lands — the first entry the new field governs",
       "date": "2026-07-28",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
@@ -208,16 +208,16 @@
       "prd": "PRD-030",
       "owner": "owner",
       "items": [
-        "4.1 T1 install into a repo that already has a config \u2014 activation is the adopter's paste, and it is a precondition rather than a step that can lag the store",
-        "4.1 T2 upgrade \u2014 `init` cannot deliver one; the mechanism is adopter deletion of the reinstall unit followed by reinstall, terminating over a finite enumerable set",
-        "4.1 T3 upgrade with a deliberately edited file \u2014 survives an install by the additive-only contract; destroyed by the default upgrade path, and pinned at the old version permanently if spared by hand",
-        "4.1 T4 add / remove an adapter \u2014 the previous file keeps working until a human deletes it; discovery is by re-render or banner signature, and neither covers the unbannered codex snippet",
-        "4.1 T5 rename the store directory \u2014 the old tree is discoverable only by content, and the adapters keep pointing at it because the reinstall skips them",
-        "4.1 T6 remove the config block \u2014 recorded limit in its narrow form: no durable pointer survives, a content search still works",
-        "4.1 T7 the receipt's own second write \u2014 no receipt exists and this model introduces none; if one ever is, `init` is its only writer and it is not itself a destination",
+        "4.1 T1 install into a repo that already has a config — activation is the adopter's paste, and it is a precondition rather than a step that can lag the store",
+        "4.1 T2 upgrade — `init` cannot deliver one; the mechanism is adopter deletion of the reinstall unit followed by reinstall, terminating over a finite enumerable set",
+        "4.1 T3 upgrade with a deliberately edited file — survives an install by the additive-only contract; destroyed by the default upgrade path, and pinned at the old version permanently if spared by hand",
+        "4.1 T4 add / remove an adapter — the previous file keeps working until a human deletes it; discovery is by re-render or banner signature, and neither covers the unbannered codex snippet",
+        "4.1 T5 rename the store directory — the old tree is discoverable only by content, and the adapters keep pointing at it because the reinstall skips them",
+        "4.1 T6 remove the config block — recorded limit in its narrow form: no durable pointer survives, a content search still works",
+        "4.1 T7 the receipt's own second write — no receipt exists and this model introduces none; if one ever is, `init` is its only writer and it is not itself a destination",
         "4.3 the model as a whole: `_docs/design/prompt-store-state-model.md`, including its six recorded limits and their design/mixed classification"
       ],
-      "reason": "owner read the seven transition answers and the six recorded limits as presented in session and approved them explicitly, which unblocks PRD-034. What the machine established is narrow and is recorded as such: the \u00a711 gates hold the document's structure only (all seven transitions present, all four axes non-blank, discrimination proved by blanking an axis and observing exit 1), and the independent review caught three factual errors about the shipped installer \u2014 a banner premise false for the codex adapter, a T3 that answered the install instead of the upgrade, and a T6 limit its own sibling transition refuted \u2014 with all nine findings fixed in the files rather than waived. No gate can establish that these are the right design decisions, which is exactly what this row records. Two disclosures the owner accepted with the decision: the reviewer was a fresh same-family session with zero implementation context, the method's documented fallback rather than its different-model-family default, and this same session wrote the PRD, scored it, planned it and authored the deliverable. Written by the agent at the owner's explicit in-session approval, under ADR-0003.",
+      "reason": "owner read the seven transition answers and the six recorded limits as presented in session and approved them explicitly, which unblocks PRD-034. What the machine established is narrow and is recorded as such: the §11 gates hold the document's structure only (all seven transitions present, all four axes non-blank, discrimination proved by blanking an axis and observing exit 1), and the independent review caught three factual errors about the shipped installer — a banner premise false for the codex adapter, a T3 that answered the install instead of the upgrade, and a T6 limit its own sibling transition refuted — with all nine findings fixed in the files rather than waived. No gate can establish that these are the right design decisions, which is exactly what this row records. Two disclosures the owner accepted with the decision: the reviewer was a fresh same-family session with zero implementation context, the method's documented fallback rather than its different-model-family default, and this same session wrote the PRD, scored it, planned it and authored the deliverable. Written by the agent at the owner's explicit in-session approval, under ADR-0003.",
       "date": "2026-07-28",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
@@ -249,9 +249,9 @@
       "prd": "PRD-030",
       "owner": "owner",
       "items": [
-        "4.3 state model Revision 2: `_docs/design/prompt-store-state-model.md` \u2014 two unbannered generated paths (the codex snippet and prompts/PLACEHOLDERS.md, the latter a deliberate verbatim disposition verified at core/run/prompts.ts:656-661); the detection/attribution split for unbannered planned paths; five superseded statements enumerated old-to-new; constraints 1-4, every actor answer, T3's suppress-never-write boundary, T7's no-receipt decision and limits 1-5 unchanged"
+        "4.3 state model Revision 2: `_docs/design/prompt-store-state-model.md` — two unbannered generated paths (the codex snippet and prompts/PLACEHOLDERS.md, the latter a deliberate verbatim disposition verified at core/run/prompts.ts:656-661); the detection/attribution split for unbannered planned paths; five superseded statements enumerated old-to-new; constraints 1-4, every actor answer, T3's suppress-never-write boundary, T7's no-receipt decision and limits 1-5 unchanged"
       ],
-      "reason": "owner reviewed the Revision 2 draft as presented in session \u2014 trigger (PRD-034 iteration-1 independent finding, re-verified against the shipped renderer by the transcribing session before drafting), the five superseded statements, and the enumerated re-derivation consequences \u2014 and approved explicitly. Written by the agent at the owner's explicit in-session approval, under ADR-0003; the owner decided, the agent typed.",
+      "reason": "owner reviewed the Revision 2 draft as presented in session — trigger (PRD-034 iteration-1 independent finding, re-verified against the shipped renderer by the transcribing session before drafting), the five superseded statements, and the enumerated re-derivation consequences — and approved explicitly. Written by the agent at the owner's explicit in-session approval, under ADR-0003; the owner decided, the agent typed.",
       "date": "2026-07-28",
       "method": "interactive (owner-directed, agent-transcribed)",
       "authorship": "agent-transcribed"
@@ -298,11 +298,23 @@
       "owner": "owner",
       "items": [
         "7.1 independent review accepted (Codex, 7 rounds, verdict pass, Critical: 0 sustained rounds 6-7, quorum 1/1)",
-        "0.4 stop-rule resolution ratified: owner-directed \u00a79 conformance edits on main (48d5503) for 027/034/036/039 in place of a hand-back",
+        "0.4 stop-rule resolution ratified: owner-directed §9 conformance edits on main (48d5503) for 027/034/036/039 in place of a hand-back",
         "operator acceptance of the operator-gated close via gate run; push remains the owner's"
       ],
       "reason": "owner approved the acceptance in-session ('kabul', 2026-07-28) after the phase 4-7 report; the agent transcribed the decision",
       "date": "2026-07-28",
+      "method": "interactive",
+      "authorship": "agent-transcribed"
+    },
+    {
+      "prd": "PRD-034",
+      "owner": "owner",
+      "items": [
+        "9.1 independent review accepted (Codex, 5 rounds, verdict pass, Critical: 0 at rounds 4-5, quorum 1/1): _docs/reviews/review-034-prompt-store-reconciliation.md",
+        "10.3 operator acceptance of the operator-gated close via gate run; push remains the owner's"
+      ],
+      "reason": "owner accepted the review verdict and directed the close in-session ('1' selecting the acceptance item after the phase 4-6 report, 2026-07-29); the agent transcribed the decision",
+      "date": "2026-07-29",
       "method": "interactive",
       "authorship": "agent-transcribed"
     }
