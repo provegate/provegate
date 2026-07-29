@@ -1,5 +1,41 @@
 # Readiness Assessment: PRD-036 — Frozen-Snapshot Digest Gate
 
+> **Iteration 2 (Codex, independent) — 5.85/10, ITERATE, band 4–5.9: "Major rework
+> needed. Return to Phase 1."** Orchestration disclosure: the orchestrating session
+> wrote the iteration-1 rework, so this round's independence matters doubly — Codex
+> scored fresh, and the session re-verified every load-bearing citation against source
+> (the `apps/web/app/page.tsx` read, the `practices-pack` live `auditWiring` call and
+> the `.github/workflows`/`.githooks` reads inside `wiring.ts`, the
+> `verify-script-classes` two-way ADR-table diff, the 130-import count, the traversal
+> fixture literals) before transcribing; it authored no verdicts.
+>
+> **The headline: of iteration 1's findings A–F, only F closed; A, B, D partially
+> reworked but still open, C partial, E ruled against.** The census grew 2 → 12 groups
+> and is STILL incomplete: `content-launch.test.ts:68,85-87` reads
+> `apps/web/app/page.tsx` (covered by neither the `*.md` superset nor any dir glob),
+> and `practices-pack.test.ts:739-744` runs `auditWiring` against the LIVE repo root —
+> which reads `.github/workflows/*.yml` (`wiring.ts:463-464`) and `.githooks/*`
+> (`wiring.ts:568-573`) — a sixteenth reader with two more undeclared groups. FR-3's
+> byte rule as written refuses the corpus it must pass: 130 ordinary `from '../…'`
+> import declarations across 42 files are parent-segment string literals, plus ~22
+> intentional traversal deny-fixtures (`config.test.ts:198`, `memory.test.ts:90`,
+> `init.test.ts:126`, …) that cannot be reworded without destroying the containment
+> tests they exercise — and the helper is one-directional: `repoPath('undeclared')`
+> passes while absent from the ledger. The atomic rollout omits a mechanically
+> required surface: `verify-script-classes.mjs:109-141` diffs the ledger against
+> ADR-0004's Classification table BOTH ways, so the new script needs an ADR table row
+> the PRD never targets. **Value ruling: TL held at 4** — the standing-invariant claim
+> underpinning TL 5 is not yet real while live reads escape the census and the
+> helper-to-ledger direction is unguarded — so the honest total is **3.30, below the
+> 3.40 cutoff: the second expansion has failed on this round's evidence, and the
+> protocol's recorded-cut decision now sits with the owner.** What held: all 12
+> declared census rows are genuine, the nine globs cover the declared set, Turbo
+> 2.10.5's `--dry=json` emits the per-task hash (proven by execution), ADR-0004
+> placement is right, rollout/rollback structure is sound once the missing surfaces
+> land, all eight Memory Inputs active, `lintPrd` green, hard caps clear.
+
+---
+
 > **Iteration 1 (Codex, independent) — 5.55/10, ITERATE, band 4–5.9: "Major rework
 > needed. Return to Phase 1" (`score-band-prescribes-the-action`).** Orchestration
 > disclosure: the orchestrating session verified every load-bearing citation against
@@ -29,19 +65,19 @@
 
 ## Quick Meta
 
-| Field                  | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PRD                    | `_prds/wip/prd-036-frozen-snapshot-digest-gate.md`                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Score                  | 5.55/10                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The declared two-read baseline omits at least five further undeclared repo-root reads the census would immediately trip on; the FR-2 scanner has no implementable closed grammar; FR-1's runnable row bypasses Turbo and cannot evidence cache invalidation; no rollout/rollback contract in an infra item whose census lands red; post-expansion RM 5 unsupported — RM 4 yields 3.30, below the candidate cutoff |
-| Iteration              | 1                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Model Tier (Execution) | do not assign — fix the PRD first                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Model Tier (Audit)     | — (assign on a PASS)                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations**                                                                                                                                                                                                                                                 |
-| Self-scored            | no                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Date                   | 2026-07-28                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| PRD Lint               | passed — Codex ran the production-shaped `lintPrd(config, manifest, text, root, 36)` directly → `ok: true`, zero issues; the orchestrator's `gate check PRD-036` exit 0; all three §11 commands classified safe by direct `parseVerificationCommands` probe                                                                                                                                                                                             |
-| State Record           | updated — `gate status` re-run after saving                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Field                  | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PRD                    | `_prds/wip/prd-036-frozen-snapshot-digest-gate.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Score                  | 5.85/10                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The 12-group census still misses live reads (`apps/web/app/page.tsx`; `practices-pack`'s live `auditWiring` call reading `.github/workflows` and `.githooks`); FR-3's byte rule refuses 130 ordinary imports and ~22 traversal fixtures the corpus legitimately carries, and the helper-to-ledger direction is unguarded; the atomic rollout omits the mechanically required ADR-0004 Classification row; TL ruled 4 → Value 3.30, below the 3.40 cutoff — the second expansion failed and the recorded-cut decision is the owner's |
+| Iteration              | 2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Model Tier (Execution) | do not assign — fix the PRD first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Model Tier (Audit)     | — (assign on a PASS)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations**                                                                                                                                                                                                                                                                                                                                                                   |
+| Self-scored            | no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Date                   | 2026-07-29 (iteration 2); iteration 1 on 2026-07-28                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| PRD Lint               | passed — both iterations ran the production-shaped `lintPrd(config, manifest, text, root, 36)` directly → `ok: true`, zero issues; `gate check PRD-036` exit 0; iteration 2's four deduplicated §11 commands all classified safe by direct `parseVerificationCommands` probe                                                                                                                                                                                                                                                                                              |
+| State Record           | updated — `gate status` re-run after saving                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
@@ -52,12 +88,89 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 
 | Phase               | Tier          | Rationale                                                                    |
 | ------------------- | ------------- | ---------------------------------------------------------------------------- |
-| Execution (Phase 4) | do not assign | band 4–5.9; the census baseline and scanner grammar must be re-founded first |
+| Execution (Phase 4) | do not assign | band 4–5.9 twice; the value question (cut or third rework) precedes any tier |
 | Audit (Phase 6)     | —             | assign when a PASS exists                                                    |
 
 ---
 
 ## Analysis
+
+### Findings — iteration 2 (Codex, independent)
+
+**[P1] A still open — the census remains incomplete.** The claimed 12 groups across 15
+files omit at least three undeclared groups: `apps/web/app/page.tsx` read by
+`content-launch.test.ts` (`SELF_COPY_PAGES` at `content-launch.test.ts:68`, read via
+`it.each` at `:85-87` — covered by neither the `*.md` superset nor `apps/docs/**`);
+and `practices-pack.test.ts:739-744` runs `auditWiring(DEFAULT_CONFIG, …, repoRootDir)`
+against the LIVE repo root, which reads `.github/workflows/*.yml` (`wiring.ts:463-464`)
+and the configured `.githooks/*` dir (`wiring.ts:568-573`) — making
+`practices-pack.test.ts` a sixteenth reader with two more groups. Remedy: add the
+groups, reader citations, covering globs, the sixteenth migration, and the matching
+ledger entries.
+
+**[P1] B still open — FR-3's byte boundary cannot pass the corpus it must gate, and
+the helper is one-directional.** The rule ("no parent-directory segment inside a
+string literal outside the helper") refuses **130 ordinary `from '../…'` import
+declarations across 42 test files** (count verified by execution; e.g.
+`content-placeholders.test.ts:6`, `content-canon.test.ts:5`, `worktree.test.ts:16`) —
+all of which survive the FR-2 migration — plus ~22 intentional traversal deny-fixtures
+across 14 files (`config.test.ts:198` `'../victim'`, `memory.test.ts:90`
+`'../outside'`, `init.test.ts:126` `'../escaped-locks'`, `content-templates.test.ts:307`,
+…) that cannot be reworded without destroying the containment tests they exercise —
+contradicting FR-2's own "no fixture content changes" constraint. The PRD inventories
+only three fixture strings. Separately, FR-3(b) checks only `REPO_READ_GLOBS` ⊆ turbo
+inputs; nothing ties `repoPath()` **usage** to the ledger, so
+`repoPath('new/undeclared.json')` passes while undeclared. Remedy: redesign the rule
+around a measured legal grammar (exempt import/export specifiers as a syntactic class;
+preserve traversal fixtures by a mechanism that is not an author-typed suppression),
+and enforce both directions: usage→ledger and ledger→turbo.
+
+**[P2] C partial — the Turbo hash mechanism is proven; the probe's failure path is
+not.** `pnpm turbo run test --filter=provegate --dry=json` under the pinned Turbo
+2.10.5 (`package.json:55`) emits a usable per-task `provegate#test.hash` — verified by
+execution, tree left clean. But FR-4's write/capture/delete sequence has no collision
+guard, no `try/finally` cleanup, no stale-probe handling: "leaves the tree clean"
+holds only on the happy path. Remedy: exclusive-create a unique probe name,
+unconditional cleanup, stale-probe detection, post-failure restoration check.
+
+**[P1] D partial — rollout/rollback now exist but the atomic commit as scoped would
+fail its own class gate.** `verify-script-classes.mjs:109-141` diffs the ledger
+against ADR-0004's Classification table in BOTH directions — a ledger row for
+`verify-test-inputs.mjs` without a matching ADR-0004 table row fails by name. ADR-0004
+is absent from FR-3's Targets, the Conflict Surface, the rollout, and the rollback.
+Remedy: own the ADR-0004 table append in every scope surface, and rebuild the rollout
+around the corrected census.
+
+**[P2] E ruled — RM 4 stands, TL 4 not 5.** Weights confirmed
+(`defaults.ts:128`); 3.50 is arithmetically correct only with TL 5. Ruling: the
+work de-risks local closes, but the standing-invariant claim behind TL 5 ("closes the
+class for every future PRD") is not yet real while live reads escape the census and
+the helper-to-ledger direction is unguarded. With 5/2/4/1/4 the total is **3.30 —
+below the 3.40 cutoff. The second expansion has failed on this round's evidence; the
+protocol's action is the recorded cut, and that decision is the owner's.**
+
+**[P2] F closed.** PRD-034's lock names `verify-workflow.mjs`
+(`prd-034 lock:45`); CI runs the aggregate at `ci.yml:73`, so no `ci.yml` edit is
+needed. The recorded lease shows Phase 2b and an expiry already past — no readiness
+penalty since the PRD requires re-running `gate queue` before claiming; execution
+honors whatever lease is active then.
+
+### What held up — iteration 2 (verified with citations, several by execution)
+
+All 12 declared census rows are genuine reads (spot-checked ≥ half); the three named
+non-reads are indeed fixture data. The nine new + four existing globs cover the
+DECLARED set, and the `*.md` superset's invalidation cost is honestly disclosed.
+Turbo dry-run hash proven by execution. ADR-0004 placement correct; alias + bundle +
+ledger + harness are the right wiring surfaces. `pnpm verify:brain`,
+`verify:script-classes`, `verify:turbo-inputs`, `verify:workflow` all pass. All eight
+Memory Inputs active and indexed; six dispositions accurate — but
+`narrow-the-grammar-not-the-parser` was not applied faithfully (its
+measure-the-corpus-first requirement is exactly what FR-3 skipped), and
+`gate-wire-or-delete` is incomplete without the ADR-table agreement. Production-dist
+`lintPrd` → `ok: true`; four deduplicated §11 commands all safe. Rollout/rollback
+structurally sound once the missing surfaces land.
+
+---
 
 ### Findings — iteration 1 (Codex, independent)
 
@@ -150,6 +263,20 @@ source inspection instead.)
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
 
+### Iteration 2
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                        |
+| --------- | ------------------------ | ------ | ----------- | -------------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 6.0/10      | concrete targets and commands, but FR-3 contradicts the measured corpus and omits migrations |
+| 2         | Completeness             | 20%    | 4.0/10      | at least three input groups and one test file remain outside the census and globs            |
+| 3         | Technical Depth          | 20%    | 5.0/10      | Turbo hashing sound; boundary closure, helper-ledger linkage, failure-safe probing are not   |
+| 4         | Multi-Tenancy & Security | 10%    | 9.5/10      | no tenant/auth/network/data surface                                                          |
+| 5         | Scope & Testability      | 15%    | 6.0/10      | runnable evidence and deny harness specified, but the default corpus cannot satisfy the rule |
+| 6         | Migration & Rollback     | 20%    | 6.5/10      | atomic/reverse plans exist but omit the required ADR, census, and cleanup surfaces           |
+| **Total** | **Weighted**             |        | **5.85/10** | **ITERATE — band 4–5.9: Phase-1 rework**                                                     |
+
+### Iteration 1
+
 | #         | Dimension                | Weight | Score       | Notes                                                                                                            |
 | --------- | ------------------------ | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------- |
 | 1         | Clarity                  | 15%    | 6.5/10      | concrete targets and anti-patterns; scanner contract and glob-scope conflict block autonomous execution          |
@@ -165,7 +292,25 @@ traceability — all clear.
 
 ---
 
-## Missing Pieces (binding on the Phase-1 rework)
+## Missing Pieces (iteration 2 — binding IF the owner chooses a third rework over the recorded cut)
+
+1. Census completed: `apps/web/app/page.tsx` (content-launch), the `practices-pack`
+   live-`auditWiring` groups (`.github/workflows/**`, `.githooks/**`), the sixteenth
+   file's migration, matching globs and ledger entries.
+2. FR-3's rule re-founded on the measured corpus (`narrow-the-grammar-not-the-parser`
+   applied faithfully this time): import/export specifiers exempt as a syntactic
+   class; the ~22 traversal deny-fixtures preserved by a non-author-typed mechanism;
+   both directions enforced (`repoPath` usage → ledger, ledger → turbo inputs).
+3. FR-4's probe made failure-safe: exclusive-create unique probe name, `try/finally`
+   cleanup, stale-probe handling, post-failure restoration check.
+4. ADR-0004's Classification table append owned in Targets, Conflict Surface, rollout
+   and rollback (`verify-script-classes` diffs both ways and will fail the atomic
+   commit without it).
+5. Value: the owner's call first — 3.30 stands below the cutoff on this round's TL 4
+   ruling; either record the cut, or the third rework must make the standing-invariant
+   claim real enough to re-argue TL 5 on evidence.
+
+## Missing Pieces (iteration 1 — superseded by the 2026-07-29 rework, kept for the record)
 
 1. The complete baseline census, recorded in the PRD: every out-of-package read in
    `packages/provegate/test/**` today, with each path's disposition (declare the glob,
@@ -189,13 +334,31 @@ traceability — all clear.
 
 ## Iteration History
 
-| #   | Date       | Score | Verdict | Key Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --- | ---------- | ----- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | 2026-07-28 | 5.55  | ITERATE | First independent round. The declared two-read baseline is refuted by at least five further undeclared repo-root reads in the package suite — including the one the applied learning record itself names as the class's first instance; the FR-2 scanner grammar cannot find aliased or `cpSync`-shaped reads; FR-1's §11 row bypasses Turbo; no rollout/rollback in an infra item whose census lands red; RM 5 unsupported post-expansion (RM 4 → 3.30, below cutoff). Both named reads, PRD-024's seam, the exception policy, Memory Inputs, §11 safety, and `lintPrd` all verified green. Band 4–5.9: Phase-1 rework, not another scoring round. |
+| #   | Date       | Score | Verdict | Key Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --- | ---------- | ----- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2   | 2026-07-29 | 5.85  | ITERATE | Re-score of the second-expansion rework. Of iteration 1's A–F: only F closed. The 12-group census still misses `apps/web/app/page.tsx` and the two groups behind `practices-pack`'s live `auditWiring` call (`.github/workflows`, `.githooks`) — a sixteenth reader. FR-3's byte rule refuses 130 ordinary imports across 42 files plus ~22 traversal deny-fixtures the corpus legitimately carries, and the helper-to-ledger direction is unguarded. The atomic rollout omits the ADR-0004 Classification row that `verify-script-classes` mechanically requires both ways. Turbo `--dry=json` per-task hash proven by execution (the one clean closure beyond F). TL ruled 4 → Value 3.30, below the 3.40 cutoff: **the second expansion failed; the recorded-cut decision is the owner's.** |
+| 1   | 2026-07-28 | 5.55  | ITERATE | First independent round. The declared two-read baseline is refuted by at least five further undeclared repo-root reads in the package suite — including the one the applied learning record itself names as the class's first instance; the FR-2 scanner grammar cannot find aliased or `cpSync`-shaped reads; FR-1's §11 row bypasses Turbo; no rollout/rollback in an infra item whose census lands red; RM 5 unsupported post-expansion (RM 4 → 3.30, below cutoff). Both named reads, PRD-024's seam, the exception policy, Memory Inputs, §11 safety, and `lintPrd` all verified green. Band 4–5.9: Phase-1 rework, not another scoring round.                                                                                                                                            |
 
 ---
 
 ## Verdict
+
+**ITERATE — 5.85/10, iteration 2, scored independently by Codex.**
+
+Two rounds, same band, same shaped defect: a census that promises completeness while
+the corpus holds reads it never measured — first 2-of-7, now 12-of-15-plus. The rework
+genuinely improved the design (Turbo-level proof, rollout/rollback, ADR-0004
+placement), but its boundary rule was again written before measuring what the corpus
+legitimately contains — `narrow-the-grammar-not-the-parser`'s own instruction — and
+refuses 130 imports and the traversal fixtures on contact. **The Value question now
+precedes the design question: TL ruled 4 puts the honest total at 3.30, below the
+cutoff, which makes this the protocol's second failed expansion. The next move — the
+recorded cut, or a third rework commissioned in the knowledge that the census must be
+machine-measured before the PRD claims it — belongs to the owner, not to another
+scoring round.**
+
+<details>
+<summary>Iteration-1 verdict (2026-07-28, superseded)</summary>
 
 **ITERATE — 5.55/10, iteration 1, scored independently by Codex.**
 
@@ -207,3 +370,5 @@ about, and the scanner it specifies could not find them. The band's action is th
 instruction (`score-band-prescribes-the-action`): return to Phase 1, re-found FR-1 on
 a complete measured baseline, close FR-2's grammar, give the infra change its
 rollout/rollback contract, and bring an honest RM with it.
+
+</details>
