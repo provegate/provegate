@@ -47,11 +47,10 @@ jobs:
       - name: check-wiring
         run: pnpm check:wiring
 
-      # The ONLY gate that runs the built CLI, so it lives here rather than in
-      # the hygiene job — that job installs but never builds, and a check whose
-      # first act is to require `dist/` would report the absence of a build as a
-      # governance violation. This is also the first `gate` invocation on any
-      # automated surface of this repository.
+      # A built-CLI gate placed after this job's build (the hygiene job runs
+      # built-CLI checks too since PRD-034 — it builds the package before its
+      # aggregate step). This was the first `gate` invocation on any automated
+      # surface of this repository.
       - name: verify-value-score
         run: pnpm verify:value-score
 
@@ -69,6 +68,12 @@ jobs:
 
       - name: install
         run: pnpm install --frozen-lockfile
+
+      # PRD-034: verify-prompts (a bundle member and an explicit step below)
+      # executes the built CLI; a clean checkout has no dist/, so build before
+      # the aggregate. The order is asserted by `verify:prompts --assert-ci-order`.
+      - name: build-provegate
+        run: pnpm --filter provegate build
 
       - name: verify-workflow
         run: pnpm verify:workflow
@@ -99,3 +104,11 @@ jobs:
 
       - name: verify-dependency-audit
         run: pnpm verify:dependency-audit
+
+      # PRD-034: the reconciliation check (dormant until PRD-032 enables
+      # prompts here) and its own hygiene-job order assertion.
+      - name: verify-prompts
+        run: pnpm verify:prompts
+
+      - name: verify-prompts-ci-order
+        run: pnpm verify:prompts -- --assert-ci-order

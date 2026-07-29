@@ -47,10 +47,14 @@ import {
   planPrompts,
   durableDeclarationIssue,
   practicesPackDir,
+  evaluatePromptReconciliation,
+  promptsCheckPreflight,
   promptsConfigBlock,
   promptsPackageDir,
   PromptsError,
+  reconcilePrompts,
   type InitAction,
+  type RenderConfig,
   mergePreconditions,
   mergeToLocalBase,
   claimMutexPath,
@@ -122,7 +126,7 @@ function usage(): string {
     '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
-    '  check    lint a PRD for readiness (gate check PRD-XXX | gate check --wiring)',
+    '  check    lint a PRD for readiness (gate check PRD-XXX | --wiring | --prompts: store reconciliation)',
     '  doctor   diagnose an install, read-only (gate doctor --memory [--json])',
     '  memory   deterministic local recall (gate memory find --query=… | --paths=… | --tag=…)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',
@@ -255,7 +259,9 @@ function runInit(args: string[]): number {
     console.log(
       '       delete EVERY path above — not just the store directory — and run this again.',
     );
-    console.log('       There is no upgrade path, no reconciliation and no sync in this version.');
+    console.log(
+      '       `gate check --prompts` detects a stale or edited store; nothing repairs or syncs automatically.',
+    );
   }
   if (practices) {
     // The pack creates files only. Hook wiring, package.json scripts, and shim
@@ -763,12 +769,46 @@ function runValueScoreSweep(config: WorkflowConfig, root: string): number {
 }
 
 function runCheck(args: string[]): number {
-  const unknown = unknownOption(args, ['--wiring', '--value-score', '--review-artifacts', '--durable-artifacts']);
+  const unknown = unknownOption(args, ['--wiring', '--value-score', '--review-artifacts', '--durable-artifacts', '--prompts']);
   if (unknown !== null) {
     console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
   }
   const { root, config } = loadConfig();
+
+  if (args.includes('--prompts')) {
+    // PRD-034 FR-3: the reconciliation check. Disabled and absent-store
+    // handling live in the shared preflight so the packed twin cannot answer
+    // those cases differently; the comparison and the interpretation are the
+    // exported primitive + evaluator, consumed here exactly as the twin does.
+    const renderConfig = config as unknown as RenderConfig;
+    const pre = promptsCheckPreflight(renderConfig, root);
+    if (pre.kind === 'disabled') {
+      console.log(`[check --prompts] ${pre.note}`);
+      return 0;
+    }
+    if (pre.kind === 'absent') {
+      console.error(`[check --prompts] ${pre.problem}`);
+      return 1;
+    }
+    try {
+      const findings = reconcilePrompts(renderConfig, root);
+      const report = evaluatePromptReconciliation(findings, {
+        exceptions: config.prompts.exceptions,
+        // The package reads no clock; the command supplies today's UTC date.
+        todayUtc: new Date().toISOString().slice(0, 10),
+      });
+      for (const line of report.lines) console.log(`[check --prompts] ${line}`);
+      for (const problem of report.problems) console.error(`[check --prompts] ${problem}`);
+      console.log(`[check --prompts] ${report.summary}`);
+      return report.ok ? 0 : 1;
+    } catch (error) {
+      if (!(error instanceof PromptsError)) throw error;
+      console.error(`[check --prompts] ${error.message}`);
+      return 1;
+    }
+  }
+
   const manifest = loadManifest(config, root);
 
   if (args.includes('--wiring')) {
@@ -831,7 +871,7 @@ function runCheck(args: string[]): number {
 
   const idArg = args.find((a) => !a.startsWith('-'));
   if (!idArg) {
-    console.error('usage: gate check PRD-XXX | gate check --wiring | gate check --review-artifacts | gate check --durable-artifacts');
+    console.error('usage: gate check PRD-XXX | gate check --wiring | gate check --prompts | gate check --review-artifacts | gate check --durable-artifacts');
     return 1;
   }
   const found = findRecord(config, root, idArg);

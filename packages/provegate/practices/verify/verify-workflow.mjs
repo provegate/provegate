@@ -16,6 +16,7 @@ const CHECKS = [
   'verify-brain.mjs',
   'verify-deferred.mjs',
   'verify-test-task-coverage.mjs',
+  'verify-prompts.mjs',
 ];
 
 const root = targetRoot();

@@ -65,6 +65,7 @@
   "practices/verify/verify-brain.mjs",
   "practices/verify/verify-deferred.mjs",
   "practices/verify/verify-dependency-audit.mjs",
+  "practices/verify/verify-prompts.mjs",
   "practices/verify/verify-test-task-coverage.mjs",
   "practices/verify/verify-workflow.mjs",
   "prompts/_fragments/AUTONOMY_MODE.human-gated.md",

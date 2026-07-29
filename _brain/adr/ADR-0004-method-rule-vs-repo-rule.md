@@ -56,6 +56,12 @@ born agreeing at that PRD's close, and neither store ever contains the deleted t
 | verify-dependency-audit.mjs | repo |
 | verify-workflow.mjs | repo |
 | verify-script-classes.mjs | repo |
+| verify-prompts.mjs | repo |
+
+Appended at PRD-034: `verify-prompts.mjs` reads this repository's `ci.yml` and executes
+the built CLI from this repository's layout — repo-class by the what-it-READS test. The
+method-side rule is not this script: it ships as the packed twin
+(`practices/verify/verify-prompts.mjs`), which imports the package's exported primitive.
 
 ## Alternatives
 

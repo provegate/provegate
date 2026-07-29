@@ -8,6 +8,8 @@ export type {
   IdPatternConfig,
   MemoryConfig,
   PartialWorkflowConfig,
+  PromptsConfig,
+  PromptsException,
   StatusVocabConfig,
   WorkflowConfig,
   WorktreeConfig,

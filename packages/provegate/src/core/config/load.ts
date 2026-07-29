@@ -234,6 +234,83 @@ function promptsPathContained(root: string, config: WorkflowConfig): ConfigIssue
   return resolveContainedPaths(root, [['prompts.dir', prompts.dir]]).issues;
 }
 
+const EXCEPTION_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Why an exception path is not usable, or null (PRD-034 FR-2). The contract is
+ * REJECTION, not canonicalization: no normalize-then-compare ambiguity — an
+ * entry matches the check's canonical report spelling byte-exact or it is
+ * refused here by the rule it broke. These rules are this field's own,
+ * enumerated rather than borrowed from the watch-glob rule.
+ */
+function unusableExceptionPath(value: string): string | null {
+  if (value.length === 0) return 'must not be empty';
+  if (value.includes('\\')) {
+    return 'must not contain a backslash — forward slashes only (rejection, not canonicalization)';
+  }
+  if (value.startsWith('/')) return 'must be repo-relative, not absolute';
+  if (value === '~' || value.startsWith('~/')) return 'must not be home-relative';
+  if (/^[A-Za-z]:/.test(value)) return 'must not be drive-anchored';
+  if (value.startsWith('./')) {
+    return "must not start with './' — the canonical report spelling never does";
+  }
+  const segments = value.split('/');
+  if (segments.some((s) => s === '.' || s === '..')) {
+    return 'must not contain a `.` or `..` segment';
+  }
+  if (segments.some((s) => s.length === 0)) {
+    return 'must not contain an empty segment (repeated or trailing separators)';
+  }
+  return null;
+}
+
+/**
+ * The exception entries' semantic contract (PRD-034 FR-2), enforced at EVERY
+ * config load — a malformed entry fails the load whether or not prompts is
+ * enabled, because config validity is not feature-scoped. Entry EVALUATION
+ * (expiry against today, staleness against findings) happens only when the
+ * check runs enabled; valid, expired and would-be-stale entries are inert
+ * here — present, validated, unevaluated.
+ */
+function promptsExceptionsValid(config: WorkflowConfig): ConfigIssue[] {
+  const entries = config.prompts?.exceptions ?? [];
+  const issues: ConfigIssue[] = [];
+  const seen = new Set<string>();
+  entries.forEach((entry, i) => {
+    const at = `prompts.exceptions[${i}]`;
+    const pathReason = unusableExceptionPath(entry.path);
+    if (pathReason !== null) issues.push({ path: `${at}.path`, message: pathReason });
+    if (entry.reason.trim().length === 0) {
+      issues.push({ path: `${at}.reason`, message: 'must be non-empty after trimming' });
+    }
+    if (entry.owner.trim().length === 0) {
+      issues.push({ path: `${at}.owner`, message: 'must be non-empty after trimming' });
+    }
+    const date = EXCEPTION_DATE.exec(entry.expires);
+    if (date === null) {
+      issues.push({ path: `${at}.expires`, message: 'must be a YYYY-MM-DD calendar date (compared in UTC; valid THROUGH that date)' });
+    } else {
+      const [year, month, day] = [Number(date[1]), Number(date[2]), Number(date[3])];
+      const utc = new Date(Date.UTC(year, month - 1, day));
+      if (
+        utc.getUTCFullYear() !== year ||
+        utc.getUTCMonth() !== month - 1 ||
+        utc.getUTCDate() !== day
+      ) {
+        issues.push({ path: `${at}.expires`, message: `${entry.expires} is not a real calendar date` });
+      }
+    }
+    // Byte-wise after NO transformation: two spellings a canonicalizing
+    // contract would merge are two strings here, and each must be legal on
+    // its own terms.
+    if (seen.has(entry.path)) {
+      issues.push({ path: `${at}.path`, message: `duplicates ${entry.path} — paths are compared byte-wise` });
+    }
+    seen.add(entry.path);
+  });
+  return issues;
+}
+
 /**
  * `DEFAULT_CONFIG` merged with a parsed config — with ONE keyed exception.
  *
@@ -316,6 +393,7 @@ export function resolveConfig(root: string): WorkflowConfig {
     ...validateResolvedConfig(merged),
     ...memoryPathsContained(root, merged),
     ...promptsPathContained(root, merged),
+    ...promptsExceptionsValid(merged),
   ];
   if (semanticIssues.length > 0) {
     throw new ConfigError(`${CONFIG_FILENAME} is semantically invalid`, semanticIssues);
