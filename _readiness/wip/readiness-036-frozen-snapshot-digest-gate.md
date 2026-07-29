@@ -1,5 +1,44 @@
 # Readiness Assessment: PRD-036 — Frozen-Snapshot Digest Gate
 
+> **Iteration 3 (Codex, independent) — 6.95/10, ITERATE, band 6–7.9 ("Good start —
+> iterate on the identified gaps").** Orchestration disclosure: the orchestrating
+> session wrote both reworks; Codex scored fresh, reproduced the census with its own
+> AST scanner, and the session re-verified the decisive citations (the
+> `content-prompts.test.ts:458` split-parent bypass, the red `verify:workflow`
+> baseline) before transcribing; it authored no verdicts.
+>
+> **The headline: the measure-first rework moved the score a full point (5.85 → 6.95)
+> and Codex's own scan REPRODUCED the census core exactly — 54 files, 23 multi-parent
+> hits in 18 files (20 reads + 3 fixtures), 0 multi-parent module specifiers — but the
+> standing invariant is still false on one live site: `content-prompts.test.ts:458`
+> builds the repo root as `join(pkgRoot, '..', '..')` — two bare single-parent
+> literals, each legal under the grammar — and walks the snapshot through it
+> (`:466,488,501`). The PRD's own flagship digest block bypasses both the grammar and
+> `repoPath`.** Iteration-2 rulings: **C, D, F CLOSED; A and B open** on that one
+> compositional escape (the input itself is glob-covered — this is a
+> boundary-invariant failure, not a missing cache input); **E open: TL held at 4
+> again** → Value 3.30, below the 3.40 cutoff — **the recorded-cut decision returns
+> to the owner a third time.** Secondary finds: the "210 legal single-parent
+> literals" figure was an overlapping-substring count (exclusive AST partition: 225
+> parts, 202 legal-only) — the violation census reproduced, the legal-side bookkeeping
+> did not; the helper exemption is structural but shapeless (nothing stops
+> `escape-fixtures.ts` growing an arbitrary new constant — validate both helpers'
+> exact AST shape with planted failures); the copied-script harness cannot resolve
+> the package-local `typescript` devDependency from a temp root (executed proof:
+> bare import fails at root, resolves under `pnpm --filter provegate exec`) — run
+> the production script with a target-root argument or anchor `createRequire` to
+> `packages/provegate/package.json`; and **`pnpm verify:workflow` is currently RED on
+> main** (`case-study.mdx:97` says `"shipVerified": 32`, the fresh derivation says
+> 33 — PRD-037's sentinel region gone stale, external to this PRD: clear or serialize
+> behind it before Phase 4, do not absorb). What held: glob coverage complete
+> including every `auditWiring` transitive read (checked site by site in
+> `wiring.ts`), fixture moves preserve asserted behavior, FR-4 probe contract
+> adequate with the Turbo hash re-executed (`provegate#test.hash` obtained), ADR-0004
+> in every required surface, `lintPrd` ok, five §11 commands safe, all nine Memory
+> Inputs indexed, hard caps clear.
+
+---
+
 > **Iteration 2 (Codex, independent) — 5.85/10, ITERATE, band 4–5.9: "Major rework
 > needed. Return to Phase 1."** Orchestration disclosure: the orchestrating session
 > wrote the iteration-1 rework, so this round's independence matters doubly — Codex
@@ -65,19 +104,19 @@
 
 ## Quick Meta
 
-| Field                  | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PRD                    | `_prds/wip/prd-036-frozen-snapshot-digest-gate.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Score                  | 5.85/10                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The 12-group census still misses live reads (`apps/web/app/page.tsx`; `practices-pack`'s live `auditWiring` call reading `.github/workflows` and `.githooks`); FR-3's byte rule refuses 130 ordinary imports and ~22 traversal fixtures the corpus legitimately carries, and the helper-to-ledger direction is unguarded; the atomic rollout omits the mechanically required ADR-0004 Classification row; TL ruled 4 → Value 3.30, below the 3.40 cutoff — the second expansion failed and the recorded-cut decision is the owner's |
-| Iteration              | 2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Model Tier (Execution) | do not assign — fix the PRD first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Model Tier (Audit)     | — (assign on a PASS)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations**                                                                                                                                                                                                                                                                                                                                                                   |
-| Self-scored            | no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Date                   | 2026-07-29 (iteration 2); iteration 1 on 2026-07-28                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| PRD Lint               | passed — both iterations ran the production-shaped `lintPrd(config, manifest, text, root, 36)` directly → `ok: true`, zero issues; `gate check PRD-036` exit 0; iteration 2's four deduplicated §11 commands all classified safe by direct `parseVerificationCommands` probe                                                                                                                                                                                                                                                                                              |
-| State Record           | updated — `gate status` re-run after saving                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Field                  | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PRD                    | `_prds/wip/prd-036-frozen-snapshot-digest-gate.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Score                  | 6.95/10                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Verdict                | ITERATE — band 6–7.9: iterate on the identified gaps. The census core reproduced exactly under the scorer's own AST scan, glob coverage is complete, and C/D/F closed — but the standing invariant fails on one live compositional escape (`content-prompts.test.ts:458` `join(pkgRoot, '..', '..')`, legal under the grammar, outside `repoPath` after the specified migration), the helper exemption has no shape validation, the harness cannot resolve the package-local `typescript` from a copied temp root, and TL held at 4 a third time → Value 3.30, below the 3.40 cutoff — the recorded-cut decision returns to the owner. `pnpm verify:workflow` is red on main for an external reason (PRD-037's stale sentinel count) — clear or serialize before Phase 4 |
+| Iteration              | 3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Model Tier (Execution) | do not assign — fix the PRD first                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Model Tier (Audit)     | — (assign on a PASS)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Self-scored            | no                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Date                   | 2026-07-29 (iterations 2–3); iteration 1 on 2026-07-28                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| PRD Lint               | passed — both iterations ran the production-shaped `lintPrd(config, manifest, text, root, 36)` directly → `ok: true`, zero issues; `gate check PRD-036` exit 0; iteration 2's four deduplicated §11 commands all classified safe by direct `parseVerificationCommands` probe                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| State Record           | updated — `gate status` re-run after saving                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
 by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -->
@@ -94,6 +133,71 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 3 (Codex, independent)
+
+**[P1] A/B residue — one live compositional escape defeats the grammar and the
+migration.** `content-prompts.test.ts:458` builds `const repoRoot = join(pkgRoot,
+'..', '..')` — two bare single-parent literals, each legal under FR-3 — and the
+frozen-digest block walks and reads the snapshot through it (`:466,488,501`). The
+positive control would pass while this site stays outside `repoPath`; the PRD's own
+flagship digest test is the bypass. A plausible authoring pattern, not adversarial
+(nested `new URL('..', …)` and repeated `dirname()` are the equivalent shapes; the
+input itself is glob-covered, so this is a boundary-invariant failure, not a missing
+cache input). Remedy: migrate the site; extend the grammar compositionally (e.g. flag
+bare `'..'` literals in path-building positions) with deny cases for split
+`join`/`resolve`, nested URL, concatenation, repeated `dirname` — or narrow the
+invariant claim to what the syntactic rule proves, accepting that the narrower claim
+does not support TL 5.
+
+**[P2] The "210 legal single-parent literals" figure does not reproduce as a
+partition.** The scorer's AST scan reproduced the violation census exactly (54 files;
+23 multi-parent in 18 files = 20 reads + 3 fixtures; 0 multi-parent specifiers; 144
+parent-relative specifiers) but found 225 literal parts with a parent segment under an
+exclusive partition — 23 violations + 202 legal-only; 210 is an overlapping-substring
+count that includes violations and misses bare `'..'` terminals. Remedy: report
+mutually exclusive AST categories and rerun after the compositional-grammar fix.
+
+**[P2] The helper exemption is structural but shapeless.** FR-3 exempts both helper
+files wholesale while the Memory Input claims their contents are gated; nothing stops
+`escape-fixtures.ts` gaining an arbitrary new multi-parent constant or a read helper.
+Remedy: validate both helpers' exact AST shape (named fixture-only exports; only
+`repoPath` + the literal ledger; no fs or child-process calls) with planted
+extra-export/read deny cases.
+
+**[P2] The copied-script harness cannot resolve `typescript` from a temp root.**
+TypeScript exists only as the package's devDependency (`packages/provegate/
+package.json:60`); executed proof: bare `import 'typescript'` fails at the repo root
+and resolves under `pnpm --filter provegate exec`. A script copied to a temp root
+loses both anchors. Remedy: run the production script with a target-root argument, or
+anchor `createRequire` to `packages/provegate/package.json` and state it in FR-3.
+
+**[P2] External red baseline.** `pnpm verify:workflow` fails on main:
+`case-study.mdx:97` records `"shipVerified": 32` while the fresh derivation reports
+33 — PRD-037's sentinel region gone stale after its own close. Unrelated to PRD-036,
+but the cross-cutting floor requires the aggregate green: clear or explicitly
+serialize behind that fix before Phase 4; do not absorb it into this scope.
+
+**Iteration-2 rulings: C CLOSED (probe contract adequate; Turbo hash re-executed),
+D CLOSED (ADR-0004 in Targets, Scope, Conflict Surface, rollout, rollback; the
+no-prettier disposition accurate), F CLOSED (CI runs the aggregate at `ci.yml:73`;
+queue recheck handles the moving PRD-034/PRD-038 overlaps), A/B OPEN on the one
+compositional escape, E OPEN — TL 4 a third time.**
+
+### What held up — iteration 3 (verified with citations, several by execution)
+
+The census core reproduced under the scorer's own independent AST scan — the numbers
+match the PRD's §1 verbatim on every load-bearing figure. Glob coverage is complete:
+every `auditWiring` transitive read checked site by site (`wiring.ts:430,463,571,616,
+651`) lands in a declared glob; no uncovered input found. The three fixture moves
+preserve asserted behavior at all three sites. FR-4's contract is adequate and the
+Turbo dry-run hash was re-obtained by execution. Production `lintPrd` → `ok: true`;
+five deduplicated §11 commands all safe. All nine Memory Inputs indexed and active.
+`verify:brain`, `verify:script-classes`, `verify:turbo-inputs` pass. Hard caps all
+clear — including runtime-dependency: `typescript` stays a devDependency used by a
+repo-class, never-shipped script.
+
+---
 
 ### Findings — iteration 2 (Codex, independent)
 
@@ -263,6 +367,18 @@ source inspection instead.)
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
 
+### Iteration 3
+
+| #         | Dimension                | Weight | Score       | Notes                                                                                   |
+| --------- | ------------------------ | ------ | ----------- | --------------------------------------------------------------------------------------- |
+| 1         | Clarity                  | 15%    | 7.0/10      | concrete targets and rows; grammar and copied-harness contracts contradictory           |
+| 2         | Completeness             | 20%    | 5.5/10      | globs broad enough; the claimed escape census and helper closure are not complete       |
+| 3         | Technical Depth          | 20%    | 6.0/10      | Turbo proof and two-way ledger strong; the central lexical invariant fails on live code |
+| 4         | Multi-Tenancy & Security | 10%    | 9.5/10      | no tenant/auth/network/data surface                                                     |
+| 5         | Scope & Testability      | 15%    | 7.0/10      | runnable deny/positive rows; no split-construction or helper-shape denial               |
+| 6         | Migration & Rollback     | 20%    | 8.0/10      | atomic/reverse plans and ADR lifecycle complete; the external red must clear first      |
+| **Total** | **Weighted**             |        | **6.95/10** | **ITERATE — band 6–7.9: iterate on the identified gaps**                                |
+
 ### Iteration 2
 
 | #         | Dimension                | Weight | Score       | Notes                                                                                        |
@@ -292,7 +408,25 @@ traceability — all clear.
 
 ---
 
-## Missing Pieces (iteration 2 — binding IF the owner chooses a third rework over the recorded cut)
+## Missing Pieces (iteration 3 — the Value fork first, then four precision pieces)
+
+0. **The owner's Value call precedes everything: TL has been ruled 4 in three
+   consecutive rounds → 3.30, below the 3.40 cutoff.** Options: record the cut; or a
+   fourth precision round (the band now says iterate-in-place, not Phase-1), knowing
+   the scorer's stated position is that even a corrected-but-narrowed invariant claim
+   does not support TL 5.
+1. Migrate `content-prompts.test.ts:458`'s frozen-digest block through `repoPath` and
+   extend the grammar compositionally (bare `'..'` literals in path-building
+   positions) with the four deny shapes — or narrow the invariant claim honestly.
+2. Census output re-reported as mutually exclusive AST categories; rerun after the
+   grammar fix.
+3. Helper AST-shape validation with planted extra-export/read deny cases.
+4. Harness toolchain anchoring: production script + target-root argument, or
+   `createRequire` against `packages/provegate/package.json`, stated in FR-3.
+5. The external `verify:workflow` red (PRD-037 sentinel count 32→33) cleared or
+   explicitly serialized before Phase 4.
+
+## Missing Pieces (iteration 2 — superseded by the measure-first rework, kept for the record)
 
 1. Census completed: `apps/web/app/page.tsx` (content-launch), the `practices-pack`
    live-`auditWiring` groups (`.github/workflows/**`, `.githooks/**`), the sixteenth
@@ -336,12 +470,30 @@ traceability — all clear.
 
 | #   | Date       | Score | Verdict | Key Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | --- | ---------- | ----- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3   | 2026-07-29 | 6.95  | ITERATE | Re-score of the measure-first rework. The scorer's own AST scan REPRODUCED the census core exactly (54 files; 23 multi-parent in 18 files = 20 reads + 3 fixtures; 0 multi-parent specifiers) and glob coverage verified complete including every `auditWiring` transitive read. C, D, F closed. One live compositional escape keeps A/B open: `content-prompts.test.ts:458` `join(pkgRoot, '..', '..')` — legal under the grammar, outside the migration — plus three precision pieces (exclusive census partition, helper AST-shape validation, harness `typescript` anchoring) and the external `verify:workflow` red. TL held at 4 a third time → 3.30 below cutoff: **the recorded-cut decision returns to the owner**, now with the band at 6–7.9 (iterate-in-place, not Phase-1).       |
 | 2   | 2026-07-29 | 5.85  | ITERATE | Re-score of the second-expansion rework. Of iteration 1's A–F: only F closed. The 12-group census still misses `apps/web/app/page.tsx` and the two groups behind `practices-pack`'s live `auditWiring` call (`.github/workflows`, `.githooks`) — a sixteenth reader. FR-3's byte rule refuses 130 ordinary imports across 42 files plus ~22 traversal deny-fixtures the corpus legitimately carries, and the helper-to-ledger direction is unguarded. The atomic rollout omits the ADR-0004 Classification row that `verify-script-classes` mechanically requires both ways. Turbo `--dry=json` per-task hash proven by execution (the one clean closure beyond F). TL ruled 4 → Value 3.30, below the 3.40 cutoff: **the second expansion failed; the recorded-cut decision is the owner's.** |
 | 1   | 2026-07-28 | 5.55  | ITERATE | First independent round. The declared two-read baseline is refuted by at least five further undeclared repo-root reads in the package suite — including the one the applied learning record itself names as the class's first instance; the FR-2 scanner grammar cannot find aliased or `cpSync`-shaped reads; FR-1's §11 row bypasses Turbo; no rollout/rollback in an infra item whose census lands red; RM 5 unsupported post-expansion (RM 4 → 3.30, below cutoff). Both named reads, PRD-024's seam, the exception policy, Memory Inputs, §11 safety, and `lintPrd` all verified green. Band 4–5.9: Phase-1 rework, not another scoring round.                                                                                                                                            |
 
 ---
 
 ## Verdict
+
+**ITERATE — 6.95/10, iteration 3, scored independently by Codex.**
+
+The measure-first rework did what it promised at the measurement level — the scorer
+reproduced the census verbatim and could not find an uncovered cache input — and the
+score moved a full point into the iterate-in-place band. What remains is one honest
+gap and one standing ruling. The gap: the boundary invariant is syntactic while one
+live site composes its escape from legal pieces — the PRD's own frozen-digest block —
+so either the grammar grows a compositional rule or the claim narrows to what the
+syntax proves. The ruling: TL 4, three rounds running, which holds Value at 3.30
+below the cutoff regardless of the design's health. **The fork is the owner's:
+record the cut with the protocol's rationale, or commission a fourth precision round
+accepting the scorer's stated position that even a corrected-but-narrowed invariant
+may not lift TL to 5.**
+
+<details>
+<summary>Iteration-2 verdict (2026-07-29, superseded)</summary>
 
 **ITERATE — 5.85/10, iteration 2, scored independently by Codex.**
 
@@ -356,6 +508,8 @@ cutoff, which makes this the protocol's second failed expansion. The next move �
 recorded cut, or a third rework commissioned in the knowledge that the census must be
 machine-measured before the PRD claims it — belongs to the owner, not to another
 scoring round.**
+
+</details>
 
 <details>
 <summary>Iteration-1 verdict (2026-07-28, superseded)</summary>
