@@ -1,5 +1,29 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
+> **Iteration 7 (Codex, independent, 2026-07-29) — 8.10/10, PASS. Zero findings.**
+> Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75 → 7.90 → 8.10, seven independent rounds,
+> every load-bearing claim verified by EXECUTION at least once along the way. The
+> iteration-6 closure table came back all-CLOSED (both "one file" survivors retired,
+> all three reinforcements landed); the eleven-surface serialization sweep found the
+> whole-PRD rule and only the whole-PRD rule everywhere operative; the Clarity gate
+> checklist passed literally, with the `none in code` Targets form accepted for
+> verified-transition FRs; all six hard caps clear and both §11 cap lines confirmed;
+> the ten-value render exact for the fourth time; Value 3.50 credible a FOURTH
+> independent round (`problem: null`, `valueScoreIssue: null`). The scorer also ruled
+> the sequencing prose survives 036's lease expiry without edits — the operative
+> condition is "while the overlapping lease is active", so `gate queue`/`gate open`
+> re-establish the truth at Phase 3, no prose churn. **Model tier: Execution high,
+> Audit high. Six watch items W1–W6 bind Phases 3–7** (CHECKS filename literal; the
+> nine-instance restatement pattern as a Phase-6 sweep brief; 036 serialization at
+> Phase 3; the operator rows binding the operator-gated close; mutation
+> restore-in-`finally`; the printed-set STOP rule). Orchestration disclosure: the
+> orchestrating session verified the closure-table citations against `c454ec1`'s diff
+> and authored no verdicts; Codex is the scorer and did not write the PRD.
+
+---
+
+## Superseded headline — iteration 6
+
 > **Iteration 6 (Codex, independent, 2026-07-29) — 7.90/10, ITERATE; one P2 finding
 > stands between this document and the PASS band.** Three of iteration-5's four
 > remedies CLOSED (the CHECKS filename literal in both FR-9 sites + the §6 meta-gate
@@ -144,14 +168,14 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 7.90/10                                        |
-| Verdict                | ITERATE — one P2 stands: the whole-PRD serialization rule landed in FR-9 and Memory Inputs but two sites (FR-7 Targets, Conflict Surface) still say "serializes on this one file" — a restatement survivor that is also factually false, since the live probe returns four shared paths with PRD-036. Everything else closed: 12 of 13 sweep families clean, all probes green, Value 3.50 credible a third round, six hard caps clear, the "none in code" Targets form explicitly accepted for verified-transition FRs |
-| Iteration              | 6                                              |
-| Model Tier (Execution) | do not assign — fix the PRD first              |
-| Model Tier (Audit)     | — (assign on a PASS)                           |
+| Score                  | 8.10/10                                        |
+| Verdict                | PASS — zero findings at iteration 7. The iteration-6 closure table all-CLOSED; the eleven-surface serialization sweep found only the whole-PRD rule operative; Clarity gate passed literally; all six hard caps clear; the ten-value render exact; Value 3.50 credible a fourth independent round. Proceed to Phase 3 on the owner's Go, under watch items W1–W6 |
+| Iteration              | 7                                              |
+| Model Tier (Execution) | high — cross-module generation, contested surfaces, semantic twin authority, meta-gate integration, atomic ordering |
+| Model Tier (Audit)     | high — nine historical restatement instances and source/installed/generated authority boundaries demand full consistency sweeps |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-29 (iteration 6; iterations 1–5 same file, below) |
+| Date                   | 2026-07-29 (iteration 7; iterations 1–6 same file, below) |
 | PRD Lint               | passed — Codex's direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}` (the CLI's state write EPERMs in its read-only sandbox, known); the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
@@ -164,8 +188,31 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Execution (Phase 4) | do not assign | band 4–5.9; the chain dependency must be re-founded first |
-| Audit (Phase 6)     | — | assign when a PASS exists |
+| Execution (Phase 4) | **high** | cross-module generation, contested surfaces, semantic twin authority, meta-gate integration and atomic ordering require repository-wide reasoning |
+| Audit (Phase 6)     | **high** | nine historical restatement failures and source/installed/generated authority boundaries require a reviewer capable of full consistency sweeps |
+
+## Watch Items (bind Phases 3–7)
+
+- **W1 — CHECKS filename-literal class (Phase 4):** append exactly
+  `'verify-review-quorum-authority.mjs'`, never the package alias; discharge with
+  `pnpm verify:workflow` and `gate check --wiring`.
+- **W2 — the nine-instance restatement pattern (Phase 6):** brief the reviewer to
+  SWEEP every named restatement surface including new remediation text — never merely
+  to hunt the previously known phrase.
+- **W3 — PRD-036 serialization (Phase 3):** re-read the lease state, then `gate queue`
+  and the enforcing `gate open`; no implementation begins while any overlapping lease
+  is active.
+- **W4 — operator-gated close (Phases 5 and 7):** Phase 5 includes the live Claude
+  command-listing observation; Phase 7 binds it to the owner-signed acceptance
+  `Autonomous Close: operator-gated` demands.
+- **W5 — mutation restoration (Phase 5):** the planted edit is restored in `finally`
+  on ALL paths including failures, and the clean tree is asserted after.
+- **W6 — printed-set STOP rule (Phase 4):** compare the initializer's printed keys
+  with FR-1's ten-value table; an additional printed key STOPS for an owner decision,
+  a no-longer-printed key is dropped.
+
+At Phase 3 open, the implementing agent re-verifies: (1) the 036 lease state through
+`gate queue`/`gate open`; (2) a green `pnpm verify:workflow` on current main.
 
 ---
 
@@ -546,18 +593,19 @@ exit 0); method-content traceability — clear.
 | 4   | 2026-07-29 | 6.95  | ITERATE | Score DOWN — the iteration-3 remedy created the next defect: the two new `verify:*` scripts are specified deliberately unwired, which `auditWiring` (wire-or-except every verify script) and `verify:script-classes` (ledger + ADR-0004 rows for every on-disk script) refuse; the PRD's own §11 would redden `check --wiring` and `verify:workflow`. Fix paths (`verify-workflow.mjs`, `script-classes.json`, ADR-0004) all inside PRD-036's live Phase-4 lease — declare and serialize. Pack-drift fallback refuted (copies can regress together). Six FR-8 restatements missed (eighth instance); one live-red DO NOT line. GAINED: Value 3.50 judged CREDIBLE; snapshot Quorum doctrine confirmed at the source; render/lint/caps all green. |
 | 5   | 2026-07-29 | 7.75  | ITERATE | Climbing again. FR-9's topology PASSES the production projection — exact landing shapes on record (CHECKS filename literal, wiringExceptions script-name→justification, repo-class by what-it-READS). One P1: the partial-start instruction is impossible — `gate open` reads the whole declared surface, live probe found four 036 overlaps, the entire PRD serializes behind 036's lease release (`conflict-check-independent-of-override` to disposition). Two P2s: four fresh restatements from the previous edit's own text (sweep held on mandated sites, not on new text — the remedy is a SEPARATE post-edit sweep pass), and the CHECKS literal + §6 criterion so Phase 4 does not learn the filename from a red gate. Value still credible; all probes green. |
 | 6   | 2026-07-29 | 7.90  | ITERATE | One P2 from the PASS band: the whole-PRD serialization rule landed in FR-9 + Memory Inputs but "serializes on this one file" survived in FR-7's Targets note and the Conflict Surface — the ninth restatement instance, and factually false (live probe: four shared paths). Everything else CLOSED: three of four iteration-5 remedies verified landed exactly; 12/13 sweep families clean; "none in code" Targets explicitly accepted for verified-transition FRs; §11 cap lines confirmed; Value 3.50 credible third round (`problem: null` from the exported scorer); all probes green. Correction ordered: the total rule in both sites plus explicit whole-PRD-hold language in §7 Prerequisites, §8's FR-9 bullet and DO NOT. |
+| 7   | 2026-07-29 | 8.10  | **PASS** | Zero findings. Iteration-6 closure all-CLOSED at `c454ec1`; the eleven-surface serialization sweep found only the whole-PRD rule operative (changelog history exempt); Clarity gate passed literally; six hard caps clear; ten-value render exact; four-path conflict probe re-confirmed; the sequencing prose ruled robust to lease expiry (conditional form, `gate queue`/`gate open` re-establish truth at Phase 3). Value 3.50 credible a fourth round. Tiers: Execution high, Audit high. Watch items W1–W6 issued. Next: owner Go for Phase 3, serialized behind 036's lease release. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.90/10, iteration 6, scored independently by Codex.**
+**PASS — 8.10/10, iteration 7, scored independently by Codex. Zero findings.**
 
-Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75 → 7.90. One phrase separates this from the
-PASS band: "serializes on this one file", surviving in exactly two sites after the
-rule it contradicts landed correctly in FR-9 — the ninth restatement instance in this
-chain, and factually false against the four-path probe. The correction is two line
-edits plus three explicit reinforcements (§7, §8, DO NOT), then re-score. Nothing else
-remains: the sweep table is clean in 12 of 13 families, every probe is green, the
-value header held credible for a third consecutive independent round, and the scorer
-accepted the verified-transition Targets form on the record.
+Seven rounds, 4.00 → 8.10, and the document earned every point the hard way: the ten
+values were rendered rather than read, the rollback was rewritten in the state model's
+own terms, the wiring topology was projected through the production gates before any
+code exists, and the chain's signature failure — the corrected rule surviving where it
+is restated — was hunted through nine instances until an eleven-surface sweep came
+back clean. Execution high, Audit high. Phase 3 opens on the owner's Go, behind two
+re-verifications: 036's lease through `gate queue`/`gate open`, and a green
+`pnpm verify:workflow` on current main. Watch items W1–W6 travel with the task plan.
