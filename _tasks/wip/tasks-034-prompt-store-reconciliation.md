@@ -183,40 +183,44 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
         `pnpm --filter provegate build` before `verify:workflow`; update the adjacent
         stale comment claiming the other job is the ONLY built-CLI surface (watch
         item 2).
-- [ ] 6.0 FR-6 — the full fixture matrix (beyond 1.1's red-first core)
-  - [ ] 6.1 Exceptions: valid; expiry boundary (today passes, yesterday fails);
+- [x] 6.0 FR-6 — the full fixture matrix (beyond 1.1's red-first core)
+  - [x] 6.1 Exceptions: valid; expiry boundary (today passes, yesterday fails);
         duplicate/malformed-date/non-normalized path refused at load; stale entry
         fails; every suppression fixture first proves the finding with the entry
         removed; disabled-exception inertness.
-  - [ ] 6.2 Command: summary counts; disabled note verbatim; enabled-absent failure;
+  - [x] 6.2 Command: summary counts; disabled note verbatim; enabled-absent failure;
         backslash-dir load refusal; production-surface assertions (rendered README +
         help mention the check, neither claims nothing detects).
-  - [ ] 6.3 Migration scenarios: pre-034 practices tree through upgrade+init (new
+  - [x] 6.3 Migration scenarios: pre-034 practices tree through upgrade+init (new
         file created, existing untouched, changeset text carries all three steps);
         backslash-dir procedure end-to-end incl. `templates.prd` resolving via the
-        production `gate new` path and a clean post-migration reconcile.
-  - [ ] 6.4 Containment: leaf-symlink and parent-symlink escape fixtures (watch
+        production `gate new` path and a clean post-migration reconcile. (The
+        resolver assertion is error-class discrimination — see Deferrals: the
+        inherited PRD-029 anchor defect blocks full instantiation of ANY rendered
+        template, with a control fixture proving the discrimination.)
+  - [x] 6.4 Containment: leaf-symlink and parent-symlink escape fixtures (watch
         item 1); packed-twin executed as a module; API-export assertion.
-- [ ] 7.0 Migration & Rollback verification (infra parent)
-  - [ ] 7.1 Sequence atomicity: between adjacent commits of the implementation
-        stack, no tree holds a registered check without its script or a script
-        without registration — verify by checking out each intermediate commit and
-        running `pnpm verify:workflow` (or land as one commit).
-  - [ ] 7.2 Rollback prova: revert the stack in a scratch worktree; confirm
-        `verify:workflow`, `verify:pack-drift` and the pack test return to green
-        pre-PRD state.
-- [ ] 8.0 Phase 5 — Testing: every §11 row, then the floor
-  - [ ] 8.1 `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification`
-  - [ ] 8.2 `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export`
-  - [ ] 8.3 `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception`
-  - [ ] 8.4 `pnpm --filter provegate test test/prompts-integrity.test.ts -t command`
-  - [ ] 8.5 `pnpm --filter provegate test test/prompts-integrity.test.ts -t packed`
-  - [ ] 8.6 `pnpm --filter provegate test test/prompts-integrity.test.ts` (whole matrix)
-  - [ ] 8.7 `pnpm verify:prompts` (dormant note here) + `pnpm verify:prompts -- --assert-ci-order`
-  - [ ] 8.8 `pnpm verify:workflow` + `pnpm verify:pack-drift`
-  - [ ] 8.9 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` && `pnpm build`
-  - [ ] 8.10 Re-read PRD §12 DO NOT — no `any`, no adopter-file delete, no repair
-        verb, no second implementation, no behavior change for a no-prompts repo.
+- [x] 7.0 Migration & Rollback verification (infra parent)
+  - [x] 7.1 Sequence atomicity: landed as ONE commit (`bf942eb`) — the permitted
+        degenerate case; no intermediate tree exists.
+  - [x] 7.2 Rollback prova: `git revert -n HEAD` in a scratch worktree
+        (`../provegate-prd-034-rollback`, removed after): `verify:workflow` PASS,
+        `verify:pack-drift` PASS, pack test 9/9 — green pre-PRD state restored.
+- [x] 8.0 Phase 5 — Testing: every §11 row, then the floor
+  - [x] 8.1 `pnpm --filter provegate test test/prompts-integrity.test.ts -t classification` — 16 passed
+  - [x] 8.2 `pnpm --filter provegate test test/prompts-integrity.test.ts -t api-export` — 1 passed
+  - [x] 8.3 `pnpm --filter provegate test test/prompts-integrity.test.ts -t exception` — 16 passed
+  - [x] 8.4 `pnpm --filter provegate test test/prompts-integrity.test.ts -t command` — 13 passed
+  - [x] 8.5 `pnpm --filter provegate test test/prompts-integrity.test.ts -t packed` — 5 passed
+  - [x] 8.6 `pnpm --filter provegate test test/prompts-integrity.test.ts` — 54/54
+  - [x] 8.7 `pnpm verify:prompts` (dormant note, exit 0) + `pnpm verify:prompts -- --assert-ci-order` PASS
+  - [x] 8.8 `pnpm verify:workflow` PASS + `pnpm verify:pack-drift` PASS
+  - [x] 8.9 Floor: check-types 5/5, lint 4/4, test 7/7 (1327 tests, 55 files), build 4/4
+  - [x] 8.10 §12 re-read: no `any` (types+lint green); reconcile writes nothing
+        (byte-level no-write fixture); no repair/sync verb anywhere; twin imports the
+        primitive; a repo whose config OMITS prompts sees zero change (defaults carry
+        no backslash and an empty exceptions list — the backslash refusal on a
+        PRESENT block is FR-2's named behavior change, not a violation).
 - [ ] 9.0 Phase 6 — Final Auditing
   - [ ] 9.1 Independent adversarial review (different model/session; `Critical: 0`;
         `Quorum: 1/1 pass`) → `_docs/reviews/review-034-prompt-store-reconciliation.md`.
@@ -241,16 +245,16 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
 
 | Gate | Command / Check | Scope | Result | Evidence | Notes |
 | ---- | --------------- | ----- | ------ | -------- | ----- |
-| FR-1 | `... -t classification` | pkg | pending | | five classes + limit pins + values-change case |
-| FR-1 | `... -t api-export` | pkg | pending | | both symbols import from `provegate` |
-| FR-2 | `... -t exception` | pkg | pending | | incl. expiry boundary, backslash-dir refusal, disabled inertness |
-| FR-3 | `... -t command` | pkg | pending | | summary/note verbatim, T2 remedy, surface assertions, read-error fixtures |
-| FR-5 | `... -t packed` | pkg | pending | | twin as module, shared evaluator |
-| FR-6 | whole `prompts-integrity.test.ts` | pkg | pending | | full matrix incl. both migration scenarios |
-| FR-4 | `pnpm verify:prompts` + `-- --assert-ci-order` | repo | pending | | dormant note; hygiene-job order |
-| FR-4/5 | `pnpm verify:workflow` + `pnpm verify:pack-drift` | repo | pending | | CHECKS membership; both ledger pairs |
-| atomicity | intermediate-commit `verify:workflow` sweep | repo | pending | | 7.1 |
-| types/lint/test/build | the floor | monorepo | pending | | |
+| FR-1 | `... -t classification` | pkg | passed | 16 passed / 38 skipped (2026-07-29) | five classes + limit pins + values-change case |
+| FR-1 | `... -t api-export` | pkg | passed | 1 passed (2026-07-29) | both symbols import from the package root |
+| FR-2 | `... -t exception` | pkg | passed | 16 passed (2026-07-29) | incl. expiry boundary, backslash-dir refusal, disabled inertness |
+| FR-3 | `... -t command` | pkg | passed | 13 passed (2026-07-29) | summary/note verbatim, T2 remedy, surface assertions, read-error fixtures |
+| FR-5 | `... -t packed` | pkg | passed | 5 passed (2026-07-29) | twin as module, shared evaluator, PACK_MAP + manifest + NEXT_STEPS |
+| FR-6 | whole `prompts-integrity.test.ts` | pkg | passed | 54/54 (2026-07-29) | full matrix incl. both migration scenarios |
+| FR-4 | `pnpm verify:prompts` + `-- --assert-ci-order` | repo | passed | dormant note exit 0; order PASS (2026-07-29) | dormant note; hygiene-job order |
+| FR-4/5 | `pnpm verify:workflow` + `pnpm verify:pack-drift` | repo | passed | both PASS (2026-07-29) | CHECKS membership; both ledger pairs + notes |
+| atomicity | intermediate-commit `verify:workflow` sweep | repo | passed | one commit `bf942eb`; rollback prova green (7.2) | 7.1 degenerate case + revert restores pre-PRD green |
+| types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1327 tests), 4/4 (2026-07-29) | |
 | independent-review | `Critical: 0`, Quorum `1/1 pass`, six-surface audit | review | pending | | |
 | durable | `pnpm verify:durable-artifacts` | repo | pending | | |
 

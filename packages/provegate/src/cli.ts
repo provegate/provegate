@@ -126,7 +126,7 @@ function usage(): string {
     '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
     '  status   rebuild workflow state from artifacts and show it',
     '  queue    show the PRD queue (--json for machine output)',
-    '  check    lint a PRD for readiness (gate check PRD-XXX | --wiring | --prompts: store reconciliation)',
+    '  check    lint a PRD for readiness (gate check PRD-XXX | --wiring | --prompts: prompt-store staleness check)',
     '  doctor   diagnose an install, read-only (gate doctor --memory [--json])',
     '  memory   deterministic local recall (gate memory find --query=… | --paths=… | --tag=…)',
     '  run      run gated phases 4-7 + local merge (--dry-run, --from-phase=4|5|6|7|merge)',

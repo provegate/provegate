@@ -87,8 +87,10 @@ Where things land:
 There is no upgrade path and no `sync` — nothing repairs or syncs automatically. After a
 package upgrade the store does not change; `gate check --prompts` is what detects that it is
 stale: it recomputes the store from the installed package and your config, compares bytes,
-and reports `stale`, `modified`, `missing` and `unattributable` paths (every generated file
-also names the producing package version in its banner).
+and reports `stale`, `modified`, `missing` and `unattributable` paths. Bannered files also
+name the producing package version; two generated paths are deliberately unbannered — the
+codex snippet and `prompts/PLACEHOLDERS.md` — so divergence in them reports as
+`unattributable` (detected by bytes, only the stale-versus-modified split is lost).
 
 To reinstall: run `gate init --prompts`, read the **generated set** it prints, delete **every
 path in that set**, and run it again. Not just the store directory — two of the destinations

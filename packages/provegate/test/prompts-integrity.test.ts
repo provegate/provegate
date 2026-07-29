@@ -369,6 +369,30 @@ describe('classification (PRD-034 FR-1)', () => {
     expect(() => reconcilePrompts(config, root, packageDir)).toThrow(/outside the repository/);
   });
 
+  it('containment: a DANGLING leaf symlink fails closed — never classified missing', () => {
+    const config = storeConfig();
+    const { root, paths } = freshTree(config);
+    const outside = scratch('pg-outside-dangling-');
+    const victim = firstKey(paths, 'prompts/phase-1');
+    rmSync(join(root, victim));
+    // The target never exists: realpath ENOENTs exactly like true absence,
+    // but SOMETHING sits at the planned path and its destination is outside.
+    symlinkSync(join(outside, 'never-created.md'), join(root, victim));
+    expect(() => reconcilePrompts(config, root, packageDir)).toThrow(/unresolvable symlink/);
+  });
+
+  it('containment: a missing leaf beneath an OUTSIDE-pointing parent fails closed — never missing', () => {
+    const config = storeConfig();
+    const { root } = freshTree(config);
+    const outside = scratch('pg-outside-empty-');
+    mkdirSync(join(outside, 'templates'), { recursive: true });
+    // The parent escapes and the planned files are absent at the destination:
+    // realpath of each leaf ENOENTs, but the escape must win over `missing`.
+    rmSync(join(root, '.provegate/templates'), { recursive: true });
+    symlinkSync(join(outside, 'templates'), join(root, '.provegate/templates'));
+    expect(() => reconcilePrompts(config, root, packageDir)).toThrow(/outside the repository/);
+  });
+
   it('a leaf symlink resolving INSIDE the repository is read, not refused', () => {
     const config = storeConfig();
     const { root, paths } = freshTree(config);
@@ -566,6 +590,12 @@ describe('exception (PRD-034 FR-2)', () => {
       expires,
     });
 
+    // Independent cause first: without any entry, the run fails on `modified` —
+    // so the boundary suppressions below suppress a PROVEN finding.
+    const bare = evaluatePromptReconciliation(findings, { todayUtc: '2026-07-29' });
+    expect(bare.ok).toBe(false);
+    expect(bare.lines.some((l) => l.startsWith(victim) && l.includes('modified'))).toBe(true);
+
     const today = evaluatePromptReconciliation(findings, {
       exceptions: [exception('2026-07-29')],
       todayUtc: '2026-07-29',
@@ -620,10 +650,12 @@ describe('command (PRD-034 FR-3)', () => {
     const { root, paths } = await cliTree();
     const result = await gate(root, 'check', '--prompts');
     expect(result.code, result.stderr).toBe(0);
-    expect(result.stdout).toContain(
-      `${paths.size} current, 0 excepted, 0 stale, 0 modified, 0 missing, 0 unattributable`,
-    );
-    expect(result.stdout).not.toMatch(/: (modified|stale|missing|unattributable)/);
+    // EXACTLY the one summary line — not containment: duplicate summaries,
+    // stray `path: current` lines or any extra output must fail here.
+    expect(result.stdout.trim().split('\n')).toEqual([
+      `[check --prompts] ${paths.size} current, 0 excepted, 0 stale, 0 modified, 0 missing, 0 unattributable`,
+    ]);
+    expect(result.stderr.trim()).toBe('');
   });
 
   it('a modified path exits 1, says the cause may be a hand edit or a config change, and counts it', async () => {
@@ -770,7 +802,11 @@ describe('command (PRD-034 FR-3)', () => {
   it('restatement sweep: the CLI help and the check usage line both carry --prompts', async () => {
     const help = await gate(scratch('pg-cli-help-'), '--help');
     expect(help.code).toBe(0);
-    expect(help.stdout).toContain('--prompts');
+    // The full production phrase, not mere flag presence: the help must
+    // DESCRIBE the check as the staleness detector, and must not claim
+    // nothing detects staleness.
+    expect(help.stdout).toContain('--prompts: prompt-store staleness check');
+    expect(help.stdout).not.toMatch(/nothing detects/i);
 
     const root = scratch('pg-cli-usage-');
     writeConfigJson(root, { enabled: false, values: {} });

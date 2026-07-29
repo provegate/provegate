@@ -41,8 +41,12 @@ if (process.argv.includes('--assert-ci-order')) {
     }
   }
   const job = lines.slice(start, end);
-  const buildAt = job.findIndex((l) => l.includes('pnpm --filter provegate build'));
-  const aggregateAt = job.findIndex((l) => l.includes('pnpm verify:workflow'));
+  // Only `run:` lines count — a COMMENT quoting the build command must never
+  // satisfy the order assertion (that is a silent false-green: delete the real
+  // step and the quoted command still matches).
+  const isRunLine = (l) => /^\s*run:/.test(l);
+  const buildAt = job.findIndex((l) => isRunLine(l) && l.includes('pnpm --filter provegate build'));
+  const aggregateAt = job.findIndex((l) => isRunLine(l) && l.includes('pnpm verify:workflow'));
   if (aggregateAt === -1) {
     console.error('verify:prompts: FAIL — the hygiene job has no verify:workflow step');
     process.exit(1);
