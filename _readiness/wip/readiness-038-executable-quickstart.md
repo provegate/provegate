@@ -1,201 +1,134 @@
 # Readiness Assessment: PRD-038 — Executable Quickstart
 
-**ITERATE — 5.62/10. Return to Phase 1.**
+**PASS — 8.46/10. The normative requirements are executable without clarification. Residual summary-level wording is retained as watch items but does not override the explicit FRs, direct verification commands, or decided implementation route.**
 
 ## Quick Meta
 
 | Field | Value |
 | --- | --- |
 | PRD | `_prds/wip/prd-038-executable-quickstart.md` |
-| Score | 5.62/10 |
-| Verdict | ITERATE |
-| Iteration | 3 |
+| Score | 8.46/10 |
+| Verdict | PASS |
+| Iteration | 7 |
 | PRD Class | infra |
-| Model Tier (Execution) | Do not assign — fix PRD first |
-| Model Tier (Audit) | — |
-| Scored by | Codex (GPT-5), fresh independent re-scorer |
+| Model Tier (Execution) | high |
+| Model Tier (Audit) | high |
+| Scored by | Codex, fresh independent re-scorer |
 | Self-scored | no |
-| Date | 2026-07-28 |
-| PRD Lint | Waived for the documented sandbox state-write restriction. `node packages/provegate/dist/cli.js check PRD-038` failed with `EPERM: operation not permitted, open '.../_state/prds.json.13111.tmp'`. The read-only production equivalent `lintPrd(config, manifest, content, root, 38)` returned `{ "ok": true, "issues": [] }`. Relied additionally on the orchestrating session’s out-of-sandbox green run dated 2026-07-28. |
-| State Record | pending |
+| Date | 2026-07-29 |
+| PRD Lint | Command-surface waiver applied. `node packages/provegate/dist/cli.js check PRD-038` reached only the documented sandbox write and failed with `EPERM: operation not permitted, open '/Users/rayvaz/Projects/provegate/_state/prds.json.81226.tmp'`. The read-only production-shaped `loadConfig` + `loadManifest` + `lintPrd(config, manifest, content, root, 38)` call returned `{ "ok": true, "issues": [] }`. Command-level evidence additionally relies on the orchestrating session’s out-of-sandbox green run dated 2026-07-29. |
+| State Record | Pending orchestration update; current generated state still records iteration 6 at 7.88/ITERATE. |
 
 ---
 
-## Iteration 3 — Closure Review
+## Iteration 7 — Sweep Review
 
-### 1. Tagged-region contract — NOT CLOSED
+### 1. Region geometry and per-document scope — CLOSED
 
-The owning FR is substantially clearer:
+The owning rule is now single-valued:
 
-> “one `<!-- qs:scenario -->` … `<!-- /qs:scenario -->` region”  
-> “within it, every ` ```sh ` fence is executable and every ` ```text ` fence is output illustration”  
-> “an untagged fence inside the region is a named failure”
+> “the worktree alternative stays INSIDE it under `<!-- qs:skip -->`”
 
-But the stale promise remains in §6:
+> “the practices layer stays OUTSIDE the region entirely”
 
-> “Then every fenced command executes in order in a scratch repo”
+FR-1 specifies that `qs:skip` binds to exactly the next `sh` fence, that dangling and doubled markers fail by name, and that both the harness and parity verifier exclude skipped fences. Success Metrics and §6 now agree:
 
-That still means every fence, including package-only material FR-1 explicitly places outside the scenario. The iteration-2 changelog’s claim that every occurrence was replaced is therefore false.
+> “every executable, non-skipped command in the tagged `qs:scenario` region”
 
-The corpus was re-measured:
+Implementation Scope correctly assigns each document its own changes:
 
-| Document | Fences | Languages | Non-comment `sh` commands |
-| --- | ---: | --- | ---: |
-| `packages/provegate/QUICKSTART.md` | 11 | 9 `sh`, 1 untagged, 1 `json` | 14 |
-| `apps/docs/content/docs/quickstart.mdx` | 8 | 6 `sh`, 1 untagged, 1 `json` | 8 |
+> “`packages/provegate/QUICKSTART.md` — its `qs:scenario` region markers, the `qs:skip` marker … and the retag of ITS handoff-card fence”
 
-There are two untagged output fences in the two-document corpus, not one:
+> “`apps/docs/content/docs/quickstart.mdx` — ITS OWN `qs:scenario` region markers … and the retag of ITS handoff-card fence”
 
-- `packages/provegate/QUICKSTART.md:108`
-- `apps/docs/content/docs/quickstart.mdx:101`
+The corpus supports the migration: the package document has 14 executable shell-command lines overall and the docs page has 8. Excluding the three-command worktree alternative and package-only commands leaves the intended eight-command canonical path. The only two bare fence openings are the handoff cards in the package and docs documents.
 
-Both illustrate the final handoff and would naturally fall inside equivalent first-touch regions. FR-1 only explicitly retags the package copy, while FR-3 gives the docs twin the same markers without specifying its output-fence disposition. Either both must be retagged, or the grammar must explicitly be package-only and the docs verifier must state how it handles untagged fences.
+### 2. Measured transcript and production reasons — CLOSED
 
-### 2. Scratch state model through live close — NOT CLOSED
+The transcript now carries the visible missing-task reason, including the stop-card prefix:
 
-The PRD claims:
+> `PRD-001: no tasks file — independent-review ledger missing`
 
-> “as a doc-command [D] versus harness-scaffolding [H] table the test file carries verbatim”
+Production constructs the underlying reason in `chain.ts`, while `stopCard` renders `${id}: ${why}`, confirming the prefix.
 
-No such table exists in the PRD. Instead, FR-2 contains one arrow-separated paragraph, including the unresolved label:
+The main-branch refusal is complete:
 
-> “[D/H per the doc’s printed path]”
+> `current branch is 'main' — run from the feature branch, not the base checkout`
 
-It neither classifies every transition nor states each harness action and its corresponding CLI precondition. Deferring the required state model to a future test file leaves the implementing agent to invent it.
+This matches the production reason in `merge.ts`.
 
-The real canonical command path printed today is:
+The Base SHA statement is correctly narrowed:
 
-| Order | Printed command | PRD trace |
-| ---: | --- | --- |
-| 1 | `npm install -D provegate` | Present |
-| 2 | `npx gate init` | Present |
-| 3 | `npx gate status` | Missing |
-| 4 | `npx gate new fix-login-timeout --class=hotfix` | Present |
-| 5 | `npx gate open PRD-001` | Moved after `gate check` and labelled `[D/H]` |
-| 6 | `npx gate check PRD-001` | Placed before the printed `gate open` |
-| 7 | `npx gate run --dry-run PRD-001` | Present |
-| 8 | `npx gate run PRD-001` | Present |
+> “the planted template placeholder was refused in THIS run; no general claim about symbolic refs”
 
-The harness is simultaneously required to execute doc-sourced commands “in order” and instructed by its state trace to reorder `open` and `check`. It also has no instruction for asserting the printed `status` result.
+The specified negative fixture plants literal `main`; production rejects it because `validateReviewArtifact` requires a Base SHA value of at least seven characters. The PRD no longer claims that symbolic refs generally fail validation.
 
-The quickstart’s prose path includes Phase 2 readiness before task generation:
+### 3. Full active-text consistency sweep — PASS WITH WATCH ITEMS
 
-> “You want PASS (≥ 8, no caps tripped)”  
-> “Then … the task file”
+The sweep covered §1–§12, Memory Inputs, Memory Outputs, Conflict Surface, and Durable Artifacts. Dated Changelog rows were excluded as directed.
 
-The proposed scaffolding creates a task file but no PASS readiness artifact. The runner does not independently enforce a readiness verdict, so a live close can turn green while the harness silently skips this documented phase. The harness must assert the promise the CLI does not enforce.
+No active owning requirement retains the former worktree-outside rule, the broad symbolic-ref claim, the truncated production reasons, or the incorrect per-file retag assignment. Memory Outputs and Durable Artifacts agree on the learning and ADR amendment, and Conflict Surface covers every non-shared implementation target.
 
-The shipped close preconditions otherwise trace as follows:
+Three non-owning shorthand survivors remain:
 
-- `buildGateChain` refuses when no task file or no passed `independent-review` row exists.
-- `validateTasksReviewRow` requires a referenced review artifact with valid PRD, verdict, reviewer, base SHA, Critical, and quorum metadata.
-- The durable gate requires every declared path to appear in the feature diff.
-- `mergePreconditions` requires a non-base, non-detached feature branch and a clean checkout.
-- `operatorGateOk` requires committed acceptance only when the task file contains operator-owned rows.
+> “one source of truth; the other proven equivalent or derived”
 
-The PRD names review, durable, branch, and clean-tree concepts, but does not give exact transitions or commands. It also never decides whether the scratch task contains zero operator rows—requiring no acceptance—or contains a row and therefore needs committed owner acceptance. That choice cannot be left implicit, especially because an implementing agent may not originate an acceptance.
+This Primary Goal retains an alternative even though FR-3 explicitly decides a root parity verifier.
 
-Installed-file disposition is similarly only named, not decided. `npm install` can leave `package.json`, a lockfile, and untracked `node_modules`; plain `gate init` creates no root `.gitignore`. The PRD does not say what is committed, ignored, or removed before the clean-tree assertion.
+> “the docs-site parity crosses the boundary via docs build or a root script”
 
-### 3. FR-3 and FR-4 verification route — CLOSED
+This Memory Input similarly retains an obsolete choice. FR-3, FR-4, §8, §11, and §12 all require the root-script route, so an implementing agent has one executable answer.
 
-Section 11 now directly assigns:
+> “I want every executable command in it to work exactly as printed”
 
-> FR-3: `pnpm verify:quickstart-parity`  
-> FR-4: `pnpm verify:workflow`
+User Story 1 omits “non-skipped,” despite the claimed rework. Its Acceptance Criteria immediately delegates to §6, where the non-skipped qualification is present. It is therefore an editorial consistency defect, not an implementation decision.
 
-This matches the decided root boundary and no longer asks an in-package test to read the docs-site file.
+### 4. Technical and governance verification — ADEQUATE
 
-The repository can host FR-4 as written:
+The PRD provides a production-shaped, offline tarball installation; a measured scratch-state sequence; exact negative fixtures; runner-sentinel removal; inherited Git-configuration scrubbing; empty-remote assertions; mutation proof that the document is the runtime source; cleanup recovery; direct parity wiring; class-ledger registration; and an atomic rollback set.
 
-- `scripts/verify/script-classes.json` accepts a new `repo` entry.
-- `verify-script-classes.mjs` enforces on-disk coverage and mechanically compares the ledger to ADR-0004’s two-column Classification table.
-- ADR-0004 defines repository class by what a check reads and can accept the new row.
-- `verify-workflow.mjs` has a direct `CHECKS` array for the verifier.
-- Root `package.json` has the established `verify:*` registration surface.
+Production and repository checks confirmed:
 
-### 4. Mutation and cleanup probes — NOT CLOSED
+- `packages/provegate` has zero runtime, optional, and peer dependencies.
+- The only runner re-entry sentinel in current source is `PROVEGATE_RUN_ACTIVE`.
+- Zero operator rows make the acceptance gate pass without an acceptance entry.
+- The run chain contains no readiness-artifact gate.
+- The stop-card, review-validator, and merge-refusal behavior match the PRD’s corrected claims.
+- No remote-push path, protected surface, client/server payload, or untraceable method content is introduced.
 
-The exact mutation is specified, but its expected behavior contradicts the shipped CLI.
+No hard cap fires. The lint failure is waived only for the reproduced sandbox `EPERM`, with the read-only production equivalent green and the required out-of-sandbox run reported green.
 
-The PRD says swapping `gate init` and `gate new` makes relocated `gate new` fail because there is “no workspace to allocate in.” The implementation deliberately supports this case. `createPrd` says:
-
-> “Uninitialized repo (W2): create just the needed parents”
-
-The CLI then reports:
-
-> “parent directories were missing — run `gate init` for the full workflow tree”
-
-Therefore `gate new` succeeds before `gate init`; the proposed mutation supplies neither the expected failure nor the promised stderr diagnostic. A mutation such as swapping `gate new` and `gate open` would have an independent, shipped failure cause: `open` cannot claim a PRD that does not yet exist.
-
-The cleanup probe is also not a deterministic planted failure. On POSIX systems, deleting a read-only file is governed by permissions on its parent directory; a writable scratch directory can remove that file normally. Resetting the file mode in `finally` may execute, but the test does not prove cleanup would otherwise fail. Use a deterministic failure injection or a permission setup whose first deletion attempt is asserted to fail before recovery.
-
-### 5. Sentinel contract — CLOSED
-
-The name is exact:
-
-> `PROVEGATE_RUN_ACTIVE`
-
-`runChain` exports it as `1` into §11 commands, and the CLI refuses a nested live run when it is truthy. Removing it from each harness-spawned CLI child is the documented remedy for a direct CLI-spawning test.
-
-### 6. Persisting hermeticity and corpus contradictions
-
-The earlier install and isolation defects remain:
-
-- `pnpm --filter provegate build` can write repository build output outside the scratch root.
-- `npm pack` has no specified destination and normally writes into its invocation directory.
-- “an unreachable local path” is not an exact npm registry URL or configuration.
-- Audit, fund, update-notifier, cache, and lifecycle behavior remain unspecified.
-- The assertion that “nothing outside the temp dir was written” has no scope excluding preparatory build output.
-- Remapping `HOME` does not disable system Git configuration or inherited `GIT_CONFIG_*` injection.
-
-FR-3 also still requires the docs twin to replace its recommended:
-
-> `npx gate init --practices`
-
-with the package’s plain-init sequence, while the docs explicitly say:
-
-> “`--practices` is the recommended install.”
-
-That is a public recommendation change, contradicting the non-goal against rewriting teaching content unless explicitly authorized and reconciled in the surrounding prose.
-
-Finally, “reuse their helpers where exported” is non-actionable because the cited lifecycle helpers are file-local, the rollback remains only “plain revert” despite coordinated verifier/ledger/ADR/doc changes, and sequencing still says PRD-026 owns files even though PRD-026 is already Ship Verified.
+The Clarity ceiling does not fire: every FR has concrete Targets, every FR maps to a runnable §11 command, DO NOT exists, Open Questions is empty, and no undecided token remains in the owning requirements.
 
 ---
 
 ## Scorecard
 
-| # | Dimension | Weight | Score | Notes |
-| --- | --- | ---: | ---: | --- |
-| 1 | Clarity | 15% | 5.5/10 | The tagged grammar and root verifier are clear, but the promised state table does not exist, `[D/H]` remains unresolved, and the trace contradicts printed command order. |
-| 2 | Completeness | 20% | 5.5/10 | The trace omits `gate status`, the readiness artifact, operator-row disposition, and exact installed-file handling; both output fences are not covered. |
-| 3 | Technical Depth | 20% | 5.8/10 | Strong runner, sentinel, class-ledger, and parity reasoning, but the mutation contradicts production behavior and the close model is not executable. |
-| 4 | Multi-Tenancy & Security (MT&S) | 10% | 6.5/10 | No tenant surface. Network and remote intent are strong, but npm and Git isolation are not exact or hermetic. |
-| 5 | Scope & Testability | 15% | 5.5/10 | Direct parity is testable; the primary mutation cannot fail as claimed and the cleanup probe does not deterministically exercise recovery. |
-| 6 | Migration & Rollback | 20% | 5.3/10 | Public docs convergence, external build/pack writes, helper ownership, sequencing, and coordinated rollback remain under-specified. |
-| **Total** | **Weighted** | **100%** | **5.62/10** | **ITERATE** |
-
-Hard caps checked: no runtime dependency, remote-push path, protected security surface, client/server contract, or untraceable method content is introduced. The lint cap is waived only for the reproduced sandbox `EPERM`; the read-only production lint passed. The formal Clarity checklist is present, but the dimension scores below seven on executable substance.
+| # | Dimension | Weight | Score | Weighted | Notes |
+| --- | --- | ---: | ---: | ---: | --- |
+| 1 | Clarity | 15% | 7.8/10 | 1.17 | FR-1 and FR-3 are unambiguous and directly verified. Goal-, story-, and Memory-level shorthand retains two obsolete alternatives and one missing `non-skipped` qualifier. |
+| 2 | Completeness | 20% | 8.5/10 | Extraction, execution, negative fixtures, parity, wiring, artifacts, failure cleanup, and rollback are covered. |
+| 3 | Technical Depth | 20% | 8.6/10 | Strong prototype-backed state model, production-shaped CLI execution, offline install, Git-environment isolation, and mutation proof. |
+| 4 | Multi-Tenancy & Security | 10% | 8.8/10 | No tenant/auth surface; no remote, push, network dependency, telemetry, or runtime dependency. Inherited Git configuration is scrubbed. |
+| 5 | Scope & Testability | 15% | 8.2/10 | Every FR has a runnable route and named failure behavior. External-write shorthand and privileged cleanup portability remain audit watches. |
+| 6 | Migration & Rollback | 20% | 8.8/10 | Corpus-feasible convergence and a coordinated revert unit cover both documents, harness, verifier, wiring, ledger, ADR, and learning. |
+| **Total** | **Weighted** | **100%** |  | **8.46/10** | **PASS** |
 
 ---
 
-## Missing Pieces
+## Watch Items
 
-1. Put the actual [D]/[H] transition table in the PRD. Preserve the document’s exact order, include `gate status`, and give each [H] action its exact command/file mutation, placement, expected state, and CLI precondition.
+No blocking missing pieces. The following bind implementation and audit:
 
-2. Include the documented readiness transition: create and assert a PASS readiness artifact before task generation. Explicitly state that the task fixture has zero operator-owned rows and therefore requires no acceptance, or specify a valid authorized alternative.
+1. Remove the remaining alternative-mechanism wording: change “equivalent or derived” and “via docs build or a root script” to the decided root parity verifier. FR-3 and §11 already make the implementation unambiguous.
 
-3. Decide the installed-file disposition: exact committed files, exact ignore/removal treatment for `node_modules`, tarball destination under scratch, explicit npm registry URL and no-audit/no-fund/update-notifier/cache behavior.
+2. Qualify User Story 1—and ideally §1’s generic “region’s commands” shorthand—as executable, non-skipped commands. Its Acceptance Criteria already delegates to the correctly qualified §6 rule.
 
-4. Replace the init/new mutation with one that production actually rejects, or change the expected result to match `gate new`’s supported uninitialized-repository behavior. Retain copied-document line attribution and stderr-tail assertions.
+3. Read §6’s “nothing outside the temp dir was written” through FR-2’s narrower post-setup observation boundary. Audit should reject an implementation that claims global filesystem proof from inspecting only selected directories.
 
-5. Replace the read-only-file cleanup case with a deterministic initial cleanup failure, assert that failure occurs, then reset/retry in `finally` and verify deletion.
+4. The chmod-555 cleanup plant assumes an unprivileged POSIX runner. Audit should confirm the intended Ubuntu CI identity is non-root or use a failure mechanism that remains deterministic under elevated privileges.
 
-6. Retag both handoff output fences—or explicitly scope the grammar to one document—and replace the surviving §6 “every fenced command” promise with the tagged-region contract.
-
-7. Sanitize system and injected Git configuration, not only `HOME`, and scope or correct the “nothing outside the temp dir was written” assertion.
-
-8. Reconcile the docs twin’s `--practices` recommendation with parity and the non-goal; replace the nonexistent-helper suggestion, update stale PRD-026 sequencing, and specify an atomic coordinated rollback.
+5. Synchronize the PRD’s `Updated` metadata with its 2026-07-29 Changelog entry. This is state-freshness hygiene, not an execution blocker.
 
 ---
 
@@ -205,22 +138,32 @@ Hard caps checked: no runtime dependency, remote-push path, protected security s
 | --- | --- | ---: | --- | --- |
 | 1 | 2026-07-28 | 4.95 | ITERATE | Initial independent assessment. Measured 14-versus-8 command divergence; traced lint, runner, merge, and worktree behavior; found the nested-run sentinel failure, missing verifier classification/ADR wiring, non-exported scratch helpers, and incomplete hermetic cleanup/no-remote proof. |
 | 2 | 2026-07-28 | 6.10 | ITERATE | Confirmed the measured baseline and closed FR-4 governance plus sentinel-memory coverage. Found that the revised state model omitted mandatory close transitions, FR-3’s §11 row violated its root boundary, and install/output-tag/external-write claims remained contradictory. |
-| 3 | 2026-07-28 | 5.62 | ITERATE | Confirmed the direct FR-3/FR-4 route and exact sentinel. Found that the claimed [D]/[H] table is absent and contradicts the printed order, `gate status` and readiness are omitted, two output fences are untagged, `gate new` intentionally succeeds before `gate init`, and a read-only file does not deterministically fail cleanup. |
+| 3 | 2026-07-28 | 5.62 | ITERATE | Confirmed the direct FR-3/FR-4 route and exact sentinel. Found that the claimed [D]/[H] table was absent and contradicted printed order, `gate status` and readiness were omitted, two output fences were untagged, `gate new` intentionally succeeded before `gate init`, and a read-only file did not deterministically fail cleanup. |
+| 4 | 2026-07-28 | 7.48 | ITERATE | The real prototype closed command order, raw-template claim, minimal lint, no-readiness, zero-acceptance, offline install, mutation, and single-pass close questions. Remaining findings covered region geometry, fence census, exact negative fixtures, Git config, cleanup, docs migration, and rollback. |
+| 5 | 2026-07-28 | 7.61 | ITERATE | Confirmed the corrected handoff-fence census, literal-`main` Base SHA input, complete POSIX cleanup plant, and feasible plain-init docs migration. Corpus and production verification found that worktree was still placed both inside and outside the region, the symbolic-ref claim and truncated main reason survived, the three Git settings did not clear `GIT_CONFIG_COUNT`, and rollback remained test-only. |
+| 6 | 2026-07-29 | 7.88 | ITERATE | Confirmed that environment-injected Git configuration is now scrubbed and rollback is a coordinated atomic set. Corpus and source checks found the region contradiction still active, every-command claims incompatible with `qs:skip`, the measured transcript still carrying both truncated reasons and the false symbolic-ref statement, and the two handoff retags assigned to the wrong per-file Scope row. Read-only lint passed under the documented `EPERM` waiver. |
+| 7 | 2026-07-29 | 8.46 | PASS | Confirmed the three blocking consistency repairs across FR-1, the transcript, §6, and Implementation Scope. Full corpus and production checks validate the measured geometry and stop reasons. Residual goal/story/Memory shorthand, external-write wording, cleanup privilege assumptions, and stale Updated metadata remain bounded watch items; none introduces an implementation choice or hard cap. |
 
 ---
 
 ## Verdict
 
-**ITERATE — return to Phase 1.** The parity architecture, repository wiring, and sentinel remedy are ready. The central executable claim is not: the state model is prose rather than the promised table, disagrees with the document’s command order, omits documented transitions, and relies on mutation and cleanup failures that the current platform and CLI do not produce. An implementing agent would have to redesign the harness to make its required tests meaningful.
+**PASS — 8.46/10.** The explicit requirements now give an implementing agent one route: package-only execution grammar, skipped worktree fence, practices outside the region, a production-shaped scratch harness, and a root parity verifier wired into `verify:workflow`. The remaining inconsistencies occur in summary or rationale text and cannot reasonably override the labeled `DECIDED` FRs, concrete Targets, direct §11 commands, and anti-patterns. This is within the 8–8.9 band: proceed to Phase 3 with the watch items carried forward.
+
+## Model Tier Recommendation
+
+| Phase | Tier | Rationale |
+| --- | --- | --- |
+| Execution | high | The work combines Markdown extraction, shell-command execution, Git lifecycle setup, environment isolation, production CLI behavior, and cross-boundary verifier wiring. |
+| Audit | high | Audit must challenge hermeticity, exact production reasons, mutation causality, cleanup portability, parity semantics, and coordinated rollback. |
 
 
 ---
 
-> **Transcription note (orchestrating session, 2026-07-28).** Iteration 3 transcribed
-> verbatim from a fresh independent Codex session; 6.10 → 5.62 — the trajectory
-> OSCILLATES and the round found the draft's mutation example contradicts production
-> behavior and the close path omits the readiness transition. Per the repository's own
-> records (`state-model-before-mechanism`), the next action is not another wording
-> round: the ground truth (the real scratch-close sequence) should be EXECUTED once and
-> the measured transition table pasted, or the item parked. Decision request on the
-> board. Lint EPERM is the documented sandbox artifact; out-of-sandbox green same day.
+> **Transcription note (orchestrating session, 2026-07-29).** Iteration 7 transcribed
+> verbatim from the seventh fresh independent Codex session of this cycle. PASS 8.46 —
+> no blocking pieces; three watch items applied as post-PASS precision edits per the
+> scorer's prescriptions, recorded in the changelog. Trajectory: 4.95 → 6.10 → 5.62
+> → 7.48 → 7.61 → 7.88 → 8.46, with the owner's prototype-first pivot at iteration 3
+> as the turning point. Lint EPERM is the documented sandbox artifact; out-of-sandbox
+> green the same day.

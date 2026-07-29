@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T10:18:08.946Z",
+  "generatedAt": "2026-07-29T10:19:38.974Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1235,13 +1235,13 @@
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
         "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
         "tasks": "_tasks/wip/tasks-034-prompt-store-reconciliation.md",
-        "summary": "_docs/wip/summary-034-prompt-store-reconciliation.md"
+        "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "wip"
+        "summary": "missing"
       },
       "readiness": {
         "score": 8.4,
@@ -1250,9 +1250,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "In Progress",
-        "checkedCount": 54,
-        "uncheckedCount": 4,
+        "status": "Not Started",
+        "checkedCount": 0,
+        "uncheckedCount": 58,
         "operatorHandoffCount": 1
       },
       "summary": {
@@ -1307,19 +1307,19 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-036-frozen-snapshot-digest-gate.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 7.83,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },
@@ -1332,27 +1332,27 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-28"
+      "lastUpdated": "2026-07-29"
     },
     {
       "prd": "PRD-037",
       "number": 37,
       "slug": "case-study-self-hosting",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-037-case-study-self-hosting.md",
-        "readiness": "_readiness/wip/readiness-037-case-study-self-hosting.md",
-        "tasks": "",
-        "summary": ""
+        "prd": "_prds/completed/prd-037-case-study-self-hosting.md",
+        "readiness": "_readiness/completed/readiness-037-case-study-self-hosting.md",
+        "tasks": "_tasks/completed/tasks-037-case-study-self-hosting.md",
+        "summary": "_docs/completed/summary-037-case-study-self-hosting.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "missing",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.4,
@@ -1361,10 +1361,10 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
-        "checkedCount": 0,
+        "status": "Ship Verified",
+        "checkedCount": 30,
         "uncheckedCount": 0,
-        "operatorHandoffCount": 0
+        "operatorHandoffCount": 1
       },
       "summary": {
         "shipReadiness": "Unknown"
@@ -1382,25 +1382,25 @@
       "artifacts": {
         "prd": "_prds/wip/prd-038-executable-quickstart.md",
         "readiness": "_readiness/wip/readiness-038-executable-quickstart.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-038-executable-quickstart.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
-        "score": 5.62,
-        "verdict": "ITERATE",
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.46,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
+        "status": "Not Started",
         "checkedCount": 0,
-        "uncheckedCount": 0,
+        "uncheckedCount": 40,
         "operatorHandoffCount": 0
       },
       "summary": {
