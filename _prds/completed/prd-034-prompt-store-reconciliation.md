@@ -1,6 +1,6 @@
 # PRD-034: Prompt Store Reconciliation — the Check, Written Against the Model
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > <!-- Canonical lifecycle values only (see METHOD.md → Status lifecycle):
 > Draft | In Review | Approved | In Progress | Code Complete | Operator Verification |
@@ -13,7 +13,7 @@
 > **Author**: owner
 > **Audience**: Implementing Agent
 > **Slug**: `prompt-store-reconciliation`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Learning)
 > **PRD Class**: infra
 > **Class Rationale**: workflow tooling — a reconciliation check, its command surface, and its wiring in both layers; no product capability is added.
 > **Value**: 3.75 (MF/UI/TL/AR/RM: 5/4/3/3/3)

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T10:21:28.145Z",
+  "generatedAt": "2026-07-29T10:23:01.422Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1227,21 +1227,21 @@
       "prd": "PRD-034",
       "number": 34,
       "slug": "prompt-store-reconciliation",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Learning)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
-        "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
-        "tasks": "_tasks/wip/tasks-034-prompt-store-reconciliation.md",
-        "summary": "_docs/wip/summary-034-prompt-store-reconciliation.md"
+        "prd": "_prds/completed/prd-034-prompt-store-reconciliation.md",
+        "readiness": "_readiness/completed/readiness-034-prompt-store-reconciliation.md",
+        "tasks": "_tasks/completed/tasks-034-prompt-store-reconciliation.md",
+        "summary": "_docs/completed/summary-034-prompt-store-reconciliation.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.4,
