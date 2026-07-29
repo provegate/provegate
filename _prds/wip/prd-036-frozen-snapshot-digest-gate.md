@@ -4,7 +4,7 @@
 >
 > **Created**: 2026-07-28
 > **Updated**: 2026-07-29
-> **Author**: Claude Fable 5, converting a deferral at the board cap; iteration-1 rework on the readiness scorer's findings
+> **Author**: Claude Fable 5; iteration-2 rework on the owner's direction, census machine-measured before authorship
 > **Audience**: Implementing Agent
 > **Slug**: `frozen-snapshot-digest-gate`
 > **Cycle Phase**: 1 (PRD Generation)
@@ -18,21 +18,21 @@
 <!-- 0.25*5 + 0.25*2 + 0.20*5 + 0.15*1 + 0.15*4
      = 1.25 + 0.50 + 1.00 + 0.15 + 0.60 = 3.50 -->
 
-<!-- Value history: born 2.80 (4/2/2/1/5). First expansion (owner triage 2026-07-28):
-3.45 (5/2/4/1/5) — REFUTED at iteration 1 (5.55 ITERATE): RM 5 was unsupportable for a
-scanner with no closed grammar and a mis-measured baseline; honest RM 4 put it at 3.30,
-below the 3.40 cutoff. SECOND expansion (this rework, 2026-07-29 — the protocol's last
-before cut): the scope now absorbs the WHOLE measured class — the complete census found
-12 undeclared input groups across 15 test files, not the 2 the first draft named — plus
-a byte-closed escape boundary every future test inherits and a Turbo-level cache proof.
-RM drops honestly to 4 (a standing repo gate plus a boundary convention is real
-maintenance, though the byte-grammar is far simpler than the refuted AST scanner).
-TL rises 4→5, and this is the load-bearing claim of the header: a stale test green
-inside a Phase-5 `gate run` falsifies Ship Verified itself — the one guarantee every
-PRD in this repository rests on — and the census closes that class for every future
-close, not per-instance. If the Phase-2 scorer holds TL at 4, the total is 3.30 and the
-protocol's action is the recorded cut, which is then the owner's call — that fallback
-is stated here so the scorer judges the claim, not the arithmetic. -->
+<!-- Value history: born 2.80 (4/2/2/1/5). Expansion 1 (2026-07-28): 3.45 — refuted at
+iteration 1 (RM 5 unsupportable). Expansion 2 (2026-07-29): 3.50 claimed on TL 5 —
+iteration 2 RULED TL 4 (3.30, below cutoff) because "the standing-invariant claim is
+not yet real while live reads escape the census and the helper-to-ledger direction is
+unguarded". This third rework, commissioned by the owner over the recorded cut,
+re-argues TL 5 by REMOVING both stated blockers with evidence rather than prose: the
+census is now machine-measured (the FR-3 grammar was prototyped and RUN against the
+live corpus before this document was written — §1 records its output verbatim: 54
+files, 23 multi-parent violations in 18 files, 0 in module specifiers, 210 legal
+single-parent literals), and the helper is enforced in BOTH directions (usage→ledger
+fail-closed on non-literal args, ledger→turbo coverage). The scorer's own iteration-2
+text set this bar: "the third rework must make the standing-invariant claim real
+enough to re-argue TL 5 on evidence." If the scorer still rules TL 4, the total is
+3.30 and the recorded cut returns to the owner — stated here so the ruling is on the
+claim, not the arithmetic. RM stays 4. -->
 
 <!-- Autonomous Close: `eligible` — every verification is machine-checkable and this PRD
 produces no operator-owned rows. -->
@@ -41,51 +41,72 @@ produces no operator-owned rows. -->
 
 ## 1. Introduction / Overview
 
-Converted from the deferral "Frozen-snapshot digest" (opened at PRD-017 Phase 6 round 9,
-due 2026-08-29) when the board reached its cap of 15 rows on 2026-07-28. Reworked after
-iteration 1 (5.55 ITERATE, Codex): the first draft declared exactly two out-of-package
-reads; the scorer refuted the baseline, and this session's full census confirms the
-refutation and completes the measurement.
+Converted from the deferral "Frozen-snapshot digest" (opened at PRD-017 Phase 6
+round 9) at the board cap on 2026-07-28. Two ITERATE rounds (5.55, 5.85) shared one
+shaped defect: a census claimed before it was measured. This rework inverts the order:
+**the FR-3 scanner grammar was prototyped and executed against the live corpus first,
+and this document is written from its output.**
 
 The `test` turbo task hashes `$TURBO_DEFAULT$` plus four root globs (PRD-024's and
 PRD-028's landings). Everything else a package test reads is invisible to the cache
 key, so an edit there replays a cached green over a comparison that never re-ran —
-`turbo-cache-masks-out-of-input-reads`, a class with recorded shipped breaks. CI checks
-out fresh, so the published guarantee holds; the gap is local — **including local
-`gate run` closes, where a stale `pnpm test` green would falsify Ship Verified.**
+`turbo-cache-masks-out-of-input-reads`. CI checks out fresh, so the published
+guarantee holds; the gap is local — **including local `gate run` closes, where a stale
+`pnpm test` green would falsify Ship Verified.**
 
-**The complete census (measured 2026-07-29, this session):** 12 undeclared input groups
-across 15 test files:
+### The measured census (scanner prototype executed 2026-07-29)
 
-| #   | Out-of-package read                                                                    | Reader (file:line)                                                                                                                                          |
-| --- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `docs/research/provegate-bootstrap/source-snapshot/**`                                 | `content-prompts.test.ts:315-323`, `content-placeholders.test.ts:280`                                                                                       |
-| 2   | `docs/research/provegate-bootstrap/*.md` (whitepaper, roadmap, README)                 | `content-canon.test.ts:86-109`, `content-launch.test.ts:82,92`                                                                                              |
-| 3   | `scripts/verify/verify-workflow.mjs`                                                   | `wiring.test.ts:369-378` (PRD-025's real-bundle fixture)                                                                                                    |
-| 4   | `scripts/verify/verify-doc-claims.mjs` + `lib.mjs` (via `cpSync`)                      | `doc-claims-script.test.ts:17-19,56-62`                                                                                                                     |
-| 5   | `scripts/verify/verify-script-classes.mjs` + `script-classes.json` (exec + read)       | `consolidation.test.ts:326,353-361,482`                                                                                                                     |
-| 6   | `_docs/reviews/**`                                                                     | `review-quorum.test.ts:70-77` — the applied learning record's own original instance                                                                         |
-| 7   | `apps/docs/content/docs/**` (`.mdx` + `meta.json`)                                     | `content-adoption.test.ts:22-25,145`, `revalidate.test.ts:483-485`, `content-launch.test.ts:69-77,127-128,275`                                              |
-| 8   | `.changeset/**`                                                                        | `changeset-entry.test.ts:25,41-45`                                                                                                                          |
-| 9   | repo-wide live `*.md` walk (README, STATUS, AGENT_BOOTSTRAP, CONTRIBUTING, docs/**, …) | `consolidation.test.ts:210-222` (`liveMarkdown`), plus direct reads `content-prompts.test.ts:637`, `content-canon.test.ts:39`, `content-launch.test.ts:273` |
-| 10  | root `package.json`                                                                    | `consolidation.test.ts:166`                                                                                                                                 |
-| 11  | root `turbo.json`                                                                      | `open-questions.test.ts:542`, `lint-parsers.test.ts:207`                                                                                                    |
-| 12  | root `LICENSE`                                                                         | `pack.test.ts:89`                                                                                                                                           |
+Prototype grammar (= FR-3's grammar, verbatim): AST scan of every string literal and
+template-literal part in `packages/provegate/test/**/*.ts`; flag any containing two or
+more consecutive parent segments (`../..`), plus `process.cwd()` and `homedir(` call
+sites; module specifiers deliberately NOT exempt; single parent segments legal.
+Output:
+
+```
+files scanned: 54
+single-parent literals (legal): 210 (of which module specifiers: 144)
+multi-parent literals inside module specifiers: 0
+violations (pre-migration state): 23 in 18 files
+```
+
+The 23 sites decompose into **20 genuine escape-path constructions in 16 reader
+files** (each traced to its input below) and **3 traversal-attack fixture strings**
+(`single-package.test.ts:350` `'packages/../../x'`, `wiring.test.ts:513`,
+`worktree.test.ts:572` `'../../../escaped'`) whose byte-identical values move into an
+exempted fixtures module (FR-2). The corpus's ~144 relative imports and ~20
+single-segment traversal fixtures (`'../victim'`, `'../outside'`, …) are single-parent
+— legal under the grammar by measurement, not by exemption, which dissolves
+iteration 2's 130-import and 22-fixture objections.
+
+**The input groups those 20 reads (plus their transitive executions) resolve to — 12
+new, 4 already declared:**
+
+| #   | Out-of-package input                                                                                                                                                       | Reader (file:line)                                                                                                                                                                                           |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `docs/research/provegate-bootstrap/source-snapshot/**`                                                                                                                     | `content-prompts.test.ts:319,567`, `content-placeholders.test.ts:280`                                                                                                                                        |
+| 2   | `docs/research/provegate-bootstrap/*.md` (whitepaper, roadmap, README)                                                                                                     | `content-canon.test.ts:86-109`, `content-launch.test.ts:82,92`                                                                                                                                               |
+| 3   | `scripts/verify/**` (`verify-workflow.mjs` fixture; `verify-doc-claims.mjs` + `lib.mjs` via `cpSync`; `verify-script-classes.mjs` + `script-classes.json` via exec + read) | `wiring.test.ts:376`, `doc-claims-script.test.ts:18-19`, `consolidation.test.ts:326,353-361,482`                                                                                                             |
+| 4   | `_docs/reviews/**`                                                                                                                                                         | `review-quorum.test.ts:70` — the applied learning record's own original instance                                                                                                                             |
+| 5   | `apps/docs/content/docs/**` (`.mdx` + `meta.json`)                                                                                                                         | `content-adoption.test.ts:22-25,145`, `revalidate.test.ts:484`, `content-launch.test.ts:69-77,127-128,275`                                                                                                   |
+| 6   | `.changeset/**`                                                                                                                                                            | `changeset-entry.test.ts:25`                                                                                                                                                                                 |
+| 7   | repo-wide live `*.md` walk (README, STATUS, AGENT_BOOTSTRAP, CONTRIBUTING, `_docs/launch/`, …)                                                                             | `consolidation.test.ts:210-222` (`liveMarkdown`), direct reads `content-prompts.test.ts:637`, `content-canon.test.ts:39`, `content-launch.test.ts:65-73,273`                                                 |
+| 8   | root `package.json`                                                                                                                                                        | `consolidation.test.ts:166`; also read by `auditWiring` (`wiring.ts:430-433`) under row 11's call                                                                                                            |
+| 9   | root `turbo.json`                                                                                                                                                          | `open-questions.test.ts:542`, `lint-parsers.test.ts:207`                                                                                                                                                     |
+| 10  | root `LICENSE`                                                                                                                                                             | `pack.test.ts:89`                                                                                                                                                                                            |
+| 11  | `apps/web/app/page.tsx`                                                                                                                                                    | `content-launch.test.ts:68,85-87` (`SELF_COPY_PAGES`) — iteration 2's find                                                                                                                                   |
+| 12  | `.github/workflows/**` and `.githooks/**`                                                                                                                                  | `practices-pack.test.ts:739-744` runs `auditWiring` against the live repo root, which reads both (`wiring.ts:463-469`, `wiring.ts:572-603`) — iteration 2's find; its bundle/scripts-dir reads land in row 3 |
 
 Already declared (no action): `_prds/**` (`prd-ready.test.ts:441`, the lint corpora),
 `_brain/**` (`consolidation.test.ts:484`), `workflow.config.json`,
 `gates.manifest.json` (every `loadConfig`/`loadManifest` site).
 
-Non-reads excluded from the census: `single-package.test.ts:350`,
-`worktree.test.ts:572`, `wiring.test.ts:513` are traversal-attack _fixture strings_,
-not filesystem reads; `worktree.test.ts` and `prompts.test.ts` read only their own
-`mkdtemp` fixtures and package files.
+Known boundary, stated: absolute-path literals (`'/etc/…'` deny-fixtures) and
+environment reads are not repository inputs — Turbo cannot hash them and the census
+does not chase them.
 
-Fixing 12 groups one glob at a time is the losing game the first draft played. This PRD
-lands the class fix: declare the complete measured set (FR-1), route every escape
-through one auditable helper (FR-2), gate the boundary with a byte-closed census that
-makes the _next_ undeclared read fail by name (FR-3), and prove at the Turbo level that
-the key actually moved (FR-4).
+This PRD lands the class fix: declare the complete measured set (FR-1), route every
+escape through one auditable helper enforced in both directions (FR-2, FR-3), and
+prove at the Turbo level that the key actually moved (FR-4).
 
 ---
 
@@ -96,16 +117,18 @@ the key actually moved (FR-4).
 - [ ] An edit to **any** path a package test reads invalidates the `provegate#test`
       cache, so every comparison re-runs against the bytes on disk.
 - [ ] Out-of-package reads have exactly one home (the boundary helper) and one ledger
-      (its exported glob list), enforced by a repo gate — a new escape route fails the
-      verify bundle by file and line before a reviewer has to find it.
+      (its exported glob list), enforced in both directions by a repo gate — a new
+      escape route or an undeclared helper path fails the verify bundle by name before
+      a reviewer has to find it.
 
 ### Success Metrics
 
-| Metric                                                     | Current                                      | Target                                    | Measurement                                                   |
-| ---------------------------------------------------------- | -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------- |
-| Undeclared out-of-package input groups in `provegate#test` | 12, measured 2026-07-29 (census table in §1) | 0                                         | FR-1 declares; FR-3's census asserts list ⊆ globs             |
-| Escape sites outside the boundary helper                   | 15 files construct their own `../..` paths   | 0                                         | FR-2 migrates; FR-3's byte scan refuses new ones by file:line |
-| Proof the declared globs live in Turbo's hash              | none                                         | dry-run hash moves on a snapshot mutation | FR-4's probe                                                  |
+| Metric                                                     | Current                              | Target                                                 | Measurement                                          |
+| ---------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------- |
+| Undeclared out-of-package input groups in `provegate#test` | 12, machine-measured 2026-07-29 (§1) | 0                                                      | FR-1 declares; FR-3(b2) asserts ledger ⊆ globs       |
+| Multi-parent escape literals outside the exempted helpers  | 23 in 18 files (scanner output, §1)  | 0                                                      | FR-2 migrates; FR-3(a) refuses new ones by file:line |
+| Helper calls whose path is absent from the ledger          | n/a (helper is new)                  | 0, fail-closed on non-literal args                     | FR-3(b1)                                             |
+| Proof the declared globs live in Turbo's hash              | none                                 | dry-run hash moves on a snapshot mutation and restores | FR-4                                                 |
 
 ---
 
@@ -114,8 +137,8 @@ the key actually moved (FR-4).
 #### User Story 1
 
 ```
-As a maintainer editing the source snapshot, a docs page, a review artifact, or a
-verify script,
+As a maintainer editing the source snapshot, a docs page, a review artifact, a verify
+script, a workflow file, or a git hook,
 I want the package tests that read that file to actually re-run,
 so that a green suite — especially inside a Phase-5 gate run — means the assertions
 held against the bytes on disk, not against a cache from before my edit.
@@ -138,10 +161,12 @@ so that the cache key and the read set cannot drift apart silently again.
 
 **Acceptance Criteria:**
 
-- [ ] A test source containing a parent-segment path literal outside the helper fails
-      `verify:test-inputs` with the file and line named.
-- [ ] A helper-ledger entry with no covering turbo glob fails `verify:test-inputs`
-      with the path named.
+- [ ] A test source containing a multi-parent path literal outside the exempted
+      helpers fails `verify:test-inputs` with the file and line named.
+- [ ] A `repoPath()` call whose literal argument matches no ledger entry — or whose
+      argument is not a string literal — fails `verify:test-inputs` by name.
+- [ ] A ledger entry with no covering turbo glob fails `verify:test-inputs` with the
+      path named.
 
 ---
 
@@ -151,70 +176,82 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 `path/to/file.ts::SymbolName` notation for symbol-level targets.
 
 1. **FR-1 — Declare the complete measured input set in the test task's cache key.**
-   Extend the `test` task's `inputs` in `turbo.json` — the array PRD-024 landed and
-   PRD-028 extended — with the census's nine new globs:
-   `$TURBO_ROOT$/**/*.md` (the `liveMarkdown` walk plus every direct `.md` read — a
-   deliberate superset, cost documented below),
-   `$TURBO_ROOT$/docs/research/provegate-bootstrap/**` (snapshot files of every
-   extension), `$TURBO_ROOT$/scripts/verify/**`, `$TURBO_ROOT$/_docs/reviews/**`,
+   Extend the `test` task's `inputs` in `turbo.json` with the census's twelve new
+   globs: `$TURBO_ROOT$/**/*.md`,
+   `$TURBO_ROOT$/docs/research/provegate-bootstrap/**`,
+   `$TURBO_ROOT$/scripts/verify/**`, `$TURBO_ROOT$/_docs/reviews/**`,
    `$TURBO_ROOT$/apps/docs/content/docs/**`, `$TURBO_ROOT$/.changeset/**`,
-   `$TURBO_ROOT$/package.json`, `$TURBO_ROOT$/turbo.json`, `$TURBO_ROOT$/LICENSE`.
-   Keep `$TURBO_DEFAULT$` and all four existing root globs. Extend the written reason
-   on the existing `"test"` entry in `scripts/verify/turbo-inputs-exceptions.json` to
-   enumerate the census groups. **Accepted cost, stated for the scorer:** the `*.md`
-   superset means any live-markdown edit re-runs every workspace's `test` task. That is
-   the deliberate trade — `_prds/**` already invalidates on every workflow move, and a
-   cheap re-run beats a stale green inside a close. Precision-narrowing the superset is
-   a recorded follow-up, not a blocker.
+   `$TURBO_ROOT$/package.json`, `$TURBO_ROOT$/turbo.json`, `$TURBO_ROOT$/LICENSE`,
+   `$TURBO_ROOT$/apps/web/app/page.tsx`, `$TURBO_ROOT$/.github/workflows/**`,
+   `$TURBO_ROOT$/.githooks/**`. Keep `$TURBO_DEFAULT$` and all four existing root
+   globs. Extend the written reason on the existing `"test"` entry in
+   `scripts/verify/turbo-inputs-exceptions.json` to enumerate the census groups.
+   **Accepted cost, stated for the scorer:** the `*.md` superset means any
+   live-markdown edit re-runs every workspace's `test` task — deliberate; `_prds/**`
+   already invalidates on every workflow move, and a cheap re-run beats a stale green
+   inside a close. Precision-narrowing is a recorded follow-up, not a blocker.
    - **Targets:** `turbo.json`, `scripts/verify/turbo-inputs-exceptions.json`
 2. **FR-2 — One boundary for every escape.** Create
    `packages/provegate/test/helpers/repo-reads.ts` exporting `repoPath(rel)` (resolves
-   against the repo root) and `REPO_READ_GLOBS` (the census ledger: every root-relative
-   glob the package tests may read, matching §1's table plus the four already-declared
-   globs). Migrate all 15 census files to build their out-of-package paths through
-   `repoPath` — a mechanical rewrite of the resolution expression; **no assertion, read
-   API, or fixture content changes**. `doc-claims-script.test.ts`'s `cpSync` sources
-   and `consolidation.test.ts`'s `execFileSync` script path route through the same
-   helper (an executed script is an input like any other).
-   - **Targets:** `packages/provegate/test/helpers/repo-reads.ts` (new), the 15 census
-     files listed in §1
-3. **FR-3 — The census as a standing repo gate, byte-closed.** New
+   against the repo root) and `REPO_READ_GLOBS` (the census ledger: §1's twelve groups
+   plus the four already-declared globs), and
+   `packages/provegate/test/helpers/escape-fixtures.ts` exporting the three
+   traversal-attack strings **byte-identical** to today's values. Migrate the 16
+   reader files' 20 escape sites through `repoPath` (mechanical rewrite of the
+   resolution expression; no assertion, read API, or fixture-value changes) and the 3
+   fixture sites to import from `escape-fixtures.ts`. `doc-claims-script.test.ts`'s
+   `cpSync` sources and `consolidation.test.ts`'s `execFileSync` script path route
+   through the same helper (an executed script is an input like any other).
+   - **Targets:** `packages/provegate/test/helpers/repo-reads.ts` (new),
+     `packages/provegate/test/helpers/escape-fixtures.ts` (new), the 18 files §1's
+     scanner output names
+3. **FR-3 — The census as a standing repo gate, in both directions.** New
    `scripts/verify/verify-test-inputs.mjs` (repo-class per ADR-0004 — it reads this
-   repository's build config and test sources, so it lives in `scripts/verify/`, never
-   in shipped package code). Three checks, all fail-closed:
-   (a) **boundary scan** — outside `repo-reads.ts`, no file under
-   `packages/provegate/test/**` may contain a parent-directory segment (`..` as a path
-   segment) inside a string literal, nor `process.cwd()`, nor `homedir(`. This is a
-   byte-level rule over the source text, not an AST scanner
-   (`narrow-the-grammar-not-the-parser`): the boundary is enforced by restricting what
-   test sources may _contain_, so alias tricks, `join(repoRoot, …)` composition, and
-   `cpSync`-shaped reads are all caught at their common prerequisite — constructing the
-   escape path. False positives (a `..` in a comment or fixture string) are resolved by
-   rewording or routing through the helper; there is no suppression syntax
+   repository's build config and test sources). Checks, all fail-closed, the grammar
+   being exactly the prototype §1 records the output of:
+   (a) **boundary scan** — AST over every string literal and template part in
+   `packages/provegate/test/**/*.ts`: any multi-parent literal (`../..` or deeper),
+   any `process.cwd()` or `homedir(` call site, outside the two exempted helper
+   files, fails by file:line. Module specifiers are scanned too — the corpus measures
+   0 multi-parent specifiers, so a deep import is an escape and correctly fails.
+   Single-parent literals are legal by grammar (imports, in-package paths,
+   single-segment deny-fixtures) — no exemption list, no suppression syntax
    (`a-rule-that-exempts-itself`).
-   (b) **coverage** — every entry in `REPO_READ_GLOBS` is covered by a glob in the
-   `test` task's `inputs`; fail names the uncovered path.
-   (c) **positive control** — the current corpus passes (a)+(b).
+   (b1) **usage → ledger** — every `repoPath(` call site's first argument must be a
+   string literal (non-literal fails closed, by file:line) and must be covered by a
+   `REPO_READ_GLOBS` entry (uncovered fails by path).
+   (b2) **ledger → turbo** — every `REPO_READ_GLOBS` entry is covered by a glob in
+   the `test` task's `inputs`; fail names the uncovered path.
+   (c) **positive control** — the migrated corpus passes (a)+(b1)+(b2).
    Wire it fully (`gate-wire-or-delete`): `verify:test-inputs` alias in root
    `package.json`, membership in `scripts/verify/verify-workflow.mjs`'s `CHECKS`
-   bundle, and a repo-class row in `scripts/verify/script-classes.json`. Deny cases are
-   proven in the package suite by the `doc-claims-script.test.ts` harness pattern (copy
-   the script into a temp root, plant one boundary violation and separately one
-   uncovered ledger entry, assert each fails naming the file/path — the planted
-   fixture is the independent cause `assert-absent-needs-an-independent-cause`
-   requires, with (c) as the paired positive control).
+   bundle, a repo-class row in `scripts/verify/script-classes.json`, **and the
+   matching row appended to ADR-0004's Classification table** —
+   `verify-script-classes.mjs:109-141` diffs ledger and table in both directions, so
+   the ADR append is part of the same atomic commit (iteration 2's find). Deny cases
+   are proven in the package suite by the `doc-claims-script.test.ts` harness pattern
+   (copy the script into a temp root; plant one boundary violation, one non-literal
+   `repoPath` argument, one unledgered `repoPath` path, and one uncovered ledger
+   entry; assert each fails by name — the planted fixture is the independent cause
+   `assert-absent-needs-an-independent-cause` requires, with (c) as the paired
+   positive control).
    - **Targets:** `scripts/verify/verify-test-inputs.mjs` (new),
-     `scripts/verify/script-classes.json`, `scripts/verify/verify-workflow.mjs`,
-     `package.json`, `packages/provegate/test/verify-test-inputs.test.ts` (new)
-4. **FR-4 — Prove the key moved, at the Turbo layer.** A `--probe` mode in
-   `verify-test-inputs.mjs`, run as part of its default pass: capture
-   `turbo run test --filter=provegate --dry=json`'s task hash; write a probe file
-   under `docs/research/provegate-bootstrap/source-snapshot/`; re-capture and assert
-   the hash CHANGED; delete the probe file; re-capture and assert the hash restored.
-   `--dry=json` never executes tasks, so the probe is fast, spawns no gate CLI
-   (`runner-sentinel-blocks-cli-spawning-tests` does not apply), and leaves the tree
-   clean. This is the evidence iteration 1 found missing: FR-1's globs proven inside
-   Turbo's actual hash, not just present in a JSON file.
+     `scripts/verify/script-classes.json`,
+     `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` (Classification table row),
+     `scripts/verify/verify-workflow.mjs`, `package.json`,
+     `packages/provegate/test/verify-test-inputs.test.ts` (new)
+4. **FR-4 — Prove the key moved, at the Turbo layer, failure-safe.** A probe inside
+   `verify-test-inputs.mjs`'s default pass: (i) pre-scan the snapshot root for stale
+   `.probe-*` files — fail naming them; (ii) capture
+   `turbo run test --filter=provegate --dry=json`'s task hash; (iii) exclusive-create
+   (`wx` flag) a unique probe file `.probe-<pid>-<hrtime>.tmp` under
+   `docs/research/provegate-bootstrap/source-snapshot/`; (iv) re-capture and assert
+   the hash CHANGED; (v) in a `finally`, unlink the probe unconditionally; (vi)
+   re-capture and assert the hash restored — so even a failed comparison leaves the
+   tree clean and a dirty exit is loud. `--dry=json` never executes tasks: fast, no
+   gate-CLI spawn (`runner-sentinel-blocks-cli-spawning-tests` does not apply). Turbo
+   2.10.5 (pinned, `package.json:55`) emits the per-task hash — proven by execution
+   during iteration 2's review.
    - **Targets:** `scripts/verify/verify-test-inputs.mjs::probe`
 
 ---
@@ -222,31 +259,35 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 ## 5. Non-Goals (Out of Scope)
 
 - **Re-designing any test.** Every censused read is legitimate; only its cache
-  visibility and its resolution path change.
-- **A cache-free `scripts/verify/` twin of any comparison.** Rejected since draft 1:
-  input declaration closes the gap without a second implementation of any pin
-  (`two-parsers-wrong-together`).
-- **Any change to `verify-turbo-inputs.mjs` policy.** The blanket
-  refuse-undeclared-inputs rule stands; FR-1 uses its sanctioned exception path.
-- **Narrowing the `*.md` superset to a precise negation list.** Recorded follow-up;
-  correctness first, cache thrift second.
-- **An AST/data-flow scanner for read sites.** Refuted by iteration 1 and by
-  `narrow-the-grammar-not-the-parser`; the byte-closed boundary replaces it.
+  visibility and its resolution path change. Fixture VALUES are byte-frozen.
+- **A cache-free `scripts/verify/` twin of any comparison.** Input declaration closes
+  the gap without a second implementation of any pin (`two-parsers-wrong-together`).
+- **Any change to `verify-turbo-inputs.mjs` policy.** FR-1 uses its sanctioned
+  exception path.
+- **Narrowing the `*.md` superset to a precise negation list.** Recorded follow-up.
+- **Dataflow/alias analysis of read sites.** Refuted at iteration 1; the literal
+  grammar is measured sufficient — every escape must construct a multi-parent path,
+  and the corpus contains zero legal multi-parent literals outside the helpers.
+- **Chasing absolute-path or environment reads.** Not repository inputs; Turbo cannot
+  hash them (§1, known boundary).
 
 ---
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
 - **Given** an edit to any censused path (snapshot, docs page, review artifact, verify
-  script, changeset, root manifest), **When** `pnpm test` runs, **Then**
-  `provegate#test` is a cache miss and the reading tests execute.
-- **Given** a new test source containing a parent-segment path literal outside
-  `repo-reads.ts`, **When** `pnpm verify:test-inputs` runs, **Then** it fails naming
+  script, workflow file, git hook, changeset, root manifest, `page.tsx`), **When**
+  `pnpm test` runs, **Then** `provegate#test` is a cache miss and the reading tests
+  execute.
+- **Given** a new test source containing a multi-parent path literal outside the
+  exempted helpers, **When** `pnpm verify:test-inputs` runs, **Then** it fails naming
   the file and line.
-- **Given** a `REPO_READ_GLOBS` entry with no covering turbo glob, **When**
-  `pnpm verify:test-inputs` runs, **Then** it fails naming the path.
+- **Given** a `repoPath()` call with a non-literal argument or an unledgered path,
+  **Then** `verify:test-inputs` fails by name.
+- **Given** a `REPO_READ_GLOBS` entry with no covering turbo glob, **Then**
+  `verify:test-inputs` fails naming the path.
 - **Given** the probe mutation under the snapshot root, **Then** the dry-run task hash
-  changes and restores.
+  changes and restores — and on any probe failure the probe file is still removed.
 - **Given** no censused-path edit, **Then** caching behaves exactly as after PRD-028.
 
 ---
@@ -255,42 +296,44 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### Architecture
 
+- **Measure, then claim.** The FR-3 grammar ran against the corpus before this
+  document was written; §1 is its output, not an estimate. The shipped script is the
+  prototype hardened (same AST walk via the package's own `typescript` devDependency —
+  a devDependency of the repo toolchain, not a runtime dependency of the package).
 - **Extend, do not duplicate.** The `inputs` array, the exceptions entry, the
-  script-classes ledger, and the verify bundle all exist; every FR appends to a live
-  seam.
-- **The boundary is the durable half.** FR-1 fixes today's 12 groups; FR-2+FR-3 make
-  the 13th impossible to add silently. The helper ledger and the turbo globs are two
-  statements of one fact, and FR-3(b) is the check that they never diverge.
-- **Repo-class placement (ADR-0004).** The census reads `turbo.json` and test sources —
-  this repository's stack — so its home is `scripts/verify/`, wired like every repo
-  check, with a ledger row. A package-test home (draft 1's design) would itself have
-  been an undeclared out-of-package read of `turbo.json`.
+  script-classes ledger, the ADR table, and the verify bundle all exist; every FR
+  appends to a live seam.
+- **Two directions or none.** FR-3(b1) ties usage to the ledger, (b2) ties the ledger
+  to the cache key; either alone leaves a silent drift path (iteration 2's find).
+- **Repo-class placement (ADR-0004).** The census reads `turbo.json` and test
+  sources — this repository's stack — so its home is `scripts/verify/`, with the
+  ledger row AND the ADR table row landing together (the class gate diffs both ways).
 
 ### Rollout & Rollback
 
-- **Atomic rollout, one commit:** helper + 15 migrations + turbo globs + exception
-  reason + census script + wiring + harness test land together. Partial orderings are
-  red by construction (census before globs fails coverage; globs before census leaves
-  the guarantee unproved) — the atomicity is the migration plan, and the readiness
-  scorer should treat any task plan that splits it across commits as a defect.
+- **Atomic rollout, one commit:** helpers + 18 migrations + turbo globs + exception
+  reason + census script + `script-classes.json` row + ADR-0004 table row + bundle
+  row + `package.json` alias + harness test. Partial orderings are red by
+  construction; a task plan splitting this across commits is a defect.
 - **Rollback, exact reverse order, verified at each step:** (1) remove the harness
-  test + census script + its `package.json` alias + `CHECKS` row + `script-classes.json`
-  row (wire-or-delete: all five together); (2) revert the 15 migrations + delete the
-  helper; (3) revert the turbo globs + exception reason to the PRD-028 state. After
-  each step: `pnpm verify:turbo-inputs && pnpm verify:workflow && pnpm test` green.
-  Step (3) alone restores the pre-PRD cache behavior byte-for-byte.
+  test + census script + alias + `CHECKS` row + `script-classes.json` row + ADR-0004
+  table row (wire-or-delete: all six together — the class gate refuses any partial
+  subset); (2) revert the 18 migrations + delete both helpers; (3) revert the turbo
+  globs + exception reason to the PRD-028 state. After each step:
+  `pnpm verify:script-classes && pnpm verify:turbo-inputs && pnpm verify:workflow &&
+pnpm test` green. Step (3) alone restores the pre-PRD cache behavior byte-for-byte.
 
 ### Dependencies
 
-- **PRD-024 and PRD-028 are Ship Verified on `main`** — the `inputs` array carries
-  `$TURBO_DEFAULT$`, `_prds/**`, `_brain/**`, and both root configs; FR-1 appends.
-- **PRD-034 (Phase 4, live lease) owns `scripts/verify/verify-workflow.mjs` and
-  `.github/workflows/ci.yml`.** FR-3's bundle row touches the former, so **Phase 4 of
-  this PRD serializes behind PRD-034's close.** No `ci.yml` edit is needed here — the
-  census reaches CI through the existing `verify:workflow` bundle step.
-- **Draft PRD-032 also claims `turbo.json`** in its Conflict Surface; it is Phase-1
-  ITERATE and itself serialized behind PRD-034. Re-run `gate queue` before claiming
-  rather than trusting this paragraph.
+- **PRD-024 and PRD-028 are Ship Verified on `main`** — FR-1 appends to their seam.
+- **PRD-034 (Phase 4 at last measurement) claims
+  `scripts/verify/verify-workflow.mjs`.** FR-3's bundle row touches it, so **Phase 4
+  of this PRD serializes behind PRD-034's close.** Its recorded lease had already
+  expired at iteration 2's check — re-run `gate queue` before claiming; execution
+  honors whatever lease is active then. No `ci.yml` edit is needed — CI runs the
+  aggregate bundle (`ci.yml:73`), which picks up the new member.
+- **Draft PRD-032 also claims `turbo.json`**; it is Phase-1 ITERATE and itself behind
+  PRD-034. Re-run `gate queue` before claiming rather than trusting this paragraph.
 
 ---
 
@@ -298,15 +341,20 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ### In Scope
 
-- [ ] `turbo.json` — nine globs appended to the `test` task's `inputs`
+- [ ] `turbo.json` — twelve globs appended to the `test` task's `inputs`
 - [ ] `scripts/verify/turbo-inputs-exceptions.json` — the `test` entry's reason
       extended to enumerate the census
 - [ ] `packages/provegate/test/helpers/repo-reads.ts` (new) — `repoPath` +
       `REPO_READ_GLOBS`
-- [ ] 15 test files (§1 census) — escape sites routed through the helper, mechanical
-- [ ] `scripts/verify/verify-test-inputs.mjs` (new) — boundary scan + coverage +
-      positive control + `--probe`
-- [ ] `scripts/verify/script-classes.json` — repo-class row for the new script
+- [ ] `packages/provegate/test/helpers/escape-fixtures.ts` (new) — the three
+      traversal strings, byte-identical
+- [ ] 18 test files (§1 scanner output) — 20 escape sites through `repoPath`, 3
+      fixture sites through `escape-fixtures.ts`, mechanical
+- [ ] `scripts/verify/verify-test-inputs.mjs` (new) — boundary scan + usage→ledger +
+      ledger→turbo + positive control + failure-safe probe
+- [ ] `scripts/verify/script-classes.json` — repo-class row
+- [ ] `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — matching Classification
+      table row (the class gate diffs both directions)
 - [ ] `scripts/verify/verify-workflow.mjs` — `CHECKS` row (behind PRD-034)
 - [ ] `package.json` — `verify:test-inputs` alias
 - [ ] `packages/provegate/test/verify-test-inputs.test.ts` (new) — deny/positive
@@ -322,11 +370,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## 10. References
 
-- `_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md` — iteration 1
-  (5.55 ITERATE): the findings this rework answers point by point
+- `_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md` — iterations 1–2:
+  the findings this rework answers with measurements
 - `_brain/learnings/turbo-cache-masks-out-of-input-reads.md` — the class; its
-  `_docs/reviews` instance is census row 6
-- `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — FR-3's placement rule
+  `_docs/reviews` instance is census row 4
+- `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` — FR-3's placement rule and the
+  Classification table FR-3 appends to
 - PRD-024 FR-2 / PRD-028 FR-3 — the input-declaration seam this PRD completes
 - `_tasks/completed/tasks-025-wiring-audit-completion.md:340-344` — the real-bundle
   fixture's recorded handoff to this census
@@ -335,27 +384,35 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 
 ## Memory Inputs
 
-- applied: `turbo-cache-masks-out-of-input-reads` — the class under repair; the census
-  (§1) now covers all 12 measured groups including the record's own `_docs/reviews`
-  origin, which draft 1 wrongly claimed was already closed.
-- applied: `narrow-the-grammar-not-the-parser` — FR-3 restricts what test sources may
-  contain (byte-closed boundary) instead of parsing what they mean (the AST scanner
-  iteration 1 refuted as unimplementable).
-- applied: `gate-wire-or-delete` — FR-3 ships alias + bundle row + ledger row + harness
-  in one move, and the rollback removes all five together.
-- applied: `assert-absent-needs-an-independent-cause` — the deny cases plant the
-  violation (boundary breach; uncovered ledger entry) so the failure has an independent
-  cause, with the passing census as the paired positive control.
-- applied: `a-rule-that-exempts-itself` — the boundary scan has no suppression syntax;
-  the only way past it is the helper, whose ledger the coverage check reads.
-- reviewed: `two-parsers-wrong-together` — why Non-Goals still reject a cache-free twin
-  of any comparison; the input declaration removes the need for a second implementation.
+- applied: `turbo-cache-masks-out-of-input-reads` — the class under repair; the
+  machine-measured census (§1) covers all 16 reader files including the record's own
+  `_docs/reviews` origin.
+- applied: `narrow-the-grammar-not-the-parser` — applied faithfully this round: the
+  grammar was run against the corpus BEFORE authorship (iteration 2 caught the
+  previous rework citing this record while skipping its measure-first instruction);
+  the numbers in §1 are the measurement.
+- applied: `gate-wire-or-delete` — FR-3 ships alias + bundle row + ledger row + ADR
+  table row + harness in one move, and the rollback removes all of them together.
+- applied: `assert-absent-needs-an-independent-cause` — four planted deny fixtures
+  (boundary breach, non-literal arg, unledgered path, uncovered ledger entry), each
+  failing from its own independent cause, with the passing census as positive control.
+- applied: `a-rule-that-exempts-itself` — no suppression syntax; the only doors are
+  two structural helper files whose contents the census itself reads and gates.
+- reviewed: `two-parsers-wrong-together` — why Non-Goals still reject a cache-free
+  twin of any comparison; the input declaration removes the need for a second
+  implementation.
 - reviewed: `runner-sentinel-blocks-cli-spawning-tests` — FR-4's probe uses
-  `turbo --dry=json` only (no task execution, no gate CLI spawn); whole-suite §11 rows
-  stay on turbo.
-- applied: `ADR-0004-method-rule-vs-repo-rule` — the census reads this repository's
-  build config and test sources, so it is repo-class: `scripts/verify/` home, ledger
-  row, never shipped.
+  `turbo --dry=json` only (no task execution, no gate CLI spawn); whole-suite §11
+  rows stay on turbo.
+- applied: `ADR-0004-method-rule-vs-repo-rule` — repo-class placement, and this round
+  the ADR's own Classification table is a declared target because
+  `verify-script-classes` diffs it against the ledger in both directions.
+- reviewed: `adr-section-blank-line-reads-empty` — its watch covers the ADR-0004
+  target this PRD now edits. The section anchor is fixed (PRD-035), but the record's
+  live hazard binds the FR-3 append: `pnpm format` reflows ADR frontmatter, so the
+  implementing agent adds the one table row without running prettier over the ADR
+  file and verifies `pnpm verify:brain` and `pnpm verify:script-classes` green after
+  the edit.
 
 ---
 
@@ -383,7 +440,9 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `scripts/verify/verify-test-inputs.mjs`
 - `scripts/verify/script-classes.json`
 - `scripts/verify/verify-workflow.mjs`
+- `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md`
 - `packages/provegate/test/helpers/repo-reads.ts`
+- `packages/provegate/test/helpers/escape-fixtures.ts`
 - `packages/provegate/test/verify-test-inputs.test.ts`
 - `packages/provegate/test/review-quorum.test.ts`
 - `packages/provegate/test/consolidation.test.ts`
@@ -400,11 +459,14 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `packages/provegate/test/doc-claims-script.test.ts`
 - `packages/provegate/test/pack.test.ts`
 - `packages/provegate/test/content-placeholders.test.ts`
+- `packages/provegate/test/practices-pack.test.ts`
+- `packages/provegate/test/single-package.test.ts`
+- `packages/provegate/test/worktree.test.ts`
 
-**Contested, measured 2026-07-29:** `scripts/verify/verify-workflow.mjs` is inside
-PRD-034's live lease — **Phase 4 serializes behind PRD-034's close.** Draft PRD-032
-claims `turbo.json` but is Phase-1 ITERATE and itself behind PRD-034. Re-run
-`gate queue` before claiming.
+**Contested, measured 2026-07-29:** `scripts/verify/verify-workflow.mjs` is claimed by
+PRD-034 (its recorded lease had expired at last check but the PRD is mid-Phase-4) —
+**Phase 4 serializes behind PRD-034's close.** Draft PRD-032 claims `turbo.json` but
+is Phase-1 ITERATE and itself behind PRD-034. Re-run `gate queue` before claiming.
 
 ---
 
@@ -417,8 +479,8 @@ only **this PRD's** durable knowledge.
 - Review artifact: `_docs/reviews/review-036-frozen-snapshot-digest-gate.md`
 - Learning: `none` — the Memory Output above is a reasoned `none`; the class record and
   the placement ADR already exist, and this PRD closes their instances
-- Decision: `none` — placement follows ADR-0004; the repair pattern is PRD-024's,
-  completed
+- Decision: `none` — the ADR-0004 table row is classification maintenance under the
+  existing decision, not a new one; the repair pattern is PRD-024's, completed
 
 ---
 
@@ -429,14 +491,15 @@ with a runnable backticked command** (allowlisted prefix, no shell metacharacter
 single line — and never a pipe character inside a backticked command in this table).
 `gate check` lints this section; `gate run` executes it and refuses unsafe rows.
 
-| FR   | Command / Check                                                | Scope | Notes                                                                                                                |
-| ---- | -------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------- |
-| FR-1 | `pnpm verify:turbo-inputs`                                     | repo  | the extended exceptions entry stays valid; no task narrows its key undeclared                                        |
-| FR-1 | `pnpm verify:test-inputs`                                      | repo  | coverage check: every census glob present in the test task's inputs                                                  |
-| FR-2 | `pnpm verify:test-inputs`                                      | repo  | boundary scan: zero escape sites outside the helper after the 15-file migration                                      |
-| FR-2 | `pnpm test`                                                    | repo  | the migrated suite is green through turbo — the resolution rewrite changed no assertion                              |
-| FR-3 | `pnpm --filter provegate test test/verify-test-inputs.test.ts` | pkg   | deny cases fail by name (planted boundary breach; planted uncovered ledger entry); positive control passes           |
-| FR-4 | `pnpm verify:test-inputs`                                      | repo  | the probe ran inside the default pass: dry-run task hash changed on the snapshot mutation and restored after cleanup |
+| FR   | Command / Check                                                | Scope | Notes                                                                                                                                             |
+| ---- | -------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-1 | `pnpm verify:turbo-inputs`                                     | repo  | the extended exceptions entry stays valid; no task narrows its key undeclared                                                                     |
+| FR-1 | `pnpm verify:test-inputs`                                      | repo  | ledger→turbo coverage: every census glob present in the test task's inputs                                                                        |
+| FR-2 | `pnpm verify:test-inputs`                                      | repo  | boundary scan zero violations after the 18-file migration; every `repoPath` usage ledgered                                                        |
+| FR-2 | `pnpm test`                                                    | repo  | the migrated suite is green through turbo — resolution rewrites changed no assertion or fixture value                                             |
+| FR-3 | `pnpm --filter provegate test test/verify-test-inputs.test.ts` | pkg   | four planted deny cases fail by name; positive control passes                                                                                     |
+| FR-3 | `pnpm verify:script-classes`                                   | repo  | the ledger row and the ADR-0004 table row agree in both directions                                                                                |
+| FR-4 | `pnpm verify:test-inputs`                                      | repo  | probe ran inside the default pass: hash changed on the exclusive-created snapshot probe, restored after the finally-cleanup, stale probes refused |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -448,9 +511,9 @@ Cross-cutting floor (run before Code Complete):
 
 Hard caps (when your gates manifest configures them):
 
-- Deny test: `packages/provegate/test/verify-test-inputs.test.ts` — a planted
-  out-of-boundary read must fail by file and line, and a planted uncovered ledger
-  entry by path; a census that only passes on today's inputs is not evidence.
+- Deny test: `packages/provegate/test/verify-test-inputs.test.ts` — each of the four
+  planted violations must fail by name from its own independent cause; a census that
+  only passes on today's inputs is not evidence.
 - Contract test: n/a — no client-to-server payload ships.
 
 Before Phase 2 PASS, run: `gate check PRD-036`
@@ -467,25 +530,29 @@ rationalize.
 - DO NOT build a second comparison of any pinned content in `scripts/verify/`. One
   pin, one implementation; the cache key is the fix.
 - DO NOT narrow any appended glob below its census group, and do not remove
-  `$TURBO_DEFAULT$` or any existing glob while appending — either move re-creates a
-  stale-green key.
-- DO NOT satisfy FR-3 with a hardcoded list of today's escape sites; the boundary scan
-  reads the test sources so a new site is caught, and the coverage check reads the
-  helper ledger so a new path is caught.
+  `$TURBO_DEFAULT$` or any existing glob while appending.
+- DO NOT satisfy FR-3 with a hardcoded list of today's escape sites or a frozen copy
+  of §1's output; the scan reads the live test sources every run.
 - DO NOT add a suppression comment, marker, or exemption field to the boundary scan;
-  the helper is the only door.
-- DO NOT change any test assertion during the FR-2 migration — resolution expressions
-  only.
+  the two helper files are the only doors.
+- DO NOT change any test assertion or fixture VALUE during the FR-2 migration —
+  resolution expressions and import homes only.
+- DO NOT exempt module specifiers from the boundary scan; the corpus measures zero
+  multi-parent specifiers, and a deep import is an escape.
+- DO NOT land the `script-classes.json` row without the ADR-0004 table row (or either
+  without the script) — the class gate diffs both directions and all partial subsets
+  are red.
 - DO NOT start Phase 4 before PRD-034 closes; `verify-workflow.mjs` is inside its
-  lease.
+  claim.
 - DO NOT ship the census in `packages/provegate` (ADR-0004: repo-class).
 
 ---
 
 ## Changelog
 
-| Date       | Author                                                 | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-07-29 | Claude Fable 5, on the owner's rework direction        | **Iteration-1 rework — second expansion (the protocol's last before cut).** Answers all six binding findings of readiness iteration 1 (5.55 ITERATE, Codex): (A) the census re-measured from source — 12 undeclared input groups across 15 files, not 2; the full table with file:line in §1, including the applied learning record's own `_docs/reviews` origin and the repo-wide `liveMarkdown` walk that forces the `*.md` superset decision. (B) the AST scanner replaced by a byte-closed boundary: one helper (`repo-reads.ts`) as the only legal escape, a `scripts/verify` census gate refusing parent-segment literals, `process.cwd()` and `homedir(` in test sources by file:line, no suppression syntax. (C) FR-4's Turbo-layer probe (`--dry=json` hash comparison across a planted-then-removed snapshot mutation) supplies the cache-miss evidence the old §11 lacked. (D) Rollout & Rollback added: one atomic commit, three-step reverse-order rollback, each step verified. (E) Value rescored honestly: RM 5→4 conceded; TL 4→5 argued on the gate-run stale-green threat with the 3.30-cut fallback stated in the header for the scorer. (F) Dependencies/Conflict Surface refreshed: serializes behind PRD-034 (`verify-workflow.mjs` lease), PRD-032's `turbo.json` claim noted, no `ci.yml` edit needed. FR-2/FR-3 relocated per ADR-0004 (repo-class census in `scripts/verify/`, not a package test — draft 1's placement would itself have been an undeclared read). Memory Inputs grown 4→8 with the boundary-design records |
-| 2026-07-28 | Claude Fable 5, on the owner's triage direction        | **Expanded and queued (first expansion of the protocol's two).** The owner's call on the below-threshold header: absorb the class. FR-1 declared BOTH out-of-package reads measured on 2026-07-28 — the source snapshot and the real-bundle fixture PRD-025's review round added the same day — and the census's value claim changed kind: standing gate for the class, not one-instance repair. Value 2.80 → 3.45 (MF 4→5, TL 2→4). Superseded by the 2026-07-29 rework after iteration 1 refuted the two-read baseline and the RM 5 axis                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 2026-07-28 | Claude Fable 5, converting a deferral at the board cap | Converted from the STATUS.md deferral "Frozen-snapshot digest" (opened PRD-017 Phase 6 round 9, due 2026-08-29) when the board hit its cap of 15 rows — the cap rule converts the oldest-due row. The original sketch (a cache-free `scripts/verify/` twin) rejected in Non-Goals: PRD-024's input-declaration pattern closes the gap without a second implementation of the pin. Value scored honestly at 2.80, below the 3.40 candidate threshold, with the expand-or-cut status recorded in the header comment for the owner's triage call. Created with `gate new`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Date       | Author                                                                               | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-29 | Claude Fable 5, on the owner's third-rework direction (chosen over the recorded cut) | **Measure-first rework.** The FR-3 grammar was prototyped and EXECUTED against the live corpus before this document was touched; §1 records its output verbatim (54 files; 23 multi-parent violations in 18 files — 20 reads, 3 traversal fixtures; 0 multi-parent module specifiers; 210 legal single-parent literals). Iteration 2's findings closed by measurement, not prose: census +3 groups (`apps/web/app/page.tsx`; `.github/workflows/**` and `.githooks/**` behind `practices-pack`'s live `auditWiring` call) and a 16th reader; the 130-import objection dissolves under the multi-parent rule (imports are single-parent — legal by grammar, no exemption needed) and the ~20 single-segment traversal fixtures likewise; the 3 genuinely multi-parent fixture strings move byte-identical into an exempted `escape-fixtures.ts`; FR-3 gains the missing direction (usage→ledger, fail-closed on non-literal args); FR-4 made failure-safe (stale-probe pre-scan, `wx` exclusive create, `finally` cleanup, restored-hash assert); ADR-0004's Classification table row added to Targets/Scope/Conflict Surface/rollout/rollback (`verify-script-classes` diffs both ways). Value re-argued at 3.50: TL 5 on the two blockers the iteration-2 ruling named now removed with evidence; fallback to the owner's cut restated if TL is held at 4 |
+| 2026-07-29 | Claude Fable 5, on the owner's rework direction                                      | **Iteration-1 rework — second expansion.** Census 2→12 groups; AST scanner replaced by a byte boundary; Turbo probe; rollout/rollback; Value 3.45→3.50 (RM 5→4, TL 4→5). Iteration 2 (5.85 ITERATE) found the census still incomplete (3 more groups), the byte rule refusing 130 imports and the traversal fixtures, the helper one-directional, and the ADR-0004 row missing — superseded by the measure-first rework above                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-07-28 | Claude Fable 5, on the owner's triage direction                                      | **Expanded and queued (first expansion).** Both then-known reads declared; census as the class's standing gate. Value 2.80 → 3.45. Iteration 1 (5.55 ITERATE) refuted the two-read baseline and RM 5 — superseded                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-07-28 | Claude Fable 5, converting a deferral at the board cap                               | Converted from the STATUS.md deferral "Frozen-snapshot digest" (opened PRD-017 Phase 6 round 9, due 2026-08-29) at the board cap of 15 rows. Original cache-free-twin sketch rejected in Non-Goals. Value scored honestly at 2.80, below threshold, expand-or-cut recorded for the owner's triage. Created with `gate new`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
