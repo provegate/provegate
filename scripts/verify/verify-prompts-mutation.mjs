@@ -57,8 +57,16 @@ try {
   const { status, output } = reconcile();
   if (status === 0)
     r.fail('the reconciliation exited 0 over a planted edit — the check has no bite');
-  if (!output.includes(TARGET) || !output.includes('modified'))
-    r.fail(`the failing report does not name ${TARGET} as modified — got: ${output.slice(0, 300)}`);
+  // the TARGET's own finding line must say `modified` — a summary line's
+  // "0 modified" or a stale/unattributable classification must NOT pass
+  // (review round-1 High)
+  const targetLines = output.split('\n').filter((l) => l.includes(TARGET));
+  const asModified = targetLines.some((l) => l.includes('modified'));
+  const asOtherKind = targetLines.some((l) => /stale|unattributable|missing/.test(l));
+  if (targetLines.length === 0 || !asModified || asOtherKind)
+    r.fail(
+      `the failing report does not classify ${TARGET} as modified on its own finding line — target lines: ${JSON.stringify(targetLines).slice(0, 300)}`,
+    );
 } finally {
   if (planted) writeFileSync(path, before);
 }
