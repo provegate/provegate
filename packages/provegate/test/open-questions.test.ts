@@ -516,8 +516,10 @@ describe('FR-3 — the wip corpus under the closed grammar, five production argu
 
   it('zero closed-grammar §9 failures, offenders named by filename — never an allowlist', () => {
     const wipDir = join(repoRoot, config.dirs.artifacts.prd.dir, config.dirs.stateRoles.wip);
+    // An empty wip corpus is legal (the queue drains between waves); readdirSync
+    // throwing on a missing dir keeps the wrong-directory vacuity covered, and
+    // the planted fixtures above prove the grammar detects §9 failures.
     const files = readdirSync(wipDir).filter((f) => f.endsWith('.md'));
-    expect(files.length).toBeGreaterThan(0);
     const offenders: string[] = [];
     for (const file of files) {
       // Round 2: the declaring number comes from the state layer's own parser,
