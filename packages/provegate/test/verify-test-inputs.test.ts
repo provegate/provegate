@@ -241,6 +241,53 @@ describe('the ten planted deny causes fail by name (FR-3)', () => {
   });
 });
 
+describe('the round-2 review closures', () => {
+  it("13 — B4 catches the backtick-template variant of the base-literal read", () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      "import { readFileSync } from 'node:fs';\n" +
+        "import { join } from 'node:path';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        'const t = readFileSync(join(repoPath(\'.\'), `commitlint.config.mjs`), \'utf8\');\n',
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:4 \[base-literal-read\]/);
+  });
+
+  it('14 — an exported enum smuggled into escape-fixtures.ts fails by kind', () => {
+    const root = makeRoot();
+    writeFileSync(
+      root + '/packages/provegate/test/helpers/escape-fixtures.ts',
+      GOOD_FIXTURES + `export enum SMUGGLED {\n  PATH = '${UP}/anything',\n}\n`,
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/escape-fixtures\.ts: exported EnumDeclaration forbidden/);
+  });
+
+  it('15 — a parameter shadowing the base name is NOT a base reference (positive control)', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'ok.test.ts',
+      "import { readFileSync } from 'node:fs';\n" +
+        "import { join } from 'node:path';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const base = repoPath('.');\n" +
+        'function readUnder(base: string, rel: string): string {\n' +
+        "  return readFileSync(join(base, 'inner', rel), 'utf8');\n" +
+        '}\n' +
+        'void base;\nvoid readUnder;\n',
+    );
+    const { status, output } = run(root);
+    expect(output).toContain('PASS');
+    expect(status).toBe(0);
+  });
+});
+
 describe('the documented limit — concatenation is outside the syntactic net', () => {
   it("a runtime-assembled traversal ('..' + '/' + '..') is NOT flagged", () => {
     const root = makeRoot();

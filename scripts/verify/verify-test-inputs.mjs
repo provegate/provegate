@@ -160,8 +160,32 @@ for (const file of files) {
       baseNames.add(n.name.getText(sf));
     ts.forEachChild(n, collectBases);
   })(sf);
+  // A name is a live base reference only if no enclosing function/parameter/
+  // local declaration shadows it (the round-2 review's shadowing probe).
+  const shadowedAt = (node, name) => {
+    for (let p = node.parent; p !== undefined; p = p.parent) {
+      if (ts.isFunctionLike(p)) {
+        for (const param of p.parameters ?? [])
+          if (param.name.getText(sf) === name) return true;
+      }
+      if (ts.isBlock(p) || ts.isSourceFile(p)) {
+        for (const s of p.statements ?? []) {
+          if (ts.isVariableStatement(s))
+            for (const d of s.declarationList.declarations)
+              if (
+                d.name.getText(sf) === name &&
+                !(d.initializer !== undefined && isBaseCall(d.initializer))
+              )
+                return true;
+        }
+      }
+      if (ts.isSourceFile(p)) break;
+    }
+    return false;
+  };
   const referencesBase = (n) => {
-    if (ts.isIdentifier(n) && baseNames.has(n.getText(sf))) return true;
+    if (ts.isIdentifier(n) && baseNames.has(n.getText(sf)) && !shadowedAt(n, n.getText(sf)))
+      return true;
     if (isBaseCall(n)) return true;
     let found = false;
     ts.forEachChild(n, (c) => {
@@ -170,7 +194,13 @@ for (const file of files) {
     return found;
   };
   const containsPathLiteral = (n) => {
-    if (ts.isStringLiteral(n) && n.text.length > 0 && n.text !== '.') return true;
+    if (
+      (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) &&
+      n.text.length > 0 &&
+      n.text !== '.'
+    )
+      return true;
+    if (ts.isTemplateExpression(n) && n.head.text.length > 0) return true;
     let found = false;
     ts.forEachChild(n, (c) => {
       if (!found && containsPathLiteral(c)) found = true;
@@ -279,11 +309,19 @@ let ledgerGlobs = null;
           }
         }
       }
+      const isExported = ts.canHaveModifiers(n)
+        ? ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+        : false;
+      if (isExported && !ts.isVariableStatement(n))
+        r.fail(
+          `${HELPER_READS}: exported ${ts.SyntaxKind[n.kind]} forbidden — only the three named const exports`,
+        );
       if (
-        ts.isFunctionDeclaration(n) &&
-        n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+        isExported &&
+        ts.isVariableStatement(n) &&
+        (n.declarationList.flags & ts.NodeFlags.Const) === 0
       )
-        exported.push(n.name?.getText(sf) ?? '(anonymous)');
+        r.fail(`${HELPER_READS}: exports must be const declarations`);
       if (ts.isExportDeclaration(n) || ts.isExportAssignment(n))
         r.fail(
           `${HELPER_READS}: export declaration/assignment forbidden — only the three named declaration exports`,
@@ -331,6 +369,19 @@ let ledgerGlobs = null;
               `${HELPER_FIXTURES}: export \`${d.name.getText(sf)}\` must be a string-literal constant`,
             );
         }
+      const fxExported = ts.canHaveModifiers(n)
+        ? ts.getModifiers(n)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
+        : false;
+      if (fxExported && !ts.isVariableStatement(n))
+        r.fail(
+          `${HELPER_FIXTURES}: exported ${ts.SyntaxKind[n.kind]} forbidden — only the four named const string constants`,
+        );
+      if (
+        fxExported &&
+        ts.isVariableStatement(n) &&
+        (n.declarationList.flags & ts.NodeFlags.Const) === 0
+      )
+        r.fail(`${HELPER_FIXTURES}: exports must be const declarations`);
       if (ts.isExportDeclaration(n) || ts.isExportAssignment(n))
         r.fail(
           `${HELPER_FIXTURES}: export declaration/assignment forbidden — only the four named constants`,
