@@ -48,7 +48,7 @@
     "templates/AGENT_BOOTSTRAP.template.md": {
       "dest": "AGENT_BOOTSTRAP.md",
       "pack": "db2b9dada1c84928",
-      "repo": "e634b29b0919f540"
+      "repo": "725f6f12c48f63cd"
     },
     "templates/STATUS.template.md": {
       "dest": "STATUS.md",
@@ -63,8 +63,8 @@
     },
     "templates/review-artifact.template.md": {
       "dest": "_docs/review-artifact.template.md",
-      "pack": "910a8ffd74ed1f08",
-      "repo": "60d44637d1b11aff"
+      "pack": "824ed72e7190be44",
+      "repo": "002eccaa0a67189e"
     },
     "templates/retros-README.md": {
       "dest": "_docs/retros/README.md",
@@ -131,7 +131,7 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "71aae1a9bcda40aa",
-      "repo": "961ddce2ca67e667",
+      "repo": "7aef0efbcbecd241",
       "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit. PRD-035 adds a third repository-only member, verify-memory-record-corpus.mjs: the corpus fixture and runner are repository-local, so the packed workflow deliberately omits it. PRD-034 adds verify-prompts.mjs to BOTH bundles — the reconciliation check runs everywhere a store can exist"
     },
     "verify/test-task-allowlist.json": {

@@ -46,7 +46,9 @@
     "verify:workflow": "node scripts/verify/verify-workflow.mjs",
     "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green \u2014 ready to push; run git push yourself (push is always human)')\"",
     "verify:quickstart-parity": "node scripts/verify/verify-quickstart-parity.mjs",
-    "verify:test-inputs": "node scripts/verify/verify-test-inputs.mjs"
+    "verify:test-inputs": "node scripts/verify/verify-test-inputs.mjs",
+    "verify:review-quorum": "node scripts/verify/verify-review-quorum-authority.mjs",
+    "verify:prompts-mutation": "node scripts/verify/verify-prompts-mutation.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",

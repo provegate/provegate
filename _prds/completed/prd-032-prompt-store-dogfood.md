@@ -638,6 +638,17 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   banner), not absence; the one negative assert in this PRD (FR-3's clean-tree check)
   has an independent cause by construction — the probe itself planted the edit it
   asserts is gone.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — close-time watch fire:
+  its watch covers `_state/**` and the closing diff regenerates `_state/prds.json`
+  plus appends the acceptance entry. Reviewed against the record: this PRD adds no
+  free-text field beside an enumerated one — the acceptance entry uses the existing
+  schema's enumerated fields, and the state file is generated, not authored. No
+  edit to the record; the watch did its review-trigger job.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — close-time watch fire
+  (`_prds/**` in the closing diff via this PRD's own archive move). Reviewed: this
+  chain's layer-clustering was the restatement class, tracked under
+  `a-rule-corrected-survives-where-it-is-restated` (applied above, sweep discharged
+  in review round 2); no scope decision pending at close.
 - reviewed: `gate-run-resume-after-archive` — its watch covers `prompts.ts`. The trap is
   a Phase-7 close-time behavior (resuming a stopped close against archived paths), not a
   design input here; binding instruction for the close: run it from the primary

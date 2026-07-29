@@ -92,6 +92,7 @@ _brain/
   PROTOCOL.md          ← the memory protocol (canonical rules)
   learnings/  adr/     ← non-derivable knowledge + decisions
 _state/                ← machine state; _state/prds.json is the generated SSOT
+.provegate/            ← the generated prompt store (phase protocols + templates; `gate check --prompts` guards it)
 _prds/ _readiness/ _tasks/ _docs/   ← per-PRD workflow artifacts (wip/completed)
 _docs/reviews/         ← independent-review artifacts (one per gated change)
 _docs/retros/          ← periodic retrospective notes
@@ -102,7 +103,8 @@ docs/research/         ← bootstrap decisions + roadmap + source snapshot (law)
 
 - **Level 1 — quick start:** this file + `_brain/INDEX.md`.
 - **Level 2 — doing work:** + the matched `_brain` detail files + the active PRD's
-  artifacts in `_prds/` / `_tasks/`.
+  artifacts in `_prds/` / `_tasks/` + the phase protocol for your phase in
+  `.provegate/prompts/`.
 - **Level 3 — deep change:** + `docs/research/provegate-bootstrap/DECISIONS.md` +
   relevant ADRs.
 - **Level 4 — onboarding:** the full knowledge base.
