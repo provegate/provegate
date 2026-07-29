@@ -191,14 +191,14 @@ pnpm verify:workflow && pnpm test` at each of the three documented steps).
         comparison, no glob narrowing, no hardcoded site list, no suppression
         marker, no fixture-value change, no specifier exemption, no partial
         ledger/ADR subset, no census in the shipped package).
-- [ ] 8.0 Phase 6 — Final Auditing (W5)
-  - [ ] 8.1 Independent adversarial review (different model/session; `Critical: 0`;
+- [x] 8.0 Phase 6 — Final Auditing (W5)
+  - [x] 8.1 Independent adversarial review (different model/session; `Critical: 0`;
         Quorum per config; real Base SHA; artifact path named in the ledger row) →
         `_docs/reviews/review-036-frozen-snapshot-digest-gate.md`. Brief the
         reviewer to SWEEP the W5 subjects: migrations changed no assertion/read
         API/fixture value; helper exports/imports/calls exactly match FR-3(b3);
         the ADR received only the table-row append.
-  - [ ] 8.2 `pnpm verify:workflow` green after any fix; draft
+  - [x] 8.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-036-frozen-snapshot-digest-gate.md`.
 - [ ] 9.0 Phase 7 — Learning and close (eligible)
   - [ ] 9.1 Memory Outputs: reasoned `none` (declared in the PRD) — if
@@ -230,7 +230,7 @@ pnpm verify:workflow && pnpm test` at each of the three documented steps).
 | FR-4                  | `pnpm verify:test-inputs`                                                 | repo     | passed  | proven live in the worktree                     | probe: hash changed on `wx` snapshot probe, restored after `finally` cleanup, stale probes refused |
 | atomicity             | rollback prova                                                            | repo     | passed  | HEAD~1: zero set members, gates green           | three-step reverse order, each step verified                                                       |
 | types/lint/test/build | the floor                                                                 | monorepo | passed  | 5/5 4/4 7/7 4/4; workflow PASS; FULL TURBO warm | plus `pnpm verify:workflow` with the new bundle member                                             |
-| independent-review    | `_docs/reviews/review-036-frozen-snapshot-digest-gate.md` — `Critical: 0` | review   | pending |                                                 | W5 sweep briefed                                                                                   |
+| independent-review    | `_docs/reviews/review-036-frozen-snapshot-digest-gate.md` — `Critical: 0` | review   | passed | 6 rounds, C:1→1→3→1→1→0; quorum 1/1; Base SHA 5a2a64a; artifact committed | W5 sweep briefed                                                                                   |
 | durable               | `pnpm check:durable-artifacts`                                            | repo     | pending |                                                 | review artifact in the merge diff                                                                  |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
