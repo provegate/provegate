@@ -221,16 +221,23 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
         primitive; a repo whose config OMITS prompts sees zero change (defaults carry
         no backslash and an empty exceptions list — the backslash refusal on a
         PRESENT block is FR-2's named behavior change, not a violation).
-- [ ] 9.0 Phase 6 — Final Auditing
-  - [ ] 9.1 Independent adversarial review (different model/session; `Critical: 0`;
-        `Quorum: 1/1 pass`) → `_docs/reviews/review-034-prompt-store-reconciliation.md`.
-  - [ ] 9.2 The six-surface prose audit (watch item 3): reviewer inspects ALL six
-        sites, not only the two test-held ones.
-  - [ ] 9.3 `pnpm verify:workflow` green after any fix; draft
+- [x] 9.0 Phase 6 — Final Auditing
+  - [x] 9.1 Independent adversarial review: FIVE Codex rounds (GPT-5, codex-cli
+        0.145.0, read-only, high effort) — rounds 1-3 found 6+2+2 [P1], every closure
+        re-verified by the next round; round 4 `Critical: 0` + two [P2] advisories;
+        round 5 confirmed both advisory closures, no findings. `Quorum: 1/1 pass` →
+        `_docs/reviews/review-034-prompt-store-reconciliation.md`
+        (`check --review-artifacts` green).
+  - [x] 9.2 The six-surface prose audit (watch item 3): round 1 inspected all six
+        sites directly (found two defective — NEXT_STEPS banner over-claim, help
+        under-description — both fixed); round 2 re-swept and reported all six
+        consistent.
+  - [x] 9.3 `pnpm verify:workflow` green after every fix round; summary drafted at
         `_docs/wip/summary-034-prompt-store-reconciliation.md`.
 - [ ] 10.0 Phase 7 — Learning and close (operator-gated)
-  - [ ] 10.1 Write `_brain/learnings/recompute-beats-recorded-state.md` (banner-version
-        attribution form) + the `_brain/INDEX.md` hook (≤120 chars).
+  - [x] 10.1 Write `_brain/learnings/recompute-beats-recorded-state.md` (banner-version
+        attribution form) + the `_brain/INDEX.md` hook (103 chars; `verify:brain`
+        PASS).
   - [ ] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact
         in the merge diff.
   - [ ] 10.3 Owner acceptance transcribed on explicit direction (the merge gate
@@ -255,8 +262,8 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
 | FR-4/5 | `pnpm verify:workflow` + `pnpm verify:pack-drift` | repo | passed | both PASS (2026-07-29) | CHECKS membership; both ledger pairs + notes |
 | atomicity | intermediate-commit `verify:workflow` sweep | repo | passed | one commit `bf942eb`; rollback prova green (7.2) | 7.1 degenerate case + revert restores pre-PRD green |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1327 tests), 4/4 (2026-07-29) | |
-| independent-review | `Critical: 0`, Quorum `1/1 pass`, six-surface audit | review | pending | | |
-| durable | `pnpm verify:durable-artifacts` | repo | pending | | |
+| independent-review | `Critical: 0`, Quorum `1/1 pass`, six-surface audit | review | passed | 5 Codex rounds, 10 [P1] + 2 [P2] found→closed→re-verified; artifact committed (2026-07-29) | six-surface audit rounds 1+2 |
+| durable | `pnpm verify:durable-artifacts` | repo | pending | | at close, against the merge diff |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -324,6 +331,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
+| 2026-07-29 | 6.0–9.0 | Phases 5-6 run. §11 rows all green (ledger). Rollback prova in scratch worktree green. Phase 6: five independent Codex rounds — R1 six [P1] (containment ENOENT bypass, CI comment-match false-green, NEXT_STEPS banner over-claim, weak help+test, missing independent-cause in expiry fixture, containment-only summary assertion); R2 two [P1] (dangling-parent chain, same-line CI order); R3 two [P1] (TOCTOU read + ENOENT-branch bypass, substring-vs-execution); R4 Critical: 0 + two [P2] (block-scalar match, case-sensitive containment); R5 confirmation, no findings. Every false-green defect mutation-probed (four CI probes red). Fix commits: 080ec4a, 5d5ac9c, 311c99d, 9f25db2. Review artifact + summary + learning + INDEX hook written; `verify:brain` and `check --review-artifacts` green. |
 | 2026-07-28 | 0.1 | `gate queue`: PRD-034 READY, IN-FLIGHT 0, no overlap. `gate open PRD-034`: lease claimed, 19 globs, lock written to the MAIN checkout (`_state/locks/prd-034-prompt-store-reconciliation.json`). `gate check PRD-034` re-run green under post-PRD-028 gates (the closed §9 grammar landed after task-gen). |
 | 2026-07-28 | 0.2 | Board row added on main. Worktree at `../provegate-prd-034` from main `9789381`. `pnpm --filter provegate build` failed on unbuilt `@provegate/design` (fresh-worktree dep gap); full `pnpm build` green (4/4). No root `.env*` exists, so the fresh-worktree env gap is n/a. |
 | 2026-07-29 | 1.0–5.0 | Red-first held: `prompts-integrity.test.ts` written first, 53/54 red (missing exports), then green in slices. FR-1 primitive (16 classification tests incl. both symlink-containment arms, EISDIR fail-closed, canonical `.`-dir spelling, no-write proof), FR-2 config surface (structural spec + backslash `prompts.dir` refusal in `validate.ts`, rejection-only path contract + UTC calendar expiry + byte-wise duplicates in `load.ts`), FR-3 command + six-surface sweep, FR-5 pack layer (twin imports package; PACK_MAP; packed CHECKS; NEXT_STEPS; pack-manifest; changeset), FR-4 repo layer (`verify:prompts` + `--assert-ci-order` hygiene-job-scoped; CI build-before-aggregate + stale comment fixed — watch item 2 done). Drift ledger: one new pair + workflow pair reconciled, both notes updated. `verify:workflow` PASS, `check --wiring` PASS, integrity suite 54/54. |
