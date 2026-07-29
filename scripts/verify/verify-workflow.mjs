@@ -24,6 +24,7 @@ const CHECKS = [
   'verify-memory-record-corpus.mjs',
   'verify-prompts.mjs',
   'verify-quickstart-parity.mjs',
+  'verify-test-inputs.mjs',
 ];
 
 const root = targetRoot();

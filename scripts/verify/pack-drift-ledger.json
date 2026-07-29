@@ -131,7 +131,7 @@
     "verify/verify-workflow.mjs": {
       "dest": "scripts/verify/verify-workflow.mjs",
       "pack": "71aae1a9bcda40aa",
-      "repo": "e18d4976cb913e12",
+      "repo": "961ddce2ca67e667",
       "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit. PRD-035 adds a third repository-only member, verify-memory-record-corpus.mjs: the corpus fixture and runner are repository-local, so the packed workflow deliberately omits it. PRD-034 adds verify-prompts.mjs to BOTH bundles — the reconciliation check runs everywhere a store can exist"
     },
     "verify/test-task-allowlist.json": {

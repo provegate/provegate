@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
@@ -19,6 +19,7 @@ import {
   initWorkspace,
   revalidateControlArtifacts,
 } from '../src/core/run/index.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-022 — a worktree must still carry the control artifacts base carries.
@@ -252,7 +253,7 @@ interface Fixture {
  * not assumed. `postMerge: []` lets a recovered `gate land` actually merge
  * instead of reverting on a toolchain this temp repo does not have. */
 const MANIFEST = {
-  phases: { '4': ['node -e "require(\'fs\').writeFileSync(\'ran.txt\',\'1\')"'] },
+  phases: { '4': ["node -e \"require('fs').writeFileSync('ran.txt','1')\""] },
   postMerge: [],
 };
 
@@ -404,7 +405,12 @@ describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
 
   it('the read-only commands and the plan are unaffected by the same drift', () => {
     const fx = fixture('unaffected');
-    for (const args of [['check', 'PRD-001'], ['status'], ['queue'], ['run', 'PRD-001', '--dry-run']]) {
+    for (const args of [
+      ['check', 'PRD-001'],
+      ['status'],
+      ['queue'],
+      ['run', 'PRD-001', '--dry-run'],
+    ]) {
       const result = cli(fx.wt, args);
       expect(result.code, `${args.join(' ')}: ${result.stderr}`).toBe(0);
       expect(result.stdout + result.stderr, args.join(' ')).not.toContain(
@@ -480,10 +486,7 @@ describe('the boundary is stated where the mechanism is described (FR-5)', () =>
   it('method.mdx names all three exclusions', () => {
     // Read the file DIRECTLY: `content-launch.test.ts` never opens method.mdx,
     // so an assertion added there would be a green that proves nothing.
-    const mdx = readFileSync(
-      resolve(dirname(fileURLToPath(import.meta.url)), '../../../apps/docs/content/docs/method.mdx'),
-      'utf8',
-    );
+    const mdx = readFileSync(repoPath('apps/docs/content/docs/method.mdx'), 'utf8');
     // Anchor on the SECTION HEADING, not any mention: an earlier paragraph in
     // this file already says `git merge` bypasses the gates, and a slice that
     // started before it would satisfy the first exclusion without the new

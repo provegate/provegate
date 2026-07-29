@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { pkgRoot, repoPath } from './helpers/repo-reads.js';
 
 /**
  * PRD-021 FR-9 / FR-11 — the two weight tables are projections of one authority,
@@ -14,8 +14,7 @@ import { DEFAULT_CONFIG } from '../src/core/config/index.js';
  * checks is just a second authority that has not disagreed yet.
  */
 
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
-const pkgRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = repoPath('.');
 const read = (path: string): string => readFileSync(path, 'utf8');
 
 /** The `| DIM — name | meaning | weight |` rows of a triage table, as
@@ -31,9 +30,10 @@ function tableWeights(markdown: string): [string, number][] {
 }
 
 describe('the weight tables are projections of DEFAULT_CONFIG (FR-9, FR-10)', () => {
-  const expected = DEFAULT_CONFIG.valueScoring.axes.map(
-    (axis): [string, number] => [axis, DEFAULT_CONFIG.valueScoring.weights[axis]!],
-  );
+  const expected = DEFAULT_CONFIG.valueScoring.axes.map((axis): [string, number] => [
+    axis,
+    DEFAULT_CONFIG.valueScoring.weights[axis]!,
+  ]);
 
   it('the root AGENT_BOOTSTRAP triage table equals the configured axes, in order', () => {
     const rows = tableWeights(read(join(repoRoot, 'AGENT_BOOTSTRAP.md')));
@@ -123,10 +123,7 @@ describe('the research pack declares itself frozen (FR-11)', () => {
  * asserted.
  */
 describe('acceptance authorship rule, as shipped (PRD-033)', () => {
-  const shipped = [
-    'METHOD.md',
-    'practices/templates/AGENT_BOOTSTRAP.template.md',
-  ] as const;
+  const shipped = ['METHOD.md', 'practices/templates/AGENT_BOOTSTRAP.template.md'] as const;
 
   // Matched across whitespace, so the assertion is about the CONTENT and not
   // about one line-wrapping of it — a reflowed paragraph is not a rule change.

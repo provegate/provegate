@@ -7,9 +7,10 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
+import { repoPath } from './helpers/repo-reads.js';
 
 const run = promisify(execFile);
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
+const repoRoot = repoPath('.');
 const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
 const read = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
@@ -266,8 +267,7 @@ describe('package README command audit', () => {
 describe('adoption docs promise what the commands actually do (FR-5)', () => {
   const read = (rel: string): string =>
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '..', rel), 'utf8');
-  const readRepo = (rel: string): string =>
-    readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../..', rel), 'utf8');
+  const readRepo = (rel: string): string => readFileSync(join(repoRoot, rel), 'utf8');
 
   const surfaces = (): { name: string; text: string }[] => [
     { name: 'README.md', text: read('README.md') },

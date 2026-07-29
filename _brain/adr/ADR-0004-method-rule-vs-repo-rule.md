@@ -54,6 +54,7 @@ born agreeing at that PRD's close, and neither store ever contains the deleted t
 | verify-acceptance-rule.mjs | repo |
 | verify-turbo-inputs.mjs | repo |
 | verify-quickstart-parity.mjs | repo |
+| verify-test-inputs.mjs | repo |
 | verify-dependency-audit.mjs | repo |
 | verify-workflow.mjs | repo |
 | verify-script-classes.mjs | repo |

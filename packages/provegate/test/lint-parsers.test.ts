@@ -1,11 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { loadConfig } from '../src/core/config/load.js';
 import { loadManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { parseVerificationCommands, parseVerificationTable } from '../src/core/gates/safety.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const cfg = DEFAULT_CONFIG;
 
@@ -149,7 +150,7 @@ describe('the wip corpus and the classification pair (PRD-024 FR-2)', () => {
   // manifest, content, repository root, PRD number. A short call fails on an
   // unrelated memory error or skips missing-header enforcement —
   // `fixture-must-reach-production-shape`.
-  const repoRoot = resolve(import.meta.dirname, '../../..');
+  const repoRoot = repoPath('.');
   const { config } = loadConfig(repoRoot);
   const manifest = loadManifest(config, repoRoot);
 

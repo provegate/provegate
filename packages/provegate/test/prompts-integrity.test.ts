@@ -33,13 +33,12 @@ import {
   type PromptFinding,
   type RenderConfig,
 } from '../src/core/run/prompts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const run = promisify(execFile);
 const cliPath = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const twinPath = fileURLToPath(new URL('../practices/verify/verify-prompts.mjs', import.meta.url));
-const changesetPath = fileURLToPath(
-  new URL('../../../.changeset/prompt-store-reconciliation.md', import.meta.url),
-);
+const changesetPath = repoPath('.changeset/prompt-store-reconciliation.md');
 const packageDir = promptsPackageDir();
 const installed = packageVersion(packageDir);
 
@@ -139,7 +138,11 @@ interface ConfigJson {
   exceptions?: unknown[];
 }
 
-function writeConfigJson(root: string, prompts: ConfigJson, extra: Record<string, unknown> = {}): void {
+function writeConfigJson(
+  root: string,
+  prompts: ConfigJson,
+  extra: Record<string, unknown> = {},
+): void {
   writeFileSync(
     join(root, 'workflow.config.json'),
     `${JSON.stringify(
@@ -541,7 +544,12 @@ describe('exception (PRD-034 FR-2)', () => {
 
     const excepted = evaluatePromptReconciliation(findings, {
       exceptions: [
-        { path: victim, reason: 'kept different on purpose', owner: 'owner', expires: '2026-08-01' },
+        {
+          path: victim,
+          reason: 'kept different on purpose',
+          owner: 'owner',
+          expires: '2026-08-01',
+        },
       ],
       todayUtc: '2026-07-29',
     });

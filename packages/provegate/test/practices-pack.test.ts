@@ -21,6 +21,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { practicesPackDir } from '../src/core/run/init.js';
 import type { DoctorReport } from '../src/core/memory/doctor.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const CLI = resolve(dirname(fileURLToPath(import.meta.url)), '../dist/cli.js');
 
@@ -481,7 +482,10 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
       'workflow.config.json',
       JSON.stringify({ memory: { enabled: true, entrypoints: ['CLAUDE.md'] } }, null, 2),
     );
-    write('gates.manifest.json', JSON.stringify({ phases: { '7': ['pnpm verify:brain'] } }, null, 2));
+    write(
+      'gates.manifest.json',
+      JSON.stringify({ phases: { '7': ['pnpm verify:brain'] } }, null, 2),
+    );
     return root;
   }
 
@@ -536,7 +540,9 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
     // FR-2's contract: these keys are the machine surface an adopter scripts on.
     for (const check of report.checks) {
       expect(Object.keys(check).sort()).toEqual(
-        check.remedy === undefined ? ['detail', 'id', 'severity'] : ['detail', 'id', 'remedy', 'severity'],
+        check.remedy === undefined
+          ? ['detail', 'id', 'severity']
+          : ['detail', 'id', 'remedy', 'severity'],
       );
       expect(['pass', 'warn', 'fail']).toContain(check.severity);
     }
@@ -606,7 +612,10 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
 
   it('matrix: memory disabled reports one skipped check and exits 0', () => {
     const root = site();
-    writeFileSync(join(root, 'workflow.config.json'), JSON.stringify({ memory: { enabled: false } }));
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      JSON.stringify({ memory: { enabled: false } }),
+    );
     const { code, report } = doctor(root);
     expect(code).toBe(0);
     expect(report.disabled).toBe(true);
@@ -746,10 +755,12 @@ describe('the exceptions conversion (PRD-026 FR-5, step by step, proved through 
     // step 3: drop every survivor that is already wired — measured HERE by the
     // audit itself: keeping them is the three-step conversion the reviewer
     // executed, and auditWiring rejected all five as stale.
-    const repoRootDir = fileURLToPath(new URL('../../..', import.meta.url));
+    const repoRootDir = repoPath('.');
     const keepThem = {
       ...defaultManifest(DEFAULT_CONFIG),
-      wiringExceptions: Object.fromEntries(survivors.map((s) => [s, 'migrated from the packed array'])),
+      wiringExceptions: Object.fromEntries(
+        survivors.map((s) => [s, 'migrated from the packed array']),
+      ),
     };
     const rejected = auditWiring(DEFAULT_CONFIG, keepThem, repoRootDir);
     for (const s of survivors) {

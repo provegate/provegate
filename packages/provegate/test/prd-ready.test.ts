@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js';
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 const cfg = DEFAULT_CONFIG;
 const manifest = defaultManifest(cfg);
@@ -133,7 +133,6 @@ afterEach(() => {
 });
 
 describe('FR-2 memory readiness gate', () => {
-
   const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
 
   const record = (over: Partial<Record<string, string>> = {}): string =>
@@ -248,9 +247,7 @@ describe('FR-2 memory readiness gate', () => {
     });
 
     it('an input naming a superseded record', () => {
-      const root = fixture([
-        { slug: 'sample-record', content: record({ status: 'superseded' }) },
-      ]);
+      const root = fixture([{ slug: 'sample-record', content: record({ status: 'superseded' }) }]);
       expect(lintPrd(on, manifest, VALID, root).issues).toEqual([
         "Memory Inputs: 'sample-record' is superseded — it cannot be an input",
       ]);
@@ -421,7 +418,9 @@ describe('FR-2 memory readiness gate', () => {
       const content = VALID.replace('`sample-record`', '`unindexed`');
       const issues = lintPrd(on, manifest, content, root).issues;
       expect(issues).toContainEqual("Memory Inputs: 'unindexed' is not an active indexed record");
-      expect(issues).toContainEqual(expect.stringContaining('learnings/unindexed.md has no pointer'));
+      expect(issues).toContainEqual(
+        expect.stringContaining('learnings/unindexed.md has no pointer'),
+      );
     });
 
     it('enabled without a root fails closed rather than skipping', () => {
@@ -436,11 +435,10 @@ describe('self-application (W4 dogfood)', () => {
   it('PRD-002 itself passes the lint (wip or archived)', () => {
     // The artifact moves wip→completed at close; accept either location so
     // this test survives its own PRD's archive (lesson from PRD-001's lease test).
-    const candidates = ['wip', 'completed'].map((state) =>
-      fileURLToPath(
-        new URL(`../../../_prds/${state}/prd-002-gate-manifest-runner.md`, import.meta.url),
-      ),
-    );
+    const candidates = [
+      repoPath('_prds/wip/prd-002-gate-manifest-runner.md'),
+      repoPath('_prds/completed/prd-002-gate-manifest-runner.md'),
+    ];
     const prdPath = candidates.find((p) => existsSync(p));
     expect(prdPath, 'PRD-002 artifact not found in wip or completed').toBeDefined();
     const report = lintPrd(cfg, manifest, readFileSync(prdPath!, 'utf8'));

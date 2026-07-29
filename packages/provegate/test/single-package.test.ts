@@ -20,6 +20,7 @@ import { memoryFind } from '../src/core/memory/index.js';
 import { symlinkSync } from 'node:fs';
 import { mergeToLocalBase, mergeMessage } from '../src/core/run/merge.js';
 import type { StateRecord } from '../src/core/state/build.js';
+import { TRAVERSAL_SELECTOR } from './helpers/escape-fixtures.js';
 
 // PRD-015 — proves the gated workflow runs in a PLAIN single-package repo (one
 // package.json, no pnpm-workspace.yaml, no turbo), with commands that are not
@@ -305,9 +306,9 @@ describe('FR-4 — find bounds, portability, and safety', () => {
     // The default caps a broad query rather than dumping the store.
     expect(memoryFind(config, root, { query: 'caching' }).hits).toHaveLength(20);
     // And the cap slices the RANKED list, so the first result is stable.
-    expect(memoryFind(config, root, { query: 'caching', limit: 3 }).hits.map((h) => h.slug)).toEqual(
-      ['record-0000', 'record-0001', 'record-0002'],
-    );
+    expect(
+      memoryFind(config, root, { query: 'caching', limit: 3 }).hits.map((h) => h.slug),
+    ).toEqual(['record-0000', 'record-0001', 'record-0002']);
   });
 
   it('matches case-insensitively and handles non-ASCII text', () => {
@@ -333,9 +334,7 @@ describe('FR-4 — find bounds, portability, and safety', () => {
   });
 
   it('accepts Windows separators in a path selector', () => {
-    const { root, config } = storeOf([
-      ['watcher', rec('watcher', { watch: 'packages/x/**' })],
-    ]);
+    const { root, config } = storeOf([['watcher', rec('watcher', { watch: 'packages/x/**' })]]);
     const back = memoryFind(config, root, { paths: ['packages\\x\\a.ts'] });
     expect(back.hits.map((h) => h.slug)).toEqual(['watcher']);
     expect(back.hits[0]!.matchedPaths).toEqual(['packages/x/a.ts']);
@@ -347,8 +346,11 @@ describe('FR-4 — find bounds, portability, and safety', () => {
     const { root, config } = storeOf([
       ['watcher', rec('watcher', { watch: 'packages/x/**', description: 'about caching' })],
     ]);
-    for (const bad of ['/etc/passwd', '../outside/a.ts', 'C:\\x\\a.ts', 'packages/../../x']) {
-      const result = memoryFind(config, root, { paths: ['packages/x/a.ts', bad], query: 'caching' });
+    for (const bad of ['/etc/passwd', '../outside/a.ts', 'C:\\x\\a.ts', TRAVERSAL_SELECTOR]) {
+      const result = memoryFind(config, root, {
+        paths: ['packages/x/a.ts', bad],
+        query: 'caching',
+      });
       expect(result.ok, bad).toBe(false);
       expect(result.hits, bad).toEqual([]);
       expect(result.problem, bad).toContain(bad);
@@ -502,8 +504,12 @@ describe('FR-4 — find bounds, portability, and safety', () => {
       return parts.join('\u0000');
     };
     const before = snapshot();
-    const first = JSON.stringify(memoryFind(config, root, { query: 'caching', paths: ['packages/x/a.ts'] }));
-    const second = JSON.stringify(memoryFind(config, root, { query: 'caching', paths: ['packages/x/a.ts'] }));
+    const first = JSON.stringify(
+      memoryFind(config, root, { query: 'caching', paths: ['packages/x/a.ts'] }),
+    );
+    const second = JSON.stringify(
+      memoryFind(config, root, { query: 'caching', paths: ['packages/x/a.ts'] }),
+    );
     expect(second).toBe(first);
     // The tie-break is doing work here: `a-rec` and `b-rec` carry identical
     // signals and the index lists `b-rec` first.

@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { contractView } from '../src/core/memory/artifacts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /** FR-2..5 + W3: prompt census, calibrated-number spot checks vs the snapshot
  * values, codex-starter drift fix, CLI-mention audit. */
@@ -315,8 +316,7 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
   const addendumText = (): string =>
     readFileSync(
       join(
-        pkgRoot,
-        '../../docs/research/provegate-bootstrap/source-snapshot',
+        repoPath('docs/research/provegate-bootstrap/source-snapshot'),
         'addenda/agent-memory-closed-loop-2026-07-25.md',
       ),
       'utf8',
@@ -332,7 +332,9 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
       if (source === null) continue;
       expect(addendum, source).toContain(flat(source));
     }
-    expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
+    expect(addendum).toContain(
+      flat('5 Testing | No memory obligation. Verification is verification.'),
+    );
   });
 
   it('phase 5 carries NO memory instruction — §8 denies it one', () => {
@@ -373,9 +375,10 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     for (const { file } of ADDENDUM_SOURCE) {
       const constraints = constraintsOf(file);
       const outside = prompt(file).split(constraints).join(' ');
-      expect(MEMORY_VOCABULARY.test(outside), `${file}: memory instruction outside constraints`).toBe(
-        false,
-      );
+      expect(
+        MEMORY_VOCABULARY.test(outside),
+        `${file}: memory instruction outside constraints`,
+      ).toBe(false);
     }
   });
 
@@ -455,8 +458,7 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
  * out fresh with no restored turbo cache, so the gate is real there.
  */
 describe('frozen source snapshot (PRD-017 FR-1)', () => {
-  const repoRoot = join(pkgRoot, '..', '..');
-  const snapshot = join(repoRoot, 'docs/research/provegate-bootstrap/source-snapshot');
+  const snapshot = repoPath('docs/research/provegate-bootstrap/source-snapshot');
   const ADDENDUM = 'addenda/agent-memory-closed-loop-2026-07-25.md';
 
   /** Every frozen file, path and content, folded into one digest. */
@@ -499,7 +501,7 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
     expect(existsSync(join(snapshot, ADDENDUM))).toBe(true);
     expect(readFileSync(join(snapshot, 'MANIFEST.md'), 'utf8')).toContain(ADDENDUM);
     const decisions = readFileSync(
-      join(repoRoot, 'docs/research/provegate-bootstrap/DECISIONS.md'),
+      repoPath('docs/research/provegate-bootstrap/DECISIONS.md'),
       'utf8',
     );
     expect(decisions).toContain('Post-bootstrap method extensions');
@@ -564,7 +566,7 @@ describe('phase 6 round 8 — the constraint count is discriminating', () => {
 // rule (FR-4), and the two-copy bootstrap identity (FR-5).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SNAPSHOT_ROOT = join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot');
+const SNAPSHOT_ROOT = repoPath('docs/research/provegate-bootstrap/source-snapshot');
 const A2 = join(SNAPSHOT_ROOT, 'addenda/autonomy-mode-and-proceed-rule-2026-07-27.md');
 
 describe('the autonomy addendum — shape and clauses, never approval (PRD-031 FR-1)', () => {
@@ -604,19 +606,31 @@ describe('the configured exception (PRD-031 FR-2/FR-3)', () => {
   });
 
   it('the human-gated fragment has no exception and no self-assessment; the autonomous one reproduces the snapshot text', () => {
-    const gated = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md'), 'utf8');
-    const auto = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'), 'utf8');
+    const gated = readFileSync(
+      join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md'),
+      'utf8',
+    );
+    const auto = readFileSync(
+      join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'),
+      'utf8',
+    );
     expect(gated).toContain('This STOP has no exception');
     expect(gated).not.toContain('Exception:');
     // FR-3: the snapshot's sentence, parenthetical included, byte-anchored to
     // the snapshot itself so an abridgement cannot recur unnoticed
-    const snapshot = readFileSync(join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'), 'utf8').replace(/\s+/g, ' ');
-    const sentence = 'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.';
+    const snapshot = readFileSync(
+      join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+    const sentence =
+      "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.";
     expect(snapshot).toContain(sentence);
     expect(auto.replace(/\s+/g, ' ')).toContain(sentence);
     // both fragments state the configured-statement rule
     for (const f of [gated, auto]) {
-      expect(f.replace(/\s+/g, ' ')).toContain('an agent never assesses which mode its own session is in');
+      expect(f.replace(/\s+/g, ' ')).toContain(
+        'an agent never assesses which mode its own session is in',
+      );
     }
   });
 });
@@ -634,8 +648,11 @@ describe('the proceed rule (PRD-031 FR-4/FR-5)', () => {
   });
 
   it('both bootstrap copies carry the proceed rule IDENTICALLY — a pattern in each would be satisfied by the template alone', () => {
-    const live = readFileSync(join(pkgRoot, '../../AGENT_BOOTSTRAP.md'), 'utf8');
-    const tmpl = readFileSync(join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'), 'utf8');
+    const live = readFileSync(repoPath('AGENT_BOOTSTRAP.md'), 'utf8');
+    const tmpl = readFileSync(
+      join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'),
+      'utf8',
+    );
     const block = (s: string): string => {
       const i = s.indexOf(PROCEED_HEAD);
       expect(i, 'proceed rule missing from a bootstrap copy').toBeGreaterThanOrEqual(0);

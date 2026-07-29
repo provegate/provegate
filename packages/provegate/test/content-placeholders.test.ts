@@ -1,4 +1,13 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +22,7 @@ import {
   renderPrompts,
   requiredValues,
 } from '../src/core/run/prompts.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 /** FR-1: every {{TOKEN}} used in prompts/, templates/ and practices/templates/ is
  * declared in PLACEHOLDERS.md; the registry carries no orphans; tokens are UPPER_SNAKE.
@@ -97,10 +107,12 @@ describe('required values (PRD-029 FR-4)', () => {
   it('parses every registry row, with its config field, empty policy and enumeration', () => {
     expect(rows).toHaveLength(21);
     expect(rows.filter((r) => r.configField !== null)).toHaveLength(7);
-    expect(rows.filter((r) => r.emptyAllowed).map((r) => r.token).sort()).toEqual([
-      'DOMAIN_CHECKS',
-      'ENV_NOTES',
-    ]);
+    expect(
+      rows
+        .filter((r) => r.emptyAllowed)
+        .map((r) => r.token)
+        .sort(),
+    ).toEqual(['DOMAIN_CHECKS', 'ENV_NOTES']);
     // PRD-031 ships the first enumerated token; its two legal values are the
     // whole set (the enumerated-aware value builders below key off this).
     const enumerated = rows.filter((r) => r.enumerated !== null);
@@ -161,7 +173,8 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('renders cleanly once every required value is supplied', () => {
     const values: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
+    for (const row of requiredValues(packageDir, planned, rows))
+      values[row.token] = row.enumerated?.[0] ?? 'x';
     const config = { ...DEFAULT_CONFIG, prompts: { ...DEFAULT_CONFIG.prompts, values } };
     const result = renderPrompts(packageDir, config);
     expect(result.files.size).toBeGreaterThan(19);
@@ -174,7 +187,8 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('leaves the verbatim registry unsubstituted — rendering it would eat the table', () => {
     const values: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
+    for (const row of requiredValues(packageDir, planned, rows))
+      values[row.token] = row.enumerated?.[0] ?? 'x';
     const result = renderPrompts(packageDir, {
       ...DEFAULT_CONFIG,
       prompts: { ...DEFAULT_CONFIG.prompts, values },
@@ -186,7 +200,8 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('enforces the per-token empty policy in BOTH directions', () => {
     const base: Record<string, string> = {};
-    for (const row of requiredValues(packageDir, planned, rows)) base[row.token] = row.enumerated?.[0] ?? 'x';
+    for (const row of requiredValues(packageDir, planned, rows))
+      base[row.token] = row.enumerated?.[0] ?? 'x';
 
     const allowed = { ...base, DOMAIN_CHECKS: '' };
     expect(() =>
@@ -207,7 +222,8 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('reports a values key no rendered token consumes as `unused`', () => {
     const values: Record<string, string> = { NOT_A_TOKEN: 'x' };
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
+    for (const row of requiredValues(packageDir, planned, rows))
+      values[row.token] = row.enumerated?.[0] ?? 'x';
     expect(() =>
       renderPrompts(packageDir, {
         ...DEFAULT_CONFIG,
@@ -218,7 +234,8 @@ describe('required values (PRD-029 FR-4)', () => {
 
   it('names a registry-declared but unrendered token as unused, with the reason', () => {
     const values: Record<string, string> = { LINK_TO_VISION_DOC: 'docs/vision.md' };
-    for (const row of requiredValues(packageDir, planned, rows)) values[row.token] = row.enumerated?.[0] ?? 'x';
+    for (const row of requiredValues(packageDir, planned, rows))
+      values[row.token] = row.enumerated?.[0] ?? 'x';
     expect(() =>
       renderPrompts(packageDir, {
         ...DEFAULT_CONFIG,
@@ -277,21 +294,28 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
 
   it('the autonomous rendering reproduces the snapshot exception text, parenthetical included', () => {
     const snapshot = readFileSync(
-      join(pkgRoot, '../../docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md'),
+      repoPath(
+        'docs/research/provegate-bootstrap/source-snapshot/prompts/phase-3-task-generator.md',
+      ),
       'utf8',
     );
-    const m = snapshot.replace(/\s+/g, ' ').includes(
-      "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.",
-    );
+    const m = snapshot
+      .replace(/\s+/g, ' ')
+      .includes(
+        "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.",
+      );
     expect(m, 'the snapshot sentence moved — re-anchor this test').toBe(true);
     const values = { ...baseValues(), AUTONOMY_MODE: 'autonomous' };
     const result = renderPrompts(packageDir, {
       ...DEFAULT_CONFIG,
       prompts: { ...DEFAULT_CONFIG.prompts, values },
     });
-    const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(/\n/g, ' ');
+    const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(
+      /\n/g,
+      ' ',
+    );
     expect(phase3).toContain(
-      'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.',
+      "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.",
     );
   });
 
@@ -323,7 +347,10 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
   });
 
   it('no rendering instructs mode self-assessment — denylist after stripping the sanctioned sentence', () => {
-    const SANCTIONED = new RegExp('an agent never assesses which mode its own session is in'.split(' ').join('\\s+'), 'g');
+    const SANCTIONED = new RegExp(
+      'an agent never assesses which mode its own session is in'.split(' ').join('\\s+'),
+      'g',
+    );
     const DENY = /(decide|determine|infer|assess)[^.]{0,60}\b(mode|autonomous)/i;
     for (const mode of ['human-gated', 'autonomous']) {
       const values = { ...baseValues(), AUTONOMY_MODE: mode };
@@ -331,8 +358,10 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
         ...DEFAULT_CONFIG,
         prompts: { ...DEFAULT_CONFIG.prompts, values },
       });
-      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '')
-        .replace(SANCTIONED, '');
+      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(
+        SANCTIONED,
+        '',
+      );
       expect(DENY.test(phase3), `${mode}: ${phase3.match(DENY)?.[0] ?? ''}`).toBe(false);
     }
   });
@@ -342,15 +371,24 @@ describe('the first enumerated token (PRD-031 FR-6)', () => {
     try {
       cpSync(packageDir, tmp, { recursive: true });
       const frag = join(tmp, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md');
-      writeFileSync(frag, readFileSync(frag, 'utf8') + '\nIf unsure, determine your own mode from the session.\n');
+      writeFileSync(
+        frag,
+        readFileSync(frag, 'utf8') + '\nIf unsure, determine your own mode from the session.\n',
+      );
       const values = { ...baseValues(), AUTONOMY_MODE: 'human-gated' };
       const result = renderPrompts(tmp, {
         ...DEFAULT_CONFIG,
         prompts: { ...DEFAULT_CONFIG.prompts, values },
       });
-      const SANCTIONED = new RegExp('an agent never assesses which mode its own session is in'.split(' ').join('\\s+'), 'g');
+      const SANCTIONED = new RegExp(
+        'an agent never assesses which mode its own session is in'.split(' ').join('\\s+'),
+        'g',
+      );
       const DENY = /(decide|determine|infer|assess)[^.]{0,60}\b(mode|autonomous)/i;
-      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(SANCTIONED, '');
+      const phase3 = (result.files.get('prompts/phase-3-task-generator.md') ?? '').replace(
+        SANCTIONED,
+        '',
+      );
       expect(DENY.test(phase3)).toBe(true); // the deny case CAN fail — not vacuous
     } finally {
       rmSync(tmp, { recursive: true, force: true });

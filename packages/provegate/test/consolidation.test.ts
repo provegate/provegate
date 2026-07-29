@@ -2,12 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { loadManifest } from '../src/core/gates/index.js';
 import { sweepReviewArtifacts } from '../src/core/gates/review.js';
 import { declaredArtifacts, durableDeclarationIssue } from '../src/core/run/durable.js';
+import { repoPath } from './helpers/repo-reads.js';
 
 // PRD-026: the consolidation's own proofs — the review sweep's selection and
 // binding predicates, the declaration lint, the manifest-resolution rule, the
@@ -15,7 +15,7 @@ import { declaredArtifacts, durableDeclarationIssue } from '../src/core/run/dura
 // mutate-one-green-baseline fixtures.
 
 const cfg = DEFAULT_CONFIG;
-const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
+const repoRoot = repoPath('.');
 const roots: string[] = [];
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
@@ -57,7 +57,9 @@ describe('sweepReviewArtifacts (FR-1: selection then binding)', () => {
     expect(sweepReviewArtifacts(cfg, wrong)).toEqual([
       expect.objectContaining({
         file: 'review-023-fixture.md',
-        issues: expect.arrayContaining([expect.stringContaining('does not match expected PRD-023')]),
+        issues: expect.arrayContaining([
+          expect.stringContaining('does not match expected PRD-023'),
+        ]),
       }),
     ]);
     // paired control on the same shape
@@ -167,16 +169,17 @@ describe('manifest resolution after the consolidation (FR-4)', () => {
         scripts: Record<string, string>;
       }
     ).scripts;
-    const commands = [
-      ...Object.values(manifest.phases).flat(),
-      ...manifest.postMerge,
-    ] as string[];
+    const commands = [...Object.values(manifest.phases).flat(), ...manifest.postMerge] as string[];
     for (const cmd of commands) {
       const m = /^pnpm\s+([\w:@/.-]+)$/.exec(cmd.trim());
       if (m === null) continue; // not a bare package-manager invocation
       expect(scripts[m[1]!], cmd).toBeDefined();
     }
-    for (const gone of ['verify:review-artifact', 'verify:durable-artifacts', 'verify:gates-wired']) {
+    for (const gone of [
+      'verify:review-artifact',
+      'verify:durable-artifacts',
+      'verify:gates-wired',
+    ]) {
       expect(scripts[gone]).toBeUndefined();
       expect(commands.some((c) => c.includes(gone))).toBe(false);
     }
@@ -342,7 +345,11 @@ function ledgerRepo(
   mkdirSync(resolve(root, '_brain/adr'), { recursive: true });
   writeFileSync(resolve(root, 'scripts/verify/script-classes.json'), JSON.stringify(ledger));
   for (const f of onDisk) writeFileSync(resolve(root, 'scripts/verify', f), '// fixture');
-  const table = ['| Script | Class |', '| --- | --- |', ...adrRows.map(([s, c]) => `| ${s} | ${c} |`)];
+  const table = [
+    '| Script | Class |',
+    '| --- | --- |',
+    ...adrRows.map(([s, c]) => `| ${s} | ${c} |`),
+  ];
   writeFileSync(
     resolve(root, '_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'),
     ['# ADR-0004', '', '## Classification', '', ...table, ''].join('\n'),
@@ -427,7 +434,7 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
   });
 
   it('a method row whose script is GONE is stale — method is never a resting place', () => {
-    const [, , ] = GREEN;
+    const [, ,] = GREEN;
     const ledger = {
       'verify-a.mjs': { class: 'repo' },
       'verify-gone.mjs': { class: 'method', supersededBy: 'gate check --gone' },
@@ -491,7 +498,11 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
       .split('\n')
       .filter((l) => /^\|/.test(l))
       .join('\n');
-    for (const gone of ['verify-review-artifact', 'verify-durable-artifacts', 'verify-gates-wired']) {
+    for (const gone of [
+      'verify-review-artifact',
+      'verify-durable-artifacts',
+      'verify-gates-wired',
+    ]) {
       expect(ledger.includes(gone)).toBe(false);
       expect(tableRows.includes(gone)).toBe(false);
     }
