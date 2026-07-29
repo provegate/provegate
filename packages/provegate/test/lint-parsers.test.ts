@@ -156,8 +156,10 @@ describe('the wip corpus and the classification pair (PRD-024 FR-2)', () => {
 
   it('no PRD in the configured wip directory reports a §11-parser-class issue', () => {
     const wipDir = join(repoRoot, config.dirs.artifacts.prd.dir, config.dirs.stateRoles.wip);
+    // An empty wip corpus is legal (the queue drains between waves); readdirSync
+    // throwing on a missing dir keeps the wrong-directory vacuity covered, and
+    // the planted positive control below proves the parser detects in-class reds.
     const files = readdirSync(wipDir).filter((f) => f.endsWith('.md'));
-    expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       const content = readFileSync(join(wipDir, file), 'utf8');
       const number = Number.parseInt(/-(\d+)-/.exec(file)?.[1] ?? '0', 10);
