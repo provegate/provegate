@@ -41,17 +41,19 @@ interface Extraction {
 export function extractScenario(doc: string): Extraction {
   const starts = doc.split('\n').flatMap((l, i) => (l.trim() === SCENARIO_START ? [i] : []));
   const ends = doc.split('\n').flatMap((l, i) => (l.trim() === SCENARIO_END ? [i] : []));
-  if (starts.length !== 1 || ends.length !== 1) {
+  const startIdx = starts[0];
+  const endIdx = ends[0];
+  if (starts.length !== 1 || ends.length !== 1 || startIdx === undefined || endIdx === undefined) {
     throw new Error(`qs:scenario — exactly one region required (found ${starts.length} start, ${ends.length} end)`);
   }
-  if (ends[0] < starts[0]) throw new Error('qs:scenario — end precedes start');
+  if (endIdx < startIdx) throw new Error('qs:scenario — end precedes start');
   const lines = doc.split('\n');
   const commands: DocCommand[] = [];
   let skippedFences = 0;
   let pendingSkip = false;
-  let i = starts[0] + 1;
-  while (i < ends[0]) {
-    const line = lines[i];
+  let i = startIdx + 1;
+  while (i < endIdx) {
+    const line = lines[i] ?? '';
     if (line.trim() === SKIP_MARK) {
       if (pendingSkip) throw new Error(`qs:skip — two markers before one fence (line ${i + 1})`);
       pendingSkip = true;
@@ -62,7 +64,7 @@ export function extractScenario(doc: string): Extraction {
     if (fence) {
       const lang = fence[1];
       const close = lines.indexOf('```', i + 1);
-      if (close < 0 || close >= ends[0]) throw new Error(`unclosed fence at line ${i + 1}`);
+      if (close < 0 || close >= endIdx) throw new Error(`unclosed fence at line ${i + 1}`);
       if (lang === 'sh') {
         if (pendingSkip) {
           skippedFences++;
@@ -70,8 +72,7 @@ export function extractScenario(doc: string): Extraction {
         } else {
           let joined = '';
           for (let j = i + 1; j < close; j++) {
-            const raw = lines[j];
-            const t = raw.trim();
+            const t = (lines[j] ?? '').trim();
             if (t === '' || t.startsWith('#')) continue;
             if (t.endsWith('\\')) {
               joined += t.slice(0, -1) + ' ';
@@ -108,7 +109,7 @@ describe('quickstart extraction', () => {
   it('the region yields the canonical command sequence with doc lines retained', () => {
     const { commands } = extractScenario(doc);
     expect(commands.length).toBeGreaterThanOrEqual(8);
-    expect(commands[0].command).toBe('npm install -D provegate');
+    expect(commands[0]?.command).toBe('npm install -D provegate');
     expect(commands.every((c) => c.line > 0)).toBe(true);
     const gateCmds = commands.filter((c) => c.command.includes('gate '));
     expect(gateCmds.some((c) => c.command.includes('gate init'))).toBe(true);
@@ -145,7 +146,7 @@ describe('quickstart extraction', () => {
     const { commands } = extractScenario(doc);
     const installs = commands.filter((c) => /\binstall\b/.test(c.command));
     expect(installs).toHaveLength(1);
-    expect(installs[0].command).toBe('npm install -D provegate');
+    expect(installs[0]?.command).toBe('npm install -D provegate');
   });
 });
 
@@ -154,7 +155,7 @@ const IS_POSIX = process.platform !== 'win32';
 let tarballPath = '';
 let scratchRoot = '';
 
-function childEnv(repo: string): NodeJS.ProcessEnv {
+function childEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (k.startsWith('GIT_CONFIG')) continue; // COUNT, KEY_n, VALUE_n, PARAMETERS
@@ -185,7 +186,7 @@ function sh(repo: string, command: string, opts: { expectFail?: boolean } = {}) 
   const r = spawnSync('/bin/sh', ['-c', mapped], {
     cwd: repo,
     encoding: 'utf8',
-    env: childEnv(repo),
+    env: childEnv(),
     timeout: 180_000,
   });
   if (!opts.expectFail && r.status !== 0) {
@@ -195,7 +196,7 @@ function sh(repo: string, command: string, opts: { expectFail?: boolean } = {}) 
 }
 
 function assertNoRemote(repo: string) {
-  const r = spawnSync('git', ['remote'], { cwd: repo, encoding: 'utf8', env: childEnv(repo) });
+  const r = spawnSync('git', ['remote'], { cwd: repo, encoding: 'utf8', env: childEnv() });
   expect(r.stdout.trim()).toBe('');
 }
 
