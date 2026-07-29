@@ -148,19 +148,26 @@ describe('disposition rules (PRD-029 FR-2)', () => {
     expect(planned[0]!.rule.disposition).toBe('verbatim');
   });
 
-  it('fails when two sources resolve to one destination, case-folded and NFC', () => {
+  it('refuses a case-twin fixture fail-closed on any volume', () => {
     const root = tempPackage({
       'prompts/PLACEHOLDERS.md': '# registry\n',
       'templates/a-template.md': 'one\n',
       'templates/A-Template.md': 'two\n',
     });
-    // On a case-insensitive volume the two never coexist, so the guard cannot
-    // be exercised there; on a case-sensitive one it must fire.
+    // On a case-insensitive volume the two collapse into one file and at most
+    // two files ship. On a case-sensitive one the uppercase twin is refused at
+    // the RULE layer — the lowercase-anchored template rule does not match it,
+    // and the unmatched check runs before the collision guard, so 'one
+    // destination' is unreachable from this fixture there. The guard itself is
+    // exercised directly in M3 below; this test pins that neither volume ships
+    // the twin silently.
     const planned = (() => {
       try {
         return planStore(root);
       } catch (error) {
-        expect((error as PromptsError).message).toContain('one destination');
+        expect((error as PromptsError).message).toMatch(
+          /one destination|matches no disposition rule/,
+        );
         return null;
       }
     })();

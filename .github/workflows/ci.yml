@@ -69,6 +69,12 @@ jobs:
       - name: install
         run: pnpm install --frozen-lockfile
 
+      # provegate's tsup inlines @provegate/design (a devDependency — the
+      # zero-runtime-deps rule holds), so its dist must exist before the CLI
+      # build on a clean checkout.
+      - name: build-design
+        run: pnpm --filter @provegate/design build
+
       # PRD-034: verify-prompts (a bundle member and an explicit step below)
       # executes the built CLI; a clean checkout has no dist/, so build before
       # the aggregate. The order is asserted by `verify:prompts --assert-ci-order`.
