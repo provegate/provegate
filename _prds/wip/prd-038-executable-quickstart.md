@@ -54,7 +54,7 @@ red instead of an adopter's first five minutes.
       committed doc, against the built CLI, in a scratch repository.
 - [ ] Doc and CLI cannot drift apart silently in either direction.
 - [ ] The docs-site quickstart is held to the same sequence as the package
-      `QUICKSTART.md` (one source of truth; the other proven equivalent or derived).
+      `QUICKSTART.md` by the root parity verifier over the tagged regions.
 
 ### Success Metrics
 
@@ -72,7 +72,7 @@ red instead of an adopter's first five minutes.
 
 ```
 As a first-time adopter following the quickstart,
-I want every executable command in it to work exactly as printed,
+I want every executable, non-skipped command in it to work exactly as printed,
 so that my first five minutes build trust instead of a bug report.
 ```
 
@@ -269,7 +269,9 @@ record. Every mechanism below is now closed, decided, and hermetic.
 - **Given** the two quickstart docs, **When** the FR-3 mechanism runs, **Then** a
   command-sequence divergence fails by name.
 - **Given** the scratch repository after a full run, **When** inspected, **Then** it
-  has no remote and nothing outside the temp dir was written.
+  has no remote, and — per FR-2's post-setup observation boundary — the scratch tree
+  plus the remapped HOME/XDG/npm/TMP roots contain every file the run created after
+  setup (no global-filesystem proof is claimed from inspecting selected directories).
 
 ---
 
@@ -451,6 +453,7 @@ Before Phase 2 PASS, run: `gate check PRD-038`
 
 | Date       | Author | Changes                                                                                                    |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2026-07-29 | orchestrating session, post-PASS | **Iteration 7 scored PASS 8.46** (seventh fresh scorer; no blocking pieces; trajectory 4.95 → 6.10 → 5.62 → 7.48 → 7.61 → 7.88 → 8.46 with the owner's prototype-first pivot as the turning point). The three watch items applied as post-PASS precision edits: the goal's "equivalent or derived" replaced by the decided root parity verifier; User Story 1 gains the non-skipped qualifier; §6's temp-dir criterion restated through FR-2's post-setup observation boundary so no audit accepts a global-filesystem proof from selected directories. Verdict unchanged; owner may order a confirmation pass at Phase 3. |
 | 2026-07-29 | orchestrating session (author), sixth rework | **Iteration 6 (7.88) applied — three consistency sweeps in the active text.** The retained "worktree, practices … OUTSIDE" sentence replaced with the single-valued rule (worktree inside under `qs:skip`; practices outside). The MEASURED transcript's own stop quotes corrected to the exact forms (the `PRD-001:` prefix; the full `, not the base checkout` tail; the Base SHA stop restated as this-run's-planted-placeholder-refused, no general symbolic-ref claim). Success Metrics, User Story 1 and §6 qualified to "every executable, non-skipped command"; Implementation Scope assigns each document its own markers and its own handoff-card retag. Active-text sweep re-run after the edits; dated changelog rows exempt. |
 | 2026-07-28 | orchestrating session (author), fifth rework | **Iteration 5 (7.61) applied.** The region rule made single-valued everywhere: worktree INSIDE under `qs:skip` (binding to exactly the next fence; dangling/double markers are named failures), practices OUTSIDE, harness and parity verifier excluding skipped fences identically, no "unmarked-sh" failure class, the markers added to Implementation Scope. The two remaining production reasons quoted EXACTLY — including the `, not the base checkout` tail the earlier draft truncated — and the general symbolic-ref statement removed. Children now scrub env-injected git config (`GIT_CONFIG_COUNT`/indexed pairs/`GIT_CONFIG_PARAMETERS`) before the global/system pins, and the external-write claim narrows to what the test concretely observes. The rollback sentence replaced by the coordinated atomic set across both docs, the harness, the verifier, its wiring, the class ledger, the ADR amendment and the learning. |
 | 2026-07-28 | orchestrating session (author), fourth rework | **Iteration 4 (7.48 — the prototype broke the oscillation) applied.** Region geometry decided: one region + an explicit `qs:skip` ignored-fence form so the worktree alternative keeps its teaching position unexecuted; the fence census corrected to the two handoff-card blocks. The three negative fixtures pinned to exact production inputs and COMPLETE reason strings (omitted tasks file; the literal planted `main` in Base SHA — no general symbolic-ref claim; close-from-main). Git config neutralized properly (`GIT_CONFIG_GLOBAL/SYSTEM=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`) and the nothing-written-outside claim scoped to post-setup. The cleanup plant completed (non-empty chmod-555 dir, POSIX/Ubuntu scope stated). The docs-parity migration decided: the docs region adopts the package sequence verbatim, plain `npx gate init`, with the `--practices` recommendation moved to its own optional section; the "derivation or parity" residue, the nonexistent PRD-007 exported-helpers claim, and the stale lease-ownership wording all removed. |
