@@ -194,16 +194,16 @@ for (const file of files) {
     });
     return found;
   };
+  // A "path literal" is a segment with real NAME content: separator-only
+  // parts (`${base}/${rel}`'s '/') are plumbing for pure-dynamic reads, which
+  // stay legal by the named allowance (round-4 review).
+  const hasNameContent = (text) => text.replace(/[\\/]/g, '').length > 0 && text !== '.';
   const containsPathLiteral = (n) => {
-    if (
-      (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) &&
-      n.text.length > 0 &&
-      n.text !== '.'
-    )
+    if ((ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) && hasNameContent(n.text))
       return true;
     if (
       ts.isTemplateExpression(n) &&
-      (n.head.text.length > 0 || n.templateSpans.some((s) => s.literal.text.length > 0))
+      (hasNameContent(n.head.text) || n.templateSpans.some((s) => hasNameContent(s.literal.text)))
     )
       return true;
     let found = false;

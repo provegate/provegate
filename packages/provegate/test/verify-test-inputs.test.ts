@@ -341,6 +341,41 @@ describe('the round-3 review closures', () => {
   });
 });
 
+describe('the round-4 review closure', () => {
+  it('19 — a separator-only template over the base stays a legal pure-dynamic read', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'ok.test.ts',
+      "import { readFile } from 'node:fs/promises';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const base = repoPath('.');\n" +
+        "const rel = 'anything';\n" +
+        'const p = readFile(`${base}/${rel}`, \'utf8\');\n' +
+        'void p;\n',
+    );
+    const { status, output } = run(root);
+    expect(output).toContain('PASS');
+    expect(status).toBe(0);
+  });
+
+  it('19b — but a named leaf in the tail still fails', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      "import { readFile } from 'node:fs/promises';\n" +
+        "import { repoPath } from './helpers/repo-reads.js';\n" +
+        "const base = repoPath('.');\n" +
+        'const p = readFile(`${base}/commitlint.config.mjs`, \'utf8\');\n' +
+        'void p;\n',
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:4 \[base-literal-read\]/);
+  });
+});
+
 describe('the documented limit — concatenation is outside the syntactic net', () => {
   it("a runtime-assembled traversal ('..' + '/' + '..') is NOT flagged", () => {
     const root = makeRoot();
