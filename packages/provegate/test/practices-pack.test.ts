@@ -761,7 +761,16 @@ describe('the exceptions conversion (PRD-026 FR-5, step by step, proved through 
     // and the audit accepts it (not merely the manifest loader).
     const converted = { ...defaultManifest(DEFAULT_CONFIG), wiringExceptions: {} };
     expect(validateManifest(DEFAULT_CONFIG, converted).length).toBe(0);
-    expect(auditWiring(DEFAULT_CONFIG, converted, repoRootDir).ok).toBe(true);
+    // The conversion's claim, scoped to its subject: the audit raises no issue
+    // about any SURVIVOR under the empty store. A blanket `.ok === true` here
+    // additionally pinned "no script registered after PRD-026 may wire itself
+    // through the repo's real manifest" — an over-pin PRD-038's parity check
+    // (wired via gates.manifest phases."4"; invisible to this synthetic
+    // defaultManifest) surfaced. The five survivors are the proof; they stay.
+    const audit = auditWiring(DEFAULT_CONFIG, converted, repoRootDir);
+    for (const s of survivors) {
+      expect(audit.issues.filter((i) => i.includes(`"${s}"`))).toEqual([]);
+    }
   });
 
   it('step 4: a whitespace justification is refused — trimmed non-empty is the contract', () => {

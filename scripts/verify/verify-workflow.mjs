@@ -23,6 +23,7 @@ const CHECKS = [
   'verify-script-classes.mjs',
   'verify-memory-record-corpus.mjs',
   'verify-prompts.mjs',
+  'verify-quickstart-parity.mjs',
 ];
 
 const root = targetRoot();

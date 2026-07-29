@@ -52,6 +52,7 @@
 
 ## Project gotchas
 
+- [quickstart is a fixture](learnings/quickstart-is-a-fixture.md) — extract-and-execute the tagged region; the doc is the runtime source so both drift directions fail
 - [gate run resume after archive](learnings/gate-run-resume-after-archive.md) — resuming a stopped close re-runs memory gates against archived paths; un-archive and resume from 7
 - [turbo cache masks out-of-input reads](learnings/turbo-cache-masks-out-of-input-reads.md) — a test reading paths outside its turbo inputs replays stale green from cache
 

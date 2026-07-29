@@ -33,9 +33,11 @@ describe('quickstart presents the practices install honestly (FR-5, FR-7)', () =
     // about the install block, so read the install block.
     const text = page();
     const fences = [...text.matchAll(/```sh\n([\s\S]*?)```/g)].map((m) => m[1]!);
-    const install = fences.find((f) => f.includes('gate init'));
-    expect(install, 'no shell fence runs gate init').toBeDefined();
-    expect(install).toContain('gate init --practices');
+    // PRD-038 converged the canonical region to plain `gate init` (the parity
+    // rule with the package quickstart) and moved the practices install to its
+    // own section — still a runnable COMMAND fence, which is this test's claim.
+    const practices = fences.find((f) => f.includes('gate init --practices'));
+    expect(practices, 'no shell fence runs gate init --practices').toBeDefined();
   });
 
   it('states exactly what the pack wires and what it leaves manual', () => {

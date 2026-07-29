@@ -6,6 +6,8 @@ size, the honest answer is printed in METHOD.md — don't use the workflow.
 
 ## 1. Install and scaffold
 
+<!-- qs:scenario -->
+
 ```sh
 npm install -D provegate
 npx gate init
@@ -53,6 +55,7 @@ since the last commit) would not be in it. The command refuses rather than hand
 you a checkout whose PRD, layout config, or gate policy differs from the one it
 just claimed.
 
+<!-- qs:skip -->
 ```sh
 git add _prds/ workflow.config.json gates.manifest.json
 git commit -m "docs(prd): prd-001 draft"
@@ -105,9 +108,11 @@ archives the artifacts and merges the branch into your local base with post-merg
 verification and auto-revert. It ends with a handoff card whose last line is the whole
 philosophy:
 
-```
+```text
 → READY TO PUSH — run `git push` yourself (the runner never pushes)
 ```
+
+<!-- /qs:scenario -->
 
 ## Single-package repos
 

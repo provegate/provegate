@@ -53,6 +53,7 @@ born agreeing at that PRD's close, and neither store ever contains the deleted t
 | verify-pack-drift.mjs | repo |
 | verify-acceptance-rule.mjs | repo |
 | verify-turbo-inputs.mjs | repo |
+| verify-quickstart-parity.mjs | repo |
 | verify-dependency-audit.mjs | repo |
 | verify-workflow.mjs | repo |
 | verify-script-classes.mjs | repo |
@@ -62,6 +63,10 @@ Appended at PRD-034: `verify-prompts.mjs` reads this repository's `ci.yml` and e
 the built CLI from this repository's layout — repo-class by the what-it-READS test. The
 method-side rule is not this script: it ships as the packed twin
 (`practices/verify/verify-prompts.mjs`), which imports the package's exported primitive.
+
+`verify-quickstart-parity.mjs` (PRD-038) is repo-class by the Decision's own test: it
+READS this repository's two quickstart documents — a doc-consistency rule for this
+repo, not a method artifact — and never ships in the package or the pack.
 
 ## Alternatives
 

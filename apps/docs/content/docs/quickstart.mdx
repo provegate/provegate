@@ -9,27 +9,17 @@ size, the honest answer is printed in METHOD.md — don't use the workflow.
 
 ## 1. Install and scaffold
 
+{/* qs:scenario */}
+
 ```sh
 npm install -D provegate
-npx gate init --practices
+npx gate init
 ```
 
 `gate init` creates the artifact tree (`_prds/`, `_readiness/`, `_tasks/`, `_docs/`
 with `wip/completed/deferred` states), the state and locks directories, and two
 starter configs (`workflow.config.json`, `gates.manifest.json`). It never overwrites
 anything — re-run it any time.
-
-**`--practices` is the recommended install.** It adds the agent bootstrap and artifact
-templates plus `scripts/verify/` — the checks that hold the artifacts to what they claim.
-Without them you get the lifecycle and no one auditing it. Plain `gate init` remains
-available for a repository that wants only the tree.
-
-What the pack wires, and what it leaves to you: `--practices` writes a
-`gates.manifest.json` with the Phase 7 memory validator already in it, and that is the only
-thing it wires. Everything else is a printed manual step — the `package.json` scripts to
-add, the CI job to run them in, and the agent-entry shims to paste. That list is
-`NEXT_STEPS.md`, printed at the end of the install and kept in the package. Editing your
-`package.json` and your CI config is not something a scaffold should do without you.
 
 Check the result:
 
@@ -98,9 +88,29 @@ archives the artifacts and merges the branch into your local base with post-merg
 verification and auto-revert. It ends with a handoff card whose last line is the whole
 philosophy:
 
-```
+```text
 → READY TO PUSH — run `git push` yourself (the runner never pushes)
 ```
+
+{/* /qs:scenario */}
+
+## The practices layer (optional, recommended)
+
+```sh
+npx gate init --practices
+```
+
+**`--practices` is the recommended install.** It adds the agent bootstrap and artifact
+templates plus `scripts/verify/` — the checks that hold the artifacts to what they claim.
+Without them you get the lifecycle and no one auditing it. Plain `gate init` remains
+available for a repository that wants only the tree.
+
+What the pack wires, and what it leaves to you: `--practices` writes a
+`gates.manifest.json` with the Phase 7 memory validator already in it, and that is the only
+thing it wires. Everything else is a printed manual step — the `package.json` scripts to
+add, the CI job to run them in, and the agent-entry shims to paste. That list is
+`NEXT_STEPS.md`, printed at the end of the install and kept in the package. Editing your
+`package.json` and your CI config is not something a scaffold should do without you.
 
 ## Single-package repos
 

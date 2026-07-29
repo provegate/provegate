@@ -1,18 +1,18 @@
 {
-  "phases": {
-    "4": [
-      "pnpm check-types",
-      "pnpm lint",
-      "pnpm build",
-      "pnpm test",
-      "pnpm verify:workflow",
-      "pnpm check-egress",
-      "pnpm check:review-artifacts",
-      "pnpm check:durable-artifacts",
-      "pnpm check:wiring"
-    ],
-    "7": [
-      "pnpm verify:brain"
-    ]
-  }
+ "phases": {
+  "4": [
+   "pnpm check-types",
+   "pnpm lint",
+   "pnpm build",
+   "pnpm test",
+   "pnpm verify:workflow",
+   "pnpm check-egress",
+   "pnpm check:review-artifacts",
+   "pnpm check:durable-artifacts",
+   "pnpm check:wiring"
+  ],
+  "7": [
+   "pnpm verify:brain"
+  ]
+ }
 }
