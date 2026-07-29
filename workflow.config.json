@@ -17,5 +17,29 @@
   ],
   "valueScoring": {
     "enforceFrom": 17
+  },
+  "prompts": {
+    "enabled": true,
+    "dir": ".provegate",
+    "adapters": [
+      "claude-code",
+      "cursor",
+      "codex"
+    ],
+    "values": {
+      "PROJECT_NAME": "provegate",
+      "CMD_TEST_SCOPED": "pnpm test --filter provegate",
+      "DOMAIN_CHECKS": "No push code path anywhere (CLI or CI; only the human-triggered release workflow publishes). `packages/provegate`: zero runtime dependencies, no telemetry, no network calls. Method content traceable to the source snapshot. ADRs bind until superseded. Canonical statusVocab values only.",
+      "TECH_STANDARDS": "TypeScript strict, ESM; pnpm + turbo monorepo; zero runtime deps in `packages/provegate`; Conventional Commits with lower-case subjects; design primitives from `@provegate/design` (web consumes the built dist).",
+      "ARCHITECTURE_DOC": "AGENT_BOOTSTRAP.md",
+      "BEST_PRACTICES_DOC": "AGENT_BOOTSTRAP.md",
+      "DOCS_ROOT": "_brain",
+      "REVIEW_TOOL": "codex exec --sandbox read-only -c model_reasoning_effort=\"high\" - < brief.md",
+      "ENV_NOTES": "Hermetic \u2014 tests run against temp-dir git fixtures; no network, no external services, no `.env` required.",
+      "AUTONOMY_MODE": "human-gated"
+    }
+  },
+  "templates": {
+    "prd": ".provegate/templates/prd-template.md"
   }
 }
