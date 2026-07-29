@@ -238,8 +238,11 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
   - [x] 10.1 Write `_brain/learnings/recompute-beats-recorded-state.md` (banner-version
         attribution form) + the `_brain/INDEX.md` hook (103 chars; `verify:brain`
         PASS).
-  - [ ] 10.2 `pnpm verify:durable-artifacts` — learning, INDEX hook, review artifact
-        in the merge diff.
+  - [x] 10.2 Durable-artifacts declaration lint green (`pnpm check:durable-artifacts` —
+        the task-gen-era name `verify:durable-artifacts` was retired by PRD-026's CLI
+        sweep). Learning, INDEX hook, review artifact and summary are all committed on
+        the branch; the merge-diff half of the gate runs inside the `gate run` close
+        chain (10.4).
   - [ ] 10.3 Owner acceptance transcribed on explicit direction (the merge gate
         refuses without it).
   - [ ] 10.4 `node packages/provegate/dist/cli.js run PRD-034`; on a stop after
