@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T11:02:58.575Z",
+  "generatedAt": "2026-07-29T11:10:54.601Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1184,7 +1184,7 @@
       "summary": {
         "shipReadiness": "Unknown"
       },
-      "lastUpdated": "2026-07-28"
+      "lastUpdated": "2026-07-29"
     },
     {
       "prd": "PRD-033",
@@ -1318,10 +1318,10 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 7.98,
-        "verdict": "ITERATE",
-        "modelTierExecution": null,
-        "modelTierAudit": null
+        "score": 8.18,
+        "verdict": "PASS",
+        "modelTierExecution": "high",
+        "modelTierAudit": "high"
       },
       "task": {
         "status": "Unknown",
