@@ -254,9 +254,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    re-rendered by the same change (FR-2's fresh-render equality makes that automatic).
    - **Targets:** `packages/provegate/src/core/run/prompts.ts`,
      `packages/provegate/test/prompts.test.ts` — **contested, measured 2026-07-29:**
-     draft PRD-036 (Phase-1 ITERATE) claims `packages/provegate/test/**/*.ts` as a glob;
-     disjoint edits, but re-run `gate queue` before Phase 3 and serialize behind 036 if
-     it goes active first.
+     PRD-036 (PASS 8.18, awaiting Phase-3 Go) claims `packages/provegate/test/**/*.ts`
+     as a glob; disjoint edits, but re-run `gate queue` before Phase 3 and serialize
+     behind 036 if it goes active first.
 
 8. **FR-8**: One review-template authority. The root `_docs/review-artifact.template.md`
    calls Quorum optional while the shipped template and the review gate
@@ -564,9 +564,10 @@ execution-phase claims overlap. If nothing is claimed, write `- none`.
 - `AGENT_BOOTSTRAP.md`
 - `scripts/verify/verify-prompts-mutation.mjs`
 - `packages/provegate/src/core/run/prompts.ts`
-- `packages/provegate/test/prompts.test.ts` — **contested with draft PRD-036's
-  `packages/provegate/test/**/*.ts` glob** (both Phase-1 today; whichever goes active
-  first wins, the other serializes — re-run `gate queue` at Phase 3)
+- `packages/provegate/test/prompts.test.ts` — **contested with PRD-036's
+  `packages/provegate/test/**/*.ts` glob** (036 is PASS 8.18 awaiting Phase-3 Go as of
+  2026-07-29 and will likely go active first; this PRD serializes behind it on this one
+  file if so — disjoint edits, re-run `gate queue` at Phase 3)
 - `_docs/review-artifact.template.md`
 
 Dropped at iteration 2: `turbo.json` (PRD-036 owns it live; FR-6 is read-only here),
