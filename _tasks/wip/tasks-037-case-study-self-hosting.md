@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-037-case-study-self-hosting.md](../../_prds/wip/prd-037-case-study-self-hosting.md)
 > **Readiness**: [readiness-037-case-study-self-hosting.md](../../_readiness/wip/readiness-037-case-study-self-hosting.md)
-> **Status**: Not Started
+> **Status**: In Progress
 > **Readiness Score**: 8.40/10 (iteration 5, PASS — fifth independent scorer)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -61,17 +61,17 @@
 
 ## Tasks
 
-- [ ] 0.0 Pre-flight
-  - [ ] 0.1 `gate queue`, then `node packages/provegate/dist/cli.js open PRD-037` —
+- [x] 0.0 Pre-flight
+  - [x] 0.1 `gate queue`, then `node packages/provegate/dist/cli.js open PRD-037` —
         four-path surface, expected disjoint from every active lease.
-  - [ ] 0.2 Board row in `STATUS.md`; worktree
+  - [x] 0.2 Board row in `STATUS.md`; worktree
         (`git worktree add -b prd-037-case-study-self-hosting ../provegate-prd-037 main`
         + `pnpm install --frozen-lockfile`).
-  - [ ] 0.3 Baseline: record in the Progress Log the CURRENT `_state/prds.json`
+  - [x] 0.3 Baseline: record in the Progress Log the CURRENT `_state/prds.json`
         derivable pair values (a quick node probe — the numbers the first `--write`
         will embed).
-- [ ] 1.0 FR-1 — the derivation script (red-first)
-  - [ ] 1.1 Write `scripts/verify/derive-figures.test-cases.mjs` FIRST with the full
+- [x] 1.0 FR-1 — the derivation script (red-first)
+  - [x] 1.1 Write `scripts/verify/derive-figures.test-cases.mjs` FIRST with the full
         case list and watch it fail: shipVerified count; closeModes fixed-order
         known values; `unclassified {count, ids}` (ids sorted) as SUCCESS for
         unknown/missing `autonomousClose`; consumed-state schema violations failing
@@ -81,36 +81,36 @@
         flagged modes; stale region bytes → first-differing-line; outside-byte
         preservation under `--write`; the `[0-9]`-in-H2-span predicate; the
         `[#self-hosting-ledger]` source token.
-  - [ ] 1.2 Implement `scripts/derive-self-hosting-figures.mjs` to the canonical
+  - [x] 1.2 Implement `scripts/derive-self-hosting-figures.mjs` to the canonical
         invocation matrix: exactly one mode flag; default/invalid/combined → usage
         to stderr, exit 2, nothing read; `--print` → content (sentinels excluded)
         to stdout; `--write` → bytes strictly between the pair only; `--check` →
         first differing line to stderr, exit 1. Figure source: `_state/prds.json`
         alone; flagged modes read the MDX only for sentinel work.
-  - [ ] 1.3 Harness green; mutation sanity: break one contract (fold an unknown
+  - [x] 1.3 Harness green; mutation sanity: break one contract (fold an unknown
         close mode into `eligible`), watch the harness fail by name, revert.
-- [ ] 2.0 FR-2 — the section and the region
-  - [ ] 2.1 `apps/docs/content/docs/case-study.mdx`: add
+- [x] 2.0 FR-2 — the section and the region
+  - [x] 2.1 `apps/docs/content/docs/case-study.mdx`: add
         `## Part two: the tool's own ledger [#self-hosting-ledger]`, the sentinel
         pair, the regeneration rule beside the region, interpretation prose with
         ZERO digits outside the pair (grep-verified before commit), the unnumbered
         honesty texture (failing rounds, reverted claims), and the origin section's
         two-evidence-classes framing line.
-  - [ ] 2.2 First `--write` populates the region; `--check` green immediately after.
-- [ ] 3.0 FR-3 — the drift gate
-  - [ ] 3.1 `scripts/verify/verify-doc-claims.mjs` invokes
+  - [x] 2.2 First `--write` populates the region; `--check` green immediately after.
+- [x] 3.0 FR-3 — the drift gate
+  - [x] 3.1 `scripts/verify/verify-doc-claims.mjs` invokes
         `node scripts/derive-self-hosting-figures.mjs --check`; a planted stale byte
         fails the lint naming the first differing line (probe run-and-reverted,
         Progress Log).
-- [ ] 4.0 FR-4 — honesty boundaries
-  - [ ] 4.1 Verify by grep: the H2 span carries no digit outside the pair; the
+- [x] 4.0 FR-4 — honesty boundaries
+  - [x] 4.1 Verify by grep: the H2 span carries no digit outside the pair; the
         origin ~390 keeps its externally-sourced label; no competitor mention.
-- [ ] 5.0 Phase 5 — Testing: every §11 row, then the floor
-  - [ ] 5.1 `node scripts/derive-self-hosting-figures.mjs --print`
-  - [ ] 5.2 `node scripts/verify/derive-figures.test-cases.mjs`
-  - [ ] 5.3 `pnpm verify:doc-claims` (×2 claims: drift + span rule)
-  - [ ] 5.4 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` && `pnpm build`
-  - [ ] 5.5 Re-read PRD §12 DO NOT — no typed figure, no estimated count, no hidden
+- [x] 5.0 Phase 5 — Testing: every §11 row, then the floor
+  - [x] 5.1 `node scripts/derive-self-hosting-figures.mjs --print`
+  - [x] 5.2 `node scripts/verify/derive-figures.test-cases.mjs`
+  - [x] 5.3 `pnpm verify:doc-claims` (×2 claims: drift + span rule)
+  - [x] 5.4 Floor: `pnpm check-types` && `pnpm lint` && `pnpm test` && `pnpm build`
+  - [x] 5.5 Re-read PRD §12 DO NOT — no typed figure, no estimated count, no hidden
         failed rounds, no `apps/web` touch, no competitor claim.
 - [ ] 6.0 Phase 6 — Final Auditing
   - [ ] 6.1 Independent adversarial review (different model/session; `Critical: 0`;
@@ -136,11 +136,11 @@
 
 | Gate | Command / Check | Scope | Result | Evidence | Notes |
 | ---- | --------------- | ----- | ------ | -------- | ----- |
-| FR-1 | `node scripts/derive-self-hosting-figures.mjs --print` | repo | pending | | matrix + sentinel rules |
-| FR-1 | `node scripts/verify/derive-figures.test-cases.mjs` | repo | pending | | full case list red-first |
-| FR-2/3 | `pnpm verify:doc-claims` | repo | pending | | region byte-equality via `--check` |
-| FR-4 | `pnpm verify:doc-claims` | repo | pending | | H2-span digit rule |
-| types/lint/test/build | the floor | monorepo | pending | | |
+| FR-1 | `node scripts/derive-self-hosting-figures.mjs --print` | repo | passed | exit 0, content only | matrix + sentinel rules |
+| FR-1 | `node scripts/verify/derive-figures.test-cases.mjs` | repo | passed | ~35 assertions PASS; red-first + mutation proven | |
+| FR-2/3 | `pnpm verify:doc-claims` | repo | passed | drift probe failed by line, restored green | |
+| FR-4 | `pnpm verify:doc-claims` | repo | passed | span violations: [] | |
+| types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1273 pkg tests), 4/4 + docs 30/30 | |
 | independent-review | `Critical: 0`, Quorum `1/1 pass` | review | pending | | watch-item consistency re-verified |
 | durable | `pnpm verify:durable-artifacts` | repo | pending | | |
 
@@ -148,13 +148,25 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- (none yet)
+- 2.1 — sentinel syntax changed from the PRD's HTML-comment form to MDX comment form
+  (`{/* self-hosting-figures:start */}`): fumadocs' MDX pipeline REJECTS `<!-- -->`
+  at build time (measured: `Unexpected character '!' before name`); the PRD named the
+  literal marker, the constraint is the format's, the contract (one ordered pair,
+  named failures) is unchanged.
+- 3.1 — the doc-claims block is scoped to feature-bearing roots: both files absent =
+  no claim (fixture/adopter roots); exactly one present = broken contract, loud fail.
+  Discovered by the package conformance tests running the script against fixture
+  roots.
 
 ## Progress Log
 
 | Date | Task | Notes |
 | ---- | ---- | ----- |
-|      |      |       |
+| 2026-07-28 | 0.3 | baseline probe: shipVerified 32; closeModes SV {operator-gated: 30, eligible: 2} |
+| 2026-07-28 | 1.1 | red-first proven: harness import failed on the absent script |
+| 2026-07-29 | 1.3 | mutation probe: folding unknown modes into eligible failed 2 named cases; reverted, PASS |
+| 2026-07-29 | 3.1 | drift probe: 32→33 by hand → doc-claims FAIL naming line 18; --write restored, PASS |
+| 2026-07-29 | 5.x | MDX build initially red on HTML-comment sentinels; switched to {/* */} form (see Deferrals); docs build 30/30 green after |
 
 ## Blockers / Open Questions
 
