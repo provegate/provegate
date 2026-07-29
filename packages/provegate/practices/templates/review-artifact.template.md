@@ -22,7 +22,7 @@ File name (repo convention): review-<NNN>-<short-slug>.md
 > **Critical:** <integer count of critical findings>
 > **High:** <integer count — optional>
 > **Medium:** <integer count — optional>
-> **Quorum:** <optional — e.g. 2/3 pass; omit for a single reviewer>
+> **Quorum:** <required — e.g. `1/1 pass` for a single reviewer, `2/3 pass` for a panel; the review gate refuses omission> <!-- quorum-is-required -->
 
 ## Findings
 

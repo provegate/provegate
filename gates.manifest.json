@@ -1,18 +1,21 @@
 {
- "phases": {
-  "4": [
-   "pnpm check-types",
-   "pnpm lint",
-   "pnpm build",
-   "pnpm test",
-   "pnpm verify:workflow",
-   "pnpm check-egress",
-   "pnpm check:review-artifacts",
-   "pnpm check:durable-artifacts",
-   "pnpm check:wiring"
-  ],
-  "7": [
-   "pnpm verify:brain"
-  ]
- }
+  "phases": {
+    "4": [
+      "pnpm check-types",
+      "pnpm lint",
+      "pnpm build",
+      "pnpm test",
+      "pnpm verify:workflow",
+      "pnpm check-egress",
+      "pnpm check:review-artifacts",
+      "pnpm check:durable-artifacts",
+      "pnpm check:wiring"
+    ],
+    "7": [
+      "pnpm verify:brain"
+    ]
+  },
+  "wiringExceptions": {
+    "verify:prompts-mutation": "Phase-5 evidence probe (PRD-032 FR-3): plants and restores a one-byte store edit to prove the reconciliation refuses drift; runs via its own \u00a711 row, deliberately not a standing CHECKS member. Shrink-only \u2014 wire it or delete this entry."
+  }
 }

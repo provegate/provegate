@@ -25,6 +25,7 @@ const CHECKS = [
   'verify-prompts.mjs',
   'verify-quickstart-parity.mjs',
   'verify-test-inputs.mjs',
+  'verify-review-quorum-authority.mjs',
 ];
 
 const root = targetRoot();
