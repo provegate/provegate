@@ -33,9 +33,10 @@ directions enforced, helper shapes validated. The claim TL 5 rests on is therefo
 two-layered and stated exactly: (1) the cache key is complete against the measured
 read set — scorer-verified; (2) the boundary alarm catches every escape shape ever
 observed here, with its syntactic limits (string concatenation, novel anchor
-compositions) named in §5 rather than papered over. If the scorer rules TL 4 a
-fourth time, the total is 3.30 and the cut/threshold-recalibration decision is the
-owner's — the threshold itself is marked provisional in AGENT_BOOTSTRAP. RM stays 4. -->
+compositions) named in §5 rather than papered over. ITERATION 4 RULED TL 5 — "the two-layer argument holds at the value level" — so
+3.50 stands above the provisional 3.40 threshold and the cut question is closed;
+this revision applies iteration 4's five precision pieces without touching the
+axes. RM stays 4. -->
 
 <!-- Autonomous Close: `eligible` — every verification is machine-checkable and this PRD
 produces no operator-owned rows. -->
@@ -68,9 +69,11 @@ template-literal part in `packages/provegate/test/**/*.ts`, module specifiers
 included:
 
 - **A1** — any literal part containing `../..` (multi-parent) → violation;
-- **A2** — any call expression carrying **two or more bare `'..'` string arguments**
-  (the split-join escape shape iteration 3 found live at
-  `content-prompts.test.ts:458`) → violation;
+- **A2** — any call expression carrying **two or more parent-carrying string
+  arguments** (each exactly `'..'` or starting `'../'` — covers the split-join shape
+  iteration 3 found live at `content-prompts.test.ts:458` AND the mixed shape
+  `join(x, '..', '../docs')` iteration 4 named; re-measured: the extension adds zero
+  sites beyond the same two) → violation;
 - **A3** — `dirname(dirname(…))` nesting → violation;
 - **A4** — `new URL('..'|'../…', new URL(…))` nesting → violation;
 - **C** — `process.cwd()` / `homedir(` call sites → violation;
@@ -83,16 +86,17 @@ Output, exclusive partition (no overlapping counts — iteration 3's correction)
 ```
 files scanned: 54
 multi-parent literal parts (violation): 23
-bare-parent '..' literals: 21 (violating only in >=2-per-call sites: 2 calls / 4 literals)
-single-parent legal parts: 189 (of which module specifiers: 144)
+bare-parent '..' literals: 21 (violating only in >=2-parent-args-per-call sites: 2 calls)
+single-parent legal parts: 187 (predicate: contains '../', not A1, not bare '..';
+                                of which module specifiers: 144)
 nested-URL: 0   nested-dirname: 0   process.cwd/homedir: 0
 violations (pre-migration state): 25 in 19 files
 ```
 
-The 25 sites decompose into **21 genuine escape/read constructions in 17 reader
-files** — the 20 multi-parent reads plus `content-prompts.test.ts:458`'s
+The 25 sites decompose into **21 out-of-package escape/read constructions in 16
+reader files** — the 20 multi-parent reads plus `content-prompts.test.ts:458`'s
 frozen-digest block (`join(pkgRoot, '..', '..')`, iteration 3's find) — **1
-in-package multi-bare site** (`memory.test.ts:461` reaches
+in-package multi-bare site** (the seventeenth violating reader, `memory.test.ts:461`, reaches
 `packages/provegate/practices/verify/lib.mjs`, inside the package; same shape as
 :458, migrated to a helper-anchored expression so the rule needs no exception), and
 **3 traversal-attack fixture strings** (`single-package.test.ts:350`,
@@ -220,7 +224,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    four already-declared globs); and
    `packages/provegate/test/helpers/escape-fixtures.ts` exporting the three
    traversal-attack strings **byte-identical** to today's values. Migrate the 21
-   escape sites in 17 reader files through `repoPath`, rewrite `memory.test.ts:461`'s
+   out-of-package escape sites in 16 reader files through `repoPath`, rewrite `memory.test.ts:461`'s
    in-package multi-bare join against the exported `pkgRoot`
    (`join(pkgRoot, 'practices/verify/lib.mjs')` — same resolved path, rule-clean),
    and move the 3 fixture sites to import from `escape-fixtures.ts` (mechanical
@@ -249,10 +253,15 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    the `test` task's `inputs`; fail names the uncovered path.
    (b3) **helper shape** — the two exempted files are themselves validated by AST
    shape (iteration 3's find: a shapeless exemption is a future hiding place):
-   `repo-reads.ts` may export only `repoPath`, `pkgRoot`, and `REPO_READ_GLOBS`, with
-   no `node:fs`/`node:child_process` imports and no read calls; `escape-fixtures.ts`
-   may export only named string constants. Any other export, import, or call fails by
-   name.
+   `repo-reads.ts` may export exactly `repoPath`, `pkgRoot`, and `REPO_READ_GLOBS`,
+   with no `node:fs`/`node:child_process` imports and no read or spawn calls;
+   `escape-fixtures.ts` may export exactly the three named string constants
+   (`TRAVERSAL_SELECTOR`, `TRAVERSAL_COMMAND`, `TRAVERSAL_SLUG` — one per §1 fixture
+   site, names mirrored in the harness assertion). Any other export, any import, or
+   any call in either file fails by name — and BOTH directions are planted in the
+   deny suite: an extra export in `escape-fixtures.ts`, and a forbidden
+   `node:fs` import with a read call in `repo-reads.ts` (iteration 4's find: the
+   read-side breach needs its own independent cause).
    (c) **positive control** — the migrated corpus passes (a)+(b1)+(b2)+(b3).
    **Toolchain anchoring, stated (iteration 3's find):** the scanner resolves
    `typescript` via `createRequire` against `packages/provegate/package.json` — the
@@ -268,9 +277,11 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    (`verify-script-classes.mjs:109-141` diffs both directions). Deny cases in the
    package suite, each planted violation failing by name from its own independent
    cause with (c) as the paired positive control: a multi-parent literal, a
-   split-join (`join(x, '..', '..')`), a nested URL, a nested `dirname`, a
+   split-join (`join(x, '..', '..')`), a split-resolve (`resolve(x, '..', '../y')` —
+   the mixed shape, iteration 4's find), a nested URL, a nested `dirname`, a
    non-literal `repoPath` argument, an unledgered `repoPath` path, an uncovered
-   ledger entry, and a helper-shape breach (extra export in `escape-fixtures.ts`).
+   ledger entry, an extra export in `escape-fixtures.ts`, and a forbidden
+   import-plus-read in `repo-reads.ts` — ten planted causes.
    **Named limit, owned in §5:** string concatenation assembling a traversal at
    runtime is outside any syntactic net — documented with a fixture that shows the
    scanner NOT flagging it, so the boundary's edge is tested, not implied.
@@ -439,17 +450,18 @@ pnpm test` green. Step (3) alone restores the pre-PRD cache behavior byte-for-by
 ## Memory Inputs
 
 - applied: `turbo-cache-masks-out-of-input-reads` — the class under repair; the
-  machine-measured census (§1) covers all 16 reader files including the record's own
-  `_docs/reviews` origin.
+  machine-measured census (§1) covers all 16 out-of-package reader files (plus the
+  one in-package multi-bare site) including the record's own `_docs/reviews` origin.
 - applied: `narrow-the-grammar-not-the-parser` — applied faithfully this round: the
   grammar was run against the corpus BEFORE authorship (iteration 2 caught the
   previous rework citing this record while skipping its measure-first instruction);
   the numbers in §1 are the measurement.
 - applied: `gate-wire-or-delete` — FR-3 ships alias + bundle row + ledger row + ADR
   table row + harness in one move, and the rollback removes all of them together.
-- applied: `assert-absent-needs-an-independent-cause` — four planted deny fixtures
-  (boundary breach, non-literal arg, unledgered path, uncovered ledger entry), each
-  failing from its own independent cause, with the passing census as positive control.
+- applied: `assert-absent-needs-an-independent-cause` — ten planted deny fixtures
+  (the five grammar shapes, non-literal arg, unledgered path, uncovered ledger entry,
+  and both helper-shape breaches), each failing from its own independent cause, with
+  the passing census as positive control.
 - applied: `a-rule-that-exempts-itself` — no suppression syntax; the only doors are
   two structural helper files whose contents the census itself reads and gates.
 - reviewed: `two-parsers-wrong-together` — why Non-Goals still reject a cache-free
@@ -458,6 +470,11 @@ pnpm test` green. Step (3) alone restores the pre-PRD cache behavior byte-for-by
 - reviewed: `runner-sentinel-blocks-cli-spawning-tests` — FR-4's probe uses
   `turbo --dry=json` only (no task execution, no gate CLI spawn); whole-suite §11
   rows stay on turbo.
+- applied: `fixture-must-reach-production-shape` — the harness runs the PRODUCTION
+  census script with a target-root argument (the `runLedger` pattern) instead of a
+  temp-root copy that would resolve a different `typescript` — the exact defect this
+  record describes: a check exercised with cleaner plumbing than production cannot
+  detect the production failure.
 - applied: `ADR-0004-method-rule-vs-repo-rule` — repo-class placement, and this round
   the ADR's own Classification table is a declared target because
   `verify-script-classes` diffs it against the ledger in both directions.
@@ -552,7 +569,7 @@ single line — and never a pipe character inside a backticked command in this t
 | FR-1 | `pnpm verify:test-inputs`                                      | repo  | ledger→turbo coverage: every census glob present in the test task's inputs                                                                        |
 | FR-2 | `pnpm verify:test-inputs`                                      | repo  | boundary scan zero violations after the 18-file migration; every `repoPath` usage ledgered                                                        |
 | FR-2 | `pnpm test`                                                    | repo  | the migrated suite is green through turbo — resolution rewrites changed no assertion or fixture value                                             |
-| FR-3 | `pnpm --filter provegate test test/verify-test-inputs.test.ts` | pkg   | four planted deny cases fail by name; positive control passes                                                                                     |
+| FR-3 | `pnpm --filter provegate test test/verify-test-inputs.test.ts` | pkg   | ten planted deny cases fail by name from independent causes; the concatenation non-catch documented; positive control passes                      |
 | FR-3 | `pnpm verify:script-classes`                                   | repo  | the ledger row and the ADR-0004 table row agree in both directions                                                                                |
 | FR-4 | `pnpm verify:test-inputs`                                      | repo  | probe ran inside the default pass: hash changed on the exclusive-created snapshot probe, restored after the finally-cleanup, stale probes refused |
 
@@ -611,6 +628,7 @@ rationalize.
 
 | Date       | Author                                                                                             | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-29 | Claude Fable 5, applying the iteration-4 precision pieces                                          | **Iteration 4 scored 7.83 ITERATE and RULED TL 5 — "the two-layer argument holds at the value level" — closing the cut question: Value 3.50 stands.** The five precision pieces applied same-session: (1) A2 extended to ≥2 parent-carrying literal arguments per call (covers the mixed `join(x, '..', '../docs')` shape the scorer named; re-measured — zero sites beyond the same two); (2) the census legal-side count restated under a defined predicate (contains `'../'`, not A1, not bare — 187, reproducing the scorer's own number; 189 was a predicate-ambiguous figure); (3) reader taxonomy made exact (21 out-of-package reads in 16 files + the one in-package multi-bare site; 19 migrated files total); (4) helper shapes fully enumerated (three named fixture constants; `repo-reads.ts` limited to its three exports) with BOTH breach directions planted — the deny suite grows to ten independent causes including the split-resolve variant and the `repo-reads.ts` forbidden-import-plus-read; (5) Memory Inputs corrected (ten-cause fixture rationale; `fixture-must-reach-production-shape` added for the production-script-with-target-root harness decision). The external `verify:workflow` red cleared upstream (case-study sentinel now 33) — the scorer confirmed green by execution                                                                                                  |
 | 2026-07-29 | Claude Fable 5, on the owner's fourth-round direction (chosen over the recorded cut a second time) | **Grammar v4 — iteration 3's five pieces closed by re-measurement.** The scanner grew rules A2 (≥2 bare `'..'` args in one call — catches the live `content-prompts.test.ts:458` split-join iteration 3 found), A3 (nested `dirname`), A4 (nested URL) and was RE-RUN against the corpus; §1 now records the exclusive partition (25 violations in 19 files: 23 multi-parent + 2 multi-bare-call; 0 for every never-observed shape; the 10 in-package `pkgRoot` anchors and 6 fixture hops measured legal without exemption — A2's one false positive, `memory.test.ts:461`, is in-package and migrates to the exported `pkgRoot` cleanly). FR-3 gains (b3) helper AST-shape validation (exports/imports/calls closed, breach fails by name) and the stated toolchain anchor (`createRequire` against `packages/provegate/package.json`; harness runs the production script with a target-root argument — a temp-root copy loses resolution, proven). Deny set grows to eight planted causes plus the concatenation non-catch asserted as a documented limit. §7 explicitly serializes Phase 4 behind the external `verify:workflow` red (PRD-037's stale `shipVerified` sentinel, not absorbed). Value 3.50 held with TL 5 re-argued on defense in depth — the ground iteration 3 conceded: glob set scorer-verified complete, the one bypass still glob-covered; fallback to the owner's cut/threshold call restated |
 | 2026-07-29 | Claude Fable 5, on the owner's third-rework direction (chosen over the recorded cut)               | **Measure-first rework.** The FR-3 grammar was prototyped and EXECUTED against the live corpus before this document was touched; §1 records its output verbatim (54 files; 23 multi-parent violations in 18 files — 20 reads, 3 traversal fixtures; 0 multi-parent module specifiers; 210 legal single-parent literals). Iteration 2's findings closed by measurement, not prose: census +3 groups (`apps/web/app/page.tsx`; `.github/workflows/**` and `.githooks/**` behind `practices-pack`'s live `auditWiring` call) and a 16th reader; the 130-import objection dissolves under the multi-parent rule (imports are single-parent — legal by grammar, no exemption needed) and the ~20 single-segment traversal fixtures likewise; the 3 genuinely multi-parent fixture strings move byte-identical into an exempted `escape-fixtures.ts`; FR-3 gains the missing direction (usage→ledger, fail-closed on non-literal args); FR-4 made failure-safe (stale-probe pre-scan, `wx` exclusive create, `finally` cleanup, restored-hash assert); ADR-0004's Classification table row added to Targets/Scope/Conflict Surface/rollout/rollback (`verify-script-classes` diffs both ways). Value re-argued at 3.50: TL 5 on the two blockers the iteration-2 ruling named now removed with evidence; fallback to the owner's cut restated if TL is held at 4                                                             |
 | 2026-07-29 | Claude Fable 5, on the owner's rework direction                                                    | **Iteration-1 rework — second expansion.** Census 2→12 groups; AST scanner replaced by a byte boundary; Turbo probe; rollout/rollback; Value 3.45→3.50 (RM 5→4, TL 4→5). Iteration 2 (5.85 ITERATE) found the census still incomplete (3 more groups), the byte rule refusing 130 imports and the traversal fixtures, the helper one-directional, and the ADR-0004 row missing — superseded by the measure-first rework above                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
