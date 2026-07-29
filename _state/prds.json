@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T11:10:54.601Z",
+  "generatedAt": "2026-07-29T11:17:02.503Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1308,13 +1308,13 @@
       "artifacts": {
         "prd": "_prds/wip/prd-036-frozen-snapshot-digest-gate.md",
         "readiness": "_readiness/wip/readiness-036-frozen-snapshot-digest-gate.md",
-        "tasks": "",
+        "tasks": "_tasks/wip/tasks-036-frozen-snapshot-digest-gate.md",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
-        "tasks": "missing",
+        "tasks": "wip",
         "summary": "missing"
       },
       "readiness": {
@@ -1326,7 +1326,7 @@
       "task": {
         "status": "Unknown",
         "checkedCount": 0,
-        "uncheckedCount": 0,
+        "uncheckedCount": 41,
         "operatorHandoffCount": 0
       },
       "summary": {
@@ -1429,7 +1429,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 4.88,
+        "score": 6.43,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
