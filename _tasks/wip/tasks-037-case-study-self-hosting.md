@@ -141,7 +141,7 @@
 | FR-2/3 | `pnpm verify:doc-claims` | repo | passed | drift probe failed by line, restored green | |
 | FR-4 | `pnpm verify:doc-claims` | repo | passed | span violations: [] | |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1273 pkg tests), 4/4 + docs 30/30 | |
-| independent-review | `Critical: 0`, Quorum `1/1 pass` | review | passed | 2 rounds, GATE FAIL→PASS; fenced/tilde probes in harness | |
+| independent-review | `_docs/reviews/review-037-case-study-self-hosting.md` — `Critical: 0`, Quorum `1/1 pass` | review | passed | 2 rounds, GATE FAIL→PASS; fenced/tilde probes in harness | |
 | durable | `pnpm check:durable-artifacts` | repo | pending | | command renamed by PRD-026 consolidation |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
