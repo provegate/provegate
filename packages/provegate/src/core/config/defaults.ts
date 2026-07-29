@@ -118,6 +118,7 @@ export const DEFAULT_CONFIG: WorkflowConfig = {
     dir: '.provegate',
     adapters: ['claude-code', 'cursor', 'codex'],
     values: {},
+    exceptions: [],
   },
   // The five axes this repository's triage rubric uses, and their weights.
   // `enforceFrom` is deliberately ABSENT rather than 1: the shipped PRD

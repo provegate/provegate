@@ -32,6 +32,16 @@ function makeRepo(): string {
   git('init', '-q');
   git('config', 'user.email', 'fixture@example.invalid');
   git('config', 'user.name', 'fixture');
+  // An adopter running `gate init` has the package INSTALLED — that is where
+  // their `gate` binary came from — so the fixture resolves 'provegate' the
+  // way their repo does. The packed bundle's verify-prompts twin imports the
+  // package (PRD-034), and a fixture without it would fail on an environment
+  // no real adopter has.
+  mkdirSync(join(repo, 'node_modules'), { recursive: true });
+  symlinkSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), '..'),
+    join(repo, 'node_modules/provegate'),
+  );
   return repo;
 }
 
@@ -48,7 +58,7 @@ function fingerprint(root: string): Map<string, string> {
   const out = new Map<string, string>();
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === '.git') continue;
+      if (entry.name === '.git' || entry.name === 'node_modules') continue;
       const full = join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else out.set(full.slice(root.length + 1), readFileSync(full, 'utf8'));
@@ -131,7 +141,7 @@ describe('gate init --practices (real temp repos)', () => {
     const repo = makeRepo();
     const out = gateInit(repo, '--practices', '--dry-run');
     expect(out).toContain('_brain/PROTOCOL.md');
-    expect(readdirSync(repo)).toEqual(['.git']);
+    expect(readdirSync(repo).sort()).toEqual(['.git', 'node_modules']);
   });
 
   it('existing files are never touched; no git-config or package.json mutation', () => {
@@ -507,7 +517,7 @@ describe('FR-2 — doctor output and the partial-install matrix', () => {
       for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
         a.name.localeCompare(b.name),
       )) {
-        if (entry.name === '.git') continue;
+        if (entry.name === '.git' || entry.name === 'node_modules') continue;
         const full = join(current, entry.name);
         if (entry.isDirectory()) walk(full);
         else parts.push(`${full}:${readFileSync(full, 'utf8')}`);

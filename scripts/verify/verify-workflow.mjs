@@ -22,6 +22,7 @@ const CHECKS = [
   'verify-turbo-inputs.mjs',
   'verify-script-classes.mjs',
   'verify-memory-record-corpus.mjs',
+  'verify-prompts.mjs',
 ];
 
 const root = targetRoot();

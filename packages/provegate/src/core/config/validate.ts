@@ -18,6 +18,7 @@ type Spec =
   | { kind: 'stringOrNullRecord' }
   | { kind: 'numberRecord' }
   | { kind: 'maybeEmptyString' }
+  | { kind: 'exceptionArray' }
   | { kind: 'object'; children: Record<string, Spec> };
 
 const str: Spec = { kind: 'string' };
@@ -87,6 +88,10 @@ const CONFIG_SPEC = obj({
     dir: str,
     adapters: strArr,
     values: strOrNullRec,
+    // PRD-034 FR-2: array of { path, reason, owner, expires } records. Shape
+    // here; the semantic contract (path grammar, dates, duplicates) lives in
+    // load.ts beside the config's other semantic checks.
+    exceptions: { kind: 'exceptionArray' },
   }),
   memory: obj({
     enabled: bool,
@@ -181,6 +186,36 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
         issues.push({ path, message: 'must be an object mapping strings to a string or null' });
       }
       return;
+    case 'exceptionArray': {
+      // PRD-034 FR-2, structural half. Unknown fields are refused — an entry
+      // is an owner's recorded decision, and a silently dropped field is a
+      // decision the record no longer says.
+      if (!Array.isArray(value)) {
+        issues.push({ path, message: 'must be an array of { path, reason, owner, expires } records' });
+        return;
+      }
+      const FIELDS = ['path', 'reason', 'owner', 'expires'];
+      value.forEach((entry, i) => {
+        const at = `${path}[${i}]`;
+        if (!isPlainObject(entry)) {
+          issues.push({ path: at, message: 'must be an object with exactly path, reason, owner, expires' });
+          return;
+        }
+        for (const key of Object.keys(entry)) {
+          if (!FIELDS.includes(key)) issues.push({ path: `${at}.${key}`, message: 'unknown key' });
+        }
+        for (const key of FIELDS) {
+          if (!(key in entry)) {
+            issues.push({ path: `${at}.${key}`, message: 'missing — every field is required' });
+            continue;
+          }
+          if (typeof entry[key] !== 'string') {
+            issues.push({ path: `${at}.${key}`, message: 'must be a string' });
+          }
+        }
+      });
+      return;
+    }
     case 'object': {
       if (!isPlainObject(value)) {
         issues.push({ path, message: 'must be an object' });
@@ -326,6 +361,22 @@ export function validateResolvedConfig(config: {
     if (value === undefined) continue;
     const reason = unsafeRelPath(value);
     if (reason !== null) issues.push({ path, message: reason });
+  }
+
+  // PRD-034 FR-2's one strictness addition to an existing key, named as the
+  // behavior change it is: `prompts.dir` refuses backslashes at load. The
+  // check's canonical report spelling is POSIX, and with a backslash in the
+  // value no spelling can both name the real disk destination and stay
+  // backslash-free — the config surface tightens instead. The changeset
+  // carries the migration procedure. Checked whether or not prompts is
+  // enabled: config validity is not feature-scoped.
+  const promptsDir = config.prompts?.dir;
+  if (promptsDir !== undefined && promptsDir.includes('\\')) {
+    issues.push({
+      path: 'prompts.dir',
+      message:
+        'must not contain a backslash — the reconciliation report spelling is POSIX (a PRD-034 behavior change; the release note carries the migration procedure)',
+    });
   }
 
   // FR-1 specifies `adapters` as an ordered subset of a closed set. `stringArray`

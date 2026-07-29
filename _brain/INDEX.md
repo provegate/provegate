@@ -57,6 +57,7 @@
 
 ## Conventions
 
+- [recompute beats recorded state](learnings/recompute-beats-recorded-state.md) — a pure-function artifact is checked by recomputing, never a stored hash; banner version only attributes
 - [memory index vs detail](learnings/memory-index-vs-detail.md) — INDEX = always-loaded one-liners; detail in files; never store what code already records
 - [gate wire-or-delete](learnings/gate-wire-or-delete.md) — meta-gate: every registered check wired to an executing surface, every on-disk check registered
 - [push is human by omission](learnings/push-is-human-by-omission.md) — give the autonomous runner no push code path at all; enforce by omission, not a block

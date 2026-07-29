@@ -35,6 +35,9 @@
   "verify-workflow.mjs": {
     "class": "repo"
   },
+  "verify-prompts.mjs": {
+    "class": "repo"
+  },
   "verify-script-classes.mjs": {
     "class": "repo"
   }

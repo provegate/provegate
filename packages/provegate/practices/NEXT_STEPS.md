@@ -31,9 +31,14 @@ enforces that the set only shrinks):
 "verify:deferred": "node scripts/verify/verify-deferred.mjs",
 "verify:test-task-coverage": "node scripts/verify/verify-test-task-coverage.mjs",
 "verify:dependency-audit": "node scripts/verify/verify-dependency-audit.mjs",
+"verify:prompts": "node scripts/verify/verify-prompts.mjs",
 "verify:workflow": "node scripts/verify/verify-workflow.mjs",
 "ship:pre": "node scripts/verify/verify-workflow.mjs"
 ```
+
+`verify:prompts` wraps `gate check --prompts` (the prompt-store reconciliation);
+with no `prompts` block it reports the disabled note and passes, so wiring it
+before step 5 is safe.
 
 Wire CI: run `verify:workflow` in a hygiene job; `verify:dependency-audit` needs
 registry access, so keep it CI-only. The review-artifact, durable-artifacts and wiring
@@ -79,9 +84,13 @@ Where things land:
 
 ### This store installs ONE WAY
 
-There is no upgrade path, no reconciliation and no `sync` in this version. After a package
-upgrade the store does not change and nothing detects that it is stale — every generated file
-names the package version that produced it, and reading that banner is how you find out.
+There is no upgrade path and no `sync` — nothing repairs or syncs automatically. After a
+package upgrade the store does not change; `gate check --prompts` is what detects that it is
+stale: it recomputes the store from the installed package and your config, compares bytes,
+and reports `stale`, `modified`, `missing` and `unattributable` paths. Bannered files also
+name the producing package version; two generated paths are deliberately unbannered — the
+codex snippet and `prompts/PLACEHOLDERS.md` — so divergence in them reports as
+`unattributable` (detected by bytes, only the stale-versus-modified split is lost).
 
 To reinstall: run `gate init --prompts`, read the **generated set** it prints, delete **every
 path in that set**, and run it again. Not just the store directory — two of the destinations

@@ -148,10 +148,21 @@ export interface WiringConfig {
 export interface PromptsConfig {
   /** Master switch. Disabled by default — opting in is a deliberate act. */
   enabled: boolean;
-  /** Store root, repo-root relative (e.g. `.provegate`). */
+  /** Store root, repo-root relative (e.g. `.provegate`). Backslashes are
+   * refused at load (PRD-034): the check's canonical report spelling is POSIX,
+   * and no spelling could both name the disk and stay backslash-free. */
   dir: string;
   /** Which per-tool adapters to generate, in emit order. */
   adapters: string[];
+  /**
+   * Recorded local exceptions (PRD-034 FR-2): the owner's decision that one
+   * store file stays deliberately different. An entry suppresses the
+   * `modified` finding for its exact path and nothing else — never `stale`,
+   * `missing` or `unattributable`, and never a write. Validity is enforced at
+   * every config load; evaluation (expiry, staleness against findings) only
+   * when the check runs enabled.
+   */
+  exceptions: PromptsException[];
   /**
    * Placeholder values the rendered corpus consumes and no config field
    * supplies. `null` and absence both mean unset; every string is a value,
@@ -164,6 +175,23 @@ export interface PromptsConfig {
    * config-load failure.
    */
   values: Record<string, string | null>;
+}
+
+/**
+ * One recorded local exception (PRD-034 FR-2). The contract is REJECTION, not
+ * canonicalization: `path` must already be the check's canonical report
+ * spelling — repo-relative, forward slashes only, no `.`/`..`/empty segments,
+ * no leading `./` — and is matched byte-exact and case-sensitively.
+ */
+export interface PromptsException {
+  /** Repo-relative path in the canonical report spelling. */
+  path: string;
+  /** Why this file is deliberately different. Non-empty after trimming. */
+  reason: string;
+  /** Who DECIDED (an owner role), never who typed. Non-empty after trimming. */
+  owner: string;
+  /** `YYYY-MM-DD`, compared in UTC; the entry is valid THROUGH this date. */
+  expires: string;
 }
 
 /**

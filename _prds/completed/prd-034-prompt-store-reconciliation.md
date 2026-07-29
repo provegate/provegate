@@ -593,6 +593,40 @@ rationale.
   from phase 7), and nothing in these FRs touches the runner it describes.
 - not-applicable: `push-is-human-by-omission` — no code path here reaches a remote, and the
   record's rule is preserved by adding nothing.
+- reviewed: `adr-section-blank-line-reads-empty` — close-time watch fire: the merge diff
+  appends a classification row and rationale to ADR-0004 (the gate-demanded registration
+  for the new verify script). The edit was written by hand, `pnpm format` was not run
+  over `_brain/adr/**` (the record's live hazard), and `verify:brain` plus
+  `verify:memory-corpus` are green on the result.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — close-time watch fire: the
+  merge diff appends the PRD-034 acceptance entry to `_state/acceptances.json`. The
+  entry uses the enumerated ADR-0003 fields (`owner`, `authorship`, `items` naming the
+  exact review-artifact path); no rule was parked in the free-text `reason` beside the
+  enumerated fields.
+- applied: `docs-are-a-wiring-surface` — close-time watch fire on
+  `practices/NEXT_STEPS.md` and both packed verify files: the NEXT_STEPS row telling an
+  adopter to register `verify:prompts` IS wiring and was treated as such — added
+  together with the PACK_MAP entry, the packed CHECKS member and the pack-manifest row,
+  never as prose alone.
+- applied: `recompute-beats-recorded-state` — close-time watch fire: this PRD's own
+  Memory Output watches `core/run/prompts.ts`, which the diff that creates the record
+  also changes (the 025-precedent newborn-watch case). The record's rule IS FR-1's
+  design — the check recomputes and stores nothing; the banner version is the one
+  recorded provenance, doing the attribution job recomputation cannot.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — close-time watch fire on this
+  PRD file itself (the disposition edits changed it). The record is the diagnosis
+  behind this document's own §5 narrowing: three readiness rounds landed every finding
+  in the orphan-walk layer, the owner cut the layer, and the FRs read exactly the
+  planned set — the record is applied in the design, restated here as a disposition.
+- applied: `state-model-before-mechanism` — close-time watch fire on this PRD file. The
+  record is why this PRD exists in its current form: PRD-030's flat trajectory forced
+  the state model first, and every FR here is derived from that model at Revision 2 —
+  no mechanism sentence predates its transition.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — close-time watch fire on
+  this PRD file. Applied twice over: the FR-3 six-surface prose sweep is this record
+  operating on shipped text, and the Phase 6 protocol briefed every review round to
+  sweep prior closures rather than trust the changelog — which caught three findings
+  created by the previous round's fix.
 
 ---
 

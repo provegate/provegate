@@ -173,6 +173,9 @@ const PACK_MAP: ReadonlyArray<{ src: string; dest: string; mode?: number }> = [
     src: 'verify/verify-dependency-audit.mjs',
     dest: 'scripts/verify/verify-dependency-audit.mjs',
   },
+  // PRD-034: the reconciliation check's pack twin. Named here or it never
+  // reaches an adopter (shipped-content-needs-a-delivery-gate).
+  { src: 'verify/verify-prompts.mjs', dest: 'scripts/verify/verify-prompts.mjs' },
   { src: 'verify/verify-workflow.mjs', dest: 'scripts/verify/verify-workflow.mjs' },
   { src: 'verify/test-task-allowlist.json', dest: 'scripts/verify/test-task-allowlist.json' },
   { src: 'verify/audit-allowlist.json', dest: 'scripts/verify/audit-allowlist.json' },
