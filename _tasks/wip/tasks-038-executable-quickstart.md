@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-038-executable-quickstart.md](../../_prds/wip/prd-038-executable-quickstart.md)
 > **Readiness**: [readiness-038-executable-quickstart.md](../../_readiness/wip/readiness-038-executable-quickstart.md)
-> **Status**: In Progress
+> **Status**: Code Complete
 > **Readiness Score**: 8.46/10 (iteration 7, PASS — seventh independent scorer; prototype-first pivot at iteration 3)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -159,16 +159,16 @@
   - [x] 6.7 Re-read PRD §12 DO NOT — no command copy in the harness, no internal
         calls, no remote, no turbo-boundary read, no doc redesign, committed doc
         never mutated by tests.
-- [ ] 7.0 Phase 6 — Final Auditing
-  - [ ] 7.1 Independent adversarial review (different model/session; `Critical: 0`;
+- [x] 7.0 Phase 6 — Final Auditing
+  - [x] 7.1 Independent adversarial review (different model/session; `Critical: 0`;
         `Quorum: 1/1 pass`; real Base SHA; artifact path named in the ledger row) →
         `_docs/reviews/review-038-executable-quickstart.md`.
-  - [ ] 7.2 `pnpm verify:workflow` green after any fix; draft
+  - [x] 7.2 `pnpm verify:workflow` green after any fix; draft
         `_docs/wip/summary-038-executable-quickstart.md`.
-- [ ] 8.0 Phase 7 — Learning and close (eligible)
-  - [ ] 8.1 Write `_brain/learnings/quickstart-is-a-fixture.md` + INDEX hook
+- [x] 8.0 Phase 7 — Learning and close (eligible)
+  - [x] 8.1 Write `_brain/learnings/quickstart-is-a-fixture.md` + INDEX hook
         (≤120 chars); the ADR amendment already carries its own declaration.
-  - [ ] 8.2 `pnpm check:durable-artifacts` — learning, ADR, INDEX, review artifact
+  - [x] 8.2 `pnpm check:durable-artifacts` — learning, ADR, INDEX, review artifact
         in the merge diff.
   - [ ] 8.3 `node packages/provegate/dist/cli.js run PRD-038` — from the WORKTREE
         (the §11 commands need the branch's files; the PRD-037 close proved the
@@ -187,11 +187,11 @@
 | FR-2 | `... -t sequence` | pkg | passed | READY TO PUSH observed; exact stop strings matched | |
 | FR-2 | `... -t mutation` | pkg | passed | relocated open failed with retained line + stderr tail | |
 | FR-3 | `pnpm verify:quickstart-parity` | repo | passed | 8 commands equal; probe failed by name, reverted | |
-| FR-4 | `pnpm check:wiring` + `pnpm verify:workflow` | repo | passed | manifest phases."4" surface (CHECKS serialized behind 034) | |
+| FR-4 | `pnpm check:wiring` + `pnpm verify:workflow` | repo | passed | CHECKS member landed after the owner steal; interim retired; bundle executes parity | |
 | FR-4 | `pnpm verify:brain` | repo | passed | amendment + learning + INDEX all green | |
 | atomicity | rollback prova | repo | passed | HEAD~1 lacks the set | |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1287), 4/4 | |
-| independent-review | artifact path + `Critical: 0` + Quorum | review | pending | | |
+| independent-review | `_docs/reviews/review-038-executable-quickstart.md` — `Critical: 0`, Quorum `1/1 pass` | review | passed | 3 rounds, GATE FAIL→FAIL→PASS; owner steal resolved the lease [P1] | |
 | durable | `pnpm check:durable-artifacts` | repo | pending | | |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
