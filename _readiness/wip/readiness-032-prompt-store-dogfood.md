@@ -1,43 +1,45 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
-> **Iteration 1 (Codex, independent) — 4.00/10, ITERATE, and the band matters more than
-> the decimal: 4–5.9 is "Major rework needed. Return to Phase 1"
-> (`score-band-prescribes-the-action`).** Orchestration disclosure: the orchestrating
-> session verified every load-bearing citation against source (the doctor flag surface,
-> PRD-030's mechanism handoff, the §11 rows) and authored no verdicts; Codex is the
-> scorer and did not write the PRD.
+> **Iteration 2 (Codex, independent, 2026-07-29) — 5.20/10, ITERATE; still band 4–5.9:
+> "Major rework needed. Return to Phase 1" (`score-band-prescribes-the-action`).**
+> Scored the day PRD-034 went Ship Verified, exactly as iteration 1 prescribed — the
+> scorer *executed* `gate check --prompts`, `verify:prompts`, `check --wiring`, the
+> CI-order assertion, and a pure in-memory full render rather than reading them.
+> Orchestration disclosure: the orchestrating session verified every load-bearing
+> citation against source (FR-1's value set, the missing rollback section, the
+> `turbo.json` collision, PRD-034's `unattributable` arm, the live doc-claims red) and
+> authored no verdicts; Codex is the scorer and did not write the PRD.
 >
-> **The headline: the document is written against an obsolete chain.** It assigns the
-> reconciliation mechanism (verify-prompts, doctor --prompts, exceptions, bundle wiring)
-> to PRD-030 — but shipped PRD-030 produced only the state model and says in its own
-> §1 that *"the mechanism is PRD-034's"* (`prd-030:49`). PRD-034 is Draft at 7.4
-> ITERATE. Consequences cascade: §11's first row runs `doctor --prompts`, a flag the
-> CLI does not accept (`cli.ts:588` — `--memory`/`--json` only; the scorer's probe
-> exited 1); FR-2/FR-3 run a `verify-prompts.mjs` that does not exist; FR-3's mutation
-> claim is never exercised (same clean-tree command as FR-2); and the Conflict Surface
-> both misses its own FR targets (`verify-prompts.mjs`, `ci.yml` — PRD-034 claims both)
-> and collides with PRD-028/036 (`turbo.json`) and PRD-031 (`AGENT_BOOTSTRAP.md`).
-> **No migration/rollback section at all in an infra-class item** (weight 20). Value
-> 3.40 arithmetic is exact but judged 2.85-supportable (4/2/3/2/3) — below threshold,
-> expand-or-cut applies. What held: the live activation mechanics are correctly
-> understood (fail-closed render, nine keys, wx-additive, presence≠enablement — all
-> re-probed read-only), §9 conforms to PRD-028's closed grammar, no hard cap trips.
-> **Next step is Phase-1 rework serialized behind PRD-034, not another scoring round.**
+> **The headline: the chain is fixed, the specification is not.** The 07-28 refresh
+> correctly re-founded PRD-032 on PRD-034 — wiring claims now all hold on main
+> (`verify-prompts.mjs` is bundle member 10, both CLI flags exist, CI order asserted
+> green). What remains is specification debt: the live initializer now prints **10**
+> required values and FR-1 still answers two of them ("and so on" for the rest); the
+> infra-weighted-20% migration/rollback section is still absent; FR-3's mutation is
+> promised in four places and executed in none — and PRD-034's FINAL contract makes the
+> generic "edit a store file → `modified`" claim wrong (unbannered members classify
+> `unattributable`, `prd-034:127-137`); the Conflict Surface still claims `turbo.json`
+> against live Draft PRD-036 ownership; and the prescribed Phase-5 baseline is red
+> TODAY (`verify:doc-claims`: committed `shipVerified: 34` vs fresh 35) with no
+> serialization named. Value 3.40 still judged 2.85-supportable — expand-or-cut stands.
+> Seven stale restatements swept out by name; the counts/sentinel/PRD-030 families came
+> back clean. **Next step: one Phase-1 rework pass with the owner's ten values and a
+> rollback section — the blockers are now decisions, not dependencies.**
 
 ## Quick Meta
 
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 4.00/10                                        |
-| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. Written against an obsolete chain: the mechanism it consumes is unshipped PRD-034's, its first §11 command is not a CLI surface, its mutation row proves nothing, its Conflict Surface misses its own targets while colliding with three live PRDs, and an infra item ships no migration/rollback contract |
-| Iteration              | 1                                              |
+| Score                  | 5.20/10                                        |
+| Verdict                | ITERATE — band 4–5.9: Phase-1 rework. The PRD-034 chain and all wiring claims now hold on main; what remains is specification debt: 8 of the 10 required values undecided, no migration/rollback section in the class that weights it 20%, a mutation promised four times and executed zero, a `turbo.json` claim colliding with live PRD-036, and a prescribed verification baseline that is red today |
+| Iteration              | 2                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-28                                     |
-| PRD Lint               | passed — Codex ran the five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` directly → green; the orchestrator's `gate check PRD-032` exit 0 |
+| Date                   | 2026-07-29                                     |
+| PRD Lint               | passed — Codex's `gate check PRD-032` exited 1 only on a sandbox `EPERM` writing the state tmp file, before lint; its direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}`; the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
 <!-- Verdict values: PASS | ITERATE | REJECT. The Score row and Verdict row are parsed
@@ -55,6 +57,107 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 2 (Codex, independent, 2026-07-29)
+
+Scored against PRD-034's **final landed contract** (Ship Verified `498e400`, HEAD at
+scoring `678eaa0`). PRD-038 went Ship Verified *during* the audit and no longer
+collides. Every probe below was executed, not read.
+
+**Iteration-1 closure: A CLOSED; C, D, H PARTIALLY CLOSED; B, E, F, G, I STILL OPEN.**
+
+| # | Finding | Status | Evidence |
+|---|---------|--------|----------|
+| A | wrong reconciliation deliverable | **CLOSED** | PRD-034 owns check + twins (`prd-032:36-40,152-170,186-193`), hard Ship Verified prerequisite (`:249-261`); stale "implementation pending" phrase reported separately |
+| B | values unspecified | **OPEN** | initializer now prints **10** required keys; FR-1 still names two + "and so on" (`prd-032:128-141`) |
+| C | §11 unrunnable/non-evidentiary | **PARTIAL** | flags/scripts now exist (`:403-411`); FR-3 still reruns FR-2's clean-tree command, mutation lives only in Notes (`:407`) |
+| D | Conflict Surface contradiction | **PARTIAL** | 034-owned targets dropped, 038 closed; `.gitignore`/`turbo.json` still Targets (`:177-180`) + exclusive claims (`:375-381`) vs PRD-036's live claim (`prd-036:407-408,517-527`) |
+| E | no migration/rollback | **OPEN** | Dependencies still jumps straight to Scope (`prd-032:257-266`) |
+| F | Claude first-line listing defect | **OPEN** | banner still line 1 of every Claude command (`prompts.ts:788-801`); no acceptance criterion |
+| G | two review-template authorities | **OPEN** | root template says Quorum optional (`_docs/review-artifact.template.md:25`); store template + gate require it (`review.ts:48-65`) |
+| H | Memory Inputs stale | **PARTIAL** | PRD-034 attribution + turbo-cache disposition fixed (`:308-337,355-358`); four dogfood records still undispositioned |
+| I | Value 3.40 not credible | **OPEN** | header unchanged; supportable 2.85 (4/2/3/2/3) |
+
+**[P1] 1 — activation inputs not agent-executable.** 10 printed required keys, exact
+answers for two (`prd-032:128-141`); `AUTONOMY_MODE` is owner-recorded and non-inferable;
+`DOMAIN_CHECKS`/`ENV_NOTES` need explicit decisions even if empty. Remedy: enumerate all
+ten: `PROJECT_NAME`, `CMD_TEST_SCOPED`, `DOMAIN_CHECKS`, `TECH_STANDARDS`,
+`ARCHITECTURE_DOC`, `BEST_PRACTICES_DOC`, `DOCS_ROOT`, `REVIEW_TOOL`, `ENV_NOTES`,
+`AUTONOMY_MODE`.
+
+**[P1] 2 — migration/rollback absent in the 20%-weighted dimension.** Ordering scattered
+across FR-1/FR-2; no section (`prd-032:257-266`). Remedy: ordered activation (capture the
+printed generated set → land block + `templates.prd` + all 30 generated paths
+atomically) and exact rollback in the state model's terms
+(`_docs/design/prompt-store-state-model.md:242-269`): disable block + clear
+`templates.prd` in one config change, human deletes every captured path, `check
+--prompts` returns the dormant note.
+
+**[P1] 3 — FR-3's mutation neither executed nor correctly scoped.** Promised at
+`prd-032:116-117,158-160,210-212,407`; §11 executes only FR-2's clean-tree command. And
+PRD-034's final contract classifies edited **unbannered** planned members (codex
+snippet, `PLACEHOLDERS.md`) as `unattributable`, not `modified`
+(`prd-034:127-137,291-324`). Remedy: name a bannered path
+(e.g. `.provegate/prompts/phase-3-task-generator.md`), one runnable §11 command that
+plants the edit, asserts non-zero + `modified` + exact path, restores in `finally`.
+
+**[P1] 4 — Conflict Surface claims check-only paths, collides with PRD-036.** FR-6
+inspects but Targets `.gitignore`/`turbo.json` (`prd-032:177-180`) and claims both
+exclusively (`:375-381`); PRD-036 (Draft, iteration-5 7.53 ITERATE) owns `turbo.json`
+live (`prd-036:407-408`). Probes: no planned destination is git-ignored,
+`verify:turbo-inputs` green. Remedy: FR-6 becomes targetless read-only assertion; drop
+`.gitignore`, `turbo.json`, and the overbroad `.claude/**` claim unless a failing probe
+proves a write.
+
+**[P1] 5 — prescribed Phase-5 baseline is red with no serialization.** `pnpm
+verify:doc-claims` fails TODAY (committed `shipVerified: 34` vs fresh 35 — observed
+across three runs spanning the 034/038 closes, including after the figure-regen commit
+`7061ac1`), so `verify:workflow` fails; FR-4/FR-5 require these surfaces without naming
+a prerequisite (`prd-032:403-418`). Remedy: require an all-green aggregate at
+Phase-3/4 open; name the self-hosting-figure owner; forbid absorbing that edit into
+PRD-032's surface.
+
+**[P2] 6 — known adapter/template defects unaccepted and untested.** Claude commands
+still open with the banner (`prompts.ts:788-801`); two conflicting review templates
+persist. PRD-032 tests only existence/byte-identity (`prd-032:94-101,217-220`). Remedy:
+prerequisite the fixes or add operator-owned acceptance rows (this would also bind the
+otherwise-unbound `Autonomous Close: operator-gated` header).
+
+**[P2] 7 — Memory Inputs incomplete for the dogfood risk.** Only
+`turbo-cache-masks-out-of-input-reads` carries a disposition; missing:
+`shipped-content-needs-a-delivery-gate`, `derive-the-requirement-from-the-consumer`,
+`state-model-before-mechanism`, `runner-sentinel-blocks-cli-spawning-tests` — all
+active and indexed (`_brain/INDEX.md:15-16,27,33,57`).
+
+**[P2] 8 — architectural headlines contradict their own scope.** "Nothing here is
+authored; everything is generated" is false (config values + two bootstrap pointer
+lines are authored — `prd-032:228-231` vs `:128-142,172-175`); the cache-comment
+attribution belongs to PRD-034 FR-4, not PRD-032 FR-3 (`:233-237`).
+
+**[P2] 9 — Value header still fails credibility at the cutoff.** Exact 3.40; supportable
+2.85 (MF 4 / UI 2 / TL 3 / AR 2 / RM 3). Expand (absorb the adapter-listing and
+review-template closures) or record the cut.
+
+### Restatement sweep — iteration 2 (mandatory pass, `a-rule-corrected-survives-where-it-is-restated`)
+
+Stale restatements found (fix ALL in the rework, not the first instance):
+
+1. `prd-032:249-251` — "implementation pending" for PRD-034, now Ship Verified.
+2. `prd-032:245-247,292` — "PRD-031 landing later" future tense; PRD-031 landed.
+3. `prd-032:116-117,158-160,210-212,407` — generic "edit a store file → `modified`";
+   final PRD-034 classifies unbannered members `unattributable`.
+4. `prd-032:472` — changelog still says the set comes from what `init --prompts`
+   "scaffolds"; the owning FR correctly says the block is only **printed**.
+5. `prd-032:233-237` — cache-boundary comment attributed to PRD-032 FR-3; it shipped
+   with PRD-034's script.
+6. `prd-032:324-328` — says no exception entry is written, then says the first
+   exception "will be written here."
+7. `prd-032:228-231` — "everything is generated" overstatement.
+
+Swept clean: required-value counts (no live hardcode; only the dated changelog mention),
+"twelve rendered protocols" (correct for the rendered-prompt subset; full plan is 21
+store files / 30 generated paths), null-vs-sentinel, PRD-030 attributions,
+doctor/sync/receipt absences, CI order + bundle membership claims.
 
 ### Findings — iteration 1 (Codex, independent)
 
@@ -129,34 +232,48 @@ arithmetic reproduces; no hard cap trips.
 ## Scorecard
 
 Class `infra` weights, per `packages/provegate/prompts/phase-2-readiness-scorer.md`.
+Iteration 2 (iteration-1 column values live in Iteration History).
 
 | #         | Dimension                | Weight | Score  | Notes |
 | --------- | ------------------------ | ------ | ------ | ----- |
-| 1         | Clarity                  | 15%    | 4.0/10 | seven of nine values unspecified; targets vs surface contradiction |
-| 2         | Completeness             | 20%    | 4.0/10 | the mechanism it consumes is another Draft PRD's; no rollback |
-| 3         | Technical Depth          | 20%    | 4.0/10 | activation mechanics right; the chain and verification layer wrong |
-| 4         | Multi-Tenancy & Security | 10%    | 8.0/10 | no tenant/auth/data surface |
-| 5         | Scope & Testability      | 15%    | 4.0/10 | first §11 command not a surface; mutation claim unexercised |
-| 6         | Migration & Rollback     | 20%    | 2.0/10 | absent entirely, in the class weighted 20% for exactly this |
-| **Total** | **Weighted**             |        | **4.00/10** | **ITERATE — Phase-1 band** |
+| 1         | Clarity                  | 15%    | 5.0/10 | lint-clean, but 8/10 values unspecified; FR-6 "targets" are read checks; mutation row not runnable as written |
+| 2         | Completeness             | 20%    | 5.5/10 | PRD-034 architecture incorporated; rollback, exact values, adapter/template closures, red-baseline handling missing |
+| 3         | Technical Depth          | 20%    | 6.5/10 | dormant activation, planned-set reconciliation, root/cache boundary all right; misses the `unattributable` arm and exact state reversal |
+| 4         | Multi-Tenancy & Security | 10%    | 9.0/10 | no tenant/auth/query/payload/network/push surface |
+| 5         | Scope & Testability      | 15%    | 5.0/10 | strong non-goals; decisive FR-3 mutation prose-only; two declared verification paths red for an undeclared prerequisite |
+| 6         | Migration & Rollback     | 20%    | 2.0/10 | still no section, in the class weighted 20% for exactly this |
+| **Total** | **Weighted**             |        | **5.20/10** | **ITERATE — Phase-1 band** |
 
-Hard caps: security, contract, lint, method-content traceability — all clear.
+Arithmetic: `(5.0×.15)+(5.5×.20)+(6.5×.20)+(9.0×.10)+(5.0×.15)+(2.0×.20)
+= 0.75+1.10+1.30+0.90+0.75+0.40 = 5.20`.
+
+Hard caps: security — no trip (`Deny test: none` appropriate, `prd-032:420-423`);
+contract — no trip (no new payload boundary); lint — no trip (sandbox `EPERM` waiver
+recorded in Quick Meta; production-shaped `lintPrd` green, orchestrator's CLI run
+exit 0); method-content traceability — clear.
 
 ---
 
-## Missing Pieces (binding on the Phase-1 rework)
+## Missing Pieces (binding on the Phase-1 rework — iteration 2)
 
-1. PRD-034 Ship Verified as the hard prerequisite; rederive FR-3/FR-4 from its final
-   contract and drop every PRD-030-as-mechanism reference.
-2. Exact approved answers for all nine prompt values.
-3. §11 rebuilt on the shipped reconciliation interface plus a real mutation fixture.
-4. Conflict Surface reconciled with PRD-028/031/034/036; read-only stance on
-   `turbo.json`/`.gitignore` unless a probe proves a write.
-5. The Claude first-line listing defect gated or explicitly accepted.
-6. One canonical review template, bound and tested.
-7. Ordered activation + full rollback section.
-8. Memory Inputs/Outputs refreshed against the current chain.
-9. Value re-scored honestly; expand-or-cut per the threshold rule.
+1. The owner's exact answers for all **ten** printed required values (including
+   explicit empties for `DOMAIN_CHECKS`/`ENV_NOTES` if intended, and the recorded
+   `AUTONOMY_MODE` choice).
+2. An ordered Migration & Rollback section in the state model's terms (capture printed
+   generated set → atomic land → disable + clear `templates.prd` → human deletes the
+   captured set → dormant note confirmed).
+3. One runnable §11 mutation command against a **bannered** path: plant, assert
+   non-zero + `modified` + exact path, restore in `finally`.
+4. FR-6 targetless/read-only; drop `.gitignore`, `turbo.json`, `.claude/**` exclusive
+   claims (PRD-036 owns `turbo.json` live).
+5. Green-aggregate prerequisite named for the red `verify:doc-claims` baseline
+   (self-hosting figure 34→35 belongs to its owner, not this PRD's surface).
+6. Adapter banner-listing and review-template ambiguity: prerequisite or
+   operator-owned acceptance rows.
+7. Dispositions for the four missing dogfood memory records.
+8. The seven named stale restatements swept — every instance, not the first.
+9. Value header: expand (absorb adapter/template closures) or record the cut; 3.40 as
+   declared is not supportable (2.85).
 
 ---
 
@@ -164,17 +281,22 @@ Hard caps: security, contract, lint, method-content traceability — all clear.
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
-| 1   | 2026-07-28 | 4.00  | ITERATE | First independent round. The document consumes a mechanism that shipped PRD-030 explicitly handed to Draft PRD-034; §11's first command is not a CLI surface and its mutation row proves nothing; the Conflict Surface misses its own FR targets while colliding with three live PRDs; an infra item carries no migration/rollback. The activation mechanics themselves verified correct by read-only probes. Band 4–5.9: Phase-1 rework, serialized behind PRD-034 — not another scoring round. |
+| 1   | 2026-07-28 | 4.00  | ITERATE | First independent round. The document consumes a mechanism that shipped PRD-030 explicitly handed to Draft PRD-034; §11's first command is not a CLI surface and its mutation row proves nothing; the Conflict Surface misses its own FR targets while colliding with three live PRDs; an infra item carries no migration/rollback. The activation mechanics themselves verified correct by read-only probes. Band 4–5.9: Phase-1 rework, serialized behind PRD-034 — not another scoring round. Dimension scores: 4.0/4.0/4.0/8.0/4.0/2.0. |
+| 2   | 2026-07-29 | 5.20  | ITERATE | Scored the day PRD-034 went Ship Verified; every wiring claim re-verified by execution (both CLI flags, bundle member 10, CI order, full in-memory render: 10 required values, 21 store files, 30 generated paths). Finding A closed; C/D/H partial; B/E/F/G/I open. New against the final contract: the `unattributable` arm breaks the generic mutation claim; the required-value set grew to ten; `verify:doc-claims` red on main with no serialization named; PRD-036's live `turbo.json` claim still collided with. Seven stale restatements named for the sweep. Band 4–5.9 again — but the residue is owner decisions (ten values, rollback shape, value expand-or-cut), not moved dependencies. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 4.00/10, iteration 1, scored independently by Codex.**
+**ITERATE — 5.20/10, iteration 2, scored independently by Codex.**
 
-The idea is right and its mechanics are correctly understood; the document is simply
-written against a chain that moved underneath it — PRD-030 narrowed to the state model
-and the mechanism went to PRD-034, which has not shipped. The band's action is the
-instruction (`score-band-prescribes-the-action`): return to Phase 1, re-found on
-PRD-034's final contract once it lands, and bring the nine values, the rollback section
-and an honest Value with it.
+The chain debt is paid: PRD-034 landed and every wiring claim PRD-032 makes now holds
+on main, verified by execution. What keeps this in the 4–5.9 band is specification
+debt that only the owner can settle — the ten exact values, the rollback contract, an
+honest Value header — plus mechanical fixes the rework can carry (the runnable
+bannered-path mutation, the narrowed Conflict Surface, the seven-restatement sweep,
+the four memory dispositions). The band's action is the instruction
+(`score-band-prescribes-the-action`): one more Phase-1 pass, then re-score. Trajectory
+4.00 → 5.20 with the blocking dependency gone; a third flat round in this band would
+trigger `state-model-before-mechanism`'s cut-or-restate rule, but the residue here is
+decisions, not design.
