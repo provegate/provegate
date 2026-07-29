@@ -265,7 +265,7 @@ Slugs the PRD selected, carried so implementation does not re-derive them:
 | FR-4/5 | `pnpm verify:workflow` + `pnpm verify:pack-drift` | repo | passed | both PASS (2026-07-29) | CHECKS membership; both ledger pairs + notes |
 | atomicity | intermediate-commit `verify:workflow` sweep | repo | passed | one commit `bf942eb`; rollback prova green (7.2) | 7.1 degenerate case + revert restores pre-PRD green |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1327 tests), 4/4 (2026-07-29) | |
-| independent-review | `Critical: 0`, Quorum `1/1 pass`, six-surface audit | review | passed | 5 Codex rounds, 10 [P1] + 2 [P2] found→closed→re-verified; artifact committed (2026-07-29) | six-surface audit rounds 1+2 |
+| independent-review | `Critical: 0`, Quorum `1/1 pass`, six-surface audit | review | passed | `_docs/reviews/review-034-prompt-store-reconciliation.md` — 5 Codex rounds, 10 [P1] + 2 [P2] found→closed→re-verified (2026-07-29) | six-surface audit rounds 1+2 |
 | durable | `pnpm verify:durable-artifacts` | repo | pending | | at close, against the merge diff |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
