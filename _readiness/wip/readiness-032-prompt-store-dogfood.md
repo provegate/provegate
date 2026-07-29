@@ -1,5 +1,33 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
+> **Iteration 5 (Codex, independent, 2026-07-29) — 7.75/10, ITERATE; band 6–7.9,
+> climbing again (6.95 → 7.75).** FR-9's wiring/classification topology is
+> **mechanically sound against production logic** — the scorer projected it through
+> the real `auditWiring` and `verify-script-classes` and supplied the exact landing
+> shapes: CHECKS takes the FILENAME literal `'verify-review-quorum-authority.mjs'`
+> (not the package alias), `wiringExceptions` maps script name → non-empty
+> justification (`manifest.ts:247-258`), both scripts are repo-class by ADR-0004's
+> what-it-READS rule, and the stale-exception direction matches (`wiring.ts:633-643`).
+> **One P1: FR-9's "land (b) freely, hold (a)/(c)" partial start is impossible** —
+> production `candidateFromPrd`/`gate open` evaluate the WHOLE declared Conflict
+> Surface and the live probe found four PRD-036 overlaps (the three FR-9 files +
+> `prompts.test.ts`), so the entire PRD serializes behind 036's lease release, full
+> stop; `conflict-check-independent-of-override` must be dispositioned. Two P2s: four
+> fresh stale restatements (the "one-shot" verifier now standing; FR-4's "no wiring
+> file is touched"; §7's authored list omitting the probe + FR-9 rows; DO NOT's
+> "bundle is PRD-034's as shipped") — the sweep discipline held on the six mandated
+> sites but not on the edit's own new text; and FR-9 should name the exact CHECKS
+> literal + a §6 criterion so Phase 4 does not discover the filename by failure. All
+> baseline probes green; the ten-value render green again; **Value 3.50 still
+> credible**; caps clear; the production memory-overlap probe (54 records) found no
+> undispositioned watch. Orchestration disclosure: the orchestrating session verified
+> the four restatement sites and the CHECKS-filename form against source and authored
+> no verdicts.
+
+---
+
+## Superseded headline — iteration 4
+
 > **Iteration 4 (Codex, independent, 2026-07-29) — 6.95/10, ITERATE; band 6–7.9. The
 > score went DOWN (7.33 → 6.95) because the iteration-3 remedy created the next
 > defect — the chain's recurring shape, this time authored by the orchestrating
@@ -91,14 +119,14 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 6.95/10                                        |
-| Verdict                | ITERATE — band 6–7.9, score down from 7.33: the iteration-3 remedy created the next defect. The two new `verify:*` scripts are specified deliberately unwired, which the repository's own meta-gates refuse (`auditWiring` wires-or-excepts every verify script; `verify:script-classes` demands ledger + ADR-0004 rows for every on-disk `verify-*.mjs`), and the integration paths that fix it sit inside PRD-036's live Phase-4 lease — the additions must be declared and serialized behind 036. The FR-8 sweep also missed six restatements (eighth instance of the pattern) and one live-red narration. Value 3.50 is now judged credible; hard caps clear; the ten-value render green |
-| Iteration              | 4                                              |
+| Score                  | 7.75/10                                        |
+| Verdict                | ITERATE — band 6–7.9, climbing (6.95 → 7.75). FR-9's topology is mechanically sound against the production wiring and class gates, with the exact landing shapes now on record. One P1: the partial-start instruction is impossible — `gate open` evaluates the whole declared surface and four PRD-036 overlaps exist, so the entire PRD serializes behind 036's lease release. Two mechanical P2s: four fresh stale restatements from the iteration-4 edit's own text, and FR-9 must name the CHECKS filename literal plus a §6 criterion |
+| Iteration              | 5                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-29 (iteration 4; iterations 1–3 same file, below) |
+| Date                   | 2026-07-29 (iteration 5; iterations 1–4 same file, below) |
 | PRD Lint               | passed — Codex's direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}` (the CLI's state write EPERMs in its read-only sandbox, known); the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
@@ -117,6 +145,56 @@ by the state builder — keep the `| Score |` and `| Verdict |` labels intact. -
 ---
 
 ## Analysis
+
+### Findings — iteration 5 (Codex, independent, 2026-07-29, HEAD `adbc917`)
+
+**Iteration-4 closure: live-red CLOSED; P1 and both other P2s PARTIAL** (topology right,
+sequencing wrong; six mandated sites swept, four fresh survivors; dispositions accurate,
+one new record invoked). **Scorecard (infra):** Clarity 7.0 ×15% = 1.050 · Completeness
+8.0 ×20% = 1.600 · Tech Depth 8.0 ×20% = 1.600 · MT&S 9.0 ×10% = 0.900 · Scope &
+Testability 8.0 ×15% = 1.200 · Migration & Rollback 7.0 ×20% = 1.400 → **7.75/10**.
+Hard caps: all clear. **Value 3.50: exact and still credible** (FR-9 adds integration
+rows, no new value claim).
+
+**FR-9 production projection — the topology PASSES both meta-gates when landed as:**
+CHECKS gains the filename literal `'verify-review-quorum-authority.mjs'` (the bundle
+spawns filenames from `scripts/verify/`, `verify-workflow.mjs:15-27,65-68`; appending
+the alias string would neither execute nor satisfy `auditWiring`);
+`gates.manifest.json` gains `"wiringExceptions": {"verify:prompts-mutation": "<non-empty
+justification>"}` (`manifest.ts:247-258`); `script-classes.json` gains repo-class rows
+for both scripts with matching ADR-0004 two-column rows (repo-class holds by the ADR's
+what-it-READS rule — the probe reads the dogfood tree, the verifier reads two repo
+templates; "neither ships" is not the test but the conclusion stands). Stale-exception
+direction confirmed: wired+excepted fails, missing+excepted fails
+(`wiring.ts:633-643`). The standing member is safe in the bundle — it only reads; the
+tree-mutating probe stays outside.
+
+**[P1] 1 — the partial-start instruction is impossible.** FR-9's "lands (b) freely and
+holds (a)/(c)" contradicts production: `candidateFromPrd` reads the ENTIRE declared
+Conflict Surface and `gate open` refuses on any overlap with an active execution-phase
+lease (`conflicts.ts:207-248`, `open.ts:381-420`). Live probe: four PRD-032↔PRD-036
+overlaps (ADR-0004, `prompts.test.ts`, `script-classes.json`, `verify-workflow.mjs`);
+036's lease valid until `2026-07-29T23:22:21Z`. Remedy: one enforceable rule — no
+implementation begins while the overlapping lease is active; after 036 closes, `gate
+queue` then `gate open`, then everything lands as one gate-green sequence. Disposition
+`conflict-check-independent-of-override` as applied.
+
+**[P2] 2 — four fresh stale restatements** (the iteration-4 edit's own text): FR-8
+still says "one-shot verifier" right before making it standing (`:284-292`); FR-4 says
+"No wiring file is touched" while FR-9 appends to `verify-workflow.mjs` (`:227-233`);
+§7's authored list omits the FR-3 probe and FR-9 integration rows (`:393-399`); DO NOT
+still says the bundle is "PRD-034's as shipped" (`:779-781`). Remedy: fix all four,
+then a SEPARATE post-edit sweep pass — never claimed in the edit that performs it.
+
+**[P2] 3 — FR-9 must state the exact CHECKS literal and a §6 criterion.** The FR names
+the package alias; production CHECKS takes the filename. Phase 4 should not discover
+the literal by a red `check --wiring`. Remedy: name
+`'verify-review-quorum-authority.mjs'` in FR-9 and add a §6 Gherkin row covering the
+filename member, the still-unwired-but-excepted alias, both class pairs, no stale
+exception, and both meta-gates green.
+
+**Memory overlap:** production `memoryFind` over the four new targets searched 54
+active records — only the ADR formatter-hazard watch matched, already dispositioned.
 
 ### Findings — iteration 4 (Codex, independent, 2026-07-29, HEAD `e445da0`)
 
@@ -441,21 +519,20 @@ exit 0); method-content traceability — clear.
 | 2   | 2026-07-29 | 5.20  | ITERATE | Scored the day PRD-034 went Ship Verified; every wiring claim re-verified by execution (both CLI flags, bundle member 10, CI order, full in-memory render: 10 required values, 21 store files, 30 generated paths). Finding A closed; C/D/H partial; B/E/F/G/I open. New against the final contract: the `unattributable` arm breaks the generic mutation claim; the required-value set grew to ten; `verify:doc-claims` red on main with no serialization named; PRD-036's live `turbo.json` claim still collided with. Seven stale restatements named for the sweep. Band 4–5.9 again — but the residue is owner decisions (ten values, rollback shape, value expand-or-cut), not moved dependencies. |
 | 3   | 2026-07-29 | 7.33  | ITERATE | Same-day rework re-scored: six of nine findings closed by execution-grade evidence — the owner's exact ten values RENDER, rollback holds against T6/T7, the mutation-probe spec is runnable and correctly bannered, the surface narrowing verified by the production glob matcher, FR-7's defect and banner coherence both reproduce. One P1: FR-8's delivery topology — the root template is PACK_MAP-installed from a packed source still saying Quorum optional, and the marker-only grep is the evidence-pattern trap. Three mechanical P2s (mid-audit staleness ×2 — 036 took Phase-3 Go and the doc-claims red went green under the audit; three disposition rationale fixes; one rollback sentence). Band 6–7.9: iterate and re-score, no Phase-1 return. Value 3.50 credible once FR-8 covers the packed source. |
 | 4   | 2026-07-29 | 6.95  | ITERATE | Score DOWN — the iteration-3 remedy created the next defect: the two new `verify:*` scripts are specified deliberately unwired, which `auditWiring` (wire-or-except every verify script) and `verify:script-classes` (ledger + ADR-0004 rows for every on-disk script) refuse; the PRD's own §11 would redden `check --wiring` and `verify:workflow`. Fix paths (`verify-workflow.mjs`, `script-classes.json`, ADR-0004) all inside PRD-036's live Phase-4 lease — declare and serialize. Pack-drift fallback refuted (copies can regress together). Six FR-8 restatements missed (eighth instance); one live-red DO NOT line. GAINED: Value 3.50 judged CREDIBLE; snapshot Quorum doctrine confirmed at the source; render/lint/caps all green. |
+| 5   | 2026-07-29 | 7.75  | ITERATE | Climbing again. FR-9's topology PASSES the production projection — exact landing shapes on record (CHECKS filename literal, wiringExceptions script-name→justification, repo-class by what-it-READS). One P1: the partial-start instruction is impossible — `gate open` reads the whole declared surface, live probe found four 036 overlaps, the entire PRD serializes behind 036's lease release (`conflict-check-independent-of-override` to disposition). Two P2s: four fresh restatements from the previous edit's own text (sweep held on mandated sites, not on new text — the remedy is a SEPARATE post-edit sweep pass), and the CHECKS literal + §6 criterion so Phase 4 does not learn the filename from a red gate. Value still credible; all probes green. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 6.95/10, iteration 4, scored independently by Codex.**
+**ITERATE — 7.75/10, iteration 5, scored independently by Codex.**
 
-Trajectory 4.00 → 5.20 → 7.33 → 6.95: the first regression, and its cause is the
-chain's signature failure — the fix that creates the next defect, this round authored
-by the orchestrating session (unwired-by-design verify scripts; six unswept FR-8
-restatements). What survived intact: the owner's ten values render, the rollback holds,
-the snapshot doctrine backs FR-8, and the Value header is credible for the first time.
-The remedy is topology, not design: wire the standing verifier into CHECKS, except the
-one-shot probe, class both scripts in the ledger + ADR-0004, declare every touched
-path, and serialize the 036-owned ones behind its live lease. Two consecutive rounds in
-the 6–7.9 band with remedy-created defects: the next rework must sweep EVERY section
-against each corrected fact before re-scoring (`score-band-prescribes-the-action`
-watches this trajectory).
+Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75. The design is done: activation, rollback,
+probes, semantics and now the full meta-gate topology all hold against production
+logic, with the exact landing shapes written down. What keeps this out of the PASS
+band is process residue, not design: one impossible sequencing sentence (the lease
+gate takes the whole surface — serialize the entire PRD behind 036), four restatements
+the previous edit itself minted, one missing filename literal, one missing §6 row, one
+missing disposition. Every remedy is a named line edit. The recurring lesson is now
+structural: the post-edit sweep must be its own pass, performed AFTER the corrections
+and never claimed by them.

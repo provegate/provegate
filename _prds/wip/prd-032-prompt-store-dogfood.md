@@ -228,7 +228,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    `verify:prompts`, made it a `verify:workflow` CHECKS member and a CI hygiene step
    (after the job's provegate build); this FR asserts all three surfaces execute the
    now-live check — `gate check --wiring` green, the bundle running it inside rather
-   than beside, CI unchanged. No wiring file is touched.
+   than beside, CI unchanged. FR-4 itself touches no wiring file — PRD-034's
+   prompts-check wiring is consumed exactly as shipped; the one wiring edit this PRD
+   makes anywhere is FR-9's CHECKS append, owned there.
    - **Targets:** none in code — `pnpm verify:workflow` and `gate check --wiring` are
      the §11 rows
 
@@ -281,7 +283,7 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    construction: the source snapshot's review doctrine REQUIRES the quorum (the
    PRD-003 port that weakened it to optional was itself a caught defect class — this
    FR removes the same weakening from the practices twin). Evidence is semantic, not
-   marker-only: a new one-shot verifier
+   marker-only: a new standing verifier
    `scripts/verify/verify-review-quorum-authority.mjs` (package script
    `verify:review-quorum`) asserts in BOTH copies that the required-Quorum wording and
    the `quorum-is-required` marker are present AND that the optional/omit wording is
@@ -305,8 +307,9 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 9. **FR-9**: The two new scripts join the repository's meta-gates — the additions this
    PRD makes arrive WITH their wiring, or `check --wiring` and `verify:workflow` (both
    required green by this PRD's own §11) refuse them (iteration-4 P1). Three surfaces:
-   (a) **CHECKS membership** for `verify:review-quorum` — one member line appended to
-   `scripts/verify/verify-workflow.mjs`; (b) a justified **shrink-only
+   (a) **CHECKS membership** for the Quorum verifier — the filename literal
+   `'verify-review-quorum-authority.mjs'` appended as one member line to
+   `scripts/verify/verify-workflow.mjs` (the bundle spawns filenames, never aliases); (b) a justified **shrink-only
    `wiringExceptions` entry** in `gates.manifest.json` for the one-shot
    `verify:prompts-mutation` (Phase-5 evidence probe; the exception text says exactly
    that, and `auditWiring` fails a stale exception if it is ever wired later); (c)
@@ -314,10 +317,18 @@ Each FR carries the exact target paths the implementing agent will touch. Use
    the matching **ADR-0004 table rows** (repo-class, per that ADR: both read repo
    state, neither ships) — the ledger and the ADR are checked bidirectionally by
    `verify:script-classes`. Surfaces (a) and (c) sit inside PRD-036's live Phase-4
-   lease (`verify-workflow.mjs`, `script-classes.json`, ADR-0004): **this FR
-   serializes behind PRD-036's close** — implementation lands (b) freely and holds
-   (a)/(c) until 036 releases its lease; `gate queue` at Phase 3 is the arbiter, as
-   ever.
+   lease (`verify-workflow.mjs`, `script-classes.json`, ADR-0004), and the sequencing
+   rule is total, not partial (iteration-5 P1: `gate open` evaluates the ENTIRE
+   declared Conflict Surface — `candidateFromPrd` + the pre-start refusal — so there
+   is no such thing as landing the unleased part "freely"): **no PRD-032
+   implementation begins while PRD-036's overlapping lease is active.** After 036
+   closes and releases, re-run `gate queue`, then the enforcing `gate open`, then the
+   exception, the CHECKS member, the class rows, the ADR rows, the scripts, the
+   aliases and the templates land as one gate-green implementation sequence. The
+   CHECKS member is the **filename literal `'verify-review-quorum-authority.mjs'`** —
+   the bundle spawns filenames from `scripts/verify/`, never package aliases; the
+   exception entry's production shape is
+   `"wiringExceptions": {"verify:prompts-mutation": "<non-empty justification>"}`.
    - **Targets:** `scripts/verify/verify-workflow.mjs` (**contested — 036-owned,
      serialized**), `scripts/verify/script-classes.json` (**contested — 036-owned,
      serialized**), `_brain/adr/ADR-0004-method-rule-vs-repo-rule.md` (**contested —
@@ -383,6 +394,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
   **When** `pnpm verify:review-quorum` runs, **Then** each carries the required-Quorum
   wording and the `quorum-is-required` marker, neither contains the optional/omit
   wording, and a missing file fails loudly — one authority, semantically asserted.
+- **Given** the landed FR-9 integration, **When** `gate check --wiring` and
+  `pnpm verify:script-classes` run, **Then** the CHECKS array contains the filename
+  literal `'verify-review-quorum-authority.mjs'`, the `verify:prompts-mutation` alias
+  is registered, unwired and carried by its non-empty `wiringExceptions` entry (no
+  stale exception), and both scripts hold repo-class ledger rows with matching
+  ADR-0004 table rows — both meta-gates green.
 
 ---
 
@@ -393,10 +410,12 @@ Each FR carries the exact target paths the implementing agent will touch. Use
 **The store and the adapters are never authored; they are generated and committed.** The
 value of that surface is entirely in it being produced by the shipped CLI — a hand-written
 `.provegate/` that looks right would be worse than none, because the check would then be
-measuring a copy against itself. Around that generated core, three things ARE authored,
+measuring a copy against itself. Around that generated core, five things ARE authored,
 and saying so is the point: the `prompts` block's values in `workflow.config.json`
-(FR-1's owner-recorded answers), two pointer lines in `AGENT_BOOTSTRAP.md` (FR-5), and
-the FR-7/FR-8 source closures.
+(FR-1's owner-recorded answers), two pointer lines in `AGENT_BOOTSTRAP.md` (FR-5), the
+FR-7/FR-8 source closures, the two probe/verifier scripts (FR-3/FR-8), and FR-9's
+integration rows (the CHECKS member line, the wiring exception, the class and ADR
+rows).
 
 **The cache trap decides the verification surface.** This is the third time in this
 repository that a check reading paths outside a package's turbo inputs has come up — the
@@ -635,6 +654,12 @@ Required in a memory-enabled repository, alongside Memory Outputs below.
   record's live hazard is prettier reflowing ADR frontmatter lists into the block form
   the parser subset rejects (`verify:memory-corpus` pins it, but only after the
   breakage).
+- applied: `conflict-check-independent-of-override` — iteration 5's P1 is this record's
+  rule enforced: the pre-start overlap check reads the item's ENTIRE declared surface,
+  never a caller-selected subset, so FR-9's earlier "land the unleased part freely"
+  sequencing was impossible by construction. The whole PRD serializes behind PRD-036's
+  lease release; `gate queue` then `gate open` are the arbiters, and no override or
+  partial claim exists to reach for.
 - not-applicable: `push-is-human-by-omission` — no code path here reaches a remote, and the
   record's rule is preserved by adding nothing.
 - reviewed: `strictness-added-during-extraction-is-a-behavior-change` — its watch covers
@@ -777,8 +802,9 @@ rationalize.
   every generated command to `unattributable` and blinds the reconciliation's
   stale-versus-modified split.
 - DO NOT run the FR-3 mutation probe inside a package test, and DO NOT make it a
-  `verify:workflow` CHECKS member — it is Phase-5 evidence, and the bundle is PRD-034's
-  as shipped.
+  `verify:workflow` CHECKS member — it is Phase-5 evidence, carried by its shrink-only
+  exception. The bundle gains exactly ONE member from this PRD: FR-9's
+  `'verify-review-quorum-authority.mjs'` filename literal, nothing else.
 - DO NOT absorb another surface's aggregate red into this PRD. The prerequisite is a
   green `verify:workflow` at Phase 3/4 open; any red's fix belongs to whoever owns the
   drifted surface (the 2026-07-29 doc-claims instance was the case-study owner's and
@@ -818,6 +844,7 @@ rationalize.
 
 | Date       | Author | Changes                                                                                                                                                                                                                                              |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-07-29 | orchestrating session (mechanical, per iteration-5 remedies) | **Iteration-5 remediation — sequencing made enforceable, literals made exact.** The P1: FR-9's "land the unleased part freely" replaced by the total rule production actually enforces — `gate open` reads the entire declared surface (four live 036 overlaps measured by the scorer's `candidateConflicts` probe), so NO implementation begins until 036 releases; then queue → open → one gate-green sequence. `conflict-check-independent-of-override` dispositioned as applied. The two P2s: the CHECKS member named as the filename literal `'verify-review-quorum-authority.mjs'` with the exception's exact production shape, plus a new §6 criterion binding both meta-gates; and the previous edit's own four stale restatements fixed ("one-shot" → standing, FR-4's wiring sentence qualified, §7's authored list completed to five, DO NOT's bundle line updated to the one-member append). Post-edit sweep run as a SEPARATE pass after these corrections — recorded in the next row down from the sweep itself, never claimed by the edit that performed it. |
 | 2026-07-29 | orchestrating session (mechanical, per iteration-4 remedies) | **Iteration-4 remediation — the additions arrive with their wiring.** The P1 (created by iteration-3's own remedy — `gate-wire-or-delete` at this PRD's expense): new FR-9 gives both scripts their meta-gate integration — `verify:review-quorum` becomes a standing CHECKS member (the pack-drift-suffices rationale was refuted: agreement is not semantics, both copies can regress together), the one-shot `verify:prompts-mutation` takes a justified shrink-only `wiringExceptions` entry in unleased `gates.manifest.json`, and both scripts get class-ledger + ADR-0004 rows (repo-class: read repo state, ship nowhere). The three 036-owned integration files (`verify-workflow.mjs`, `script-classes.json`, ADR-0004) are declared as contested and serialized behind 036's close — the PRD-038-behind-034 shape. The six surviving FR-8 restatements swept (§1, the identity line, §2 metric, §5 non-goals, §6 AC, §7 backcompat — the eighth instance of the pattern, and the a-rule-corrected disposition now carries the full sweep checklist as a binding instruction); the last live-red DO NOT line made historical; dispositions added for `false-green-on-missing-file` and `ADR-0004`, and `gate-wire-or-delete` extended to FR-9. |
 | 2026-07-29 | orchestrating session (mechanical, per iteration-3 remedies) | **Iteration-3 remediation — FR-8 closed at its source.** The one P1: FR-8 now targets the packed source `practices/templates/review-artifact.template.md` (PACK_MAP installs the root copy from it; a root-only edit drifts the twin or is reverted by a fresh install) plus the drift ledger, with a semantic verifier `verify:review-quorum` (required wording present AND optional wording absent, both copies, loud on missing files) replacing the marker-only grep — which was `evidence-pattern-satisfied-by-the-template`'s shape, now dispositioned as applied twice. The three P2s: the 036 contest re-measured (Phase 4 active, `06efc01`; serializes on `prompts.test.ts`); the green-baseline prerequisite made conditional (the 07-29 doc-claims red resolved same-day via the case-study owner's `5a2a64a`); the sentinel disposition corrected (probe: `check --prompts` exits 0 under `PROVEGATE_RUN_ACTIVE=1` — the record binds the test rows, and FR-3's placement belongs to the turbo-cache record); the strictness disposition corrected (FR-7 does touch `core/run/prompts.ts` — reviewed, bounded framing change); rollback now removes each probe/verifier script together with its package alias. |
 | 2026-07-29 | orchestrating session, on owner decisions taken in-session | **Iteration-2 rework: decisions in, rollback in, expansion in.** The owner decided the four open calls with the orchestrator (recorded here as the deciding authority; the session typed): all ten required values enumerated in FR-1's table (`AUTONOMY_MODE: human-gated`; `DOMAIN_CHECKS`/`ENV_NOTES` deliberately filled; `REVIEW_TOOL` is the codex-exec STDIN invocation), and the value expansion absorbs the two measured delivery defects as FR-7 (Claude listing line — closes the 2026-09-26 deferral) and FR-8 (one review-template authority) — `Value` re-derived to 3.50 (4/4/3/3/3). Added: the Migration & Rollback section in the state model's terms; the FR-3 probe script `verify:prompts-mutation` (bannered-path plant, `modified` assert, `finally` restore); FR-6 narrowed to read-only; Conflict Surface drops `turbo.json`/`.gitignore`, narrows `.claude/**` to `.claude/commands/**`, adds the FR-7/FR-8 targets with the PRD-036 test-glob contest noted; the green-aggregate prerequisite names the live doc-claims red as the case-study owner's. Iteration-2's seven stale restatements swept (034 "implementation pending", 031 future tense, the four generic `modified` claims re-scoped to bannered paths, the cache-comment attribution, the exception contradiction, the generated-only overstatement, and the "scaffolds" row below — corrected in place with a dated note). Four memory dispositions added. |
