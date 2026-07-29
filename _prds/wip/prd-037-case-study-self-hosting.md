@@ -273,6 +273,11 @@ above is dated, not standing.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — the lint must compare
   VALUES, not the presence of a table; a template-shaped section with stale numbers is
   the failure mode FR-3's rows must catch.
+- reviewed: `free-text-field-is-the-unread-drift-ledger` — its watch covers
+  `_state/acceptances.json`, which the close touches only by appending the owner's
+  acceptance entry in the schema PRD-033 enumerated (`authorship` is an enum, not
+  free text); this PRD adds no documentation-enforced rule and no free-text field
+  beside one.
 - not-applicable: `push-is-human-by-omission` — nothing here executes git.
 
 ---
