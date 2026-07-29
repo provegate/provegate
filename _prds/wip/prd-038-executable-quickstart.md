@@ -60,7 +60,7 @@ red instead of an adopter's first five minutes.
 
 | Metric | Current | Target | Measurement |
 | ------ | ------- | ------ | ----------- |
-| Quickstart steps executed by any gate | 0 | every command in the tagged `qs:scenario` region, in sequence | the harness parses the region at run time and runs what it finds |
+| Quickstart steps executed by any gate | 0 | every executable, non-skipped command in the tagged `qs:scenario` region, in sequence | the harness parses the region at run time and runs what it finds |
 | Promised outcomes asserted | 0 | one assertion per step's stated result | the harness's per-step expectations, derived from the doc's own prose claims |
 | Divergence between the two quickstart docs | unmeasured | 0 command-sequence divergence | the equivalence check in FR-3 |
 
@@ -72,7 +72,7 @@ red instead of an adopter's first five minutes.
 
 ```
 As a first-time adopter following the quickstart,
-I want every command in it to work exactly as printed,
+I want every executable command in it to work exactly as printed,
 so that my first five minutes build trust instead of a bug report.
 ```
 
@@ -120,8 +120,9 @@ record. Every mechanism below is now closed, decided, and hermetic.
    `packages/provegate/QUICKSTART.md` alone**: the docs twin receives only the
    region markers FR-3's parity needs, never the execution grammar. Command splitting: one command per line;
    backslash continuations joined; `#`-prefixed and blank lines skipped; every command
-   retains its doc line number for failure naming. Package-only extras (worktree,
-   practices) live OUTSIDE the region and are not part of the canonical scenario.
+   retains its doc line number for failure naming. The worktree alternative stays
+   INSIDE the region under `qs:skip` (documented, never executed); the practices
+   layer stays OUTSIDE the region entirely.
    The harness stores no command copy; it parses the region at run time
    (`derive-the-requirement-from-the-consumer`).
    - **Targets:** `packages/provegate/test/quickstart-e2e.test.ts`,
@@ -152,14 +153,16 @@ record. Every mechanism below is now closed, decided, and hermetic.
      `node -e "process.exit(0)"` (allowlisted) and `Autonomous Close` flips to
      `eligible` → [D] `npx gate check PRD-001` (measured: green after only that
      substitution) → [D] `npx gate run --dry-run PRD-001` → [D] `npx gate run
-     PRD-001` — measured STOP at phase 6: *"no tasks file — independent-review
-     ledger missing"* → [H] tasks file with a Verification Ledger carrying the
-     `independent-review` row → [D] `--from-phase=6` — measured STOP: *"missing
-     Base SHA"* (the template's symbolic ref is refused; a real sha is required) →
+     PRD-001` — measured STOP at phase 6: *`PRD-001: no tasks file —
+     independent-review ledger missing`* → [H] tasks file with a Verification Ledger carrying the
+     `independent-review` row → [D] `--from-phase=6` — measured STOP: the exact missing-`> **Base SHA:** <git sha>`-metadata reason
+     (the planted template placeholder was refused in THIS run; no general claim
+     about symbolic refs) →
      [H] review artifact per the shipped template: six metadata fields,
      `Critical: 0`, `Quorum: 1/1 pass`, the real HEAD sha → [D] `--from-phase=6` —
-     phases 6, 7 and the merge gate all pass; measured STOP: *"current branch is
-     'main' — run from the feature branch"* → [H] feature branch;
+     phases 6, 7 and the merge gate all pass; measured STOP: *`current branch is
+     'main' — run from the feature branch, not the base checkout`* → [H] feature
+     branch;
      `.gitignore` for `node_modules`; commit → [D] `--from-phase=merge` —
      **the HANDOFF CARD**: no-ff merge, lease released, *"READY TO PUSH — the
      runner never pushes"* → [H] merged-base inspection + cleanup.
@@ -242,7 +245,8 @@ record. Every mechanism below is now closed, decided, and hermetic.
 ## 6. Acceptance Criteria (Gherkin Style)
 
 - **Given** the committed `QUICKSTART.md`, **When** the harness runs, **Then** every
-  command in the tagged `qs:scenario` region executes in order in a scratch repo,
+  executable, non-skipped command in the tagged `qs:scenario` region executes in
+  order in a scratch repo,
   pre-seeded per the measured [H] table, single-pass to the handoff card, and every
   per-step assertion passes.
 - **Given** the mutation pair — a scratch copy of the doc with `gate new` and
@@ -307,12 +311,13 @@ standing.
 
 - [ ] `packages/provegate/test/quickstart-e2e.test.ts` — new: extraction, execution,
       assertions, mutation-provable doc-sourcing
-- [ ] `packages/provegate/QUICKSTART.md` — the `qs:scenario` region markers, the
-      `qs:skip` marker on the worktree block, and the two handoff-card `text`
-      retags (FR-1)
-- [ ] `apps/docs/content/docs/quickstart.mdx` — canonical region converges to the
-      package sequence; `--practices` recommendation moves to its own optional
-      section (FR-3)
+- [ ] `packages/provegate/QUICKSTART.md` — its `qs:scenario` region markers, the
+      `qs:skip` marker on the worktree block, and the retag of ITS handoff-card
+      fence (§5's close output) (FR-1)
+- [ ] `apps/docs/content/docs/quickstart.mdx` — ITS OWN `qs:scenario` region
+      markers (FR-3's parity needs both) and the retag of ITS handoff-card fence,
+      alongside the canonical-region convergence + relocated `--practices`
+      recommendation (FR-3)
 - [ ] `scripts/verify/verify-quickstart-parity.mjs` + `package.json` (shared
       append-only, out of Conflict Surface by rule) + `scripts/verify/verify-workflow.mjs`
       + `scripts/verify/script-classes.json` — the decided root-verifier route (FR-3/4)
@@ -446,6 +451,7 @@ Before Phase 2 PASS, run: `gate check PRD-038`
 
 | Date       | Author | Changes                                                                                                    |
 | ---------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| 2026-07-29 | orchestrating session (author), sixth rework | **Iteration 6 (7.88) applied — three consistency sweeps in the active text.** The retained "worktree, practices … OUTSIDE" sentence replaced with the single-valued rule (worktree inside under `qs:skip`; practices outside). The MEASURED transcript's own stop quotes corrected to the exact forms (the `PRD-001:` prefix; the full `, not the base checkout` tail; the Base SHA stop restated as this-run's-planted-placeholder-refused, no general symbolic-ref claim). Success Metrics, User Story 1 and §6 qualified to "every executable, non-skipped command"; Implementation Scope assigns each document its own markers and its own handoff-card retag. Active-text sweep re-run after the edits; dated changelog rows exempt. |
 | 2026-07-28 | orchestrating session (author), fifth rework | **Iteration 5 (7.61) applied.** The region rule made single-valued everywhere: worktree INSIDE under `qs:skip` (binding to exactly the next fence; dangling/double markers are named failures), practices OUTSIDE, harness and parity verifier excluding skipped fences identically, no "unmarked-sh" failure class, the markers added to Implementation Scope. The two remaining production reasons quoted EXACTLY — including the `, not the base checkout` tail the earlier draft truncated — and the general symbolic-ref statement removed. Children now scrub env-injected git config (`GIT_CONFIG_COUNT`/indexed pairs/`GIT_CONFIG_PARAMETERS`) before the global/system pins, and the external-write claim narrows to what the test concretely observes. The rollback sentence replaced by the coordinated atomic set across both docs, the harness, the verifier, its wiring, the class ledger, the ADR amendment and the learning. |
 | 2026-07-28 | orchestrating session (author), fourth rework | **Iteration 4 (7.48 — the prototype broke the oscillation) applied.** Region geometry decided: one region + an explicit `qs:skip` ignored-fence form so the worktree alternative keeps its teaching position unexecuted; the fence census corrected to the two handoff-card blocks. The three negative fixtures pinned to exact production inputs and COMPLETE reason strings (omitted tasks file; the literal planted `main` in Base SHA — no general symbolic-ref claim; close-from-main). Git config neutralized properly (`GIT_CONFIG_GLOBAL/SYSTEM=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`) and the nothing-written-outside claim scoped to post-setup. The cleanup plant completed (non-empty chmod-555 dir, POSIX/Ubuntu scope stated). The docs-parity migration decided: the docs region adopts the package sequence verbatim, plain `npx gate init`, with the `--practices` recommendation moved to its own optional section; the "derivation or parity" residue, the nonexistent PRD-007 exported-helpers claim, and the stale lease-ownership wording all removed. |
 | 2026-07-28 | orchestrating session (author), third rework — PROTOTYPE-FIRST on owner decision (a) | **Iteration 3 (5.62, oscillating) stopped the wording rounds; the owner chose prototype-first.** The real scratch-close sequence was EXECUTED once (provegate-0.2.0 tarball, unreachable registry, temp repo) and reached the handoff card; the [D]/[H] table is now that run's transcript with the CLI's actual stop messages quoted. Measured facts replacing guesses: the claim SUCCEEDS on the raw template (claim-precedes-fill is the real order); `gate check` greens after only the §11 command substitution; the chain gates on NO readiness artifact and (eligible, zero rows) NO acceptance — measured absences the harness asserts; the three real stops (missing tasks/review ledger; symbolic Base SHA refused; run-from-main refused) become verbatim negative fixtures while the production path pre-seeds and runs single-pass. The install form measured working offline; the mutation pair replaced with one production actually rejects (new/open swap — nothing to claim); the cleanup plant made deterministic (chmod 555 subdir, initial failure asserted, reset+retry in finally); both untagged fences named; the grammar scoped to the package doc alone. |
