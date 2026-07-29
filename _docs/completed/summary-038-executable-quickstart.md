@@ -1,7 +1,7 @@
 # Summary: PRD-038 — The Quickstart Executes, or It Fails
 
 > **PRD**: [prd-038-executable-quickstart.md](../../_prds/wip/prd-038-executable-quickstart.md)
-> **Status**: Code Complete, pending eligible close
+> **Status**: Ship Verified — landed on local main; push stays the owner call
 > **Class**: infra · **Autonomous Close**: eligible
 > **Branch**: `prd-038-executable-quickstart`
 > **Date**: 2026-07-29

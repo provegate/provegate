@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-038-executable-quickstart.md](../../_prds/wip/prd-038-executable-quickstart.md)
 > **Readiness**: [readiness-038-executable-quickstart.md](../../_readiness/wip/readiness-038-executable-quickstart.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.46/10 (iteration 7, PASS — seventh independent scorer; prototype-first pivot at iteration 3)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -170,12 +170,12 @@
         (≤120 chars); the ADR amendment already carries its own declaration.
   - [x] 8.2 `pnpm check:durable-artifacts` — learning, ADR, INDEX, review artifact
         in the merge diff.
-  - [ ] 8.3 `node packages/provegate/dist/cli.js run PRD-038` — from the WORKTREE
+  - [x] 8.3 `node packages/provegate/dist/cli.js run PRD-038` — from the WORKTREE
         (the §11 commands need the branch's files; the PRD-037 close proved the
         worktree-run merge lands when the primary is clean); on a stop after
         "archived", `gate-run-resume-after-archive`. NO acceptance needed
         (eligible, zero operator rows). Push stays the owner's.
-  - [ ] 8.4 `release PRD-038`, drop the board row, remove the worktree.
+  - [x] 8.4 `release PRD-038`, drop the board row, remove the worktree.
 
 ---
 
@@ -192,7 +192,7 @@
 | atomicity | rollback prova | repo | passed | HEAD~1 lacks the set | |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1287), 4/4 | |
 | independent-review | `_docs/reviews/review-038-executable-quickstart.md` — `Critical: 0`, Quorum `1/1 pass` | review | passed | 3 rounds, GATE FAIL→FAIL→PASS; owner steal resolved the lease [P1] | |
-| durable | `pnpm check:durable-artifacts` | repo | pending | | |
+| durable | `pnpm check:durable-artifacts` | repo | passed | gate chain: all declared paths in merge diff | |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

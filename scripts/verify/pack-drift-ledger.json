@@ -1,255 +1,255 @@
 {
- "_readme": [
-  "Reconciliation ledger for verify:pack-drift. Each entry is the sha256 (16 hex) of the",
-  "packed file and of its live counterpart AS THEY STOOD when a human last compared them.",
-  "The two sides are genericized copies, never byte-identical, so equality is not the",
-  "contract — reconciliation is: either side moving fails the check until someone opens the",
-  "counterpart, ports what belongs there, and re-runs with --reconcile. Add a \"note\" to any",
-  "pair to record why it diverges; notes and this _readme survive a reconcile."
- ],
- "packOnly": [
-  "NEXT_STEPS.md",
-  "shims/AGENTS.md.snippet",
-  "shims/CLAUDE.md.snippet",
-  "shims/cursor-brain.mdc.snippet"
- ],
- "pairs": {
-  "brain/PROTOCOL.md": {
-   "dest": "_brain/PROTOCOL.md",
-   "pack": "928149b82b901e0c",
-   "repo": "ae70fbd804b97e86"
-  },
-  "brain/README.md": {
-   "dest": "_brain/README.md",
-   "pack": "7c972b7c52b01b93",
-   "repo": "7c972b7c52b01b93"
-  },
-  "brain/INDEX.md": {
-   "dest": "_brain/INDEX.md",
-   "pack": "24750e380c5a78b3",
-   "track": "pack",
-   "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
-  },
-  "brain/_templates/learning.md": {
-   "dest": "_brain/_templates/learning.md",
-   "pack": "404fc25783a009a1",
-   "repo": "38b1a31dfa338753"
-  },
-  "brain/_templates/adr.md": {
-   "dest": "_brain/_templates/adr.md",
-   "pack": "40d5f78d6352a74d",
-   "repo": "606d90e355b6d6e7"
-  },
-  "brain/private-gitignore": {
-   "dest": "_brain/private/.gitignore",
-   "pack": "240a3e0d37d2e86b",
-   "repo": "240a3e0d37d2e86b"
-  },
-  "templates/AGENT_BOOTSTRAP.template.md": {
-   "dest": "AGENT_BOOTSTRAP.md",
-   "pack": "db2b9dada1c84928",
-   "repo": "e634b29b0919f540"
-  },
-  "templates/STATUS.template.md": {
-   "dest": "STATUS.md",
-   "pack": "b8845ca5022c7245",
-   "track": "pack",
-   "note": "repo side is the live board (agents, deferral rows, activity log) — data, not content an adopter would want"
-  },
-  "templates/commitlint.config.template.mjs": {
-   "dest": "commitlint.config.mjs",
-   "pack": "4fe1f3f3195357a4",
-   "repo": "bf258a3b9e22eb3b"
-  },
-  "templates/review-artifact.template.md": {
-   "dest": "_docs/review-artifact.template.md",
-   "pack": "910a8ffd74ed1f08",
-   "repo": "60d44637d1b11aff"
-  },
-  "templates/retros-README.md": {
-   "dest": "_docs/retros/README.md",
-   "pack": "b83db25cb3d8a07e",
-   "repo": "13bee03528b7060f"
-  },
-  "templates/known-red-verifies.json": {
-   "dest": "_state/known-red-verifies.json",
-   "pack": "774abe2251b69da2",
-   "track": "pack",
-   "note": "repo side is the live acknowledged-red ledger — entries come and go by design"
-  },
-  "hooks/pre-commit": {
-   "dest": ".githooks/pre-commit",
-   "pack": "970cde21602b20b5",
-   "repo": "165d7f54fb048393"
-  },
-  "hooks/commit-msg": {
-   "dest": ".githooks/commit-msg",
-   "pack": "950a12752321f430",
-   "repo": "950a12752321f430"
-  },
-  "scripts/base-branch-guard.mjs": {
-   "dest": "scripts/base-branch-guard.mjs",
-   "pack": "84ef8a97ab21299b",
-   "repo": "3b83b58d0a79e1d7"
-  },
-  "scripts/secret-scan.mjs": {
-   "dest": "scripts/secret-scan.mjs",
-   "pack": "917691ab41d16b40",
-   "repo": "917691ab41d16b40"
-  },
-  "verify/lib.mjs": {
-   "dest": "scripts/verify/lib.mjs",
-   "pack": "cec9f0826c8885c9",
-   "repo": "c297a1f86814b03d"
-  },
-  "verify/verify-brain.mjs": {
-   "dest": "scripts/verify/verify-brain.mjs",
-   "pack": "2f99d602ce4ebed1",
-   "repo": "a0832d3d3fc8a0bc"
-  },
-  "verify/verify-deferred.mjs": {
-   "dest": "scripts/verify/verify-deferred.mjs",
-   "pack": "713a588f303f0349",
-   "repo": "97af027cd4c8b1dc"
-  },
-  "verify/verify-test-task-coverage.mjs": {
-   "dest": "scripts/verify/verify-test-task-coverage.mjs",
-   "pack": "bb94e3de52ee041b",
-   "repo": "bb94e3de52ee041b"
-  },
-  "verify/verify-dependency-audit.mjs": {
-   "dest": "scripts/verify/verify-dependency-audit.mjs",
-   "pack": "6f0af7a8e4ba7945",
-   "repo": "6f0af7a8e4ba7945"
-  },
-  "verify/verify-prompts.mjs": {
-   "dest": "scripts/verify/verify-prompts.mjs",
-   "pack": "8b9f5c048decece2",
-   "repo": "c4cbc121b1ff7030",
-   "note": "deliberately different bodies, same verdict: the packed twin imports the primitive + evaluator from the installed `provegate`; the repo side has no installed package, so it executes the built CLI and adds the --assert-ci-order mode (PRD-034 FR-4/FR-5)"
-  },
-  "verify/verify-workflow.mjs": {
-   "dest": "scripts/verify/verify-workflow.mjs",
-   "pack": "71aae1a9bcda40aa",
-   "repo": "230964a25393dfd4",
-   "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit. PRD-035 adds a third repository-only member, verify-memory-record-corpus.mjs: the corpus fixture and runner are repository-local, so the packed workflow deliberately omits it. PRD-034 adds verify-prompts.mjs to BOTH bundles — the reconciliation check runs everywhere a store can exist"
-  },
-  "verify/test-task-allowlist.json": {
-   "dest": "scripts/verify/test-task-allowlist.json",
-   "pack": "37517e5f3dc66819",
-   "track": "pack",
-   "note": "repo side names this repo's packages — data"
-  },
-  "verify/audit-allowlist.json": {
-   "dest": "scripts/verify/audit-allowlist.json",
-   "pack": "37517e5f3dc66819",
-   "track": "pack",
-   "note": "repo side is this repo's accepted advisories — data"
-  },
-  "brain/learnings/absence-must-be-asserted.md": {
-   "dest": "_brain/learnings/absence-must-be-asserted.md",
-   "pack": "de1a1c041bd994d1",
-   "repo": "c9916b07759cc89e"
-  },
-  "brain/learnings/append-only-manifest-union-driver.md": {
-   "dest": "_brain/learnings/append-only-manifest-union-driver.md",
-   "pack": "9ecb53074b099b40",
-   "repo": "07588fe00725900a"
-  },
-  "brain/learnings/cleanup-after-verified-merge.md": {
-   "dest": "_brain/learnings/cleanup-after-verified-merge.md",
-   "pack": "29ae865468ad72bf",
-   "repo": "417c26f69d5a62ee"
-  },
-  "brain/learnings/conflict-check-independent-of-override.md": {
-   "dest": "_brain/learnings/conflict-check-independent-of-override.md",
-   "pack": "251a467d44916e4d",
-   "repo": "ebafcb2e33c2592a"
-  },
-  "brain/learnings/durable-artifact-must-commit.md": {
-   "dest": "_brain/learnings/durable-artifact-must-commit.md",
-   "pack": "06949fca48009548",
-   "repo": "ba75c7a46143580e"
-  },
-  "brain/learnings/false-green-on-missing-file.md": {
-   "dest": "_brain/learnings/false-green-on-missing-file.md",
-   "pack": "dac14a441f86a412",
-   "repo": "89e92aa258b0a379"
-  },
-  "brain/learnings/fresh-worktree-env-gap.md": {
-   "dest": "_brain/learnings/fresh-worktree-env-gap.md",
-   "pack": "84ff6cee523311ad",
-   "repo": "bbe4b2f3f9f068b6"
-  },
-  "brain/learnings/gate-wire-or-delete.md": {
-   "dest": "_brain/learnings/gate-wire-or-delete.md",
-   "pack": "290589695ce57164",
-   "repo": "98c4ac69f548d907"
-  },
-  "brain/learnings/grep-token-anchors-real-impl.md": {
-   "dest": "_brain/learnings/grep-token-anchors-real-impl.md",
-   "pack": "cd7e613631286045",
-   "repo": "7db5550c42de8287"
-  },
-  "brain/learnings/guard-destructive-by-target-host.md": {
-   "dest": "_brain/learnings/guard-destructive-by-target-host.md",
-   "pack": "cf777a743ec0a95a",
-   "repo": "193dfe38e716b387"
-  },
-  "brain/learnings/known-red-ledger-must-expire.md": {
-   "dest": "_brain/learnings/known-red-ledger-must-expire.md",
-   "pack": "c5a518b5f36546ce",
-   "repo": "f57e369e9634aff0"
-  },
-  "brain/learnings/locks-on-main-not-worktree.md": {
-   "dest": "_brain/learnings/locks-on-main-not-worktree.md",
-   "pack": "5f48a8b0ef4b97c3",
-   "repo": "61b31fd312a64d7a"
-  },
-  "brain/learnings/memory-index-vs-detail.md": {
-   "dest": "_brain/learnings/memory-index-vs-detail.md",
-   "pack": "c67435a6fb2e43e9",
-   "repo": "c67435a6fb2e43e9"
-  },
-  "brain/learnings/new-package-postmerge-install.md": {
-   "dest": "_brain/learnings/new-package-postmerge-install.md",
-   "pack": "20e54e1cc4dcf57d",
-   "repo": "9b2516900e33d654"
-  },
-  "brain/learnings/no-completed-done-status-alias.md": {
-   "dest": "_brain/learnings/no-completed-done-status-alias.md",
-   "pack": "5bc8619aba64a7e6",
-   "repo": "696786e40588ea51"
-  },
-  "brain/learnings/notes-column-runs-commands.md": {
-   "dest": "_brain/learnings/notes-column-runs-commands.md",
-   "pack": "f9aa4cea707b4ed1",
-   "repo": "1e00c6b9c8066c7f"
-  },
-  "brain/learnings/operator-acceptance-no-self-accept.md": {
-   "dest": "_brain/learnings/operator-acceptance-no-self-accept.md",
-   "pack": "e6ed258147729463",
-   "repo": "e6ed258147729463"
-  },
-  "brain/learnings/push-is-human-by-omission.md": {
-   "dest": "_brain/learnings/push-is-human-by-omission.md",
-   "pack": "ee07ddacb4a970bf",
-   "repo": "ee07ddacb4a970bf"
-  },
-  "brain/learnings/score-must-equal-weighted-sum.md": {
-   "dest": "_brain/learnings/score-must-equal-weighted-sum.md",
-   "pack": "51018ec2b9cd6294",
-   "repo": "b51d88da3028995d"
-  },
-  "brain/learnings/unparseable-command-must-fail-loudly.md": {
-   "dest": "_brain/learnings/unparseable-command-must-fail-loudly.md",
-   "pack": "6d2f77fb345e7944",
-   "repo": "6d2f77fb345e7944"
-  },
-  "brain/learnings/verify-check-phase-placement.md": {
-   "dest": "_brain/learnings/verify-check-phase-placement.md",
-   "pack": "ba8ad07cd2cbdf07",
-   "repo": "f9a7ba42698c45f5"
+  "_readme": [
+    "Reconciliation ledger for verify:pack-drift. Each entry is the sha256 (16 hex) of the",
+    "packed file and of its live counterpart AS THEY STOOD when a human last compared them.",
+    "The two sides are genericized copies, never byte-identical, so equality is not the",
+    "contract — reconciliation is: either side moving fails the check until someone opens the",
+    "counterpart, ports what belongs there, and re-runs with --reconcile. Add a \"note\" to any",
+    "pair to record why it diverges; notes and this _readme survive a reconcile."
+  ],
+  "packOnly": [
+    "NEXT_STEPS.md",
+    "shims/AGENTS.md.snippet",
+    "shims/CLAUDE.md.snippet",
+    "shims/cursor-brain.mdc.snippet"
+  ],
+  "pairs": {
+    "brain/PROTOCOL.md": {
+      "dest": "_brain/PROTOCOL.md",
+      "pack": "928149b82b901e0c",
+      "repo": "ae70fbd804b97e86"
+    },
+    "brain/README.md": {
+      "dest": "_brain/README.md",
+      "pack": "7c972b7c52b01b93",
+      "repo": "7c972b7c52b01b93"
+    },
+    "brain/INDEX.md": {
+      "dest": "_brain/INDEX.md",
+      "pack": "24750e380c5a78b3",
+      "track": "pack",
+      "note": "repo side is this repo's pointer list, one line per learning — grows with every capture"
+    },
+    "brain/_templates/learning.md": {
+      "dest": "_brain/_templates/learning.md",
+      "pack": "404fc25783a009a1",
+      "repo": "38b1a31dfa338753"
+    },
+    "brain/_templates/adr.md": {
+      "dest": "_brain/_templates/adr.md",
+      "pack": "40d5f78d6352a74d",
+      "repo": "606d90e355b6d6e7"
+    },
+    "brain/private-gitignore": {
+      "dest": "_brain/private/.gitignore",
+      "pack": "240a3e0d37d2e86b",
+      "repo": "240a3e0d37d2e86b"
+    },
+    "templates/AGENT_BOOTSTRAP.template.md": {
+      "dest": "AGENT_BOOTSTRAP.md",
+      "pack": "db2b9dada1c84928",
+      "repo": "e634b29b0919f540"
+    },
+    "templates/STATUS.template.md": {
+      "dest": "STATUS.md",
+      "pack": "b8845ca5022c7245",
+      "track": "pack",
+      "note": "repo side is the live board (agents, deferral rows, activity log) — data, not content an adopter would want"
+    },
+    "templates/commitlint.config.template.mjs": {
+      "dest": "commitlint.config.mjs",
+      "pack": "4fe1f3f3195357a4",
+      "repo": "bf258a3b9e22eb3b"
+    },
+    "templates/review-artifact.template.md": {
+      "dest": "_docs/review-artifact.template.md",
+      "pack": "910a8ffd74ed1f08",
+      "repo": "60d44637d1b11aff"
+    },
+    "templates/retros-README.md": {
+      "dest": "_docs/retros/README.md",
+      "pack": "b83db25cb3d8a07e",
+      "repo": "13bee03528b7060f"
+    },
+    "templates/known-red-verifies.json": {
+      "dest": "_state/known-red-verifies.json",
+      "pack": "774abe2251b69da2",
+      "track": "pack",
+      "note": "repo side is the live acknowledged-red ledger — entries come and go by design"
+    },
+    "hooks/pre-commit": {
+      "dest": ".githooks/pre-commit",
+      "pack": "970cde21602b20b5",
+      "repo": "165d7f54fb048393"
+    },
+    "hooks/commit-msg": {
+      "dest": ".githooks/commit-msg",
+      "pack": "950a12752321f430",
+      "repo": "950a12752321f430"
+    },
+    "scripts/base-branch-guard.mjs": {
+      "dest": "scripts/base-branch-guard.mjs",
+      "pack": "84ef8a97ab21299b",
+      "repo": "3b83b58d0a79e1d7"
+    },
+    "scripts/secret-scan.mjs": {
+      "dest": "scripts/secret-scan.mjs",
+      "pack": "917691ab41d16b40",
+      "repo": "917691ab41d16b40"
+    },
+    "verify/lib.mjs": {
+      "dest": "scripts/verify/lib.mjs",
+      "pack": "cec9f0826c8885c9",
+      "repo": "c297a1f86814b03d"
+    },
+    "verify/verify-brain.mjs": {
+      "dest": "scripts/verify/verify-brain.mjs",
+      "pack": "2f99d602ce4ebed1",
+      "repo": "a0832d3d3fc8a0bc"
+    },
+    "verify/verify-deferred.mjs": {
+      "dest": "scripts/verify/verify-deferred.mjs",
+      "pack": "713a588f303f0349",
+      "repo": "97af027cd4c8b1dc"
+    },
+    "verify/verify-test-task-coverage.mjs": {
+      "dest": "scripts/verify/verify-test-task-coverage.mjs",
+      "pack": "bb94e3de52ee041b",
+      "repo": "bb94e3de52ee041b"
+    },
+    "verify/verify-dependency-audit.mjs": {
+      "dest": "scripts/verify/verify-dependency-audit.mjs",
+      "pack": "6f0af7a8e4ba7945",
+      "repo": "6f0af7a8e4ba7945"
+    },
+    "verify/verify-prompts.mjs": {
+      "dest": "scripts/verify/verify-prompts.mjs",
+      "pack": "8b9f5c048decece2",
+      "repo": "c4cbc121b1ff7030",
+      "note": "deliberately different bodies, same verdict: the packed twin imports the primitive + evaluator from the installed `provegate`; the repo side has no installed package, so it executes the built CLI and adds the --assert-ci-order mode (PRD-034 FR-4/FR-5)"
+    },
+    "verify/verify-workflow.mjs": {
+      "dest": "scripts/verify/verify-workflow.mjs",
+      "pack": "71aae1a9bcda40aa",
+      "repo": "e18d4976cb913e12",
+      "note": "repo bundle runs verify-pack-drift and verify-turbo-inputs; the packed bundle must not — an adopter has no pack to compare against and no turbo.json to audit. PRD-035 adds a third repository-only member, verify-memory-record-corpus.mjs: the corpus fixture and runner are repository-local, so the packed workflow deliberately omits it. PRD-034 adds verify-prompts.mjs to BOTH bundles — the reconciliation check runs everywhere a store can exist"
+    },
+    "verify/test-task-allowlist.json": {
+      "dest": "scripts/verify/test-task-allowlist.json",
+      "pack": "37517e5f3dc66819",
+      "track": "pack",
+      "note": "repo side names this repo's packages — data"
+    },
+    "verify/audit-allowlist.json": {
+      "dest": "scripts/verify/audit-allowlist.json",
+      "pack": "37517e5f3dc66819",
+      "track": "pack",
+      "note": "repo side is this repo's accepted advisories — data"
+    },
+    "brain/learnings/absence-must-be-asserted.md": {
+      "dest": "_brain/learnings/absence-must-be-asserted.md",
+      "pack": "de1a1c041bd994d1",
+      "repo": "c9916b07759cc89e"
+    },
+    "brain/learnings/append-only-manifest-union-driver.md": {
+      "dest": "_brain/learnings/append-only-manifest-union-driver.md",
+      "pack": "9ecb53074b099b40",
+      "repo": "07588fe00725900a"
+    },
+    "brain/learnings/cleanup-after-verified-merge.md": {
+      "dest": "_brain/learnings/cleanup-after-verified-merge.md",
+      "pack": "29ae865468ad72bf",
+      "repo": "417c26f69d5a62ee"
+    },
+    "brain/learnings/conflict-check-independent-of-override.md": {
+      "dest": "_brain/learnings/conflict-check-independent-of-override.md",
+      "pack": "251a467d44916e4d",
+      "repo": "ebafcb2e33c2592a"
+    },
+    "brain/learnings/durable-artifact-must-commit.md": {
+      "dest": "_brain/learnings/durable-artifact-must-commit.md",
+      "pack": "06949fca48009548",
+      "repo": "ba75c7a46143580e"
+    },
+    "brain/learnings/false-green-on-missing-file.md": {
+      "dest": "_brain/learnings/false-green-on-missing-file.md",
+      "pack": "dac14a441f86a412",
+      "repo": "89e92aa258b0a379"
+    },
+    "brain/learnings/fresh-worktree-env-gap.md": {
+      "dest": "_brain/learnings/fresh-worktree-env-gap.md",
+      "pack": "84ff6cee523311ad",
+      "repo": "bbe4b2f3f9f068b6"
+    },
+    "brain/learnings/gate-wire-or-delete.md": {
+      "dest": "_brain/learnings/gate-wire-or-delete.md",
+      "pack": "290589695ce57164",
+      "repo": "98c4ac69f548d907"
+    },
+    "brain/learnings/grep-token-anchors-real-impl.md": {
+      "dest": "_brain/learnings/grep-token-anchors-real-impl.md",
+      "pack": "cd7e613631286045",
+      "repo": "7db5550c42de8287"
+    },
+    "brain/learnings/guard-destructive-by-target-host.md": {
+      "dest": "_brain/learnings/guard-destructive-by-target-host.md",
+      "pack": "cf777a743ec0a95a",
+      "repo": "193dfe38e716b387"
+    },
+    "brain/learnings/known-red-ledger-must-expire.md": {
+      "dest": "_brain/learnings/known-red-ledger-must-expire.md",
+      "pack": "c5a518b5f36546ce",
+      "repo": "f57e369e9634aff0"
+    },
+    "brain/learnings/locks-on-main-not-worktree.md": {
+      "dest": "_brain/learnings/locks-on-main-not-worktree.md",
+      "pack": "5f48a8b0ef4b97c3",
+      "repo": "61b31fd312a64d7a"
+    },
+    "brain/learnings/memory-index-vs-detail.md": {
+      "dest": "_brain/learnings/memory-index-vs-detail.md",
+      "pack": "c67435a6fb2e43e9",
+      "repo": "c67435a6fb2e43e9"
+    },
+    "brain/learnings/new-package-postmerge-install.md": {
+      "dest": "_brain/learnings/new-package-postmerge-install.md",
+      "pack": "20e54e1cc4dcf57d",
+      "repo": "9b2516900e33d654"
+    },
+    "brain/learnings/no-completed-done-status-alias.md": {
+      "dest": "_brain/learnings/no-completed-done-status-alias.md",
+      "pack": "5bc8619aba64a7e6",
+      "repo": "696786e40588ea51"
+    },
+    "brain/learnings/notes-column-runs-commands.md": {
+      "dest": "_brain/learnings/notes-column-runs-commands.md",
+      "pack": "f9aa4cea707b4ed1",
+      "repo": "1e00c6b9c8066c7f"
+    },
+    "brain/learnings/operator-acceptance-no-self-accept.md": {
+      "dest": "_brain/learnings/operator-acceptance-no-self-accept.md",
+      "pack": "e6ed258147729463",
+      "repo": "e6ed258147729463"
+    },
+    "brain/learnings/push-is-human-by-omission.md": {
+      "dest": "_brain/learnings/push-is-human-by-omission.md",
+      "pack": "ee07ddacb4a970bf",
+      "repo": "ee07ddacb4a970bf"
+    },
+    "brain/learnings/score-must-equal-weighted-sum.md": {
+      "dest": "_brain/learnings/score-must-equal-weighted-sum.md",
+      "pack": "51018ec2b9cd6294",
+      "repo": "b51d88da3028995d"
+    },
+    "brain/learnings/unparseable-command-must-fail-loudly.md": {
+      "dest": "_brain/learnings/unparseable-command-must-fail-loudly.md",
+      "pack": "6d2f77fb345e7944",
+      "repo": "6d2f77fb345e7944"
+    },
+    "brain/learnings/verify-check-phase-placement.md": {
+      "dest": "_brain/learnings/verify-check-phase-placement.md",
+      "pack": "ba8ad07cd2cbdf07",
+      "repo": "f9a7ba42698c45f5"
+    }
   }
- }
 }

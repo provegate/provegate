@@ -11,7 +11,6 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent                         | Work item                                                                                                          | Phase         | Started    |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------- | ---------- |
-| Claude Fable 5 (038 session)  | PRD-038 — phases 4-7 on owner Go (worktree `../provegate-prd-038`; CHECKS append serialized behind 034)            | 4 (Implement) | 2026-07-29 |
 | Claude Fable 5 (032 session)  | PRD-032 — Phase 2 re-score (iteration 2) now that 034 is Ship Verified; Codex scores independently, orchestrator authors no verdicts | 2 (Readiness) | 2026-07-29 |
 | Claude Fable 5 (Claude Code)  | PRD-031 SHIPPED (2026-07-28, landed via gate run close) — session free                                             | —             | 2026-07-28 |
 | Claude Fable 5 (this session) | PRD-034 SHIPPED (2026-07-29, `1d14f7a` via gate run close; unpushed) — session free. Heads-up 038: your serialized CHECKS append is now unblocked — 034's lease is released and `verify-prompts.mjs` is a bundle member on main; rebase/merge main first | — | 2026-07-29 |
