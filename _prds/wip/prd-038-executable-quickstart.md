@@ -377,6 +377,20 @@ standing.
   The record IS the pattern this PRD implements; the disposition exists because
   the gate rightly refuses an undeclared watch overlap even for a record born in
   the closing diff.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this
+  PRD file, and the record fired for real here: iterations 1-3 oscillated
+  (4.95/6.10/5.62) with findings landing in the scratch-close-sequence layer,
+  and the owner's prototype-first pivot — executing the ground truth once
+  instead of another wording round — is the record's prescription; the
+  trajectory climbed monotonically after it.
+- applied: `state-model-before-mechanism` — its watch covers `_prds/wip/**`, and
+  this PRD is the record's positive case: the [D]/[H] table was MEASURED
+  (a real run to the handoff card) before the FRs specified against it; the
+  learning this PRD outputs names that lesson explicitly.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — its watch covers
+  this PRD file; iterations 6-7 were exactly its subject (the truncated stop
+  strings and the "worktree OUTSIDE" sentence surviving in restatements), and
+  the review's changelog-vs-file catch earlier in the cycle was the same shape.
 - reviewed: `two-parsers-wrong-together` — two independently-edited quickstart
   sequences are two implementations of one promise; FR-3 exists to keep it one.
 - reviewed: `fixture-must-reach-production-shape` — the harness invokes the BUILT CLI
