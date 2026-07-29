@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T10:19:38.974Z",
+  "generatedAt": "2026-07-29T10:21:28.145Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1235,13 +1235,13 @@
         "prd": "_prds/wip/prd-034-prompt-store-reconciliation.md",
         "readiness": "_readiness/wip/readiness-034-prompt-store-reconciliation.md",
         "tasks": "_tasks/wip/tasks-034-prompt-store-reconciliation.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-034-prompt-store-reconciliation.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.4,
@@ -1250,9 +1250,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 58,
+        "status": "In Progress",
+        "checkedCount": 54,
+        "uncheckedCount": 4,
         "operatorHandoffCount": 1
       },
       "summary": {
