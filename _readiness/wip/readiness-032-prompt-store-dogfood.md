@@ -1,5 +1,30 @@
 # Readiness Assessment: PRD-032 — Prompt-Store Dogfood
 
+> **Iteration 6 (Codex, independent, 2026-07-29) — 7.90/10, ITERATE; one P2 finding
+> stands between this document and the PASS band.** Three of iteration-5's four
+> remedies CLOSED (the CHECKS filename literal in both FR-9 sites + the §6 meta-gate
+> criterion; the four restatements; the conflict-override disposition); the P1
+> sequencing rule is PARTIAL: FR-9 and Memory Inputs carry the correct whole-PRD rule,
+> but FR-7's Targets note and the Conflict Surface still say "serializes on this one
+> file" — and the live `candidateConflicts` probe returns FOUR shared paths (ADR-0004,
+> `prompts.test.ts`, `script-classes.json`, `verify-workflow.mjs`), so the phrase is
+> both a restatement survivor and factually false. Required correction: the total rule
+> in both sites, plus explicit whole-PRD-hold language in §7 Prerequisites, §8's FR-9
+> bullet and DO NOT. The full sweep table: 12 of 13 rule families CLEAN (CHECKS
+> literal, one-shot scoping, FR-4 ownership, authored-list, bundle membership, FR-8
+> authority everywhere, 034 classification, rollback unit, Open Questions, no TBD,
+> Targets intent — the scorer explicitly accepted the "none in code"
+> verified-transition form — and verification mapping). All probes green; the
+> ten-value render exact; Value 3.50 credible a third consecutive round, the exported
+> value scorer returning `problem: null`; all six hard caps clear; the two §11 cap
+> lines confirmed appropriate. 036's lease still live (Phase 2b lock, expiry
+> 2026-07-29T23:22:21Z). Orchestration disclosure: the orchestrating session verified
+> the two "one file" sites and the four-path probe result and authored no verdicts.
+
+---
+
+## Superseded headline — iteration 5
+
 > **Iteration 5 (Codex, independent, 2026-07-29) — 7.75/10, ITERATE; band 6–7.9,
 > climbing again (6.95 → 7.75).** FR-9's wiring/classification topology is
 > **mechanically sound against production logic** — the scorer projected it through
@@ -119,14 +144,14 @@
 | Field                  | Value                                          |
 | ---------------------- | ---------------------------------------------- |
 | PRD                    | `_prds/wip/prd-032-prompt-store-dogfood.md`    |
-| Score                  | 7.75/10                                        |
-| Verdict                | ITERATE — band 6–7.9, climbing (6.95 → 7.75). FR-9's topology is mechanically sound against the production wiring and class gates, with the exact landing shapes now on record. One P1: the partial-start instruction is impossible — `gate open` evaluates the whole declared surface and four PRD-036 overlaps exist, so the entire PRD serializes behind 036's lease release. Two mechanical P2s: four fresh stale restatements from the iteration-4 edit's own text, and FR-9 must name the CHECKS filename literal plus a §6 criterion |
-| Iteration              | 5                                              |
+| Score                  | 7.90/10                                        |
+| Verdict                | ITERATE — one P2 stands: the whole-PRD serialization rule landed in FR-9 and Memory Inputs but two sites (FR-7 Targets, Conflict Surface) still say "serializes on this one file" — a restatement survivor that is also factually false, since the live probe returns four shared paths with PRD-036. Everything else closed: 12 of 13 sweep families clean, all probes green, Value 3.50 credible a third round, six hard caps clear, the "none in code" Targets form explicitly accepted for verified-transition FRs |
+| Iteration              | 6                                              |
 | Model Tier (Execution) | do not assign — fix the PRD first              |
 | Model Tier (Audit)     | — (assign on a PASS)                           |
 | Scored by              | **Codex (gpt-5.x) via the `/codex` skill — independent, different model family, did not write the PRD; orchestrated by a session that authored no verdicts and re-verified the load-bearing citations** |
 | Self-scored            | no                                             |
-| Date                   | 2026-07-29 (iteration 5; iterations 1–4 same file, below) |
+| Date                   | 2026-07-29 (iteration 6; iterations 1–5 same file, below) |
 | PRD Lint               | passed — Codex's direct five-argument production-shaped `lintPrd(config, manifest, text, root, 32)` returned `{ok:true, issues:[]}` (the CLI's state write EPERMs in its read-only sandbox, known); the orchestrator's unsandboxed `gate check PRD-032` exit 0 |
 | State Record           | updated — `gate status` re-run after saving    |
 
@@ -520,19 +545,19 @@ exit 0); method-content traceability — clear.
 | 3   | 2026-07-29 | 7.33  | ITERATE | Same-day rework re-scored: six of nine findings closed by execution-grade evidence — the owner's exact ten values RENDER, rollback holds against T6/T7, the mutation-probe spec is runnable and correctly bannered, the surface narrowing verified by the production glob matcher, FR-7's defect and banner coherence both reproduce. One P1: FR-8's delivery topology — the root template is PACK_MAP-installed from a packed source still saying Quorum optional, and the marker-only grep is the evidence-pattern trap. Three mechanical P2s (mid-audit staleness ×2 — 036 took Phase-3 Go and the doc-claims red went green under the audit; three disposition rationale fixes; one rollback sentence). Band 6–7.9: iterate and re-score, no Phase-1 return. Value 3.50 credible once FR-8 covers the packed source. |
 | 4   | 2026-07-29 | 6.95  | ITERATE | Score DOWN — the iteration-3 remedy created the next defect: the two new `verify:*` scripts are specified deliberately unwired, which `auditWiring` (wire-or-except every verify script) and `verify:script-classes` (ledger + ADR-0004 rows for every on-disk script) refuse; the PRD's own §11 would redden `check --wiring` and `verify:workflow`. Fix paths (`verify-workflow.mjs`, `script-classes.json`, ADR-0004) all inside PRD-036's live Phase-4 lease — declare and serialize. Pack-drift fallback refuted (copies can regress together). Six FR-8 restatements missed (eighth instance); one live-red DO NOT line. GAINED: Value 3.50 judged CREDIBLE; snapshot Quorum doctrine confirmed at the source; render/lint/caps all green. |
 | 5   | 2026-07-29 | 7.75  | ITERATE | Climbing again. FR-9's topology PASSES the production projection — exact landing shapes on record (CHECKS filename literal, wiringExceptions script-name→justification, repo-class by what-it-READS). One P1: the partial-start instruction is impossible — `gate open` reads the whole declared surface, live probe found four 036 overlaps, the entire PRD serializes behind 036's lease release (`conflict-check-independent-of-override` to disposition). Two P2s: four fresh restatements from the previous edit's own text (sweep held on mandated sites, not on new text — the remedy is a SEPARATE post-edit sweep pass), and the CHECKS literal + §6 criterion so Phase 4 does not learn the filename from a red gate. Value still credible; all probes green. |
+| 6   | 2026-07-29 | 7.90  | ITERATE | One P2 from the PASS band: the whole-PRD serialization rule landed in FR-9 + Memory Inputs but "serializes on this one file" survived in FR-7's Targets note and the Conflict Surface — the ninth restatement instance, and factually false (live probe: four shared paths). Everything else CLOSED: three of four iteration-5 remedies verified landed exactly; 12/13 sweep families clean; "none in code" Targets explicitly accepted for verified-transition FRs; §11 cap lines confirmed; Value 3.50 credible third round (`problem: null` from the exported scorer); all probes green. Correction ordered: the total rule in both sites plus explicit whole-PRD-hold language in §7 Prerequisites, §8's FR-9 bullet and DO NOT. |
 
 ---
 
 ## Verdict
 
-**ITERATE — 7.75/10, iteration 5, scored independently by Codex.**
+**ITERATE — 7.90/10, iteration 6, scored independently by Codex.**
 
-Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75. The design is done: activation, rollback,
-probes, semantics and now the full meta-gate topology all hold against production
-logic, with the exact landing shapes written down. What keeps this out of the PASS
-band is process residue, not design: one impossible sequencing sentence (the lease
-gate takes the whole surface — serialize the entire PRD behind 036), four restatements
-the previous edit itself minted, one missing filename literal, one missing §6 row, one
-missing disposition. Every remedy is a named line edit. The recurring lesson is now
-structural: the post-edit sweep must be its own pass, performed AFTER the corrections
-and never claimed by them.
+Trajectory 4.00 → 5.20 → 7.33 → 6.95 → 7.75 → 7.90. One phrase separates this from the
+PASS band: "serializes on this one file", surviving in exactly two sites after the
+rule it contradicts landed correctly in FR-9 — the ninth restatement instance in this
+chain, and factually false against the four-path probe. The correction is two line
+edits plus three explicit reinforcements (§7, §8, DO NOT), then re-score. Nothing else
+remains: the sweep table is clean in 12 of 13 families, every probe is green, the
+value header held credible for a third consecutive independent round, and the scorer
+accepted the verified-transition Targets form on the record.
