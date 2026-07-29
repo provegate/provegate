@@ -51,9 +51,13 @@ if (process.argv.includes('--assert-ci-order')) {
     console.error('verify:prompts: FAIL — the hygiene job has no verify:workflow step');
     process.exit(1);
   }
-  if (buildAt === -1 || buildAt > aggregateAt) {
+  // STRICTLY earlier: equal indexes mean both commands share one run: line,
+  // where line order proves nothing about execution order (`run: pnpm
+  // verify:workflow; pnpm --filter provegate build` would pass a >= check
+  // while running the aggregate first).
+  if (buildAt === -1 || buildAt >= aggregateAt) {
     console.error(
-      'verify:prompts: FAIL — the hygiene job must run `pnpm --filter provegate build` before its verify:workflow aggregate step (this bundle executes the built CLI)',
+      'verify:prompts: FAIL — the hygiene job must run `pnpm --filter provegate build` as its own step strictly before the verify:workflow aggregate step (this bundle executes the built CLI)',
     );
     process.exit(1);
   }

@@ -904,6 +904,30 @@ function lstatExists(path: string): boolean {
 }
 
 /**
+ * The deepest component on `path`'s chain that lstat SEES but realpath cannot
+ * resolve — a dangling symlink at the leaf OR anywhere among the parents — or
+ * null when the missing tail is genuine absence. A leaf-only lstat check
+ * missed the dangling-parent case: lstat follows parent links, so a dangling
+ * parent makes the leaf read as absent while a link still sits on the chain.
+ */
+function danglingOnChain(path: string): string | null {
+  let current = path;
+  for (;;) {
+    if (lstatExists(current)) {
+      try {
+        realpathSync(current);
+        return null; // resolvable from here up — nothing dangling
+      } catch {
+        return current;
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+/**
  * The reconciliation primitive (FR-1). Recomputes the generated set —
  * `generatedPaths()` from the INSTALLED package and the CURRENT config, the
  * same pure function the installer uses — and compares bytes on disk. No
@@ -952,12 +976,19 @@ export function reconcilePrompts(
       real = realpathSync(abs);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        // ENOENT from realpath is 'missing' ONLY when nothing sits at the path
-        // and its parents stay contained. Two escapes hide behind this code:
-        // a DANGLING symlink (something IS at the path; its target — possibly
-        // outside — does not exist), and a missing leaf beneath a symlinked
-        // parent that resolves outside. Both fail closed rather than inviting
-        // a reinstall over a link this check cannot vouch for.
+        // ENOENT from realpath is 'missing' ONLY when nothing sits anywhere on
+        // the missing tail and the resolvable ancestors stay contained. Three
+        // escapes hide behind this code: a DANGLING leaf symlink, a DANGLING
+        // parent symlink (lstat follows parents, so the leaf reads absent
+        // while a link still sits on the chain), and a missing leaf beneath a
+        // parent that resolves OUTSIDE. All fail closed rather than inviting
+        // a reinstall over a chain this check cannot vouch for.
+        const dangling = danglingOnChain(abs);
+        if (dangling !== null) {
+          throw new PromptsError('a planned path is an unresolvable symlink', [
+            `${canonical} — a link at ${dangling} cannot be resolved`,
+          ]);
+        }
         const ancestorReal = nearestRealAncestor(abs);
         if (ancestorReal === null) {
           throw new PromptsError('reconcile cannot resolve a planned path', [
@@ -967,11 +998,6 @@ export function reconcilePrompts(
         if (ancestorReal !== rootReal && !ancestorReal.startsWith(rootReal + sep)) {
           throw new PromptsError('a planned path resolves outside the repository', [
             `${canonical} — its nearest existing ancestor resolves to ${ancestorReal}`,
-          ]);
-        }
-        if (lstatExists(abs)) {
-          throw new PromptsError('a planned path is an unresolvable symlink', [
-            `${canonical} — a link sits at the planned path and its destination cannot be resolved`,
           ]);
         }
         findings.push({ path: canonical, kind: 'missing', bannerVersion: null, installedVersion: version });

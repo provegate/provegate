@@ -381,6 +381,17 @@ describe('classification (PRD-034 FR-1)', () => {
     expect(() => reconcilePrompts(config, root, packageDir)).toThrow(/unresolvable symlink/);
   });
 
+  it('containment: a DANGLING parent symlink fails closed — the chain is checked, not only the leaf', () => {
+    const config = storeConfig();
+    const { root } = freshTree(config);
+    // The parent link points at nothing: lstat on any planned child ENOENTs
+    // (lstat follows parents), so a leaf-only check reads this as absence
+    // while a link still sits on the chain.
+    rmSync(join(root, '.provegate/templates'), { recursive: true });
+    symlinkSync(join(root, 'no-such-target'), join(root, '.provegate/templates'));
+    expect(() => reconcilePrompts(config, root, packageDir)).toThrow(/unresolvable symlink/);
+  });
+
   it('containment: a missing leaf beneath an OUTSIDE-pointing parent fails closed — never missing', () => {
     const config = storeConfig();
     const { root } = freshTree(config);
