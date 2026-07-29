@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T12:55:14.232Z",
+  "generatedAt": "2026-07-29T13:21:32.723Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1161,13 +1161,13 @@
         "prd": "_prds/wip/prd-032-prompt-store-dogfood.md",
         "readiness": "_readiness/wip/readiness-032-prompt-store-dogfood.md",
         "tasks": "_tasks/wip/tasks-032-prompt-store-dogfood.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-032-prompt-store-dogfood.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.1,
@@ -1176,9 +1176,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Unknown",
-        "checkedCount": 0,
-        "uncheckedCount": 49,
+        "status": "Code Complete",
+        "checkedCount": 46,
+        "uncheckedCount": 3,
         "operatorHandoffCount": 1
       },
       "summary": {

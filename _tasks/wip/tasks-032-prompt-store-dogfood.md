@@ -257,6 +257,12 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   member; reconciled with the counterpart decision: the packed twin's CHECKS
   array is the ADOPTER bundle and deliberately does NOT gain repo-class members
   (same rule as the 036 close).
+- close-time decision — the probe's dirty-tree refusal fired INSIDE `gate run`
+  (the chain's own state writes dirty the tree mid-run, by design). The refusal
+  is scoped to `.provegate/` — exactly the paths whose masking/clobbering it
+  guards and whose restoration it must prove; tree-wide cleanliness is the
+  chain's own concern, not the probe's. The refusal behavior itself is
+  unchanged and was observed live twice.
 
 ## Progress Log
 

@@ -26,8 +26,15 @@ const r = makeReporter('verify:prompts-mutation');
 
 const TARGET = '.provegate/prompts/phase-3-task-generator.md';
 
+// Scoped to the STORE: the refusal's purpose is never masking or clobbering a
+// real store edit and proving the plant restored — runner-state writes
+// elsewhere in the tree (the gate chain updates its own ledgers mid-run) are
+// not this probe's business (close-time decision, task file Deferrals).
 const gitStatus = () =>
-  execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim();
+  execFileSync('git', ['status', '--porcelain', '--', '.provegate'], {
+    cwd: root,
+    encoding: 'utf8',
+  }).trim();
 
 const reconcile = () => {
   try {
