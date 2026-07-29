@@ -62,6 +62,7 @@
 - [memory index vs detail](learnings/memory-index-vs-detail.md) — INDEX = always-loaded one-liners; detail in files; never store what code already records
 - [gate wire-or-delete](learnings/gate-wire-or-delete.md) — meta-gate: every registered check wired to an executing surface, every on-disk check registered
 - [push is human by omission](learnings/push-is-human-by-omission.md) — give the autonomous runner no push code path at all; enforce by omission, not a block
+- [ci capability omission not token omission](learnings/ci-capability-omission-not-token-omission.md) — id-token:write + persisted checkout creds keep publish/push reachable with no secret; omit per-job capabilities
 
 ## ADRs
 
