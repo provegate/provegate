@@ -278,6 +278,16 @@ above is dated, not standing.
   acceptance entry in the schema PRD-033 enumerated (`authorship` is an enum, not
   free text); this PRD adds no documentation-enforced rule and no free-text field
   beside one.
+- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — its watch covers this
+  PRD file. The five-iteration readiness trajectory did NOT show the record's shape:
+  each round's findings landed in a different layer (derivability, region lifecycle,
+  invocation matrix, residual restatements) and the score climbed monotonically
+  after the figure-set narrowing — the one layer-repeat (underivable figures) was
+  scoped out at iteration 1, which is the record's prescription already applied.
+- reviewed: `state-model-before-mechanism` — its watch covers `_prds/wip/**`. The
+  ground truth here was written and executable from the start (`_state/prds.json`
+  and the committed artifacts); the iterations refined contracts against it rather
+  than specifying into a void. Not the record's failure shape.
 - not-applicable: `push-is-human-by-omission` — nothing here executes git.
 
 ---
