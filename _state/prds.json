@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-29T09:23:48.859Z",
+  "generatedAt": "2026-07-29T09:41:57.950Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1338,21 +1338,21 @@
       "prd": "PRD-037",
       "number": 37,
       "slug": "case-study-self-hosting",
-      "status": "Draft",
-      "cyclePhase": "1 (PRD Generation)",
+      "status": "Ship Verified",
+      "cyclePhase": "7 (Closed)",
       "operatorAcceptance": null,
       "autonomousClose": "operator-gated",
       "artifacts": {
-        "prd": "_prds/wip/prd-037-case-study-self-hosting.md",
-        "readiness": "_readiness/wip/readiness-037-case-study-self-hosting.md",
-        "tasks": "_tasks/wip/tasks-037-case-study-self-hosting.md",
-        "summary": ""
+        "prd": "_prds/completed/prd-037-case-study-self-hosting.md",
+        "readiness": "_readiness/completed/readiness-037-case-study-self-hosting.md",
+        "tasks": "_tasks/completed/tasks-037-case-study-self-hosting.md",
+        "summary": "_docs/completed/summary-037-case-study-self-hosting.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "missing"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.4,
@@ -1361,9 +1361,9 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Not Started",
-        "checkedCount": 0,
-        "uncheckedCount": 30,
+        "status": "Ship Verified",
+        "checkedCount": 30,
+        "uncheckedCount": 0,
         "operatorHandoffCount": 1
       },
       "summary": {

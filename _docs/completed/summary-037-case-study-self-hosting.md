@@ -1,7 +1,7 @@
 # Summary: PRD-037 — Case Study, Part Two: the Tool's Own Ledger
 
 > **PRD**: [prd-037-case-study-self-hosting.md](../../_prds/wip/prd-037-case-study-self-hosting.md)
-> **Status**: Code Complete, pending operator-gated close
+> **Status**: Ship Verified — landed on local main via gate run; push stays the owner call
 > **Class**: feature · **Autonomous Close**: operator-gated
 > **Branch**: `prd-037-case-study-self-hosting` (four commits: 9a7c672, 136c830, d00b977 + close-out)
 > **Date**: 2026-07-29

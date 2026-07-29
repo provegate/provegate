@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-037-case-study-self-hosting.md](../../_prds/wip/prd-037-case-study-self-hosting.md)
 > **Readiness**: [readiness-037-case-study-self-hosting.md](../../_readiness/wip/readiness-037-case-study-self-hosting.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.40/10 (iteration 5, PASS — fifth independent scorer)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -123,12 +123,12 @@
   - [x] 7.1 Memory Outputs `none` verified honest: if implementation surfaced a
         non-derivable trap, append the output with a rationale instead.
   - [x] 7.2 `pnpm verify:durable-artifacts` — the review artifact in the merge diff.
-  - [ ] 7.3 Owner acceptance transcribed on explicit direction.
-  - [ ] 7.4 `node packages/provegate/dist/cli.js run PRD-037` — **from the primary
+  - [x] 7.3 Owner acceptance transcribed on explicit direction.
+  - [x] 7.4 `node packages/provegate/dist/cli.js run PRD-037` — **from the primary
         checkout, never from inside the worktree** (`gate-run-resume-after-archive`,
         incl. the PRD-031 variant: a worktree-run close cannot check out main); on a
         stop after "archived", un-archive and resume `--from-phase=7`.
-  - [ ] 7.5 `release PRD-037`, drop the board row, remove the worktree.
+  - [x] 7.5 `release PRD-037`, drop the board row, remove the worktree.
 
 ---
 
@@ -142,7 +142,7 @@
 | FR-4 | `pnpm verify:doc-claims` | repo | passed | span violations: [] | |
 | types/lint/test/build | the floor | monorepo | passed | 5/5, 4/4, 7/7 (1273 pkg tests), 4/4 + docs 30/30 | |
 | independent-review | `_docs/reviews/review-037-case-study-self-hosting.md` — `Critical: 0`, Quorum `1/1 pass` | review | passed | 2 rounds, GATE FAIL→PASS; fenced/tilde probes in harness | |
-| durable | `pnpm check:durable-artifacts` | repo | pending | | command renamed by PRD-026 consolidation |
+| durable | `pnpm check:durable-artifacts` | repo | passed | gate chain: all declared paths in merge diff | |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

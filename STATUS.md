@@ -11,7 +11,6 @@ long changelogs live in per-PRD summary files (_docs/), not here. -->
 
 | Agent                         | Work item                                                                                                          | Phase         | Started    |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------- | ---------- |
-| Claude Fable 5 (037 session)  | PRD-037 — phases 4-7 on owner Go (worktree `../provegate-prd-037`, lease held)                                     | 4 (Implement) | 2026-07-28 |
 | Claude Fable 5 (Claude Code)  | PRD-031 SHIPPED (2026-07-28, landed via gate run close) — session free                                             | —             | 2026-07-28 |
 | Claude Fable 5 (this session) | PRD-034 prompt-store-reconciliation — phases 4-7 on owner Go; lease held (19 globs); worktree ../provegate-prd-034 | 4 (Implement) | 2026-07-28 |
 

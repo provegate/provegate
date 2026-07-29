@@ -1,13 +1,13 @@
 # PRD-037: Case Study, Part Two — the Tool's Own Ledger
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-07-28
 > **Updated**: 2026-07-28
 > **Author**: orchestrating session, for owner review (Faz E gap named in the 2026-07-28 portfolio review)
 > **Audience**: Implementing Agent
 > **Slug**: `case-study-self-hosting`
-> **Cycle Phase**: 1 (PRD Generation)
+> **Cycle Phase**: 7 (Closed)
 > **PRD Class**: feature
 > **Autonomous Close**: operator-gated
 > **Value**: 3.50 (MF/UI/TL/AR/RM: 4/3/2/5/4)
