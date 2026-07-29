@@ -1408,9 +1408,9 @@ describe('worktree teardown releases its lease (PRD-019 scope deviation)', () =>
     // directory itself survives — it is tracked with a `.gitkeep`, and asserting
     // an empty DIRECTORY would fail for a reason that has nothing to do with
     // leases.
-    expect(readdirSync(join(root, cfg.dirs.locksDir)).filter((n) => n.endsWith('.json'))).toEqual(
-      [],
-    );
+    expect(
+      readdirSync(join(root, cfg.dirs.locksDir)).filter((n) => n.endsWith('.json')),
+    ).toEqual([]);
   });
 
   it('keeps the lease when the checkout did NOT go', async () => {

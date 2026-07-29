@@ -138,11 +138,7 @@ interface ConfigJson {
   exceptions?: unknown[];
 }
 
-function writeConfigJson(
-  root: string,
-  prompts: ConfigJson,
-  extra: Record<string, unknown> = {},
-): void {
+function writeConfigJson(root: string, prompts: ConfigJson, extra: Record<string, unknown> = {}): void {
   writeFileSync(
     join(root, 'workflow.config.json'),
     `${JSON.stringify(
@@ -544,12 +540,7 @@ describe('exception (PRD-034 FR-2)', () => {
 
     const excepted = evaluatePromptReconciliation(findings, {
       exceptions: [
-        {
-          path: victim,
-          reason: 'kept different on purpose',
-          owner: 'owner',
-          expires: '2026-08-01',
-        },
+        { path: victim, reason: 'kept different on purpose', owner: 'owner', expires: '2026-08-01' },
       ],
       todayUtc: '2026-07-29',
     });

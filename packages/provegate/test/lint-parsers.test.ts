@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join,  } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { loadConfig } from '../src/core/config/load.js';
@@ -205,7 +205,7 @@ describe('the wip corpus and the classification pair (PRD-024 FR-2)', () => {
     // that the exception reason is non-empty), so this assertion is the
     // binding: a rename of the artifact root fails here, by name, instead of
     // moving the corpus reads outside the cache key.
-    const turbo = JSON.parse(readFileSync(join(repoRoot, 'turbo.json'), 'utf8')) as {
+    const turbo = JSON.parse(readFileSync(repoPath('turbo.json'), 'utf8')) as {
       tasks: Record<string, { inputs?: string[] }>;
     };
     const inputs = turbo.tasks['test']?.inputs ?? [];

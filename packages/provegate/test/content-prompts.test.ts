@@ -332,9 +332,7 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
       if (source === null) continue;
       expect(addendum, source).toContain(flat(source));
     }
-    expect(addendum).toContain(
-      flat('5 Testing | No memory obligation. Verification is verification.'),
-    );
+    expect(addendum).toContain(flat('5 Testing | No memory obligation. Verification is verification.'));
   });
 
   it('phase 5 carries NO memory instruction — §8 denies it one', () => {
@@ -375,10 +373,9 @@ describe('FR-3 per-file prompt obligations (W3)', () => {
     for (const { file } of ADDENDUM_SOURCE) {
       const constraints = constraintsOf(file);
       const outside = prompt(file).split(constraints).join(' ');
-      expect(
-        MEMORY_VOCABULARY.test(outside),
-        `${file}: memory instruction outside constraints`,
-      ).toBe(false);
+      expect(MEMORY_VOCABULARY.test(outside), `${file}: memory instruction outside constraints`).toBe(
+        false,
+      );
     }
   });
 
@@ -606,31 +603,19 @@ describe('the configured exception (PRD-031 FR-2/FR-3)', () => {
   });
 
   it('the human-gated fragment has no exception and no self-assessment; the autonomous one reproduces the snapshot text', () => {
-    const gated = readFileSync(
-      join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md'),
-      'utf8',
-    );
-    const auto = readFileSync(
-      join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'),
-      'utf8',
-    );
+    const gated = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.human-gated.md'), 'utf8');
+    const auto = readFileSync(join(pkgRoot, 'prompts/_fragments/AUTONOMY_MODE.autonomous.md'), 'utf8');
     expect(gated).toContain('This STOP has no exception');
     expect(gated).not.toContain('Exception:');
     // FR-3: the snapshot's sentence, parenthetical included, byte-anchored to
     // the snapshot itself so an abridgement cannot recur unnoticed
-    const snapshot = readFileSync(
-      join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'),
-      'utf8',
-    ).replace(/\s+/g, ' ');
-    const sentence =
-      "Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file's **Deferrals & Decisions** before proceeding.";
+    const snapshot = readFileSync(join(SNAPSHOT_ROOT, 'prompts/phase-3-task-generator.md'), 'utf8').replace(/\s+/g, ' ');
+    const sentence = 'Exception: in autonomous-execution mode (single-session test runs, agent-led sweeps), document the skipped approval gate in the task file\'s **Deferrals & Decisions** before proceeding.';
     expect(snapshot).toContain(sentence);
     expect(auto.replace(/\s+/g, ' ')).toContain(sentence);
     // both fragments state the configured-statement rule
     for (const f of [gated, auto]) {
-      expect(f.replace(/\s+/g, ' ')).toContain(
-        'an agent never assesses which mode its own session is in',
-      );
+      expect(f.replace(/\s+/g, ' ')).toContain('an agent never assesses which mode its own session is in');
     }
   });
 });
@@ -649,10 +634,7 @@ describe('the proceed rule (PRD-031 FR-4/FR-5)', () => {
 
   it('both bootstrap copies carry the proceed rule IDENTICALLY — a pattern in each would be satisfied by the template alone', () => {
     const live = readFileSync(repoPath('AGENT_BOOTSTRAP.md'), 'utf8');
-    const tmpl = readFileSync(
-      join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'),
-      'utf8',
-    );
+    const tmpl = readFileSync(join(pkgRoot, 'practices/templates/AGENT_BOOTSTRAP.template.md'), 'utf8');
     const block = (s: string): string => {
       const i = s.indexOf(PROCEED_HEAD);
       expect(i, 'proceed rule missing from a bootstrap copy').toBeGreaterThanOrEqual(0);

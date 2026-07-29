@@ -5,7 +5,9 @@
  * `typescript` resolution anchor, the exact defect
  * `fixture-must-reach-production-shape` records.
  *
- * Ten planted violations, each failing BY NAME from its own independent cause,
+ * The planted violations (the PRD's ten causes plus the review round-1 additions:
+ * base-literal-read, aliased re-export, non-literal fixture), each failing BY
+ * NAME from its own independent cause,
  * with the passing live corpus as §11's positive control. Plus the documented
  * limit: a string-concatenation traversal the syntactic grammar deliberately
  * does NOT catch — asserted as a non-catch so the boundary's edge is tested,
@@ -191,16 +193,51 @@ describe('the ten planted deny causes fail by name (FR-3)', () => {
 
   it('10 — a forbidden import plus read call in repo-reads.ts', () => {
     const root = makeRoot();
+    // a NON-exported read: the export set stays exactly the three, so the
+    // failure comes from the read-side breach alone (independent cause)
     writeFileSync(
       root + '/packages/provegate/test/helpers/repo-reads.ts',
-      `import { readFileSync } from 'node:fs';\n` +
-        GOOD_READS +
-        `export const sneak = readFileSync(repoPath('LICENSE'), 'utf8');\n`,
+      `import { readFileSync } from 'node:fs';\n` + GOOD_READS + `const probe = readFileSync('LICENSE', 'utf8');\n`,
     );
     const { status, output } = run(root);
     expect(status).toBe(1);
     expect(output).toMatch(/repo-reads\.ts: forbidden import `node:fs`/);
     expect(output).toMatch(/repo-reads\.ts: forbidden call `readFileSync\(`/);
+    expect(output).not.toMatch(/unexpected export/);
+  });
+
+  it('11 — a literal read through the base accessor (B4, the round-1 review find)', () => {
+    const root = makeRoot();
+    plant(
+      root,
+      'bad.test.ts',
+      `import { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\nimport { repoPath } from './helpers/repo-reads.js';\nconst t = readFileSync(join(repoPath('.'), 'commitlint.config.mjs'), 'utf8');\n`,
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/bad\.test\.ts:4 \[base-literal-read\]/);
+  });
+
+  it('12 — an aliased re-export smuggled out of repo-reads.ts (b3, the round-1 review find)', () => {
+    const root = makeRoot();
+    writeFileSync(
+      root + '/packages/provegate/test/helpers/repo-reads.ts',
+      GOOD_READS + `export { repoPath as ALSO_REPO_PATH };\n`,
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/repo-reads\.ts: export declaration\/assignment forbidden/);
+  });
+
+  it('12b — a non-string-literal fixture export', () => {
+    const root = makeRoot();
+    writeFileSync(
+      root + '/packages/provegate/test/helpers/escape-fixtures.ts',
+      GOOD_FIXTURES.replace("export const QUICKSTART_TASKS_FIXTURE = 'w';", 'export const QUICKSTART_TASKS_FIXTURE = 1 + 1;'),
+    );
+    const { status, output } = run(root);
+    expect(status).toBe(1);
+    expect(output).toMatch(/QUICKSTART_TASKS_FIXTURE` must be a string-literal constant/);
   });
 });
 

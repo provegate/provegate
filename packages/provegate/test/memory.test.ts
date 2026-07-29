@@ -699,13 +699,7 @@ describe('phase 6 round 21 regressions — the record validator', () => {
 
   it('[R21-9b] a flow mapping is refused rather than read as a scalar', () => {
     const flow = validateRecord(
-      RECORD(BODY, [
-        'name: r',
-        'description: {nested: map}',
-        'type: convention',
-        'scope: workflow',
-        'status: active',
-      ]),
+      RECORD(BODY, ['name: r', 'description: {nested: map}', 'type: convention', 'scope: workflow', 'status: active']),
       'learnings/r.md',
       'r',
     );
@@ -894,19 +888,13 @@ describe('FR-1 — read-only memory doctor', () => {
         'memory.entrypoint.pointer',
         (root) => writeFileSync(join(root, 'CLAUDE.md'), 'no pointer here\n'),
       ],
-      [
-        'memory.verify.script.wired',
-        (root) => rmSync(join(root, 'scripts/verify/verify-brain.mjs')),
-      ],
+      ['memory.verify.script.wired', (root) => rmSync(join(root, 'scripts/verify/verify-brain.mjs'))],
     ];
     for (const [id, breakIt] of cases) {
       const site = install();
       breakIt(site.root, site);
       const report = run(site);
-      expect(
-        check(report, id).some((c) => c.severity === 'fail'),
-        id,
-      ).toBe(true);
+      expect(check(report, id).some((c) => c.severity === 'fail'), id).toBe(true);
       expect(report.code, id).toBe(1);
     }
     // And the two that live in the manifest rather than on disk.
@@ -1116,26 +1104,16 @@ describe('FR-3 — deterministic local recall', () => {
       // would pass without the tie-break existing.
       ['zzz-tie', record('zzz-tie', { description: 'a note about caching behaviour' })],
       ['aaa-tie', record('aaa-tie', { description: 'a note about caching behaviour' })],
-      [
-        'retired',
-        record('retired', {
-          status: 'superseded',
-          superseded: 'watcher',
-          description: 'about caching',
-        }),
-      ],
+      ['retired', record('retired', { status: 'superseded', superseded: 'watcher', description: 'about caching' })],
     ];
     for (const [slug, body] of files) {
       writeFileSync(join(root, `_brain/learnings/${slug}.md`), body);
     }
     writeFileSync(
       join(root, '_brain/INDEX.md'),
-      [
-        '# INDEX',
-        '',
-        ...files.map(([slug]) => `- [${slug}](learnings/${slug}.md) — hook`),
-        '',
-      ].join('\n'),
+      ['# INDEX', '', ...files.map(([slug]) => `- [${slug}](learnings/${slug}.md) — hook`), ''].join(
+        '\n',
+      ),
     );
     const config = deepMerge(DEFAULT_CONFIG, {
       memory: { enabled: true, entrypoints: ['CLAUDE.md'] },

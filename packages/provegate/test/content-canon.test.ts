@@ -30,10 +30,9 @@ function tableWeights(markdown: string): [string, number][] {
 }
 
 describe('the weight tables are projections of DEFAULT_CONFIG (FR-9, FR-10)', () => {
-  const expected = DEFAULT_CONFIG.valueScoring.axes.map((axis): [string, number] => [
-    axis,
-    DEFAULT_CONFIG.valueScoring.weights[axis]!,
-  ]);
+  const expected = DEFAULT_CONFIG.valueScoring.axes.map(
+    (axis): [string, number] => [axis, DEFAULT_CONFIG.valueScoring.weights[axis]!],
+  );
 
   it('the root AGENT_BOOTSTRAP triage table equals the configured axes, in order', () => {
     const rows = tableWeights(read(join(repoRoot, 'AGENT_BOOTSTRAP.md')));
@@ -123,7 +122,10 @@ describe('the research pack declares itself frozen (FR-11)', () => {
  * asserted.
  */
 describe('acceptance authorship rule, as shipped (PRD-033)', () => {
-  const shipped = ['METHOD.md', 'practices/templates/AGENT_BOOTSTRAP.template.md'] as const;
+  const shipped = [
+    'METHOD.md',
+    'practices/templates/AGENT_BOOTSTRAP.template.md',
+  ] as const;
 
   // Matched across whitespace, so the assertion is about the CONTENT and not
   // about one line-wrapping of it — a reflowed paragraph is not a rule change.

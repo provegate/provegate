@@ -8,7 +8,6 @@ import { repoPath } from './helpers/repo-reads.js';
 
 const run = promisify(execFile);
 const pkgDir = fileURLToPath(new URL('..', import.meta.url));
-const repoRoot = repoPath('.');
 
 /** FR-3/FR-4: the tarball is the product's first artifact — its contents are a
  * tested invariant, not a hope. The invariant is an EXPLICIT manifest
@@ -87,7 +86,7 @@ describe('pack audit (FR-3)', () => {
 
   it('package LICENSE is byte-identical to the root LICENSE (anti-drift, W1)', () => {
     const pkg = readFileSync(join(pkgDir, 'LICENSE'), 'utf8');
-    const root = readFileSync(join(repoRoot, 'LICENSE'), 'utf8');
+    const root = readFileSync(repoPath('LICENSE'), 'utf8');
     expect(pkg).toBe(root);
     expect(pkg).toContain('ProveGate contributors');
   });

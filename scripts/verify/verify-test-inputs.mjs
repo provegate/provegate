@@ -126,6 +126,12 @@ files.sort();
 const repoPathArgs = [];
 let violations = 0;
 
+// Read APIs whose path argument B4 inspects (the reviewed accident shape).
+const READ_APIS = new Set([
+  'readFileSync', 'readdirSync', 'existsSync', 'statSync', 'lstatSync',
+  'cpSync', 'copyFileSync', 'openSync', 'createReadStream',
+]);
+
 for (const file of files) {
   const rel = relative(TEST_DIR, file).replaceAll('\\', '/');
   const exempt = EXEMPT.has(rel);
@@ -141,6 +147,36 @@ for (const file of files) {
     c.arguments.filter(
       (a) => ts.isStringLiteral(a) && (a.text === '..' || a.text.startsWith('../')),
     ).length;
+  // B4 support: identifiers bound to the base accessor repoPath('.') in this file.
+  const baseNames = new Set();
+  const isBaseCall = (n) =>
+    ts.isCallExpression(n) &&
+    n.expression.getText(sf) === 'repoPath' &&
+    n.arguments.length === 1 &&
+    ts.isStringLiteral(n.arguments[0]) &&
+    n.arguments[0].text === '.';
+  (function collectBases(n) {
+    if (ts.isVariableDeclaration(n) && n.initializer && isBaseCall(n.initializer))
+      baseNames.add(n.name.getText(sf));
+    ts.forEachChild(n, collectBases);
+  })(sf);
+  const referencesBase = (n) => {
+    if (ts.isIdentifier(n) && baseNames.has(n.getText(sf))) return true;
+    if (isBaseCall(n)) return true;
+    let found = false;
+    ts.forEachChild(n, (c) => {
+      if (!found && referencesBase(c)) found = true;
+    });
+    return found;
+  };
+  const containsPathLiteral = (n) => {
+    if (ts.isStringLiteral(n) && n.text.length > 0 && n.text !== '.') return true;
+    let found = false;
+    ts.forEachChild(n, (c) => {
+      if (!found && containsPathLiteral(c)) found = true;
+    });
+    return found;
+  };
   const scanText = (n, t) => {
     if (MULTI.test(t)) flag(n, 'multi-parent', JSON.stringify(t).slice(0, 80));
   };
@@ -159,6 +195,17 @@ for (const file of files) {
           flag(n, 'nested-dirname', 'dirname(dirname(…))');
       }
       if (parentArgs(n) >= 2) flag(n, 'multi-parent-args-call', `${et}(… ≥2 parent args)`);
+      // B4 — a read API whose path expression composes the BASE with a string
+      // literal evades the usage ledger (the reviewed accident shape:
+      // readFileSync(join(repoPath('.'), 'file'))). Name the leaf with a
+      // literal repoPath('file') instead. Pure-dynamic base reads (a walk's
+      // variable) stay legal: they are covered at the glob level by design.
+      const bare = et.includes('.') ? et.slice(et.lastIndexOf('.') + 1) : et;
+      if (READ_APIS.has(bare) && n.arguments.length > 0) {
+        const pathArg = n.arguments[0];
+        if (referencesBase(pathArg) && containsPathLiteral(pathArg))
+          flag(n, 'base-literal-read', `${et}(…repoPath('.')… + a string literal) — name the leaf with repoPath('<literal>')`);
+      }
       if (et === 'repoPath') {
         const first = n.arguments[0];
         if (first !== undefined && ts.isStringLiteral(first))
@@ -237,6 +284,10 @@ let ledgerGlobs = null;
         n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
       )
         exported.push(n.name?.getText(sf) ?? '(anonymous)');
+      if (ts.isExportDeclaration(n) || ts.isExportAssignment(n))
+        r.fail(
+          `${HELPER_READS}: export declaration/assignment forbidden — only the three named declaration exports`,
+        );
       ts.forEachChild(n, visit);
     })(sf);
     for (const imp of imports)
@@ -269,7 +320,21 @@ let ledgerGlobs = null;
         ts.isVariableStatement(n) &&
         n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
       )
-        for (const d of n.declarationList.declarations) exported.push(d.name.getText(sf));
+        for (const d of n.declarationList.declarations) {
+          exported.push(d.name.getText(sf));
+          const init = d.initializer;
+          if (
+            init === undefined ||
+            !(ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init))
+          )
+            r.fail(
+              `${HELPER_FIXTURES}: export \`${d.name.getText(sf)}\` must be a string-literal constant`,
+            );
+        }
+      if (ts.isExportDeclaration(n) || ts.isExportAssignment(n))
+        r.fail(
+          `${HELPER_FIXTURES}: export declaration/assignment forbidden — only the four named constants`,
+        );
       ts.forEachChild(n, visit);
     })(sf);
     const extra = exported.filter((e) => !FIXTURE_EXPORTS.includes(e));

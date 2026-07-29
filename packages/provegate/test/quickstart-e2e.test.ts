@@ -9,14 +9,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  mkdtempSync,
-  writeFileSync,
-  readFileSync,
-  rmSync,
-  mkdirSync,
-  chmodSync,
-  existsSync,
-  readdirSync,
+  mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync, chmodSync,
+  existsSync, readdirSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -52,9 +46,7 @@ export function extractScenario(doc: string): Extraction {
   const startIdx = starts[0];
   const endIdx = ends[0];
   if (starts.length !== 1 || ends.length !== 1 || startIdx === undefined || endIdx === undefined) {
-    throw new Error(
-      `qs:scenario — exactly one region required (found ${starts.length} start, ${ends.length} end)`,
-    );
+    throw new Error(`qs:scenario — exactly one region required (found ${starts.length} start, ${ends.length} end)`);
   }
   if (endIdx < startIdx) throw new Error('qs:scenario — end precedes start');
   const lines = doc.split('\n');
@@ -70,9 +62,7 @@ export function extractScenario(doc: string): Extraction {
       let j = i + 1;
       while (j < endIdx && (lines[j] ?? '').trim() === '') j++;
       if (!/^```sh\s*$/.test(lines[j] ?? '')) {
-        throw new Error(
-          `qs:skip — marker must be immediately followed by a \`\`\`sh fence (line ${i + 1})`,
-        );
+        throw new Error(`qs:skip — marker must be immediately followed by a \`\`\`sh fence (line ${i + 1})`);
       }
       pendingSkip = true;
       i++;
@@ -100,9 +90,7 @@ export function extractScenario(doc: string): Extraction {
             joined = '';
           }
           if (joined !== '') {
-            throw new Error(
-              `unterminated backslash continuation in the fence closing at line ${close + 1}`,
-            );
+            throw new Error(`unterminated backslash continuation in the fence closing at line ${close + 1}`);
           }
         }
       } else if (lang === 'text' || lang === 'json') {
@@ -192,17 +180,7 @@ function childEnv(): NodeJS.ProcessEnv {
     if (k.startsWith('GIT_CONFIG')) continue; // COUNT, KEY_n, VALUE_n, PARAMETERS
     if (k.startsWith('PROVEGATE_')) continue; // runner sentinels
     if (/^npm_config_/i.test(k) || /^NPM_CONFIG_/.test(k)) continue; // registry/cache/prefix overrides
-    if (
-      [
-        'HOME',
-        'XDG_CONFIG_HOME',
-        'XDG_DATA_HOME',
-        'XDG_CACHE_HOME',
-        'XDG_STATE_HOME',
-        'TMPDIR',
-      ].includes(k)
-    )
-      continue;
+    if (['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'TMPDIR'].includes(k)) continue;
     env[k] = v;
   }
   const home = join(scratchRoot, 'home');
@@ -218,10 +196,7 @@ function childEnv(): NodeJS.ProcessEnv {
   // unreachable registry and a scratch cache via the child's own .npmrc
   const npmrc = join(home, '.npmrc');
   if (!existsSync(npmrc)) {
-    writeFileSync(
-      npmrc,
-      `registry=http://127.0.0.1:9\ncache=${join(scratchRoot, 'npm-cache')}\nupdate-notifier=false\naudit=false\nfund=false\n`,
-    );
+    writeFileSync(npmrc, `registry=http://127.0.0.1:9\ncache=${join(scratchRoot, 'npm-cache')}\nupdate-notifier=false\naudit=false\nfund=false\n`);
   }
   env.npm_config_userconfig = npmrc;
   env.GIT_CONFIG_GLOBAL = '/dev/null';
@@ -231,10 +206,9 @@ function childEnv(): NodeJS.ProcessEnv {
 }
 
 function sh(repo: string, command: string, opts: { expectFail?: boolean } = {}) {
-  const mapped =
-    command === 'npm install -D provegate'
-      ? `npm install -D ${JSON.stringify(tarballPath)} --no-audit --no-fund --registry http://127.0.0.1:9`
-      : command;
+  const mapped = command === 'npm install -D provegate'
+    ? `npm install -D ${JSON.stringify(tarballPath)} --no-audit --no-fund --registry http://127.0.0.1:9`
+    : command;
   const r = spawnSync('/bin/sh', ['-c', mapped], {
     cwd: repo,
     encoding: 'utf8',
@@ -260,10 +234,7 @@ function seedPrd(repo: string) {
   const p = join(repo, '_prds/wip/prd-001-fix-login-timeout.md');
   let s = readFileSync(p, 'utf8');
   s = s.replaceAll('`{{CMD_TEST_SCOPED}}`', '`node -e "process.exit(0)"`');
-  s = s.replace(
-    '- `{{CMD_CHECK_TYPES}}` — zero errors',
-    '- `node -e "process.exit(0)"` — placeholder floor',
-  );
+  s = s.replace('- `{{CMD_CHECK_TYPES}}` — zero errors', '- `node -e "process.exit(0)"` — placeholder floor');
   s = s.replace('- `{{CMD_LINT}}` — zero warnings', '');
   s = s.replace('- `{{CMD_TEST}}` — added tests pass; existing tests unchanged', '');
   s = s.replace('> **Autonomous Close**: operator-gated', '> **Autonomous Close**: eligible');
@@ -277,9 +248,7 @@ function seedTasks(repo: string) {
 function seedReview(repo: string, sha: string) {
   // [H] the review gate validates six metadata fields; a symbolic Base SHA is
   // refused (measured stop (b)) — the REAL head sha goes in.
-  writeFileSync(
-    join(repo, '_docs/reviews/review-001-fix-login-timeout.md'),
-    `# Independent Review: PRD-001 — Fix Login Timeout
+  writeFileSync(join(repo, '_docs/reviews/review-001-fix-login-timeout.md'), `# Independent Review: PRD-001 — Fix Login Timeout
 
 > **PRD:** PRD-001
 > **Verdict:** pass
@@ -293,8 +262,7 @@ function seedReview(repo: string, sha: string) {
 ## Summary
 
 Scratch harness review artifact.
-`,
-  );
+`);
 }
 function gitCommitAll(repo: string, msg: string) {
   sh(repo, 'git add -A');
@@ -323,13 +291,11 @@ beforeAll(() => {
   // a current dist; an ad-hoc run with no dist at all still self-heals.
   if (!existsSync(join(PKG_DIR, 'dist', 'cli.js'))) {
     execFileSync('pnpm', ['--filter', 'provegate', 'build'], {
-      cwd: repoPath('.'),
-      stdio: 'pipe',
+      cwd: repoPath('.'), stdio: 'pipe',
     });
   }
   execFileSync('npm', ['pack', '--pack-destination', scratchRoot], {
-    cwd: PKG_DIR,
-    stdio: 'pipe',
+    cwd: PKG_DIR, stdio: 'pipe',
   });
   const tgz = readdirSync(scratchRoot).find((f) => f.endsWith('.tgz'));
   if (!tgz) throw new Error('npm pack produced no tarball');
@@ -417,28 +383,16 @@ describe.skipIf(!IS_POSIX)('quickstart sequence (hermetic, single-pass)', () => 
 describe.skipIf(!IS_POSIX)('the three measured chain stops, pinned', () => {
   it('(a) omitted tasks file stops phase 6 with the exact reason', () => {
     const repo = setupScratchRepo();
-    for (const cmd of [
-      'npm install -D provegate',
-      'npx gate init',
-      'npx gate new fix-login-timeout --class=hotfix',
-    ])
-      sh(repo, cmd);
+    for (const cmd of ['npm install -D provegate', 'npx gate init', 'npx gate new fix-login-timeout --class=hotfix']) sh(repo, cmd);
     seedPrd(repo);
     sh(repo, 'npx gate check PRD-001');
     const r = sh(repo, 'npx gate run PRD-001', { expectFail: true });
-    expect(r.stdout + r.stderr).toContain(
-      'PRD-001: no tasks file — independent-review ledger missing',
-    );
+    expect(r.stdout + r.stderr).toContain('PRD-001: no tasks file — independent-review ledger missing');
   }, 600_000);
 
   it('(b) the planted literal `main` in Base SHA is refused with the exact reason', () => {
     const repo = setupScratchRepo();
-    for (const cmd of [
-      'npm install -D provegate',
-      'npx gate init',
-      'npx gate new fix-login-timeout --class=hotfix',
-    ])
-      sh(repo, cmd);
+    for (const cmd of ['npm install -D provegate', 'npx gate init', 'npx gate new fix-login-timeout --class=hotfix']) sh(repo, cmd);
     seedPrd(repo);
     sh(repo, 'npx gate check PRD-001');
     seedTasks(repo);
@@ -449,12 +403,7 @@ describe.skipIf(!IS_POSIX)('the three measured chain stops, pinned', () => {
 
   it('(c) the close from the base checkout is refused with the exact reason', () => {
     const repo = setupScratchRepo();
-    for (const cmd of [
-      'npm install -D provegate',
-      'npx gate init',
-      'npx gate new fix-login-timeout --class=hotfix',
-    ])
-      sh(repo, cmd);
+    for (const cmd of ['npm install -D provegate', 'npx gate init', 'npx gate new fix-login-timeout --class=hotfix']) sh(repo, cmd);
     seedPrd(repo);
     sh(repo, 'npx gate check PRD-001');
     seedTasks(repo);
@@ -462,9 +411,7 @@ describe.skipIf(!IS_POSIX)('the three measured chain stops, pinned', () => {
     seedReview(repo, sh(repo, 'git rev-parse HEAD').stdout.trim());
     gitCommitAll(repo, 'docs: review');
     const r = sh(repo, 'npx gate run --from-phase=merge PRD-001', { expectFail: true });
-    expect(r.stdout + r.stderr).toContain(
-      "current branch is 'main' — run from the feature branch, not the base checkout",
-    );
+    expect(r.stdout + r.stderr).toContain("current branch is 'main' — run from the feature branch, not the base checkout");
   }, 600_000);
 });
 
