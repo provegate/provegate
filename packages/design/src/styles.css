@@ -7,3 +7,6 @@
 @import url("./tokens/typography.css");
 @import url("./tokens/spacing.css");
 @import url("./tokens/effects.css");
+/* One base layer, not a token file: shared element styling every consumer
+   wants identical (scrollbars). Anything page-specific stays in the app. */
+@import url("./scrollbars.css");

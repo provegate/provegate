@@ -1,0 +1,34 @@
+/* Scrollbars: thin, invisible track, thumb from the border tokens so both
+   themes stay tuned without a hardcoded colour. `scrollbar-color` inherits,
+   so terminal surfaces (always dark, whatever the theme — colour law) re-pin
+   the thumb to the term palette. Chromium 121+/Firefox take the standard
+   properties; older Safari falls back to the -webkit pseudo-elements. */
+* {
+  scrollbar-width: thin;
+}
+html {
+  scrollbar-color: var(--pg-border-strong) transparent;
+}
+.pg-codeblock,
+.pg-handoff {
+  scrollbar-color: var(--pg-term-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pg-border-strong);
+  border-radius: var(--pg-radius-pill);
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.pg-codeblock ::-webkit-scrollbar-thumb,
+.pg-codeblock::-webkit-scrollbar-thumb,
+.pg-handoff::-webkit-scrollbar-thumb {
+  background: var(--pg-term-border);
+}
