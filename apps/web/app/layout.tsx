@@ -6,7 +6,7 @@ import './globals.css';
 import sans400 from '@provegate/design/assets/fonts/ibm-plex-sans-latin-400-normal.woff2';
 import sans700 from '@provegate/design/assets/fonts/ibm-plex-sans-latin-700-normal.woff2';
 import mono400 from '@provegate/design/assets/fonts/ibm-plex-mono-latin-400-normal.woff2';
-import { Analytics } from './analytics';
+import { Analytics, VercelAnalytics } from './analytics';
 import { PRODUCT_NAME, SITE_DESCRIPTION as description, SITE_TITLE, SITE_URL } from './sections/content';
 
 // The three above-the-fold faces: body prose (sans 400), the hero display
@@ -58,6 +58,7 @@ export default function RootLayout({ children }: { children: ReactNode }): React
       <body>
         {children}
         <Analytics />
+        <VercelAnalytics />
       </body>
     </html>
   );
