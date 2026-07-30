@@ -21,6 +21,32 @@ body {
   overflow-x: hidden;
 }
 
+/* The nav is sticky (~52px tall), so anchor targets need an offset or their
+   headings land underneath it. Applied to every [id] — only scroll-to uses it. */
+[id] {
+  scroll-margin-top: 72px;
+}
+
+/* Skip link: first tab stop, invisible until focused, then a small surface
+   card pinned under the top-left corner, above the sticky nav (z-index 20). */
+.pg-skip {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 30;
+  padding: 10px 16px;
+  background: var(--pg-surface);
+  color: var(--pg-text);
+  border: 1px solid var(--pg-border-strong);
+  border-radius: var(--pg-radius-md);
+  font-family: var(--pg-font-mono);
+  font-size: var(--pg-text-sm);
+  transform: translateY(-200%);
+}
+.pg-skip:focus-visible {
+  transform: none;
+}
+
 a {
   color: var(--pg-link);
   text-decoration: none;
@@ -99,6 +125,41 @@ a:hover {
 
 ::selection {
   background: color-mix(in srgb, var(--pg-human) 30%, transparent);
+}
+
+/* Scrollbars: thin, invisible track, thumb from the border tokens so both
+   themes stay tuned without a hardcoded colour. `scrollbar-color` inherits,
+   so terminal surfaces (always dark, whatever the theme — colour law) re-pin
+   the thumb to the term palette. Chromium 121+/Firefox take the standard
+   properties; older Safari falls back to the -webkit pseudo-elements. */
+* {
+  scrollbar-width: thin;
+}
+html {
+  scrollbar-color: var(--pg-border-strong) transparent;
+}
+.pg-codeblock,
+.pg-handoff {
+  scrollbar-color: var(--pg-term-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pg-border-strong);
+  border-radius: var(--pg-radius-pill);
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.pg-codeblock ::-webkit-scrollbar-thumb,
+.pg-codeblock::-webkit-scrollbar-thumb,
+.pg-handoff::-webkit-scrollbar-thumb {
+  background: var(--pg-term-border);
 }
 
 /* Responsive: two-column section grids collapse to one, the primary nav
