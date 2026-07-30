@@ -1,9 +1,16 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
+import type { Metadata } from 'next';
 // Self-hosted IBM Plex + the --pg-* tokens. Imported here (not a font CDN) so
 // the docs share one superfamily with the landing and the CLI; replaces the
 // stock next/font/google Inter, which fetched from Google at build.
 import '@provegate/design/styles.css';
 import './global.css';
+
+// Without a metadataBase, Next leaves og/twitter image URLs relative and
+// social cards break; the docs live on their own subdomain, not the apex.
+export const metadata: Metadata = {
+  metadataBase: new URL('https://docs.provegate.dev'),
+};
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
