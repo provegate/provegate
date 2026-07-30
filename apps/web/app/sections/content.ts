@@ -20,6 +20,9 @@ export const TAGLINE = 'ProveGate (prove + gate): prove it, then let it propagat
 export const PRODUCT_NAME_PARTS = ['Prove', 'Gate'] as const;
 export const PRODUCT_NAME = PRODUCT_NAME_PARTS.join('');
 export const SITE_TITLE = `${PRODUCT_NAME} — prove it, then let it propagate.`;
+export const SITE_URL = 'https://provegate.dev';
+export const SITE_DESCRIPTION =
+  "Your coding agent's “done” is not evidence. Seven phases where every autonomous boundary is a machine-checkable gate — a verification command's exit code or an independent cross-model reviewer's structured verdict — and nothing pushes to a remote without a human. MIT, agent-agnostic, zero dependencies.";
 
 /** The FR-6 joining term: the hero HandoffCard wrapper class. The DOM half
  * (landing.test) and the stylesheet half (a11y.test) both read THIS constant,

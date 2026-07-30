@@ -6,7 +6,8 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["NEXT_PUBLIC_GA_ID", "VERCEL"]
     },
     "check-types": {
       "dependsOn": ["^build"]
