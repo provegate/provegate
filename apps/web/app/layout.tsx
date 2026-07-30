@@ -34,10 +34,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }): React.JSX.Element {
-  // Dark is canonical (design brief §12.1). A tiny inline script mirrors the OS
-  // preference onto data-theme so light is a real, first-class theme too — no
-  // third-party request, no flash of the wrong theme.
-  const themeScript = `try{var m=matchMedia('(prefers-color-scheme: light)');document.documentElement.dataset.theme=m.matches?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}`;
+  // Dark is canonical (design brief §12.1): every visitor lands dark, matching
+  // the docs site's forced-dark default. A tiny inline script restores a
+  // persisted toggle choice before paint (same semantics as the docs'
+  // next-themes storageKey) — no OS-preference mirror, no third-party request,
+  // no flash of the wrong theme.
+  const themeScript = `try{var t=localStorage.getItem('pg-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'dark';}catch(e){document.documentElement.dataset.theme='dark';}`;
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>

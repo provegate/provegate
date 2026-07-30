@@ -57,8 +57,9 @@ const iconButton: React.CSSProperties = {
 
 /**
  * Sticky nav. The dark/light toggle is real product behaviour: `layout.tsx`
- * seeds `data-theme` from `prefers-color-scheme` before paint, and this button
- * flips the same attribute — dark is canonical, light is first-class.
+ * seeds `data-theme` before paint (persisted choice, else dark), and this
+ * button flips the same attribute and persists it — dark is canonical, light
+ * is first-class.
  *
  * Below 900px the links and CTAs collapse into a hamburger-toggled drawer
  * (`aria-expanded` / `aria-controls`); the CSS lives in `globals.css`.
@@ -115,6 +116,11 @@ export function Nav(): React.JSX.Element {
     setTheme((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
+      try {
+        localStorage.setItem('pg-theme', next);
+      } catch {
+        /* private mode: the choice just doesn't persist */
+      }
       return next;
     });
   };
