@@ -35,3 +35,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
+
+      # `changeset publish` creates the release tag on the runner; without this
+      # step it is lost when the job ends (the 0.3.0 tag had to be recreated by
+      # hand). Still inside the never-push invariant's one carve-out: this
+      # workflow is human-dispatched, and the step moves only tags — no branch.
+      - name: push release tags
+        run: git push origin --tags
