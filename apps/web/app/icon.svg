@@ -1,0 +1,6 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ProveGate">
+<rect width="32" height="32" rx="7" fill="#14130d"></rect>
+<path d="M8 7 L8 25" stroke="#4fd08a" stroke-width="2.8" stroke-linecap="round"></path>
+<path d="M24 7 L24 25" stroke="#4fd08a" stroke-width="2.8" stroke-linecap="round"></path>
+<path d="M11.5 16 L14.8 19.5 L21 11.5" stroke="#4fd08a" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
