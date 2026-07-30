@@ -12,10 +12,9 @@ import { ConsentBanner, useConsent } from '@provegate/design/react/client';
  * the CLI and the method keep zero telemetry — the claim on the pages stays
  * CLI-scoped and true). The permitted hosts are enumerated in
  * scripts/check-static-egress.mjs; a new analytics host must be added there or
- * the egress gate refuses it. docs.provegate.dev is its own origin, so the
- * choice is stored (and asked) separately from the landing site.
+ * the egress gate refuses it.
  */
-export function Analytics(): React.JSX.Element | null {
+export function ConsentedAnalytics(): React.JSX.Element | null {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
   const consent = useConsent();
   if (!gaId) return null;
@@ -37,5 +36,33 @@ gtag('config', '${gaId}');`}
         </>
       ) : null}
     </>
+  );
+}
+
+/** The withdrawal surface (footer): clears the stored choice, which reopens
+ * the banner. Renders nothing when analytics is off — no dangling control. */
+export function CookiePrefsButton(): React.JSX.Element | null {
+  const consent = useConsent();
+  if (!process.env.NEXT_PUBLIC_GA_ID) return null;
+  return (
+    <span>
+      {' · '}
+      <button
+        type="button"
+        onClick={consent.reset}
+        style={{
+          background: 'none',
+          border: 0,
+          padding: 0,
+          font: 'inherit',
+          color: 'inherit',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          textUnderlineOffset: 3,
+        }}
+      >
+        cookies
+      </button>
+    </span>
   );
 }
