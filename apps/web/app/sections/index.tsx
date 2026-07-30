@@ -9,6 +9,7 @@ import {
   VerdictBadge,
 } from '@provegate/design/react';
 import { CopyableCodeBlock } from '@provegate/design/react/client';
+import { CookiePrefsButton } from '../consent';
 import { Reveal } from './reveal';
 import { HeroTerminal } from './hero-terminal';
 import { GateRun } from './gate-run';
@@ -908,7 +909,10 @@ export function Footer(): React.JSX.Element {
           ...mono,
         }}
       >
-        <span>provegate · MIT</span>
+        <span>
+          provegate · MIT
+          <CookiePrefsButton />
+        </span>
         <span style={{ marginLeft: 'auto' }}>{C.TAGLINE}</span>
       </div>
     </footer>
