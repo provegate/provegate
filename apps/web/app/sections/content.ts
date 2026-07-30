@@ -474,15 +474,22 @@ npm run check-types && npm run lint && npm test`,
   },
 ] as const;
 
+/** The docs live on their own subdomain (apps/docs, metadataBase
+ * docs.provegate.dev) — the apex has no /docs route and no rewrite, so every
+ * docs link must be absolute. Each target below is a page that exists in
+ * apps/docs/content/docs/; there is no dedicated manifest/operator/CI page,
+ * so those point at the page that actually covers the topic. */
+const DOCS = 'https://docs.provegate.dev/docs';
+
 export const LINKS = {
   github: 'https://github.com/provegate/provegate',
-  docs: '/docs',
-  spec: '/docs/method',
-  quickstart: '/docs/quickstart',
-  manifest: '/docs/gates-manifest',
-  operator: '/docs/operator-gates',
-  ci: '/docs/ci',
-  changelog: '/docs/changelog',
+  docs: DOCS,
+  spec: `${DOCS}/method`,
+  quickstart: `${DOCS}/quickstart`,
+  manifest: `${DOCS}/cli`,
+  operator: `${DOCS}/method`,
+  ci: `${DOCS}/brownfield`,
+  changelog: 'https://github.com/provegate/provegate/blob/main/packages/provegate/CHANGELOG.md',
   license: 'https://github.com/provegate/provegate/blob/main/LICENSE',
   contributing: 'https://github.com/provegate/provegate/blob/main/CONTRIBUTING.md',
 };

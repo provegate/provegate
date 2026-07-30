@@ -31,7 +31,12 @@ import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
 const ROOTS = ['apps/web/.next', 'apps/docs/.next'].filter((d) => existsSync(d));
-const OWN_HOSTS = new Set(['provegate.dev', 'www.provegate.dev', 'localhost']);
+const OWN_HOSTS = new Set([
+  'provegate.dev',
+  'www.provegate.dev',
+  'docs.provegate.dev',
+  'localhost',
+]);
 
 /** The one sanctioned carve-out (owner decision 2026-07-30): Google Analytics,
  * loaded by `app/analytics.tsx` only when NEXT_PUBLIC_GA_ID is set. Suffix
