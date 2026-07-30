@@ -59,12 +59,15 @@ rendered output contains neither `passed` nor `exit 0`.
 Terminal blocks elsewhere on the page remain real, static, copy-exact CLI output
 as selectable text (the brief's §12.4 decision).
 
-## No third-party requests
+## Third-party requests: enumerated, not zero
 
 `scripts/check-static-egress.mjs` scans the built output and fails on any
-off-origin fetch (a font CDN, analytics, a CSS `url(http…)`). Fonts are
-self-hosted via `@provegate/design`. (Blind spot, stated: a URL assembled at
-runtime is invisible to a static scan.)
+off-origin fetch (a font CDN, a CSS `url(http…)`) outside its one carve-out:
+the Google Analytics hosts (owner decision 2026-07-30), loaded by
+`app/analytics.tsx` only when `NEXT_PUBLIC_GA_ID` is set at build time. The
+CLI and the method still make zero network calls — every "no telemetry" claim
+on the pages is scoped to them. Fonts are self-hosted via `@provegate/design`.
+(Blind spot, stated: a URL assembled at runtime is invisible to a static scan.)
 
 ## Where a section lives
 

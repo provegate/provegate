@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 // stock next/font/google Inter, which fetched from Google at build.
 import '@provegate/design/styles.css';
 import './global.css';
+import { Analytics } from './analytics';
 
 // Without a metadataBase, Next leaves og/twitter image URLs relative and
 // social cards break; the docs live on their own subdomain, not the apex.
@@ -31,6 +32,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
         >
           {children}
         </RootProvider>
+        <Analytics />
       </body>
     </html>
   );

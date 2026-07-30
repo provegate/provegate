@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
  * check-static-egress — fail if a built web app would FETCH a resource from a
- * third-party origin. "No telemetry" is a product principle, so provegate.dev
- * must make zero external requests. Zero dependencies.
+ * third-party origin outside the enumerated analytics carve-out. "No telemetry"
+ * is a product principle about the CLI and the method — they make zero network
+ * calls, and every page claim is scoped to them. The SITE additionally ships
+ * Google Analytics by the owner's decision of 2026-07-30: exactly the hosts in
+ * ALLOWED_ANALYTICS below may be fetched, and anything else is still a
+ * violation. Zero dependencies.
  *
  * It detects the SHAPES that actually fetch — not merely the presence of a URL,
  * because framework bundles legitimately contain doc-URL strings (nextjs.org,
@@ -29,11 +33,24 @@ import { join, extname } from 'node:path';
 const ROOTS = ['apps/web/.next', 'apps/docs/.next'].filter((d) => existsSync(d));
 const OWN_HOSTS = new Set(['provegate.dev', 'www.provegate.dev', 'localhost']);
 
-/** True if `url` (an absolute or protocol-relative URL) is off our origin. */
+/** The one sanctioned carve-out (owner decision 2026-07-30): Google Analytics,
+ * loaded by `app/analytics.tsx` only when NEXT_PUBLIC_GA_ID is set. Suffix
+ * match because GA beacons use regional subdomains. Adding ANY other host here
+ * is a new owner decision, not a maintenance edit. */
+const ALLOWED_ANALYTICS = [
+  /(^|\.)googletagmanager\.com$/i,
+  /(^|\.)google-analytics\.com$/i,
+  /(^|\.)analytics\.google\.com$/i,
+];
+
+/** True if `url` (an absolute or protocol-relative URL) is off our origin and
+ * outside the analytics carve-out. */
 function isExternal(url) {
   const m = /^(?:[a-z][a-z0-9+.-]*:)?\/\/([a-z0-9.-]+)/i.exec(url);
   if (!m) return false;
-  return !OWN_HOSTS.has(m[1].toLowerCase());
+  const host = m[1].toLowerCase();
+  if (OWN_HOSTS.has(host)) return false;
+  return !ALLOWED_ANALYTICS.some((re) => re.test(host));
 }
 
 /** A URL literal (`<scheme>://host`, e.g. https/wss, or protocol-relative `//host`). */
