@@ -22,6 +22,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { repoPath } from './helpers/repo-reads.js';
+import { withSnapshotLock } from './helpers/snapshot-lock.js';
 
 const SCRIPT = repoPath('scripts/verify/verify-test-inputs.mjs');
 const UP = '..' + '/' + '..'; // multi-parent, assembled — the documented limit's shape
@@ -409,29 +410,32 @@ describe('the documented limit — concatenation is outside the syntactic net', 
 });
 
 describe('stale-probe refusal (FR-4 pre-scan)', () => {
-  it('a leftover .probe-* file under the snapshot root fails by name', () => {
+  it('a leftover .probe-* file under the snapshot root fails by name', () =>
     // fixture root is not the real repo root, so the probe itself is skipped;
     // the pre-scan runs only at the real root. Prove the refusal by pointing
     // the script at the REAL root with a planted stale probe — without --no-probe.
-    const snapshotRoot = repoPath('docs/research/provegate-bootstrap/source-snapshot');
-    const stale = join(snapshotRoot, '.probe-stale-fixture.tmp');
-    writeFileSync(stale, 'stale\n');
-    try {
-      const result = (() => {
-        try {
-          const output = execFileSync(process.execPath, [SCRIPT, repoPath('.')], {
-            encoding: 'utf8',
-          });
-          return { status: 0, output };
-        } catch (error) {
-          const e = error as { status?: number; stdout?: string; stderr?: string };
-          return { status: e.status ?? 1, output: `${e.stdout ?? ''}${e.stderr ?? ''}` };
-        }
-      })();
-      expect(result.status).toBe(1);
-      expect(result.output).toMatch(/stale probe file\(s\).*\.probe-stale-fixture\.tmp/);
-    } finally {
-      rmSync(stale, { force: true });
-    }
-  });
+    // Locked: content-prompts digests this same REAL tree from a parallel
+    // worker, and it must never observe the planted probe (or the script's own).
+    withSnapshotLock(() => {
+      const snapshotRoot = repoPath('docs/research/provegate-bootstrap/source-snapshot');
+      const stale = join(snapshotRoot, '.probe-stale-fixture.tmp');
+      writeFileSync(stale, 'stale\n');
+      try {
+        const result = (() => {
+          try {
+            const output = execFileSync(process.execPath, [SCRIPT, repoPath('.')], {
+              encoding: 'utf8',
+            });
+            return { status: 0, output };
+          } catch (error) {
+            const e = error as { status?: number; stdout?: string; stderr?: string };
+            return { status: e.status ?? 1, output: `${e.stdout ?? ''}${e.stderr ?? ''}` };
+          }
+        })();
+        expect(result.status).toBe(1);
+        expect(result.output).toMatch(/stale probe file\(s\).*\.probe-stale-fixture\.tmp/);
+      } finally {
+        rmSync(stale, { force: true });
+      }
+    }));
 });

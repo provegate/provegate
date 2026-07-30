@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { contractView } from '../src/core/memory/artifacts.js';
 import { repoPath } from './helpers/repo-reads.js';
+import { withSnapshotLock } from './helpers/snapshot-lock.js';
 
 /** FR-2..5 + W3: prompt census, calibrated-number spot checks vs the snapshot
  * values, codex-starter drift fix, CLI-mention audit. */
@@ -474,25 +475,29 @@ describe('frozen source snapshot (PRD-017 FR-1)', () => {
       .filter((p) => p !== 'MANIFEST.md' && !p.startsWith('addenda/'))
       .sort();
 
-  it('is byte-unchanged: no file added, removed, or edited', () => {
-    const files = frozenFiles();
-    expect(files).toHaveLength(FROZEN_FILE_COUNT);
-    const digest = createHash('sha256');
-    for (const path of files) {
-      digest
-        .update(path)
-        .update('\0')
-        .update(
-          createHash('sha256')
-            .update(readFileSync(join(snapshot, path)))
-            .digest('hex'),
-        )
-        .update('\n');
-    }
-    // A mismatch means the frozen copy moved. That is not a test to update — it is a
-    // change to revert, or an addendum to write instead.
-    expect(digest.digest('hex')).toBe(FROZEN_DIGEST);
-  });
+  it('is byte-unchanged: no file added, removed, or edited', () =>
+    // Locked: the stale-probe test (verify-test-inputs) plants a probe in this
+    // REAL tree from a parallel worker, and an unlocked walk counts it as a
+    // 75th frozen file.
+    withSnapshotLock(() => {
+      const files = frozenFiles();
+      expect(files).toHaveLength(FROZEN_FILE_COUNT);
+      const digest = createHash('sha256');
+      for (const path of files) {
+        digest
+          .update(path)
+          .update('\0')
+          .update(
+            createHash('sha256')
+              .update(readFileSync(join(snapshot, path)))
+              .digest('hex'),
+          )
+          .update('\n');
+      }
+      // A mismatch means the frozen copy moved. That is not a test to update — it is a
+      // change to revert, or an addendum to write instead.
+      expect(digest.digest('hex')).toBe(FROZEN_DIGEST);
+    }));
 
   it('routes the memory extension through an addendum, not through the frozen bytes', () => {
     expect(existsSync(join(snapshot, ADDENDUM))).toBe(true);

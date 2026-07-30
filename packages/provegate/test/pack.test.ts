@@ -15,7 +15,16 @@ const pkgDir = fileURLToPath(new URL('..', import.meta.url));
  * conscious, reviewed diff of that fixture — whole-directory allowlisting
  * would let a stray file (or a gutted prompts/) pass unseen. */
 
-async function packedFiles(): Promise<string[]> {
+// One `npm pack` per test-file run: two tests consume the same set, the spawn
+// costs seconds under a loaded turbo worker pool, and the 5s default test
+// timeout ate exactly that budget twice in full-suite runs.
+let packedFilesOnce: Promise<string[]> | undefined;
+function packedFiles(): Promise<string[]> {
+  packedFilesOnce ??= packedFilesUncached();
+  return packedFilesOnce;
+}
+
+async function packedFilesUncached(): Promise<string[]> {
   let stdout: string;
   try {
     ({ stdout } = await run('npm', ['pack', '--dry-run', '--json'], { cwd: pkgDir }));
@@ -43,7 +52,7 @@ describe('pack audit (FR-3)', () => {
     const missing = expected.filter((f) => !files.includes(f));
     expect(extra, `NOT in pack-manifest.json (add consciously): ${extra.join(', ')}`).toEqual([]);
     expect(missing, `in pack-manifest.json but not packed: ${missing.join(', ')}`).toEqual([]);
-  });
+  }, 60_000);
 
   it('the manifest itself still carries the load-bearing files', () => {
     // Belt to the manifest's suspenders: a bad manifest edit must not be able
@@ -98,7 +107,7 @@ describe('pack audit (FR-3)', () => {
       expect(content.includes('rayvaz'), `${file} contains "rayvaz"`).toBe(false);
       expect(content.includes('ramazan'), `${file} contains a personal name`).toBe(false);
     }
-  });
+  }, 60_000);
 });
 
 describe('version single-sourcing (FR-4)', () => {
