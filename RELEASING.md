@@ -31,6 +31,14 @@ workflow runs only when the owner dispatches it.
    The pack audit (`test/pack.test.ts`) runs inside `pnpm test` and gates the
    tarball contents: required files, whitelist roots, LICENSE identity, hygiene.
 
+   **If `prompts.enabled` is on** (it is, in this repository): the bump stales
+   every bannered file in the installed prompt store — the banners name the
+   version that rendered them, and `gate check --prompts` (CI's hygiene job)
+   goes red on the mismatch. Reinstall per the check's own remedy: run
+   `gate init --prompts` to print the reinstall unit, delete every path it
+   prints, run it again, then confirm `gate check --prompts` reports every
+   file `current`. The diff must be the banner line only.
+
 3. **Review and land** the version commit through the workflow's gates as usual.
 
 4. **Push** — the owner runs `git push`. (The runner has no code path for this;
@@ -39,10 +47,13 @@ workflow runs only when the owner dispatches it.
 5. **Publish** — the owner dispatches the **Release** workflow (GitHub → Actions →
    Release → Run workflow). It re-verifies everything, then runs
    `changeset publish` with npm provenance (`id-token: write`). Nothing else in CI
-   can publish; `NPM_TOKEN` is used by this workflow only.
+   can publish; `NPM_TOKEN` is used by this workflow only, and it must be an npm
+   **granular or automation** token — a classic publish token dies in CI with
+   `EOTP` under 2FA. Provenance also requires the repository to be public.
 
 6. **Verify**: check the npm listing shows the provenance badge and the new version;
-   `npm view provegate version`.
+   `npm view provegate version`. The workflow pushes the `provegate@X.Y.Z` tag
+   `changeset publish` creates — confirm it arrived with `git ls-remote --tags origin`.
 
 ## Never
 
