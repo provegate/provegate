@@ -21,6 +21,32 @@ body {
   overflow-x: hidden;
 }
 
+/* The nav is sticky (~52px tall), so anchor targets need an offset or their
+   headings land underneath it. Applied to every [id] — only scroll-to uses it. */
+[id] {
+  scroll-margin-top: 72px;
+}
+
+/* Skip link: first tab stop, invisible until focused, then a small surface
+   card pinned under the top-left corner, above the sticky nav (z-index 20). */
+.pg-skip {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 30;
+  padding: 10px 16px;
+  background: var(--pg-surface);
+  color: var(--pg-text);
+  border: 1px solid var(--pg-border-strong);
+  border-radius: var(--pg-radius-md);
+  font-family: var(--pg-font-mono);
+  font-size: var(--pg-text-sm);
+  transform: translateY(-200%);
+}
+.pg-skip:focus-visible {
+  transform: none;
+}
+
 a {
   color: var(--pg-link);
   text-decoration: none;
