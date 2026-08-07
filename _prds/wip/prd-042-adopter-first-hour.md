@@ -116,9 +116,13 @@ so that my first close fails on my code and not on my paperwork.
    | `{{MEMORY_ROOT}}` | `config.memory.root` | config only |
    | `{{DOCS_ROOT}}` | `config.prompts.values.DOCS_ROOT`, else `config.dirs.artifacts.summary.dir` | prompts value wins |
 
-   Those seven rows are the CLOSED set: a token outside the table is never substituted, however
-   plausible its name, and adding a row is a change to this requirement rather than an
-   implementation detail. It is also exactly the set the adopter run found unsubstituted. A source whose
+   This is an **additional** substitution pass that runs after the existing anchored
+   substitutions and changes none of them: the id, class, status, slug and date anchors
+   `substituteAnchor` already writes — including `{{ID_PREFIX}}` — keep their current behaviour
+   and their drift refusals. Within this new pass the seven rows are the CLOSED set: a token
+   outside the table is never substituted, however plausible its name, and adding a row is a
+   change to this requirement rather than an implementation detail. It is also exactly the set
+   the adopter run found unsubstituted. A source whose
    value is absent or an empty string is **not** a substitution: the token stays, and it joins
    the unknown list. Unknown tokens are reported once each, sorted, deduplicated, on stdout as
    a single `[new] unresolved tokens: …` line; the command still exits 0, because an unresolved
@@ -150,7 +154,11 @@ so that my first close fails on my code and not on my paperwork.
    reader wires the floor before running the command that executes it. `verify:quickstart-parity`
    gains a structural order assertion — command-sequence equality alone cannot see prose order,
    and an unasserted ordering claim is the kind of documentation this repository already refuses.
-   The practices `NEXT_STEPS.md` duplicate `## 7` heading is corrected in the same pass.
+   The practices `NEXT_STEPS.md` duplicate `## 7` heading is corrected in the same pass, and the
+   correction is asserted rather than assumed: a test in
+   `packages/provegate/test/content-hygiene.test.ts` named
+   `"NEXT_STEPS numbered headings are unique and sequential"` fails while a duplicate exists and
+   passes once the second `## 7` becomes `## 8`.
    - **Targets:** `packages/provegate/QUICKSTART.md`, `apps/docs/content/docs/quickstart.mdx`,
      `scripts/verify/verify-quickstart-parity.mjs`, `packages/provegate/practices/NEXT_STEPS.md`
 
@@ -220,13 +228,14 @@ the same commit or the check fails, which is the point of it.
   `verify:quickstart-parity`, so a release carrying one and not the other is red before it
   reaches an adopter.
 - **Revert:** reverting this work leaves any file already created by `--tasks`/`--review` in
-  place — they are ordinary artifacts, not managed state, and the older CLI neither reads nor
-  rejects them. A PRD created without its memory sections in a memory-disabled repository stays
+  place. The older `gate new` cannot create them and ignores them; the Phase-6 chain, which is
+  unchanged by the revert, keeps CONSUMING them exactly as it does a hand-written task file —
+  so a revert removes the convenience, never the artifacts or their effect. A PRD created without its memory sections in a memory-disabled repository stays
   valid there; if that repository later enables the contract, `gate check` fails it, which is the
   correct reading and the same thing that happens to any hand-written PRD.
-- **Rollback trigger:** an anchor alternation that admits a template it should have refused.
-  FR-5's four deny tests are the detector; if one goes green after a change, revert rather than
-  widen.
+- **Rollback trigger:** if any of FR-5's four deny tests FAILS — that is, an invalid anchor is
+  admitted — revert rather than widen. A deny test failing is the detector firing, not a test to
+  be updated.
 
 ### Dependencies
 
@@ -245,7 +254,7 @@ the same commit or the check fails, which is the point of it.
 - [ ] `scripts/verify/verify-quickstart-parity.mjs`
 - [ ] `packages/provegate/practices/NEXT_STEPS.md`
 - [ ] `packages/provegate/test/new.test.ts`, `packages/provegate/test/prd-ready.test.ts`,
-      `packages/provegate/test/chain.test.ts`
+      `packages/provegate/test/chain.test.ts`, `packages/provegate/test/content-hygiene.test.ts`
 
 ---
 
@@ -284,9 +293,10 @@ the same commit or the check fails, which is the point of it.
   HAS the sections and a config that disables memory, so absence can only come from the
   omission; a fixture whose template lacked them would prove nothing.
 - applied: `evidence-pattern-satisfied-by-the-template` — FR-1 instantiates templates whose
-  placeholder lines must not satisfy any gate. Binding form: the FR-4 §11 row asserts the
-  phase-6 gate against an instantiated ledger, so a template placeholder cannot stand in for a
-  recorded review.
+  placeholder lines must not satisfy any gate. Binding form: the FR-1 row in §11 named
+  `chain.test.ts` → `"an unedited instantiated tasks template fails the Phase-6 gate"`, which
+  runs the real chain against a file `gate new --tasks` just wrote and requires a FAILURE, so a
+  template placeholder can never stand in for a recorded review.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — FR-5 LOOSENS a drift
   detector, which is the same class in the opposite direction. Binding form: the four deny tests
   (foreign prefix, malformed heading, absent anchor, competing anchors) pin what must still
@@ -325,6 +335,7 @@ the same commit or the check fails, which is the point of it.
 - `packages/provegate/test/new.test.ts`
 - `packages/provegate/test/prd-ready.test.ts`
 - `packages/provegate/test/chain.test.ts`
+- `packages/provegate/test/content-hygiene.test.ts`
 
 ---
 
@@ -347,9 +358,10 @@ the same commit or the check fails, which is the point of it.
 | FR-3 | `pnpm test --filter provegate`  | new.test.ts            | memory sections absent when the contract is off            |
 | FR-3 | `pnpm test --filter provegate`  | prd-ready.test.ts      | absence passes with memory off, fails with memory on       |
 | FR-4 | `pnpm test --filter provegate`  | chain.test.ts          | the stop names the configured path and the ledger row columns |
-| FR-1 | `pnpm test --filter provegate`  | chain.test.ts          | an unedited instantiated tasks template FAILS the real Phase-6 chain |
+| FR-1 | `pnpm test --filter provegate`  | chain.test.ts          | test `"an unedited instantiated tasks template fails the Phase-6 gate"` — real chain, freshly instantiated file, failure required |
 | FR-5 | `pnpm test --filter provegate`  | new.test.ts            | rendered template instantiates; four drift shapes each refuse |
 | FR-6 | `pnpm verify:quickstart-parity` | both quickstart copies | order assertion fails when the recipe follows the close section |
+| FR-6 | `pnpm test --filter provegate`  | content-hygiene.test.ts | test `"NEXT_STEPS numbered headings are unique and sequential"` |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -380,4 +392,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | Initial draft — the hand-work measured in the first adopter run |
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.1 ITERATE): FR-1 destination paths derived from `dirs.artifacts.tasks` / `dirs.reviewsDir` with exact-id resolution, mutually exclusive modes, `wx`-atomic contained writes and three refusals; FR-2 replaced by a closed seven-row token→source table with precedence, empty-value behaviour, sorted unique reporting and exit 0; FR-3 states the removal grammar and the memory-on failure that stops it becoming an escape hatch; FR-4 retargeted to `chain.ts::buildGateChain` (the message lives there, not in `review.ts`) and names the required ledger columns; FR-5 closed to a two-member anchor alternation with four deny tests and wildcards forbidden; FR-6 adds the structural order assertion to the parity verifier; every memory input rewritten to name the test that binds it; RM 4→2, value 3.75→3.45 |
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.7 ITERATE; 6.1→7.7, five items closed): FR-1 states the three-mode argument grammar with every mixed form refused by name; §2's metric reworded to resolvable-with-non-empty-source; `{{DOCS_ROOT}}`'s fallback named as `config.dirs.artifacts.summary.dir`; the seven rows declared the CLOSED set; a chain.test.ts regression added proving an unedited instantiated tasks template FAILS Phase 6, so the convenience cannot hand an author a pre-passed review row; §7 gained Migration & Rollback (legacy mode unchanged, both quickstart copies in one release, revert leaves created artifacts, deny tests as the rollback trigger) |
+| 2026-08-07 | owner  | Iteration 3 (Codex 7.7, flat; five items CLOSED and holding): the three productions written out as a grammar block with six enumerated refusals, each with a test; FR-2 scoped as an ADDITIONAL pass that leaves every existing anchor substitution — `{{ID_PREFIX}}` included — and its drift refusals untouched; the `evidence-pattern-satisfied-by-the-template` disposition repointed from a row that did not exist to the FR-1 row, with the exact test title named; the revert story now distinguishes the older `gate new` (ignores the artifacts) from the Phase-6 chain (keeps consuming them); rollback trigger reworded to a deny test FAILING; the NEXT_STEPS heading fix given a runnable assertion instead of a promise |
 

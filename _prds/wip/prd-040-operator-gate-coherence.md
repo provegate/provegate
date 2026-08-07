@@ -425,7 +425,8 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   `html`/`in-html`), masked (`COMMENT_MASK`), preserved (same-line code spans) — rather than
   describing an idealized Markdown; FR-2 states the one construct it deliberately still reads
   wrong (a pipe inside a code span) as a Non-Goal instead of leaving it unstated; and FR-4
-  refuses everything outside that partition, including the scanner's own `unreliable` signal.
+  states the interim behaviour for everything outside that partition rather than refusing it —
+  the refusals, including the scanner's own `unreliable` signal, belong to PRD-043.
 - applied: `a-rule-that-exempts-itself` — the predicate FR-5 enforces was the author's to
   invent and is not; it moved to the owner as Addendum A3 before any method byte moved (the
   PRD-031 ordering), because a gated party writing its own exemption is not gated.
@@ -544,7 +545,8 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 - DO NOT introduce `any`; use `unknown` + narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
 - DO NOT count a row by its position in the table; read the column by its header name.
-- DO NOT return zero for input the grammar does not cover; refuse and name it.
+- DO NOT add a refusal for input the grammar does not cover — the interim zeros are recorded in
+  §7 and PRD-043 turns them into refusals; adding one here re-merges the split.
 - DO NOT edit the shipped tasks template — method content needs an owner-approved addendum.
 - DO NOT let the harness keep a known-red entry for a defect this work fixes.
 - DO NOT add a suppression flag that lets an author declare `eligible` and keep operator rows.
@@ -569,4 +571,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 6 sweep (Codex 7.6): the scope move left restatements, which is `a-rule-corrected-survives-where-it-is-restated` verbatim — §7 still claimed a `{count, problem}` return shape and listed nesting as excluded. Swept: the counter keeps its signature, every reachable list item counts, and §7 now states the INTERIM behaviour for each input this item does not refuse (no-separator table, unequal-width row, missing Result column, unterminated fence) as a recorded decision rather than an implication. The Phase-2 lint warning moved WHOLE to PRD-043 with the `lintPrd`/`runCheck` contract it needs — splitting one contract across two items half-specifies both — so `prd-ready.ts`, `cli.ts` and `lint-parsers.test.ts` left this item's scope. FR-6 is now the audit's executable continuation gate: `--assert-acknowledged` recomputes a fingerprint and exits 1 on a missing or stale acknowledgement |
 | 2026-08-07 | owner  | Iteration 7 (Codex 7.6, flat after 7.6): stopped arguing about today's behaviour and MEASURED it — the shipped counter executed against fourteen shapes, verbatim output pasted into §7 with the per-shape delta this item makes. Two earlier drafts had described that behaviour from reading the code and were wrong in both directions (an all-empty placeholder row does count 0; the 1 was the header, and a separator-less table counts 2, not 0). FR-2's "exactly as now" claim corrected to the measured deltas |
 | 2026-08-07 | owner  | Cross-item sweep (found while scoring PRD-043, iteration 2): this file still carried present-tense claims that IT plumbs the diagnostic result through `buildState` and that `StateRecord.task` gains a field — both left PRD-040 with the split. §1's history paragraph now marks them as moved, the Migration bullet states that this item changes only WHAT IS COUNTED, and the DO NOT names all four moved surfaces. Third instance of a correction surviving where it was restated |
+| 2026-08-07 | owner  | Second cross-item sweep (found while scoring PRD-043, iteration 3): the `narrow-the-grammar-not-the-parser` disposition still claimed FR-4 refuses `scanDocument().unreliable`, and §12 still ordered a refusal this item no longer performs. Both now point at PRD-043. Fourth instance of the restatement trap in this file — the pattern is that a scope change must sweep dispositions and DO NOTs, not only the FRs |
 

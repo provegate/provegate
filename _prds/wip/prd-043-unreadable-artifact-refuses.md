@@ -96,9 +96,16 @@ so that a formatting mistake cannot silently drop my operator gate.
      is a `problem` (`table at line N has no separator row`) — that shape counts 2 today, per §7
      of PRD-040.
    - a **boundaryless** line has at least one unescaped `|` but no leading-and-trailing pair. It
-     is a `problem` only when the line after it is a separator line ignoring boundary pipes —
-     i.e. someone wrote a GFM table without edge pipes. Otherwise it is prose, and prose
-     containing `|` is never a table.
+     is a `problem` only when the line after it is a separator line ignoring boundary pipes AND
+     the two lines split to the same cell count — the same two-part test the piped case uses.
+     Either half alone is prose: a sentence containing `|` above an unrelated dashed line is not
+     a table, and neither is a `|`-bearing sentence above a differently-shaped one.
+   **Positive controls.** Every refusal fixture is paired with a legal one that differs in
+   exactly the refused property and must produce NO problem: a well-formed boundaryless table
+   (legal GFM) beside the mismatched-count one; a well-formed piped table beside the
+   separator-less one; a ledger with one `Result` column beside the two-column case; a document
+   whose fence closes beside the unterminated one. A refusal set without positive controls
+   cannot show that the predicate discriminates rather than rejects.
    - **cells** split on unescaped pipes by backslash parity; a data row whose cell count differs
      from its block header's is a `problem` naming the line and both counts.
    - a ledger section with no `Result` column, or with two, is a `problem` naming the section.
@@ -111,9 +118,12 @@ so that a formatting mistake cannot silently drop my operator gate.
    `code: 'OPERATOR_HANDOFF_UNREADABLE'` — when `readOperatorHandoff` reports a problem. An
    unchanged source signature is NOT runtime compatibility: a caller that received `0` now
    receives an exception, and the changeset says so, names the export, and gives the migration
-   (call `readOperatorHandoff` and branch on `problem`). The throw is tested through the
-   INSTALLED package export, the way `scripts/adopter-smoke.sh` imports it, not through a
-   source-relative import.
+   (call `readOperatorHandoff` and branch on `problem`). For that migration to be available, the
+   reader and the error class are themselves **package-root exports** — re-exported through
+   `core/state/index.ts` and the package root, and asserted from the installed package, not only
+   from source. A migration that names a symbol an adopter cannot import is not a migration. The
+   throw is tested the same way `scripts/adopter-smoke.sh` imports it, never through a
+   source-relative path.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`,
      `packages/provegate/src/core/state/index.ts`, `scripts/adopter-smoke.sh`
 3. **FR-3**: `buildState` stores both results on `StateRecord.task`: `operatorHandoffCount` and
@@ -151,6 +161,10 @@ so that a formatting mistake cannot silently drop my operator gate.
    recorded in this PRD's Changelog and the authorized actor is the owner. A
    refusal on a historical artifact stops the work by default: it means the corpus contains
    something the reader cannot parse, which is a finding about the reader.
+   The field growth is itself verified: a three-field acknowledgement line must be reported as
+   STALE by the four-field reader, and a four-field line matching the corpus must pass. Both are
+   §11 checks, because a fingerprint whose compatibility behaviour is unasserted is a string, not
+   a gate.
    - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`,
      `_prds/wip/prd-043-unreadable-artifact-refuses.md`
 
@@ -183,7 +197,12 @@ so that a formatting mistake cannot silently drop my operator gate.
   `gate check` runs, **Then** it prints a warning and its exit code is unchanged; **Given** no
   task file, **Then** it says nothing about operator rows.
 - **Given** an unreadable document, **When** the legacy numeric `countOperatorHandoff` is
-  called, **Then** it throws the named diagnostic error rather than returning zero.
+  called from the INSTALLED package export, **Then** it throws the named diagnostic error, whose
+  class and `code` are importable from the same root.
+- **Given** a legal boundaryless GFM table, a legal piped table, a one-`Result`-column ledger and
+  a document whose fence closes, **When** the read runs, **Then** none produces a problem.
+- **Given** an acknowledgement line carrying PRD-040's three fields, **When**
+  `--assert-acknowledged` runs under this item's four-field reader, **Then** it reports STALE.
 
 ---
 
@@ -332,6 +351,7 @@ therefore the only one it may assume.
 | FR-4 | `pnpm test --filter provegate`         | cli-state.test.ts    | problem is fatal, contradiction is a warning, via runCheck |
 | FR-4 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warning only when the task file exists; exit code unchanged |
 | FR-5 | `node scripts/audit-operator-rows.mjs` | repo corpus          | every artifact that would newly refuse is listed           |
+| FR-5 | `node scripts/audit-operator-rows.mjs --assert-acknowledged` | repo corpus | a three-field PRD-040 acknowledgement reports STALE; a matching four-field line passes |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -363,4 +383,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Absorbed PRD-040's Phase-2 contradiction warning: it needs this item's `lintPrd` parameter and `runCheck` plumbing, and one contract split across two items half-specifies both. `PrdReadyReport.warnings` and the print-without-exit-change rule are stated here |
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.4 ITERATE): FR-1 states the five predicates as a closed set (header candidate, separator candidate, block boundary, cell parity by backslash, width equality), aggregates problems in document order, and declares `count` UNUSABLE rather than zero when a problem exists; FR-2 gains a stable exported diagnostic identity (`OperatorHandoffUnreadableError` / `OPERATOR_HANDOFF_UNREADABLE`), states that an unchanged signature is not runtime compatibility, and is tested through the installed export; FR-3 adds `StateRecord` to Targets; FR-4 makes artifact PRESENCE part of the contract (`present` flag, `undefined` when absent) — the missing third state the first draft had; FR-5 converts the PRD-040 dependency into a hard preflight with the new refusal population and the owner as the authorized actor; Memory Outputs `none` replaced by a real learning; RM 3→2, value 3.60→3.45 |
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.2 ITERATE; 6.4→7.2, three items closed): FR-1's "header candidate" predicate matched every data row — corrected to position-based block detection (a piped line whose NEXT line is a matching separator line starts a block; header is a position, not a shape), with "separator line" defined for boundaryless lines too; FR-4's sixth parameter is now a discriminated union (`{present: true, count, problem} | {present: false}`) so a caller cannot read a count on an absent artifact, and where the distinction is built is named; `scripts/adopter-smoke.sh` added to FR-2's Targets, Scope, Conflict Surface and §11 so the installed-export assertion is executable; FR-5 defines the fingerprint's field GROWTH (three fields → four), which correctly stales a PRD-040 acknowledgement that never measured refusals |
+| 2026-08-07 | owner  | Iteration 3 (Codex 7.2→7.7; three more items closed): the boundaryless predicate gained its second half — separator shape AND equal cell count, either alone being prose — and every refusal fixture is now paired with a POSITIVE control differing in exactly the refused property, so the predicate is shown to discriminate rather than to reject; FR-2 makes the reader and the error class package-root exports, because a migration naming a symbol an adopter cannot import is not a migration; FR-5's fingerprint growth is verified in both directions (a three-field acknowledgement reports STALE, a matching four-field line passes) instead of being asserted in prose |
 
