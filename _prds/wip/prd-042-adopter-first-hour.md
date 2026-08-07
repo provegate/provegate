@@ -97,11 +97,36 @@ so that my first close fails on my code and not on my paperwork.
    `<dirs.artifacts.tasks.dir>/<dirs.stateRoles.wip>/<dirs.artifacts.tasks.prefix>-NNN-<slug>.md`
    and `<dirs.reviewsDir>/review-NNN-<slug>.md`, where `NNN` is the id at
    `idPattern.width` and `<slug>` is the PRD's own slug — the same shapes the phase-6 gate
-   reads. The two modes are mutually exclusive (`--tasks` with `--review` is a refusal, not a
-   both-at-once). The id must resolve to exactly one PRD: zero is a refusal naming the id, and
-   more than one is a refusal naming the candidates. Every write is `wx`-atomic and
-   containment-checked against the workspace root, exactly as `gate init` writes; an existing
-   destination is reported and left byte-untouched.
+   reads. Every write is `wx`-atomic and containment-checked against the workspace root, exactly
+   as `gate init` writes; an existing destination is reported and left byte-untouched.
+
+   `gate new` has exactly three productions, mutually exclusive:
+
+   ```
+   gate new <slug> [--class=<class>] [--template=<path>]
+   gate new --tasks <ID>
+   gate new --review <ID>
+   ```
+
+   **Identity:** the id is matched against PRD artifacts in the configured **wip** role only — a
+   completed item is not a target for new artifacts — and the artifact's **basename is
+   authoritative** for both the number and the slug (`prd-NNN-<slug>.md`), never the heading
+   text, which an author may edit freely.
+
+   Each refusal is named and gets its own test in `packages/provegate/test/new.test.ts`:
+
+   | refusal | test name |
+   | ------- | --------- |
+   | both artifact flags | `"--tasks with --review refuses"` |
+   | slug or extra positional beside an artifact flag | `"a positional argument beside --tasks refuses"` |
+   | `--class`/`--template` beside an artifact flag | `"--class beside --review refuses"` |
+   | repeated artifact flag | `"a repeated --tasks refuses"` |
+   | artifact flag with no id | `"--tasks without an id refuses"` |
+   | neither slug nor artifact flag | `"a bare gate new refuses"` |
+   | id matching zero wip PRDs | `"an id with no wip PRD refuses"` |
+   | id matching two wip PRDs | `"an ambiguous id names both candidates"` |
+
+   A command that guesses which production was meant writes the wrong file into the wrong place.
    - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`,
      `packages/provegate/src/cli.ts::usage`
 2. **FR-2**: `gate new` substitutes every template token whose value the configuration can
@@ -405,4 +430,4 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.7 ITERATE; 6.1→7.7, five items closed): FR-1 states the three-mode argument grammar with every mixed form refused by name; §2's metric reworded to resolvable-with-non-empty-source; `{{DOCS_ROOT}}`'s fallback named as `config.dirs.artifacts.summary.dir`; the seven rows declared the CLOSED set; a chain.test.ts regression added proving an unedited instantiated tasks template FAILS Phase 6, so the convenience cannot hand an author a pre-passed review row; §7 gained Migration & Rollback (legacy mode unchanged, both quickstart copies in one release, revert leaves created artifacts, deny tests as the rollback trigger) |
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.7, flat; five items CLOSED and holding): the three productions written out as a grammar block with six enumerated refusals, each with a test; FR-2 scoped as an ADDITIONAL pass that leaves every existing anchor substitution — `{{ID_PREFIX}}` included — and its drift refusals untouched; the `evidence-pattern-satisfied-by-the-template` disposition repointed from a row that did not exist to the FR-1 row, with the exact test title named; the revert story now distinguishes the older `gate new` (ignores the artifacts) from the Phase-6 chain (keeps consuming them); rollback trigger reworded to a deny test FAILING; the NEXT_STEPS heading fix given a runnable assertion instead of a promise |
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS): id resolution restricted to the configured wip role with the artifact BASENAME authoritative for number and slug (a heading an author edits is not an identifier); the eight refusals given a table of named `new.test.ts` test titles; `cli.ts::usage` added as a target so `gate --help` advertises both artifact modes, both quickstart copies teach them where they currently prescribe copying a template by hand, and a `cli.test.ts` content assertion fails while either is unadvertised — a feature the help text does not mention is a feature an adopter does not find |
-
+| 2026-08-07 | owner  | **Correction.** The iteration-3 and iteration-4 rows above claimed an FR-1 production grammar, identity rule and refusal table that were never written to this file — the edits silently no-opped (`python str.replace` on a prettier-formatted artifact, the trap this repository has recorded twice). The scorer caught it both times as MP-1 OPEN and the changelog kept saying otherwise. The content is now present and was verified by reading the file back, not by trusting the edit |

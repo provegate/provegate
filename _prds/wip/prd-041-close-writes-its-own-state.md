@@ -92,10 +92,17 @@ so that I do not have to reconstruct it from git history.
    status line matching the reader the state builder uses. Zero lines or more than one is a
    refusal that names the file and the count, and nothing is written — a partial write across
    two artifacts is worse than no write.
-   The archive commit also carries the regenerated `_state/prds.json` and, after it, the
-   regenerated self-hosting projection (`node scripts/derive-self-hosting-figures.mjs --write`
-   → `apps/docs/content/docs/case-study.mdx`), so a `gate status` run immediately after the
-   close leaves the tree clean and `verify:doc-claims` stays green.
+   The archive commit also carries the regenerated `_state/prds.json`, and then whatever a
+   repository's **configured** post-state hook regenerates from it. The shipped runner knows
+   nothing about this repository's published figures: it runs `manifest.phases['7']` commands
+   after the state regeneration and before the commit, and includes whatever they wrote in that
+   commit. In THIS repository that hook is
+   `node scripts/derive-self-hosting-figures.mjs --write`, added to `gates.manifest.json` beside
+   the existing `pnpm verify:brain` entry; in an adopter's repository the list may be empty, and
+   an empty list is a no-op, not a warning. Config over hardcode: a fresh adopter must never
+   inherit a command named after this repository's case study.
+   After the hook, a `gate status` run immediately following the close leaves the tree clean and
+   `verify:doc-claims` stays green here.
    - **Targets:** `packages/provegate/src/core/run/archive.ts::archivePrdArtifacts`
 2. **FR-2**: The write is idempotent. An artifact whose status is already the terminal value is
    an explicit **no-op** — not a refusal — because that is what a `--from-phase=7` resume looks
@@ -223,12 +230,18 @@ item's own close makes the `Ship Verified` figure **38**, not 37. The projection
 inside the close rather than by hand — see the lifecycle below.
 
 **Projection lifecycle (every automatic terminal write, not only this one).** After the status
-write and the state regeneration, and before the archive commit is created, the runner's Phase-7
-step runs `node scripts/derive-self-hosting-figures.mjs --write`, which rewrites the sentinel
-region in `apps/docs/content/docs/case-study.mdx`. That file joins the archive commit. The order
-matters and is asserted: state first (the projection reads it), projection second, commit third.
-A close that wrote the status and left the published figure stale would recreate the live
-`verify:doc-claims` red this repository already hit on 2026-07-29.
+write and the state regeneration, and before the archive commit is created, the runner executes
+the repository's configured `manifest.phases['7']` commands and includes whatever they wrote in
+that commit. The order matters and is asserted: state first (a projection reads it), configured
+hook second, commit third. An empty phase-7 list is a legal no-op — most adopters publish no
+figures at all.
+
+In THIS repository the hook is `node scripts/derive-self-hosting-figures.mjs --write`, which
+rewrites the sentinel region in `apps/docs/content/docs/case-study.mdx`; adding it to
+`gates.manifest.json` is part of this item. A close that wrote the status and left the published
+figure stale would recreate the live `verify:doc-claims` red this repository already hit on
+2026-07-29 — and a shipped runner that hardcoded that script would ship this repository's
+private problem to every adopter.
 
 ### Migration & Rollback
 
@@ -267,7 +280,7 @@ A close that wrote the status and left the published figure stale would recreate
 - [ ] `packages/provegate/test/chain.test.ts`, `packages/provegate/test/cli.test.ts`,
       `packages/provegate/test/cli-state.test.ts`
 - [ ] `scripts/check-implemented-predicate.mjs` (repo-class, run directly and uncached)
-- [ ] `scripts/derive-self-hosting-figures.mjs` (invoked by the close; interface unchanged)
+- [ ] `gates.manifest.json` (this repository's phase-7 hook; the CLI stays repo-agnostic)
 - [ ] `apps/docs/content/docs/case-study.mdx` (regenerated, never hand-edited)
 - [ ] `STATUS.md`, `scripts/adopter-smoke.sh`
 
@@ -345,6 +358,7 @@ A close that wrote the status and left the published figure stale would recreate
 - `scripts/adopter-smoke.sh`
 - `scripts/check-implemented-predicate.mjs`
 - `apps/docs/content/docs/case-study.mdx`
+- `gates.manifest.json`
 - `STATUS.md`
 - `_brain/learnings/the-close-must-record-what-it-changed.md`
 
@@ -371,7 +385,7 @@ A close that wrote the status and left the published figure stale would recreate
 | FR-4 | `node scripts/check-implemented-predicate.mjs` | repo corpus | runs UNCACHED and outside turbo (it reads `_state/prds.json`, which is not a package input — `turbo-cache-masks-out-of-input-reads`): asserts the predicate over every record and that `PRD-023` is false; prints the counts without pinning them |
 | FR-4 | `pnpm test --filter provegate` | cli-state.test.ts | fixture record with completed location, present summary and a non-implemented status is NOT implemented |
 | FR-4 | `pnpm verify:doc-claims`       | published figures  | the published figure matches the regenerated projection after the close (38 once this item lands) |
-| FR-1 | `pnpm test --filter provegate` | chain.test.ts      | the archive commit contains the regenerated state AND the regenerated case-study projection, in that order |
+| FR-1 | `pnpm test --filter provegate` | chain.test.ts      | the archive commit contains the regenerated state, then whatever the configured phase-7 hook wrote, in that order; an empty hook list is a no-op |
 | FR-5 | `pnpm verify:deferred`         | board              | the closed row is gone, cap arithmetic holds       |
 | FR-5 | `pnpm smoke:adopter`           | adopter fixture    | both known-red entries gone, run green             |
 
@@ -410,4 +424,5 @@ Before Phase 2 PASS, run: `gate check PRD-041`
 | 2026-08-07 | owner  | Iteration 2 sweep (Codex 7.8 ITERATE; 6.2→7.8, four items closed): the `statusVocab.complete` correction had not swept into Memory Inputs or §12 — same restatement failure the record warns about, now fixed in all three places; §6's merge-failure and auto-revert rows split into feature-ref and base-ref states and the resume recipe spelled out instead of cited; FR-3's commit-hook case now names exit 1, the verbatim hook output and `gate release` as the retry, with its own §11 row; §11's `gate queue --json` row replaced by a named corpus test that calls `isImplemented` and pins 38 with PRD-023 proven false |
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.6, down from 7.8 — the regression was the author's): last round's hook retry named `gate release`, which DROPS a lease and cannot commit a deletion of a lease already gone; replaced by the exact path-scoped `git commit -- <lease path>`, with a §11 row proving the retry lands. Every archived-state retry corrected to un-archive-AND-COMMIT then `--from-phase=7`, with the reason named (`shouldSkipGate` keeps the memory gates, which read `wip` paths). The absolute counts became a dated baseline: this item's own close makes them 39/38, so §11 asserts the PREDICATE and `PRD-023` being false instead of pinning a number, via a direct uncached repo-class script that reads `_state/prds.json` outside turbo |
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS; five of eight items closed): `PRD-023`'s summary is MISSING, not present — measured from `artifactStates` — so it is false on the location fallback alone; the published `Ship Verified` figure moves to 38 with this item's own close, so the projection is regenerated INSIDE the close (`derive-self-hosting-figures.mjs --write` → `case-study.mdx`) in a stated order (state → projection → commit) and both files joined Targets, Scope and the Conflict Surface; the lifecycle is stated for every later automatic terminal write, not only this one; `cleanup-after-verified-merge` and `known-red-ledger-must-expire` dispositioned |
+| 2026-08-07 | owner  | Iteration 5 (Codex 7.9, flat): the scorer refused the projection design and was right — the previous round put `derive-self-hosting-figures.mjs`, a command named after THIS repository's case study, inside the lifecycle of a CLI whose motivating scenario is a fresh adopter. Replaced by the configured `manifest.phases['7']` hook, run after the state regeneration and before the commit, with an empty list a legal no-op; this repository's hook moves into `gates.manifest.json`, which joins the Conflict Surface, and the shipped runner stays repo-agnostic |
 

@@ -7,13 +7,13 @@
 | PRD                    | `_prds/wip/prd-042-adopter-first-hour.md` |
 | Score                  | 7.9/10 |
 | Verdict                | ITERATE |
-| Iteration              | 4 |
+| Iteration              | 5 |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit)     | — |
 | Scored by              | Codex (gpt-5), fresh independent scorer |
 | Self-scored            | no |
 | Date                   | 2026-08-07 |
-| PRD Lint               | passed — direct read-only `lintPrd` invocation returned `{"ok":true,"issues":[]}`; the CLI wrapper could not update `_state/prds.json` in the read-only sandbox |
+| PRD Lint               | passed — read-only execution with only the state-snapshot write suppressed returned `[check] ok — PRD-042 passes the readiness lint`; the unmodified wrapper stopped on the sandbox’s `_state/prds.json` write |
 | State Record           | pending — read-only sandbox |
 
 ---
@@ -22,8 +22,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign — fix PRD first | FR-1 still omits the claimed argument grammar and the substitutions required to make task/review artifacts consumable. |
-| Phase 6 (Audit)     | — | Re-score after the remaining FR-1 and discoverability contracts are closed. |
+| Phase 4 (Execution) | Do not assign — fix PRD first | The authoritative-id, argument-grammar, refusal-test, and artifact-substitution changes claimed for iteration 5 are still absent from the live requirements. |
+| Phase 6 (Audit)     | — | Re-score after the live FR and verification table contain those contracts. |
 
 ---
 
@@ -31,98 +31,101 @@
 
 ### 1. Technical Depth & Architecture
 
-The iteration-4 FR-2 change passes. Its seven rows are explicitly scoped to an additional pass after existing anchored substitutions. `{{ID_PREFIX}}`, the other legacy anchors, and their drift refusals remain outside the closed seven-token set. Sources, precedence, empty-value handling, unknown-token behavior, sorting, deduplication, and exit status are specified. A token outside the table stays unresolved rather than being left to implementer discretion.
+The main iteration-5 claim did not land in the operative PRD. FR-1 still says the id resolves to “exactly one PRD”; it does not restrict lookup to `config.dirs.stateRoles.wip`, does not make the parsed artifact basename authoritative for number and slug, and does not say that edited H1 or Slug metadata is ignored. The only occurrence of that correction is the Changelog.
 
-FR-3 passes against the code. `prd-ready.ts::lintPrd` calls `lintMemoryContract` only when `config.memory.enabled` is true. In `chain.ts`, Memory Inputs/Outputs close gates are likewise conditional, while a base-enabled/branch-disabled configuration fails closed. The always-on Durable Artifacts gate is a separate contract and does not require the removed Memory sections. Absence is therefore accepted when memory is genuinely off and rejected when it is in force.
+That omission matters against the current code. `new.ts` demonstrates that lifecycle directories and prefixes are configuration, while `cli.ts::runNew` currently takes the first positional argument and ignores additional positionals. An implementer still has to invent the three-production argument grammar and the identifier-resolution authority.
 
-FR-4, FR-5, and FR-6 remain technically sound:
+The artifact-content contract also remains absent. FR-1 specifies destination names but not the substitutions required inside the task and review templates. The iteration-4 evidence remains applicable: task artifacts contain PRD/readiness references, dates, and a review-ledger path, while review artifacts contain an H1 and PRD metadata. `review.ts` requires a concrete configured review path and validates the review’s PRD metadata against the expected id. FR-1 must enumerate how those sites become concrete and consumable.
 
-- FR-4 correctly targets `core/run/chain.ts::buildGateChain`, while `review.ts` confirms the consumer requires an `independent-review` row marked `passed` and naming a valid review artifact.
-- FR-5 admits only the raw `{{ID_PREFIX}}` anchor or the escaped configured prefix. Foreign, malformed, absent, and competing anchors remain explicit refusals. The closed alternation does not permit an arbitrary rendered heading.
-- FR-6 names both parity-checked documents, requires the manifest recipe to precede Close, and names the root parity command. The current verifier was run and passes its existing eight-command comparison; inspection confirms the new structural-order assertion is still necessary.
+FR-2 is closed. The seven-token table is explicitly the complete additional-pass set, with sources, precedence, empty-value behavior, and unknown-token reporting. A token outside the table—or one with no usable configured value—stays unresolved and is reported; the implementer has no authority to expand the set.
 
-FR-1 remains incomplete despite the changelog claiming otherwise. The current FR contains no three-production grammar block. It states only that `--tasks` and `--review` are mutually exclusive. Section 11 still names only three refusals: both artifact modes, zero matches, and two matches. It has no coverage for the other advertised cases.
+FR-3 is closed against both readers:
 
-More importantly, the artifact-content contract from iteration 3 is still absent. The current templates contain sites the Phase-6 consumer cannot accept unchanged:
+- `prd-ready.ts::lintPrd` invokes `lintMemoryContract` only when `config.memory.enabled` is true.
+- `chain.ts::buildGateChain` constructs the Memory Inputs/Outputs close gates only while the contract is enabled. If the base enables memory and the branch disables it, the chain fails closed instead of treating the sections as optional.
+- The always-on Durable Artifacts gate is separate and does not require Memory Inputs or Memory Outputs.
 
-- `tasks-template.md` contains PRD/readiness links with `XXX-{short-name}`, date fields, and `_docs/reviews/review-XXX-{short-name}.md`.
-- `review-template.md` contains `{{ID_PREFIX}}-XXX` in its heading and PRD metadata.
-- `review.ts` cannot extract `review-XXX-{short-name}.md` as a concrete review path and cannot validate placeholder PRD metadata.
+FR-4 is closed. `chain.ts::buildGateChain`, not `review.ts`, owns the current no-task stop. `review.ts` confirms the requested row shape: an `independent-review` ledger row, `passed` result, configured review path, and valid review metadata.
 
-FR-2 preserves existing PRD-template anchors, but those anchors do not define how the new task and review modes fill these different template shapes. An implementing agent must still invent that contract.
+FR-5 is closed. It specifies a two-member alternation—literal `{{ID_PREFIX}}` or the exactly escaped configured prefix—and explicitly rejects foreign, malformed, absent, and competing anchors. A rendered template is therefore admitted by a closed rule, not by an open-ended intention or wildcard heading search.
 
-The destination naming itself is mostly precise: it uses the configured task directory, configured wip role, configured prefix, configured id width, and configured review directory; `wx` refusal on an existing destination is explicit. What remains unspecified is whether artifact-basename identity or possibly inconsistent PRD metadata supplies the slug, and whether completed/deferred PRDs are eligible.
+FR-6 now contains the discoverability behavior: both quickstart placements, both help flags, a named `cli.test.ts` assertion, structural ordering, and the runnable parity command. The current code confirms the intended delta: `usage()` still advertises only positional PRD creation, both quickstarts still prescribe manual task/review creation, and the current parity verifier compares eight commands without checking section order.
+
+A new consistency error was introduced: `packages/provegate/src/cli.ts::usage` was placed on FR-1’s Targets line even though help advertising is owned by FR-6. FR-6’s own Targets line omits both `cli.ts::usage` and `cli.test.ts`.
 
 ### 2. Edge Cases & Failure Modes
 
-The following now pass plainly:
+The promised eight-refusal table is not present. The live §11 table still has one aggregate row covering only both modes together and zero/two PRD matches, with no exact `new.test.ts` titles. FR-1 itself names only mutual exclusion and zero/multiple matches.
 
-- FR-2’s additional-pass boundary.
-- The template-evidence regression reference and exact test title.
-- The corrected rollback signal.
-- The NEXT_STEPS numbered-heading assertion.
-- Existing-destination refusal and byte preservation.
-- Zero/multiple PRD match refusals.
-- Memory-off success and memory-on failure.
-- All four FR-5 deny shapes.
+The live requirements therefore do not bind the mixed forms the Changelog claims were added:
 
-The six claimed FR-1 refusals are not present in the live requirement. The current document does not refuse, with a named test apiece:
-
-- both artifact flags together;
-- a slug or extra positional beside an artifact flag;
-- `--class` beside an artifact flag;
-- `--template` beside an artifact flag;
+- an artifact mode plus an extra positional;
+- `--class` in artifact mode;
+- `--template` in artifact mode;
 - a repeated artifact flag;
-- an artifact flag without an id;
-- neither a slug nor an artifact flag.
+- an artifact flag without its id.
 
-The changelog is not evidence of those rules. Current `cli.ts::runNew` selects the first positional argument and silently ignores extras, making the absent grammar consequential.
+The missing grammar also leaves the legacy bare-command refusal and exact positional cardinality implicit. This is consequential because current `runNew` selects the first positional value rather than rejecting extras.
 
-The new modes are also undiscoverable as specified. `cli.ts::usage` advertises only `gate new <slug> [--class=X] [--template=path]`. Both quickstarts still tell adopters to create the task through the Phase-3 prompt and the review from the template; neither teaches `gate new --tasks` or `gate new --review`. That leaves the “first hour” user following the old manual path after the convenience ships.
+The existing-destination contract is closed: both artifact writes must use `wx`, report the existing destination, and preserve its bytes. Destination naming is otherwise sufficiently tied to configured directories, roles, prefixes, and id width; the remaining ambiguity is how the source PRD is selected and how its authoritative slug is obtained.
+
+FR-5 retains the necessary drift protections. An exact configured-prefix heading can pass, as intended for a rendered or supported forked template; no arbitrary prefix or wildcard heading can pass. The required competing-anchor refusal prevents a raw and rendered anchor from coexisting unnoticed.
+
+FR-6 correctly requires both parity-checked documents to move together and names `pnpm verify:quickstart-parity`. The command currently passes, comparing eight commands, which confirms both the present parity and why the new structural-order assertion is required.
 
 ### 3. Maintainability & DX
 
-The mechanical Clarity checklist passes: every FR has concrete Targets, each FR maps to a runnable command, DO NOT exists, Open Questions is empty, and no live decision placeholders occur. Clarity cannot exceed 7 because FR-1’s actual grammar and artifact substitutions remain unspecified.
+The mechanical Clarity checklist passes: all six FRs have a Targets line, every FR maps to a runnable §11 command, DO NOT exists, Open Questions is empty, and no live decision placeholder appears. Clarity remains 7 because the target ownership is inconsistent and FR-1 still leaves argument parsing, id authority, and generated artifact contents to implementer judgment.
 
-The requested historical value header, `3.75 (MF/UI/TL/AR/RM: 3/5/2/5/4)`, is arithmetically correct:
+The value arithmetic was recomputed:
 
 `0.25×3 + 0.25×5 + 0.20×2 + 0.15×5 + 0.15×4 = 3.75`.
 
-It is not the current header. The current file declares `3.45 (3/5/2/5/2)`, which also recomputes correctly. RM 4 was not credible for changes spanning CLI parsing, multiple artifact writers, drift detection, lint-sensitive document structure, Phase-6 diagnostics, a root verifier, and public documentation; current RM 2 is credible. MF 3, UI 5, and TL 2 are reasonable. AR 5 is only defensible if the new modes are exposed on first-touch surfaces; without the help/quickstart update, maximum reach is overstated.
+The historical `3.75 (3/5/2/5/4)` header was arithmetically correct but substantively overstated:
+
+- MF 3 is reasonable: this improves the method’s delivery without changing its governing semantics.
+- UI 5 is reasonable: every new adopter traverses these surfaces.
+- TL 2 is reasonable: the work fixes a bounded onboarding path rather than unlocking broad architecture.
+- AR 5 is now defensible because help and both first-touch quickstarts are expressly included, subject to correcting FR-6’s Targets line.
+- RM 4 is not credible for CLI grammar, multiple artifact writers, anchor strictness, lint-sensitive document removal, phase-chain diagnostics, public documentation, and a root verifier.
+
+The live replacement, `3.45 (3/5/2/5/2)`, also recomputes correctly, and RM 2 is the credible maintenance score.
 
 No method-content provenance cap is triggered:
 
 - FR-4 changes a runtime diagnostic, not a prompt, template, or schema.
 - FR-6 changes QUICKSTART and practices documentation, outside critical rule 4’s prompt/template/schema classes.
-- FR-1 consumes existing templates but does not authorize changing their source bytes.
-
-The enumerated-token approach remains consistent with ADR-0002.
+- FR-1 consumes existing shipped templates but does not authorize changing their source bytes.
 
 ### 4. Migration & Rollback
 
-The iteration-4 rollback corrections pass. The current text now distinguishes the older `gate new`, which ignores already-created artifacts, from the unchanged Phase-6 chain, which continues consuming them. It correctly defines a deny test failing as the rollback trigger. Both quickstart copies are required to ship together.
+The migration and rollback section remains sound. Legacy `gate new <slug>` retains its output and behavior except for explicitly additive mixed-mode refusals. Reverting removes the new convenience commands without deleting artifacts they already created; the unchanged phase-6 consumer continues reading those artifacts.
 
-Legacy positional mode is stated to retain its arguments, output path, and exit codes. The intended artifact-mode refusals are additive, but those refusals still need to appear in FR-1 itself before that compatibility claim is executable.
+The memory migration is also correct: a PRD created without Memory sections remains valid while memory is genuinely disabled and becomes invalid if the repository later enables the contract.
+
+The rollback detector is correctly stated: an FR-5 deny test failing means an invalid anchor was admitted and triggers reversion. Both quickstart copies are required in the same release.
+
+The compatibility claim cannot yet be executed exactly because it refers to FR-1 mixed-mode refusals that are still absent from the live FR and verification table.
 
 ### 5. Memory Inputs
 
 Each declared disposition was challenged:
 
-- `quickstart-is-a-fixture`: relevant and bound to the two-copy structural assertion.
-- `derive-the-requirement-from-the-consumer`: relevant; FR-2 now provides an enumerated, source-specific set rather than leaving discovery to the implementer.
-- `shipped-content-needs-a-delivery-gate`: relevant; instantiated-output tests and adopter smoke cover delivered behavior.
-- `metadata-declares-what-it-cannot-provide`: relevant; the memory-off/on pair closes the capability-to-policy loop.
-- `assert-absent-needs-an-independent-cause`: relevant; the source template retains the sections while configuration independently causes their removal.
-- `evidence-pattern-satisfied-by-the-template`: now correctly points to the FR-1 row and exact real-chain test title. CLOSED.
-- `strictness-added-during-extraction-is-a-behavior-change`: relevant and bound by the four FR-5 deny cases.
-- `a-rule-corrected-survives-where-it-is-restated`: not successfully applied. The changelog says the grammar block and six refusals exist, while FR-1, §6, and §11 do not contain them.
-- `docs-are-a-wiring-surface`: relevant to NEXT_STEPS; the named heading test now binds the correction.
-- `fixture-must-reach-production-shape`: relevant; tests must enter through the CLI argument surface.
+- `quickstart-is-a-fixture`: relevant and correctly bound to both watched quickstart files and the proposed structural verifier.
+- `derive-the-requirement-from-the-consumer`: relevant; FR-2 now supplies a closed seven-row set rather than letting implementation discover or expand it.
+- `shipped-content-needs-a-delivery-gate`: relevant; instantiated artifacts and `pnpm smoke:adopter` exercise delivered behavior.
+- `metadata-declares-what-it-cannot-provide`: relevant; the memory-off/on pair prevents configuration from promising an unenforced contract.
+- `assert-absent-needs-an-independent-cause`: relevant; the source template retains the sections while configuration independently causes omission.
+- `evidence-pattern-satisfied-by-the-template`: correctly bound to the exact real-chain failure test for a freshly instantiated task artifact.
+- `strictness-added-during-extraction-is-a-behavior-change`: relevant; FR-5’s closed positive alternation and four deny shapes constrain the loosened detector.
+- `a-rule-corrected-survives-where-it-is-restated`: not successfully applied. The Changelog claims the wip/basename rule and named refusal table exist, but FR-1 and §11 do not contain them. The help target was also attached to the wrong FR.
+- `docs-are-a-wiring-surface`: relevant to the asserted NEXT_STEPS correction.
+- `fixture-must-reach-production-shape`: relevant; the intended tests enter through the CLI argument surface.
 - `surface-set-without-its-predicate`: reasonably reviewed; no `core/gates/**` file is a declared FR Target.
-- `narrow-the-grammar-not-the-parser`: relevant; FR-3 uses the existing column-zero heading grammar.
-- `gate-run-resume-after-archive`: relevant watch overlap with `core/run/**`; no resume/archive behavior changes.
+- `narrow-the-grammar-not-the-parser`: relevant to FR-3’s column-zero section grammar.
+- `gate-run-resume-after-archive`: relevant through `core/run/**`; the PRD changes neither archive nor resume behavior.
 
-No active indexed record whose `watch` overlaps a declared FR Target is missing. Direct overlaps are covered by `quickstart-is-a-fixture`, `docs-are-a-wiring-surface`, `fixture-must-reach-production-shape`, `strictness-added-during-extraction-is-a-behavior-change`, and `gate-run-resume-after-archive`.
+No newly missing active record was found whose `watch` overlaps a declared FR Target. Direct overlaps remain covered for the quickstarts, `core/run/**`, `cli.ts`, `practices/**`, test files, and the PRD itself.
 
 ---
 
@@ -130,46 +133,48 @@ No active indexed record whose `watch` overlaps a declared FR Target is missing.
 
 | #         | Dimension                | Weight | Score | Notes |
 | --------- | ------------------------ | ------ | ----- | ----- |
-| 1         | Clarity                  | 15% | 7/10 | Formal gate passes, but the claimed argument grammar is absent and task/review substitutions remain undefined. |
-| 2         | Completeness             | 20% | 7/10 | Most prior gaps closed; lifecycle identity, template contents, six refusals, and user discovery remain incomplete. |
-| 3         | Technical Depth          | 25% | 8/10 | Strong token, memory, anchor, parity, and rollback treatment; FR-1 still stops at destination paths rather than consumable artifacts. |
-| 4         | Multi-Tenancy & Security | 20% | 9/10 | No protected/network surface; local writes are contained, exclusive, and refusal-oriented. |
-| 5         | Scope & Testability      | 10% | 8/10 | Runnable surfaces exist, but the six advertised refusal tests and discoverability assertions are absent. |
-| 6         | Migration & Rollback     | 10% | 8/10 | Revert consumer behavior, same-release docs, and deny-test trigger are now correct; the compatibility claim still references missing FR-1 refusals. |
+| 1         | Clarity                  | 15% | 7/10 | Formal checklist passes, but the grammar, id authority, artifact substitutions, and FR-6 target ownership remain unclear. |
+| 2         | Completeness             | 20% | 7/10 | Discoverability is specified; the central iteration-5 FR-1 closures remain Changelog-only. |
+| 3         | Technical Depth          | 25% | 8/10 | Strong token, memory, anchor, consumer, parity, and rollback treatment; artifact instantiation remains underspecified. |
+| 4         | Multi-Tenancy & Security | 20% | 9/10 | No protected, tenant, auth, network, or permission surface; writes are contained and exclusive. |
+| 5         | Scope & Testability      | 10% | 8/10 | Help and documentation assertions are named, but the promised refusal-title table is absent. |
+| 6         | Migration & Rollback     | 10% | 8/10 | Reversion and ordering are sound; compatibility still relies on unstated mixed-mode refusals. |
 | **Total** | **Weighted**             | | **7.9/10** | **ITERATE** |
 
 Hard caps checked:
 
-- Security cap: not tripped — no protected route, endpoint, query path, auth, permission, or tenant surface is touched.
+- Security cap: not tripped — no protected route, endpoint, query, auth, permission, or tenant surface is touched.
 - Contract cap: not tripped — no client→server payload is introduced.
-- Lint cap: not tripped — the current PRD returned `ok: true` from the exported readiness lint.
+- Lint cap: not tripped — the readiness lint returned PASS under a read-only state-write shim.
 - Method-content cap: not tripped — no prompt, template, or schema source byte is changed.
 
 ---
 
 ## Missing Pieces (to reach 10/10)
 
-1. **Iteration-1 MP-1 — OPEN.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-1, §6, §7 Migration & Rollback, and §11: add the actual three-production grammar block; enumerate all six refusal categories in the live FR; give each a named `packages/provegate/test/new.test.ts` test. State that the parsed PRD artifact basename is authoritative for number and slug, restrict resolution to the configured wip role or explicitly justify other lifecycle states, and enumerate the task/review title, link, date, PRD-metadata, and review-ledger-path substitutions required to produce artifacts the Phase-6 consumer accepts.
+1. **Iteration-1 MP-1 — OPEN.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-1 and §11: add the three-production grammar to the live FR; restrict artifact-mode resolution to `<prd.dir>/<stateRoles.wip>`; state that a parsed PRD artifact basename is authoritative for number and slug and that heading/metadata edits do not affect identity. Add the promised eight-row `packages/provegate/test/new.test.ts` table with exact titles for both flags, extra positional input, `--class`, `--template`, repeated artifact flag, missing id, zero wip matches, and multiple wip matches. Enumerate the task/review template sites that must receive the id, slug, dates, PRD/readiness references, PRD metadata, and concrete review-ledger path.
 
-2. **Iteration-1 MP-2 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-2, §6, §7, and §11: no further change required. The live text scopes the closed seven-token table to an additional pass and explicitly preserves `{{ID_PREFIX}}` and every existing anchored substitution.
+2. **Iteration-1 MP-2 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-2 and §11: no change required. The current seven-row table is closed and explicitly separate from existing anchored substitutions.
 
-3. **Iteration-1 MP-3 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-3, §6, §7, and §11: no further change required. `prd-ready.ts` and `chain.ts` accept absent Memory sections only when the contract is off and fail closed when it is enabled or inherited from base.
+3. **Iteration-1 MP-3 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-3 and §11: no change required. `prd-ready.ts` and `chain.ts` accept missing Memory sections only while the contract is genuinely off and fail closed when it remains in force.
 
-4. **Iteration-1 MP-4 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-4, §6, Conflict Surface, and §11: no further change required. The diagnostic owner, configured task path, required ledger columns, and chain-test surface are correctly named.
+4. **Iteration-1 MP-4 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-4 and §11: no change required. `chain.ts::buildGateChain` is the correct diagnostic owner, and the required consumer columns are specified.
 
-5. **Iteration-1 MP-5 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-5, §6, §7, and §11: no further change required. The two admitted anchors and four denied shapes form a closed contract.
+5. **Iteration-1 MP-5 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-5 and §7: no change required. The two admitted anchors and four denied shapes form a closed alternation.
 
-6. **Iteration-1 MP-6 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-6, §7, §8, and §11: no further quickstart-parity change required. Both copies, structural ordering, root verifier, and runnable command are specified.
+6. **Iteration-1 MP-6 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-6, §7, and §11: no change required for parity. Both files, ordering, and `pnpm verify:quickstart-parity` are named.
 
-7. **Iteration-1 MP-7 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §6, Memory Inputs, and §11: no further change required. The disposition now names the actual FR-1 row and exact test title, `"an unedited instantiated tasks template fails the Phase-6 gate"`.
+7. **Iteration-1 MP-7 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §6, Memory Inputs, and §11: no change required. The real-chain test title is exact and requires failure of an unedited instantiated task artifact.
 
-8. **Iteration-1 MP-8 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, Value header and value-history comment: no arithmetic change required. Current 3.45 with RM 2 is correct; historical 3.75 with RM 4 was arithmetically correct but substantively overstated.
+8. **Iteration-1 MP-8 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, Value header and value-history comment: no change required. Current 3.45 is correct; historical 3.75 was arithmetically correct but RM 4 was not credible.
 
-9. **Iteration-2 MP-9 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §7 Migration & Rollback: no further change required. The older `gate new` and Phase-6 consumer are correctly distinguished, and a deny test failing is correctly defined as the rollback trigger.
+9. **Iteration-2 MP-9 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §7 Migration & Rollback: no change required. The older writer and unchanged phase-6 consumer are correctly distinguished, and a deny-test failure is the rollback trigger.
 
-10. **Iteration-3 MP-10 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-6 and §11: no further change required. The file, runnable command, and exact test title for sequential NEXT_STEPS headings are present.
+10. **Iteration-3 MP-10 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-6 and §11: no change required. The NEXT_STEPS file, command, and exact sequential-heading test title are present.
 
-11. **New iteration-4 gap — OPEN.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-1/FR-6, §6, §8, Conflict Surface, and §11: add `packages/provegate/src/cli.ts::usage` as a target and require its `new` help line to advertise `--tasks` and `--review`; update both quickstarts to teach the new task/review creation commands at the points that currently prescribe manual template use; add a help/content assertion so the modes cannot ship undiscoverable. This closure is also required to sustain AR 5.
+11. **Iteration-4 MP-11 — CLOSED.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-6, §6, §8, Conflict Surface, and §11: the live requirement now advertises both artifact modes in help, teaches both commands in both quickstarts, and names the failing `cli.test.ts` assertion.
+
+12. **New iteration-5 gap — OPEN.** `_prds/wip/prd-042-adopter-first-hour.md`, §4 FR-1 and FR-6 Targets: remove `packages/provegate/src/cli.ts::usage` from FR-1’s Targets line and add it to FR-6’s Targets line alongside `packages/provegate/test/cli.test.ts`, so the requirement that owns help discoverability names the production symbol and regression that implement it.
 
 ---
 
@@ -177,10 +182,11 @@ Hard caps checked:
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
-| 1   | 2026-08-07 | 6.1 | ITERATE | Initial assessment found open file/token/anchor contracts, the wrong FR-4 target, insufficient parity proof, and overstated maintenance safety. |
-| 2   | 2026-08-07 | 7.7 | ITERATE | Closed atomic paths, resolver sources, memory behavior, FR-4 ownership, anchor strictness, parity order, and value scoring; requested grammar, regression, and rollback closure. |
-| 3   | 2026-08-07 | 7.7 | ITERATE | Verified the resolver and migration additions; found the claimed grammar absent, the token rule conflicting with existing anchors, stale regression provenance, and an inverted rollback trigger. |
-| 4   | 2026-08-07 | 7.9 | ITERATE | Closed the additional-pass boundary, regression provenance, rollback wording, and NEXT_STEPS assertion; the claimed FR-1 grammar is still changelog-only, artifact substitutions remain undefined, and the new modes are not exposed in help or quickstart. |
+| 1   | 2026-08-07 | 6.1 | ITERATE | Found open file/token/anchor contracts, wrong FR-4 ownership, weak parity proof, and overstated maintenance safety. |
+| 2   | 2026-08-07 | 7.7 | ITERATE | Closed paths, resolver sources, memory behavior, FR-4 ownership, anchor strictness, parity order, and value scoring; requested grammar, regression, and rollback closure. |
+| 3   | 2026-08-07 | 7.7 | ITERATE | Found the claimed grammar absent, token rule conflicting with existing anchors, stale regression provenance, and inverted rollback trigger. |
+| 4   | 2026-08-07 | 7.9 | ITERATE | Closed additional-pass boundaries, regression provenance, rollback wording, and NEXT_STEPS assertion; FR-1 and discoverability remained incomplete. |
+| 5   | 2026-08-07 | 7.9 | ITERATE | Discoverability behavior is now specified, but the wip/basename rule and eight named refusals remain Changelog-only; the help symbol was attached to the wrong FR. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
@@ -193,11 +199,11 @@ Hard caps checked:
 | No push code path in CLI or CI | Satisfied; no push behavior is proposed. |
 | Zero runtime dependencies in `packages/provegate` | Satisfied; Dependencies is `none`. |
 | No telemetry or network calls | Satisfied by scope. |
-| Method content traceable to source snapshot | Satisfied; no prompt/template/schema source byte is modified. FR-4 runtime text and FR-6 documentation are outside critical rule 4’s method-content classes. |
-| ADRs remain binding | Satisfied; enumerated substitutions align with ADR-0002, and memory-off behavior aligns with ADR-0001. |
+| Method content traceable to source snapshot | Satisfied; runtime diagnostics, QUICKSTART, and practices prose are outside the prompt/template/schema source-byte rule, and existing templates are only consumed. |
+| ADRs remain binding | Satisfied; FR-2 remains an enumerated substitution rather than a template language, consistent with ADR-0002. |
 | Canonical `statusVocab` values only | No vocabulary change is proposed. |
-| Memory contract behavior | Verified: readiness and Phase-7 memory readers accept absence only when the contract is genuinely off; base-enabled policy fails closed. |
-| Value arithmetic | Current 3.45 is correct. RM 2 is credible; historical RM 4 is not. AR 5 requires the missing discoverability work. |
+| Memory contract behavior | Satisfied; readiness and Phase-7 readers accept absence only when memory is genuinely off, while base-enabled policy fails closed. |
+| Value arithmetic | Current 3.45 and historical 3.75 both recompute; AR 5 is defensible with discoverability, while RM 4 was not. |
 | Security hard cap | Not tripped. |
 | Contract hard cap | Not tripped. |
 | Lint hard cap | Not tripped. |
@@ -207,4 +213,4 @@ Hard caps checked:
 
 ## Verdict
 
-ITERATE — iteration 4 closes four prior findings, but the central FR-1 closure is not in the current requirement: the grammar exists only in the changelog, its six refusals lack tests, and the task/review template substitutions needed by Phase 6 remain unspecified. The new modes must also be exposed in CLI help and first-touch documentation before this adopter-first feature is ready for Phase 3.
+ITERATE — PRD-042 remains at 7.9/10. The discoverability finding is closed, but the central iteration-5 changes exist only in the Changelog: FR-1 still lacks the configured-wip/basename identity rule, the executable argument grammar, the named refusal table, and the substitutions needed to produce task and review artifacts accepted by Phase 6. The help-symbol target also landed under the wrong FR.

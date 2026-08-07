@@ -100,12 +100,17 @@ so that a formatting mistake cannot silently drop my operator gate.
      the two lines split to the same cell count — the same two-part test the piped case uses.
      Either half alone is prose: a sentence containing `|` above an unrelated dashed line is not
      a table, and neither is a `|`-bearing sentence above a differently-shaped one.
+   **One outcome per shape.** A boundaryless table that DOES match — separator shape and equal
+   cell count — is a `problem`, and it is nothing else: `splitTableCells` requires boundary
+   pipes, so the reader cannot read its cells, and PRD-040 measured that shape contributing 0
+   today. Refusing it is this item's whole point, so it may never also serve as a positive
+   control.
    **Positive controls.** Every refusal fixture is paired with a legal one that differs in
-   exactly the refused property and must produce NO problem: a well-formed boundaryless table
-   (legal GFM) beside the mismatched-count one; a well-formed piped table beside the
-   separator-less one; a ledger with one `Result` column beside the two-column case; a document
-   whose fence closes beside the unterminated one. A refusal set without positive controls
-   cannot show that the predicate discriminates rather than rejects.
+   exactly the refused property and must produce NO problem: a `|`-bearing sentence whose
+   neighbour is not a matching separator, beside the matching boundaryless table; a well-formed
+   piped table beside the separator-less one; a ledger with one `Result` column beside the
+   two-column case; a document whose fence closes beside the unterminated one. A refusal set
+   without positive controls cannot show that the predicate discriminates rather than rejects.
    - **cells** split on unescaped pipes by backslash parity; a data row whose cell count differs
      from its block header's is a `problem` naming the line and both counts.
    - a ledger section with no `Result` column, or with two, is a `problem` naming the section.
@@ -389,4 +394,4 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.2 ITERATE; 6.4→7.2, three items closed): FR-1's "header candidate" predicate matched every data row — corrected to position-based block detection (a piped line whose NEXT line is a matching separator line starts a block; header is a position, not a shape), with "separator line" defined for boundaryless lines too; FR-4's sixth parameter is now a discriminated union (`{present: true, count, problem} | {present: false}`) so a caller cannot read a count on an absent artifact, and where the distinction is built is named; `scripts/adopter-smoke.sh` added to FR-2's Targets, Scope, Conflict Surface and §11 so the installed-export assertion is executable; FR-5 defines the fingerprint's field GROWTH (three fields → four), which correctly stales a PRD-040 acknowledgement that never measured refusals |
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.2→7.7; three more items closed): the boundaryless predicate gained its second half — separator shape AND equal cell count, either alone being prose — and every refusal fixture is now paired with a POSITIVE control differing in exactly the refused property, so the predicate is shown to discriminate rather than to reject; FR-2 makes the reader and the error class package-root exports, because a migration naming a symbol an adopter cannot import is not a migration; FR-5's fingerprint growth is verified in both directions (a three-field acknowledgement reports STALE, a matching four-field line passes) instead of being asserted in prose |
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS; the previous round's fix had introduced a contradiction): a MATCHING boundaryless table now has ONE outcome — a problem, because `splitTableCells` needs boundary pipes and PRD-040 measured that shape counting 0 — and the positive control for that predicate became a `|`-bearing sentence whose neighbour does not match, not the "legal boundaryless table" that contradicted the refusal; FR-2's §11 row now asserts that the reader AND the error class import from the installed package root, not only that the wrapper throws |
-
+| 2026-08-07 | owner  | **Correction.** The iteration-3 row's "one outcome per shape" paragraph never landed — the same silent `str.replace` no-op — so the file kept assigning both refusal and positive-control duty to a matching boundaryless table, exactly as iteration 4 reported. Written now via an exact-match edit and verified by reading it back |
