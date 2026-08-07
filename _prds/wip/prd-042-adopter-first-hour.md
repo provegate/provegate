@@ -127,8 +127,18 @@ so that my first close fails on my code and not on my paperwork.
    | id matching two wip PRDs | `"an ambiguous id names both candidates"` |
 
    A command that guesses which production was meant writes the wrong file into the wrong place.
-   - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`,
-     `packages/provegate/src/cli.ts::usage`
+
+   **What each artifact receives** (closed; anything absent from this table stays a placeholder
+   the author fills):
+
+   | Template | Substituted by `gate new` | Left to the author |
+   | -------- | ------------------------- | ------------------ |
+   | tasks | the PRD's id and slug in the heading and the `> **PRD**:` link, `> **Status**: Not Started`, `> **Created**` / `> **Updated**` dates, and the FR-2 token pass | task text, the Verification Ledger's rows, Relevant Files |
+   | review | the PRD's id in the heading and the `> **PRD:**` metadata line, `> **Base SHA:**` left EMPTY (the reviewer fills it — a pre-filled SHA is a claim about a diff nobody read) | verdict, reviewer, the four count fields, findings |
+
+   The review template's `Quorum` line is NOT pre-filled: the review gate refuses an artifact
+   without it, and a value the tool supplied would be a quorum nobody convened.
+   - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`
 2. **FR-2**: `gate new` substitutes every template token whose value the configuration can
    supply, from this closed table, in this precedence order:
 
@@ -191,7 +201,8 @@ so that my first close fails on my code and not on my paperwork.
    `"NEXT_STEPS numbered headings are unique and sequential"` fails while a duplicate exists and
    passes once the second `## 7` becomes `## 8`.
    - **Targets:** `packages/provegate/QUICKSTART.md`, `apps/docs/content/docs/quickstart.mdx`,
-     `scripts/verify/verify-quickstart-parity.mjs`, `packages/provegate/practices/NEXT_STEPS.md`
+     `scripts/verify/verify-quickstart-parity.mjs`, `packages/provegate/practices/NEXT_STEPS.md`,
+     `packages/provegate/src/cli.ts::usage`, `packages/provegate/test/cli.test.ts`
 
 ---
 
@@ -213,8 +224,11 @@ so that my first close fails on my code and not on my paperwork.
 - **Given** an existing PRD, **When** `gate new --tasks PRD-001` runs, **Then** the file appears
   at `<tasks.dir>/wip/tasks-001-<slug>.md` and the phase-6 gate finds it; re-running reports the
   existing file and leaves it byte-identical.
-- **Given** `--tasks` and `--review` together, or an id matching zero or two PRDs, **When**
-  `gate new` runs, **Then** each is its own named refusal.
+- **Given** each of the eight refusal categories in FR-1 — both artifact flags; a positional
+  argument beside an artifact flag; `--class` or `--template` beside one; a repeated artifact
+  flag; an artifact flag with no id; neither slug nor artifact flag; an id matching zero wip
+  PRDs; an id matching two — **When** `gate new` runs, **Then** each refuses with its own
+  message naming what was ambiguous, under the test titles FR-1 lists.
 - **Given** a repository whose `config.commands.lint` is an empty string, **When** `gate new`
   runs, **Then** `{{CMD_LINT}}` stays in the file and appears once in the sorted unresolved-token
   line, and the command exits 0.
@@ -387,7 +401,7 @@ the same commit or the check fails, which is the point of it.
 | FR   | Command / Check                 | Scope                  | Notes                                                     |
 | ---- | ------------------------------- | ---------------------- | --------------------------------------------------------- |
 | FR-1 | `pnpm test --filter provegate`  | new.test.ts            | both modes write the configured paths; re-run reports and leaves bytes |
-| FR-1 | `pnpm test --filter provegate`  | new.test.ts            | both modes together, id matching zero, id matching two — three refusals |
+| FR-1 | `pnpm test --filter provegate`  | new.test.ts            | all eight refusals by their FR-1 titles: `"--tasks with --review refuses"`, `"a positional argument beside --tasks refuses"`, `"--class beside --review refuses"`, `"a repeated --tasks refuses"`, `"--tasks without an id refuses"`, `"a bare gate new refuses"`, `"an id with no wip PRD refuses"`, `"an ambiguous id names both candidates"` |
 | FR-2 | `pnpm test --filter provegate`  | new.test.ts            | all seven tokens substituted from the §4 table; empty value keeps the token |
 | FR-2 | `pnpm test --filter provegate`  | new.test.ts            | unresolved tokens reported once, sorted, exit code 0       |
 | FR-3 | `pnpm test --filter provegate`  | new.test.ts            | memory sections absent when the contract is off            |
@@ -431,3 +445,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.7, flat; five items CLOSED and holding): the three productions written out as a grammar block with six enumerated refusals, each with a test; FR-2 scoped as an ADDITIONAL pass that leaves every existing anchor substitution — `{{ID_PREFIX}}` included — and its drift refusals untouched; the `evidence-pattern-satisfied-by-the-template` disposition repointed from a row that did not exist to the FR-1 row, with the exact test title named; the revert story now distinguishes the older `gate new` (ignores the artifacts) from the Phase-6 chain (keeps consuming them); rollback trigger reworded to a deny test FAILING; the NEXT_STEPS heading fix given a runnable assertion instead of a promise |
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS): id resolution restricted to the configured wip role with the artifact BASENAME authoritative for number and slug (a heading an author edits is not an identifier); the eight refusals given a table of named `new.test.ts` test titles; `cli.ts::usage` added as a target so `gate --help` advertises both artifact modes, both quickstart copies teach them where they currently prescribe copying a template by hand, and a `cli.test.ts` content assertion fails while either is unadvertised — a feature the help text does not mention is a feature an adopter does not find |
 | 2026-08-07 | owner  | **Correction.** The iteration-3 and iteration-4 rows above claimed an FR-1 production grammar, identity rule and refusal table that were never written to this file — the edits silently no-opped (`python str.replace` on a prettier-formatted artifact, the trap this repository has recorded twice). The scorer caught it both times as MP-1 OPEN and the changelog kept saying otherwise. The content is now present and was verified by reading the file back, not by trusting the edit |
+| 2026-08-07 | owner  | Phase 4, task 1.0 — the three readiness watch items closed in the PRD before any code. W1: the artifact-substitution table is now closed, and it deliberately leaves `Base SHA` and `Quorum` EMPTY in the review artifact (a pre-filled SHA claims a diff nobody read; a supplied quorum is a panel nobody convened). W2: `cli.ts::usage` and `cli.test.ts` moved from FR-1 to FR-6, so the requirement owning discoverability owns its targets. W3: §6 and §11 now carry all eight refusal categories and their exact test titles, counted rather than read |
+
