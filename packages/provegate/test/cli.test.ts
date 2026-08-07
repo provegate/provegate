@@ -84,3 +84,15 @@ describe('cli skeleton', () => {
     expect(result.stderr).toContain('unknown command');
   });
 });
+
+describe('discoverability (PRD-042 FR-6)', () => {
+  it('the new help line advertises --tasks and --review', async () => {
+    const result = await cli('--help');
+    const line = result.stdout.split('\n').find((l) => l.trim().startsWith('new '));
+    // A feature the help text does not mention is a feature an adopter does not
+    // find: the first external run copied templates by hand because of this.
+    expect(line).toBeTruthy();
+    expect(line).toContain('--tasks');
+    expect(line).toContain('--review');
+  });
+});

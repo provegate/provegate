@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -13,6 +13,8 @@ import {
   shouldSkipGate,
 } from '../src/core/run/chain.js';
 import { declaredArtifactsStrict } from '../src/core/run/durable.js';
+import { createCompanion, createPrd } from '../src/core/run/new.js';
+import { initWorkspace } from '../src/core/run/init.js';
 import type { StateRecord } from '../src/core/state/build.js';
 
 const cfg = DEFAULT_CONFIG;
@@ -2296,5 +2298,59 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
     );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('symlink');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * PRD-042 — the Phase-6 stop names what it wants (FR-4), and the
+ * convenience of FR-1 cannot hand an author a pre-passed review row.
+ * ------------------------------------------------------------------ */
+
+describe('phase-6 diagnostics (PRD-042 FR-4)', () => {
+  function phase6Gate(prdContent: string, tasksContent: string, rec = record()) {
+    const chain = buildGateChain({
+      config: cfg,
+      manifest: defaultManifest(cfg),
+      root: tempRoot(),
+      record: rec,
+      prdContent,
+      tasksContent,
+      changedFiles: [],
+      prdClass: 'feature',
+    });
+    return chain.find((g) => g.phase === '6 Final Auditing');
+  }
+
+  it('names the expected task path and the ledger row it reads', () => {
+    const gate = phase6Gate(PRD_WITH_11, '', record({ prd: 'PRD-007', number: 7, slug: 'a-slug' }));
+    const result = gate!.fn!();
+    expect(result.ok).toBe(false);
+    // The path is resolved from config, not a template the reader must expand.
+    expect(result.why).toContain('_tasks/wip/tasks-007-a-slug.md');
+    expect(result.why).toContain('gate new --tasks PRD-007');
+    expect(result.why).toContain('independent-review');
+    expect(result.why).toContain('`passed`');
+  });
+
+  it('an unedited instantiated tasks template fails the Phase-6 gate', () => {
+    // The convenience FR-1 adds must not hand an author a review row that
+    // passes: the shipped template's placeholder ledger is not evidence.
+    const root = tempRoot();
+    initWorkspace(cfg, root);
+    createPrd(cfg, root, { slug: 'card-truncation' });
+    const companion = createCompanion(cfg, root, 'tasks', 'PRD-001');
+    const tasksContent = readFileSync(companion.path, 'utf8');
+    const chain = buildGateChain({
+      config: cfg,
+      manifest: defaultManifest(cfg),
+      root,
+      record: record({ prd: 'PRD-001', number: 1, slug: 'card-truncation' }),
+      prdContent: PRD_WITH_11,
+      tasksContent,
+      changedFiles: [],
+      prdClass: 'feature',
+    });
+    const gate = chain.find((g) => g.phase === '6 Final Auditing');
+    expect(gate!.fn!().ok).toBe(false);
   });
 });

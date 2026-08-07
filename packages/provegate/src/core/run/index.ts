@@ -85,9 +85,15 @@ export {
   type MergeOutcome,
 } from './merge.js';
 export {
+  configuredTokens,
+  createCompanion,
   createPrd,
+  findWipPrd,
   highestPrdNumber,
   instantiateTemplate,
+  unresolvedTokens,
+  type CompanionKind,
+  type CompanionResult,
   type CreatePrdOptions,
   type CreatePrdResult,
 } from './new.js';

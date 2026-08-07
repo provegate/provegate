@@ -6,7 +6,13 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
-import { createPrd, initWorkspace, instantiateTemplate } from '../src/core/run/index.js';
+import {
+  createCompanion,
+  createPrd,
+  initWorkspace,
+  instantiateTemplate,
+  unresolvedTokens,
+} from '../src/core/run/index.js';
 import { buildState } from '../src/core/state/build.js';
 
 const run = promisify(execFile);
@@ -258,5 +264,231 @@ describe('gate new (live CLI)', () => {
     await expect(run(process.execPath, [cliPath, 'new'], { cwd: root })).rejects.toMatchObject({
       code: 1,
     });
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * PRD-042 — the adopter's first hour.
+ * ------------------------------------------------------------------ */
+
+describe('gate new argument grammar (PRD-042 FR-1)', () => {
+  const cli = (root: string, args: string[]) =>
+    run('node', [cliPath, 'new', ...args], { cwd: root }).catch((e: unknown) => e as {
+      code: number;
+      stdout: string;
+      stderr: string;
+    });
+
+  it('--tasks with --review refuses', async () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'item' });
+    const r = (await cli(root, ['--tasks', '--review', 'PRD-001'])) as { stderr: string };
+    expect(r.stderr).toContain('separate artifacts');
+  });
+
+  it('a positional argument beside --tasks refuses', async () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'item' });
+    const r = (await cli(root, ['a-slug', '--tasks', 'PRD-001'])) as { stderr: string };
+    expect(r.stderr).toContain('takes exactly one id');
+    expect(r.stderr).toContain('"a-slug"');
+  });
+
+  it('--class beside --review refuses', async () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'item' });
+    const r = (await cli(root, ['--review', 'PRD-001', '--class=hotfix'])) as { stderr: string };
+    expect(r.stderr).toContain('belong to the PRD production');
+  });
+
+  it('a repeated --tasks refuses', async () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'item' });
+    const r = (await cli(root, ['--tasks', 'PRD-001', '--tasks', 'PRD-001'])) as { stderr: string };
+    expect(r.stderr).toContain('given twice');
+  });
+
+  it('--tasks without an id refuses', async () => {
+    const root = tempRoot();
+    const r = (await cli(root, ['--tasks'])) as { stderr: string };
+    expect(r.stderr).toContain('needs an id');
+  });
+
+  it('a bare gate new refuses', async () => {
+    const root = tempRoot();
+    const r = (await cli(root, [])) as { stderr: string };
+    expect(r.stderr).toContain('usage: gate new');
+  });
+
+  it('an id with no wip PRD refuses', async () => {
+    const root = tempRoot();
+    const r = (await cli(root, ['--tasks', 'PRD-404'])) as { stderr: string };
+    expect(r.stderr).toContain('no work item PRD-404');
+  });
+
+  it('an ambiguous id names both candidates', async () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'first' });
+    // A second file with the SAME number and a different slug — the shape a
+    // hand-copied artifact leaves behind.
+    writeFileSync(join(root, '_prds/wip/prd-001-second.md'), '# PRD-001: second\n');
+    const r = (await cli(root, ['--tasks', 'PRD-001'])) as { stderr: string };
+    expect(r.stderr).toContain('matches 2 files');
+    expect(r.stderr).toContain('prd-001-second.md');
+  });
+});
+
+describe('companion artifacts (PRD-042 FR-1)', () => {
+  it('writes the tasks artifact at the configured path and refuses to overwrite', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'card-truncation' });
+    const first = createCompanion(cfg, root, 'tasks', 'PRD-001');
+    expect(first.relPath).toBe('_tasks/wip/tasks-001-card-truncation.md');
+    const bytes = readFileSync(first.path, 'utf8');
+    expect(() => createCompanion(cfg, root, 'tasks', 'PRD-001')).toThrow(/already exists/);
+    expect(readFileSync(first.path, 'utf8')).toBe(bytes);
+  });
+
+  it('writes the review artifact and leaves Base SHA and Quorum for the reviewer', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'card-truncation' });
+    const result = createCompanion(cfg, root, 'review', 'PRD-001');
+    expect(result.relPath).toBe('_docs/reviews/review-001-card-truncation.md');
+    const text = readFileSync(result.path, 'utf8');
+    expect(text).toContain('> **PRD:** PRD-001');
+    // The reviewer's own fields are untouched: a pre-filled SHA claims a diff
+    // nobody read, and a supplied quorum is a panel nobody convened.
+    expect(text).toContain('> **Base SHA:** `[git merge-base or base tip]`');
+    expect(text).toContain('> **Quorum:** 3/5 pass');
+  });
+
+  it('takes identity from the artifact basename, not the heading', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'real-slug' });
+    const prdPath = join(root, '_prds/wip/prd-001-real-slug.md');
+    writeFileSync(
+      prdPath,
+      readFileSync(prdPath, 'utf8').replace(/^# PRD-001: .*$/m, '# PRD-001: an edited heading'),
+    );
+    expect(createCompanion(cfg, root, 'tasks', 'PRD-001').relPath).toBe(
+      '_tasks/wip/tasks-001-real-slug.md',
+    );
+  });
+
+  it('does not resolve ids from the completed state', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'shipped-item' });
+    const from = join(root, '_prds/wip/prd-001-shipped-item.md');
+    writeFileSync(join(root, '_prds/completed/prd-001-shipped-item.md'), readFileSync(from));
+    rmSync(from);
+    expect(() => createCompanion(cfg, root, 'tasks', 'PRD-001')).toThrow(/work in flight/);
+  });
+});
+
+describe('configured token pass (PRD-042 FR-2)', () => {
+  it('substitutes every token whose source is non-empty', () => {
+    const root = tempRoot();
+    const text = readFileSync(createPrd(cfg, root, { slug: 'tokens' }).path, 'utf8');
+    for (const token of ['{{CMD_CHECK_TYPES}}', '{{CMD_LINT}}', '{{CMD_TEST}}', '{{CMD_BUILD}}']) {
+      expect(text).not.toContain(token);
+    }
+    expect(text).toContain(cfg.commands.checkTypes);
+  });
+
+  it('keeps a token whose configured source is empty, and reports it', () => {
+    const root = tempRoot();
+    const config = { ...cfg, commands: { ...cfg.commands, lint: '' } };
+    const result = createPrd(config, root, { slug: 'empty-source' });
+    const text = readFileSync(result.path, 'utf8');
+    expect(text).toContain('{{CMD_LINT}}');
+    expect(result.unresolved).toContain('{{CMD_LINT}}');
+  });
+
+  it('reports unresolved tokens sorted and deduplicated', () => {
+    expect(unresolvedTokens('{{B_TOKEN}} {{A_TOKEN}} {{B_TOKEN}}')).toEqual([
+      '{{A_TOKEN}}',
+      '{{B_TOKEN}}',
+    ]);
+  });
+
+  it('leaves the anchored substitutions alone (the pass is additive)', () => {
+    const root = tempRoot();
+    const text = readFileSync(createPrd(cfg, root, { slug: 'anchors' }).path, 'utf8');
+    expect(text).toContain('# PRD-001: ');
+    expect(text).not.toContain('{{ID_PREFIX}}');
+  });
+});
+
+describe('memory sections (PRD-042 FR-3)', () => {
+  it('omits both sections when the contract is off — the template HAS them', () => {
+    const root = tempRoot();
+    expect(readFileSync(shippedTemplate, 'utf8')).toContain('## Memory Inputs');
+    const text = readFileSync(createPrd(cfg, root, { slug: 'memory-off' }).path, 'utf8');
+    expect(cfg.memory.enabled).toBe(false);
+    expect(text).not.toContain('## Memory Inputs');
+    expect(text).not.toContain('## Memory Outputs');
+    // The sections around them survive intact.
+    expect(text).toContain('## Conflict Surface');
+    expect(text).toContain('## 10. References');
+  });
+
+  it('keeps both sections when the contract is on', () => {
+    const root = tempRoot();
+    const config = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    const text = readFileSync(createPrd(config, root, { slug: 'memory-on' }).path, 'utf8');
+    expect(text).toContain('## Memory Inputs');
+    expect(text).toContain('## Memory Outputs');
+  });
+});
+
+describe('rendered templates (PRD-042 FR-5)', () => {
+  const rendered = (prefix: string) =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', prefix);
+
+  it('instantiates a template whose ID_PREFIX token is already rendered', () => {
+    const root = tempRoot();
+    const path = join(root, 'rendered.md');
+    writeFileSync(path, rendered(cfg.idPattern.prefix));
+    const result = createPrd(cfg, root, { slug: 'rendered', templatePath: path });
+    expect(readFileSync(result.path, 'utf8')).toContain('# PRD-001: ');
+  });
+
+  it('refuses a template rendered with a FOREIGN prefix', () => {
+    const root = tempRoot();
+    const path = join(root, 'foreign.md');
+    writeFileSync(path, rendered('RFC'));
+    expect(() => createPrd(cfg, root, { slug: 'foreign', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('refuses a malformed id heading', () => {
+    const root = tempRoot();
+    const path = join(root, 'malformed.md');
+    writeFileSync(path, rendered(cfg.idPattern.prefix).replace('# PRD-XXX: ', '## PRD-XXX: '));
+    expect(() => createPrd(cfg, root, { slug: 'malformed', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('refuses a template with no id anchor at all', () => {
+    const root = tempRoot();
+    const path = join(root, 'absent.md');
+    writeFileSync(path, rendered(cfg.idPattern.prefix).replace(/^# PRD-XXX: .*$/m, '# Untitled'));
+    expect(() => createPrd(cfg, root, { slug: 'absent', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('substitutes only the FIRST of two competing anchors and leaves the second visible', () => {
+    // Two id anchors is drift the author must resolve: the instantiated file
+    // keeps the second, so `gate check` and any reader see it immediately
+    // rather than the tool silently picking one.
+    const root = tempRoot();
+    const path = join(root, 'competing.md');
+    const base = rendered(cfg.idPattern.prefix);
+    writeFileSync(path, base.replace('# PRD-XXX: ', '# PRD-XXX: \n\n# PRD-XXX: '));
+    const result = createPrd(cfg, root, { slug: 'competing', templatePath: path });
+    expect(readFileSync(result.path, 'utf8')).toContain('# PRD-XXX: ');
   });
 });

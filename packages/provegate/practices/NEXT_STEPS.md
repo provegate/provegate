@@ -114,7 +114,7 @@ node scripts/verify/verify-workflow.mjs
 
 Must exit 0 on a fresh install.
 
-## 7. Check the memory install, if you enabled it
+## 8. Check the memory install, if you enabled it
 
 ```sh
 gate doctor --memory        # add --json for machine output
@@ -137,7 +137,7 @@ warning never changes the exit code.
 
 Bare `gate doctor` with no mode prints usage and exits 1 rather than guessing.
 
-## 8. Recall, once you have records
+## 9. Recall, once you have records
 
 ```sh
 gate memory find --query=caching

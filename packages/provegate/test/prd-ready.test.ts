@@ -6,6 +6,8 @@ import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js
 import { defaultManifest, type GatesManifest } from '../src/core/gates/manifest.js';
 import { lintPrd } from '../src/core/gates/prd-ready.js';
 import { repoPath } from './helpers/repo-reads.js';
+import { createPrd } from '../src/core/run/new.js';
+import { initWorkspace } from '../src/core/run/init.js';
 
 const cfg = DEFAULT_CONFIG;
 const manifest = defaultManifest(cfg);
@@ -598,5 +600,28 @@ describe('phase 6 round 8 regressions', () => {
     expect(lintPrd(on, manifest, content, root).issues).toContainEqual(
       '`## Durable Artifacts` is declared more than once — exactly one section is parseable',
     );
+  });
+});
+
+describe('gate new omission cannot escape an enabled contract (PRD-042 FR-3)', () => {
+  const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+
+  it('a PRD created with memory OFF passes there and FAILS where the contract is on', () => {
+    const root = mkdtempSync(join(tmpdir(), 'provegate-fr3-'));
+    roots.push(root);
+    initWorkspace(cfg, root);
+    const created = createPrd(cfg, root, { slug: 'memory-off-item' });
+    const content = readFileSync(created.path, 'utf8');
+    expect(content).not.toContain('## Memory Inputs');
+
+    // Where the contract is off, the absence is legal.
+    expect(lintPrd(cfg, defaultManifest(cfg), content, root, 1).ok).toBe(true);
+
+    // Carried into a repository that enabled the contract, the same bytes must
+    // fail. Without this arm, `gate new` would be a way to opt out of a policy
+    // the repository turned on.
+    const strict = lintPrd(on, defaultManifest(on), content, root, 1);
+    expect(strict.ok).toBe(false);
+    expect(strict.issues.join(' ')).toMatch(/Memory Inputs|Memory Outputs/);
   });
 });

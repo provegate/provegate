@@ -54,3 +54,18 @@ describe('content hygiene (W2 policy)', () => {
     }
   });
 });
+
+describe('practices NEXT_STEPS headings (PRD-042 FR-6)', () => {
+  it('NEXT_STEPS numbered headings are unique and sequential', () => {
+    const text = readFileSync(
+      fileURLToPath(new URL('../practices/NEXT_STEPS.md', import.meta.url)),
+      'utf8',
+    );
+    const numbers = [...text.matchAll(/^## (\d+)\. /gm)].map((m) => Number(m[1]));
+    // A duplicate step number is a reader following the wrong instruction: the
+    // shipped file had two `## 7`s, so "step 7" named two different things.
+    expect(new Set(numbers).size).toBe(numbers.length);
+    expect(numbers).toEqual([...numbers].sort((a, b) => a - b));
+    expect(numbers).toEqual(numbers.map((_, i) => i + 1));
+  });
+});

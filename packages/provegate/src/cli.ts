@@ -46,7 +46,9 @@ import {
   baseWorktreeReady,
   buildGateChain,
   claimPrd,
+  createCompanion,
   createPrd,
+  type CompanionKind,
   initWorkspace,
   planPractices,
   planPrompts,
@@ -125,7 +127,7 @@ function usage(): string {
     '',
     'COMMANDS',
     '  init     scaffold the workflow tree + starter configs (--dry-run) (--practices: install the practices pack)',
-    '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
+    '  new      create the next PRD, or a tasks/review artifact for one (gate new <slug> [--class=X] [--template=path] | --tasks <ID> | --review <ID>)',
     '  open     claim a PRD: lease its conflict surface or refuse on overlap ([--steal] [--worktree] [--hours=N])',
     '  renew    extend your lease (idempotent refresh) (gate renew PRD-XXX [--hours=N])',
     '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
@@ -274,15 +276,80 @@ function runInit(args: string[]): number {
   return 0;
 }
 
+const NEW_USAGE =
+  'usage: gate new <slug> [--class=X] [--template=path] | gate new --tasks <ID> | gate new --review <ID>';
+
+/**
+ * `gate new` has three productions and they are mutually exclusive. Each
+ * ambiguous form gets its own refusal naming what was ambiguous: a command that
+ * guesses which production was meant writes the wrong file into the wrong place,
+ * and the adopter finds out at Phase 6.
+ */
 function runNew(args: string[]): number {
-  const unknown = unknownOption(args, ['--class', '--template']);
+  const unknown = unknownOption(args, ['--class', '--template', '--tasks', '--review']);
   if (unknown !== null) {
     console.error(`[new] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
   }
-  const slug = args.find((a) => !a.startsWith('--'));
+  const positional = args.filter((a) => !a.startsWith('--'));
+  const tasksFlags = args.filter((a) => a === '--tasks' || a.startsWith('--tasks='));
+  const reviewFlags = args.filter((a) => a === '--review' || a.startsWith('--review='));
+
+  if (tasksFlags.length > 0 && reviewFlags.length > 0) {
+    console.error('[new] --tasks and --review are separate artifacts — run one, then the other');
+    return 1;
+  }
+  if (tasksFlags.length > 1 || reviewFlags.length > 1) {
+    console.error('[new] the artifact flag is given twice — one artifact per run');
+    return 1;
+  }
+  const artifactFlag = tasksFlags[0] ?? reviewFlags[0];
+  if (artifactFlag !== undefined) {
+    const kind: CompanionKind = tasksFlags.length > 0 ? 'tasks' : 'review';
+    if (args.some((a) => a.startsWith('--class=') || a.startsWith('--template='))) {
+      console.error(
+        `[new] --class and --template belong to the PRD production; --${kind} instantiates the shipped ${kind} template`,
+      );
+      return 1;
+    }
+    // `--tasks PRD-001` (two tokens) and `--tasks=PRD-001` are both accepted;
+    // anything else positional alongside them is ambiguous.
+    const inline = artifactFlag.includes('=') ? artifactFlag.split('=').slice(1).join('=') : undefined;
+    const id = inline ?? positional[0];
+    const extras = inline === undefined ? positional.slice(1) : positional;
+    if (extras.length > 0) {
+      const got = inline === undefined ? positional : [inline, ...positional];
+      console.error(
+        `[new] --${kind} takes exactly one id; got ${got.map((a) => `"${a}"`).join(', ')} — a slug creates a PRD, not a companion artifact`,
+      );
+      return 1;
+    }
+    if (id === undefined || id === '') {
+      console.error(`[new] --${kind} needs an id, e.g. gate new --${kind} PRD-001`);
+      return 1;
+    }
+    const { root, config } = loadConfig();
+    try {
+      const result = createCompanion(config, root, kind, id);
+      console.log(`[new] created ${result.relPath} for ${result.id}`);
+      if (result.unresolved.length > 0) {
+        console.log(`[new] unresolved tokens: ${result.unresolved.join(', ')}`);
+      }
+      console.log(
+        kind === 'tasks'
+          ? '[new] next: fill the tasks and the Verification Ledger'
+          : '[new] next: the reviewer fills Verdict, Base SHA, the counts and Quorum',
+      );
+      return 0;
+    } catch (error) {
+      console.error(`[new] ${error instanceof Error ? error.message : String(error)}`);
+      return 1;
+    }
+  }
+
+  const slug = positional[0];
   if (!slug) {
-    console.error('usage: gate new <slug> [--class=X] [--template=path]');
+    console.error(NEW_USAGE);
     return 1;
   }
   const cls = args.find((a) => a.startsWith('--class='))?.slice('--class='.length);
@@ -300,6 +367,9 @@ function runNew(args: string[]): number {
       console.log(
         '[new] parent directories were missing — run `gate init` for the full workflow tree',
       );
+    }
+    if (result.unresolved.length > 0) {
+      console.log(`[new] unresolved tokens: ${result.unresolved.join(', ')}`);
     }
     console.log(`[new] next: fill the template, then \`gate check ${result.id}\``);
     return 0;

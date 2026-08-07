@@ -32,6 +32,9 @@ export interface CreatePrdResult {
   path: string;
   /** Relative path actually written (repo-root relative). */
   relPath: string;
+  /** Tokens the configuration could not resolve, sorted and deduplicated
+   * (PRD-042 FR-2). Reported to the author; never fatal. */
+  unresolved: string[];
   /** True when parent directories had to be created (uninitialized repo, W2). */
   createdParents: boolean;
   /** Id-allocation retries taken to dodge a concurrent `gate new` (W1). */
@@ -40,24 +43,28 @@ export interface CreatePrdResult {
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function defaultTemplatePath(): string {
+function shippedTemplatePath(name: string): string {
   // Robust against bundling: dist/ is flat while src/ is nested, so a fixed
   // relative hop is wrong in one of the two. Walk up from the module until
   // the shipped template appears (package root), both layouts covered.
   let dir = dirname(fileURLToPath(import.meta.url));
   for (;;) {
-    const candidate = resolve(dir, 'templates/prd-template.md');
+    const candidate = resolve(dir, `templates/${name}`);
     try {
       readFileSync(candidate);
       return candidate;
     } catch {
       const parent = dirname(dir);
       if (parent === dir) {
-        throw new Error('shipped templates/prd-template.md not found — package layout broken');
+        throw new Error(`shipped templates/${name} not found — package layout broken`);
       }
       dir = parent;
     }
   }
+}
+
+function defaultTemplatePath(): string {
+  return shippedTemplatePath('prd-template.md');
 }
 
 /** Highest allocated id number across ALL lifecycle states — completed and
@@ -116,6 +123,94 @@ function substituteAnchor(content: string, anchor: RegExp, replacement: string):
   return content.replace(anchor, replacement);
 }
 
+/**
+ * The id anchor, as a CLOSED two-member alternation (PRD-042 FR-5): the raw
+ * `{{ID_PREFIX}}` form, or exactly the configured prefix. A repository that
+ * installs its own prompt store renders the token away, and `gate new` refused
+ * its own template for it — every PRD here was hand-created because of this.
+ *
+ * The alternation is two literals and nothing else. A wildcard (`[A-Z]+-XXX`)
+ * would turn drift detection into a heading search: a template whose id line
+ * names ANOTHER project's prefix would then instantiate silently, which is the
+ * drift this anchor exists to catch.
+ */
+function idAnchor(config: WorkflowConfig): RegExp {
+  return new RegExp(`^# (?:\\{\\{ID_PREFIX\\}\\}|${escapeRegExp(config.idPattern.prefix)})-XXX: `, 'm');
+}
+
+/** Tokens `gate new` can resolve from configuration, with their sources and
+ * precedence (PRD-042 FR-2). CLOSED set: a token outside this table is never
+ * substituted, however plausible its name, and adding one is a spec change.
+ *
+ * A source that is absent or empty is NOT a substitution — the token survives
+ * and is reported. Silently writing an empty string would put a blank where a
+ * command belongs, and `gate check` would then refuse a §11 row for being
+ * unrunnable rather than for being unfilled. */
+export function configuredTokens(config: WorkflowConfig): Map<string, string> {
+  const promptValue = (key: string): string | undefined => {
+    const raw = config.prompts?.values?.[key];
+    return typeof raw === 'string' && raw !== '' ? raw : undefined;
+  };
+  const nonEmpty = (value: string | undefined): string | undefined =>
+    value !== undefined && value !== '' ? value : undefined;
+
+  const pairs: Array<[string, string | undefined]> = [
+    ['{{CMD_CHECK_TYPES}}', nonEmpty(config.commands.checkTypes)],
+    ['{{CMD_LINT}}', nonEmpty(config.commands.lint)],
+    ['{{CMD_TEST}}', nonEmpty(config.commands.test)],
+    ['{{CMD_BUILD}}', nonEmpty(config.commands.build)],
+    ['{{CMD_TEST_SCOPED}}', promptValue('CMD_TEST_SCOPED') ?? nonEmpty(config.commands.test)],
+    ['{{MEMORY_ROOT}}', nonEmpty(config.memory.root)],
+    ['{{DOCS_ROOT}}', promptValue('DOCS_ROOT') ?? nonEmpty(config.dirs.artifacts.summary.dir)],
+  ];
+  const out = new Map<string, string>();
+  for (const [token, value] of pairs) if (value !== undefined) out.set(token, value);
+  return out;
+}
+
+/** Every `{{TOKEN}}` left in the text, sorted and deduplicated. Reported to the
+ * author rather than failing: an unresolved token is work for them, not a fault
+ * of the command. */
+export function unresolvedTokens(content: string): string[] {
+  return [...new Set(content.match(/\{\{[A-Z0-9_]+\}\}/g) ?? [])].sort();
+}
+
+/** Apply the configured token table. Runs AFTER the anchored substitutions and
+ * touches none of them. */
+function substituteConfiguredTokens(config: WorkflowConfig, content: string): string {
+  let out = content;
+  for (const [token, value] of configuredTokens(config)) out = out.replaceAll(token, value);
+  return out;
+}
+
+/**
+ * Drop a `## <heading>` section — heading line through the last line before the
+ * next `## ` at column zero, including that section's own trailing `---`
+ * separator and nothing beyond it (PRD-042 FR-3).
+ *
+ * Absent heading = no-op: a forked template that never carried the section is
+ * not drift, it is a template with fewer sections.
+ */
+function dropSection(content: string, heading: string): string {
+  const lines = content.split('\n');
+  const start = lines.findIndex((l) => l === `## ${heading}`);
+  if (start === -1) return content;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i]!.startsWith('## ')) {
+      end = i;
+      break;
+    }
+  }
+  // Walk back over the blank lines and the single `---` that closes THIS
+  // section, so the removal leaves neither an orphan rule nor a double blank.
+  let cut = end;
+  while (cut > start && lines[cut - 1] === '') cut--;
+  if (cut > start && lines[cut - 1] === '---') cut--;
+  while (cut > start && lines[cut - 1] === '') cut--;
+  return [...lines.slice(0, start), ...lines.slice(cut)].join('\n');
+}
+
 export function instantiateTemplate(
   config: WorkflowConfig,
   template: string,
@@ -126,7 +221,7 @@ export function instantiateTemplate(
 ): string {
   const date = now.toISOString().slice(0, 10);
   let out = template;
-  out = substituteAnchor(out, /^# \{\{ID_PREFIX\}\}-XXX: /m, `# ${id}: `);
+  out = substituteAnchor(out, idAnchor(config), `# ${id}: `);
   out = out.replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
   out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`);
   out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`);
@@ -151,6 +246,17 @@ export function instantiateTemplate(
     /^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/m,
     `| ${date} | [role] | Initial draft |`,
   );
+  // A contract the repository cannot enforce is instruction the reader must
+  // ignore (PRD-042 FR-3). When memory is off, the two sections come out; when
+  // it is on they stay, and `gate check` refuses a PRD that lacks them — which
+  // is what stops this from becoming an escape hatch.
+  if (!config.memory.enabled) {
+    out = dropSection(out, 'Memory Inputs');
+    out = dropSection(out, 'Memory Outputs');
+  }
+  // Last, and additive: the anchored substitutions above are already done, and
+  // this pass changes none of them.
+  out = substituteConfiguredTokens(config, out);
   return out;
 }
 
@@ -254,8 +360,131 @@ export function createPrd(
           }
           continue;
         }
-        return { id, path: full, relPath, createdParents, retries };
+        return { id, path: full, relPath, createdParents, retries, unresolved: unresolvedTokens(content) };
       }
     },
   );
+}
+
+/* ------------------------------------------------------------------ *
+ * Companion artifacts (PRD-042 FR-1)
+ *
+ * The gate chain reads three artifacts and the CLI could create one. Phase 6
+ * stopped with `no tasks file — independent-review ledger missing` and named
+ * neither the path it wanted nor the row it would read, so an adopter had to
+ * find the template inside node_modules and guess the file name.
+ * ------------------------------------------------------------------ */
+
+export type CompanionKind = 'tasks' | 'review';
+
+export interface CompanionResult {
+  id: string;
+  slug: string;
+  relPath: string;
+  path: string;
+  /** Tokens the author must still fill; reported, never fatal. */
+  unresolved: string[];
+}
+
+/** The wip PRD an id names. Identity comes from the artifact BASENAME —
+ * `<prefix>-NNN-<slug>.md` — never from the heading, which an author may
+ * rewrite freely and often does. Completed items are not targets: new work
+ * artifacts belong to work in flight. */
+export function findWipPrd(
+  config: WorkflowConfig,
+  root: string,
+  id: string,
+): { number: string; slug: string } {
+  const prdKind = config.dirs.artifacts.prd;
+  const idRe = new RegExp(`^${escapeRegExp(config.idPattern.prefix)}-(\\d+)$`, 'i');
+  const m = idRe.exec(id.trim());
+  if (!m) {
+    throw new Error(`"${id}" is not an id — expected ${config.idPattern.prefix}-NNN`);
+  }
+  const padded = m[1]!.padStart(config.idPattern.width, '0');
+  const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${padded}-(.+)\\.md$`);
+  const wipDir = `${prdKind.dir}/${config.dirs.stateRoles.wip}`;
+  let names: string[] = [];
+  try {
+    names = readdirSync(containedPath(root, wipDir));
+  } catch {
+    /* no wip dir yet */
+  }
+  const matches = names.map((n) => fileRe.exec(n)).filter((x): x is RegExpExecArray => x !== null);
+  if (matches.length === 0) {
+    throw new Error(
+      `no work item ${config.idPattern.prefix}-${padded} in ${wipDir} — companion artifacts belong to work in flight`,
+    );
+  }
+  if (matches.length > 1) {
+    throw new Error(
+      `id ${config.idPattern.prefix}-${padded} matches ${matches.length} files in ${wipDir}: ${matches
+        .map((x) => x[0])
+        .join(', ')} — resolve the duplicate first`,
+    );
+  }
+  return { number: padded, slug: matches[0]![1]! };
+}
+
+/** Instantiate the tasks or review template for an existing wip PRD.
+ *
+ * What each artifact receives is the PRD's closed table: identity, links, dates
+ * and the configured token pass for `tasks`; identity only for `review`. The
+ * review artifact's `Base SHA` and `Quorum` are deliberately NOT filled — a
+ * pre-filled SHA claims a diff nobody read, and a supplied quorum is a panel
+ * nobody convened. */
+export function createCompanion(
+  config: WorkflowConfig,
+  root: string,
+  kind: CompanionKind,
+  id: string,
+  now: Date = new Date(),
+): CompanionResult {
+  const { number, slug } = findWipPrd(config, root, id);
+  const canonicalId = `${config.idPattern.prefix}-${number}`;
+  const prdKind = config.dirs.artifacts.prd;
+  const prdRel = `${prdKind.dir}/${config.dirs.stateRoles.wip}/${prdKind.prefix}-${number}-${slug}.md`;
+
+  let relPath: string;
+  let content: string;
+  const date = now.toISOString().slice(0, 10);
+
+  if (kind === 'tasks') {
+    const tasksKind = config.dirs.artifacts.tasks;
+    relPath = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${number}-${slug}.md`;
+    const template = readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8');
+    content = template
+      .replace(/^# Tasks: \[Feature Name\]$/m, `# Tasks: ${slug}`)
+      .replace(
+        /^> \*\*PRD\*\*: \[prd-XXX-\{short-name\}\.md\]\([^)]*\)$/m,
+        `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](../../${prdRel})`,
+      )
+      .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`)
+      .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`)
+      .replaceAll('prd-XXX-{short-name}.md', `${prdKind.prefix}-${number}-${slug}.md`)
+      .replaceAll('review-XXX-{short-name}.md', `review-${number}-${slug}.md`);
+    content = substituteConfiguredTokens(config, content);
+  } else {
+    relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
+    const template = readFileSync(shippedTemplatePath('review-template.md'), 'utf8');
+    content = template
+      .replace(
+        /^# Independent Review: \{\{ID_PREFIX\}\}-XXX — \[Feature Name\]$/m,
+        `# Independent Review: ${canonicalId} — ${slug}`,
+      )
+      .replace(/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/m, `> **PRD:** ${canonicalId}`)
+      .replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
+  }
+
+  const full = containedPath(root, relPath);
+  mkdirSync(dirname(full), { recursive: true });
+  try {
+    writeFileSync(full, content, { flag: 'wx' });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new Error(`${relPath} already exists — left byte-untouched`);
+    }
+    throw err;
+  }
+  return { id: canonicalId, slug, relPath, path: full, unresolved: unresolvedTokens(content) };
 }
