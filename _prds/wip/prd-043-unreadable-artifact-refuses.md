@@ -60,7 +60,7 @@ happens when the reader cannot tell.
 | Metric                                  | Current | Target | Measurement                       |
 | --------------------------------------- | ------- | ------ | --------------------------------- |
 | Unreadable artifacts answered with a number | always | never | FR-1 refusal fixtures             |
-| Consumers surfacing the problem         | 0 of 2  | 2 of 2 | FR-3/FR-4 tests, production shapes |
+| Read sites that surface the problem     | 0 of 5  | 5 of 5 | FR-3/FR-4 tests at each site      |
 
 ---
 
@@ -141,12 +141,18 @@ so that a formatting mistake cannot silently drop my operator gate.
    lacks a signature.
    **Every reader of the count is a consumer of the contract**, and the inventory is closed:
    `operatorGateOk` (refuses), `lintPrd` via FR-4 (fatal issue),
-   `core/state/query.ts::formatCompactRecord` (`query.ts:117` — must not report a number as a
-   fact; it carries the problem alongside or reports it in place of the count), and
-   `cli.ts::runRun`'s dry-run plan line (`cli.ts:1152`) plus the JSON summary
-   (`cli.ts:1470`), which print `operator rows: N` today and must print the problem instead of a
-   number they cannot justify. A consumer that reads `count` without reading `problem` is the
-   defect this item exists to remove, wherever it sits.
+   and three read sites that print or publish the number:
+   - `core/state/query.ts::formatCompactRecord` (`query.ts:117`) — ONE representation, chosen
+     here rather than left to the implementer: `CompactRecord.operatorHandoffs` becomes
+     `number | null` and gains `operatorHandoffProblem: string | null`, with the number
+     **necessarily `null` when a problem exists**. Not "alongside or instead" — one shape.
+   - `cli.ts::runRun`'s plan line (`cli.ts:1152`, the `[run] plan …` header block) — prints the
+     problem in place of `operator rows: N`.
+   - `cli.ts::runRun`'s **handoff card** argument (`cli.ts:1470`, `operatorRows:` passed to
+     `handoffCard`) — the same substitution at the end of a successful close, which is the one
+     place a wrong number is most likely to be believed.
+   A consumer that reads `count` without reading `problem` is the defect this item exists to
+   remove, wherever it sits.
    - **Targets:** `packages/provegate/src/core/state/build.ts::buildState`,
      `packages/provegate/src/core/state/build.ts::StateRecord`,
      `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`,
@@ -239,13 +245,22 @@ so that a formatting mistake cannot silently drop my operator gate.
 
 ### Architecture
 
-One reader, one result type, two consumers that must each say what they do with a problem. The
+One reader, one result type, and FIVE read sites that must each say what they do with a
+problem: `operatorGateOk` refuses, `lintPrd` records a fatal issue, `formatCompactRecord`
+publishes `null` plus the problem, and `runRun`'s plan line and handoff card print the problem
+in place of a count. Naming two of them, as an earlier draft did, is the same defect one level
+up — an inventory that misses a reader leaves that reader believing a number. The
 diagnostic reader is additive; the numeric export keeps its shape because an installed copy is
 imported by the adopter smoke, which is the only external consumer this repository can see and
 therefore the only one it may assume.
 
 ### Migration & Compatibility
 
+- **`CompactRecord` is a public shape.** It is package-root exported and `gate queue --json`
+  publishes it, so `operatorHandoffs: number` becoming `number | null` plus a new
+  `operatorHandoffProblem` is a consumer-visible change. The changeset names that representation
+  explicitly, beside the thrown-error migration — a JSON field that silently changes type is how
+  a downstream reader learns about it in production.
 - **Blast radius:** any repository whose task artifacts contain a shape the reader cannot
   parse. Unlike PRD-040's change, this one cannot be measured by a count diff — an artifact
   that counted 0 before will refuse now, and both look like "no operator rows" from the
@@ -423,4 +438,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | **Correction.** The iteration-3 row's "one outcome per shape" paragraph never landed — the same silent `str.replace` no-op — so the file kept assigning both refusal and positive-control duty to a matching boundaryless table, exactly as iteration 4 reported. Written now via an exact-match edit and verified by reading it back |
 | 2026-08-07 | owner  | Iteration 6 (Codex 7.9; three findings, two of them about PRD-040): §1 said every unreadable shape "returns 0" — the measurement says otherwise (missing `Result` 0, separator-less table 2, narrow row 2, unterminated fence 0), and PRD-040 changes two of those values without making any of them refuse. Restated from the measurement, and the metric reworded from "counted as zero" to "answered with a number", because a number the reader could not justify is the defect at any value |
 | 2026-08-07 | owner  | Iteration 7 (Codex 7.8; the measured-baseline and escape-parity findings CLOSED): the unusable-count contract had an open consumer inventory — `query.ts::formatCompactRecord` (`:117`) and `cli.ts::runRun`'s two printers (`:1152`, `:1470`) read the count with no problem check, so the contract said "no consumer may read `count` without `problem`" while three consumers did exactly that. Inventory closed and each named in FR-3, Scope, Conflict Surface and §11. FR-4 now states its regression surface up front: `prd-ready.test.ts` holds six exact `{ok: true, issues: []}` expectations that the `warnings` field breaks, updated by deep equality rather than a loosened matcher |
+| 2026-08-07 | owner  | Iteration 8 (Codex 7.9): the previous round's inventory fix had left its own restatements behind — §2's metric and §7 still said "two consumers" where FR-3 now names five, which is the inventory defect one level up. FR-3 also offered `CompactRecord` an ALTERNATIVE ("alongside or in place"); one representation is chosen now: `operatorHandoffs: number | null` plus `operatorHandoffProblem: string | null`, the number necessarily `null` when a problem exists. The `cli.ts:1470` site was misdescribed as a JSON summary — it is the HANDOFF CARD argument, the one place a wrong number is most likely to be believed. §7 records that `CompactRecord` is package-root exported and published by `gate queue --json`, so the changeset must name the representation change |
 

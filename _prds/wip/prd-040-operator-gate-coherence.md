@@ -366,8 +366,8 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
   changes while the count stays `0 → 0` — the second is invisible to a count diff and is the
   one Clause 1 creates. Its classification is the decision input, and the classifications are
-  the four counting sources plus the zero-row acceptance changes — nothing else. An
-  unreadable-artifact population belongs to PRD-043 — where "refusal" means an artifact PRD-043 will later
+  the four counting sources plus the zero-row acceptance changes — nothing else. PRD-043's
+  unreadable-artifact population is not audited here — where "refusal" means an artifact PRD-043 will later
   refuse, recorded here as information only. This item performs no refusals, so no rollback of
   this item can be triggered by one.
 - **Remedy, per population:** a handoff row that is real work → flip `Autonomous Close` to
@@ -376,7 +376,8 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   `operator-gated` PRD with no rows → record the acceptance the declaration always implied, or
   declare `eligible`.
 - **Rollback trigger and plan:** revert the commit if the audit shows artifacts whose count
-  changes for reasons the grammar did not intend. That is this item's only rollback trigger. The counter is pure and nothing is migrated on
+  changes for reasons the grammar did not intend. An unintended count change is this item's
+  only rollback trigger. The counter is pure and nothing is migrated on
   disk, so a revert restores previous behaviour exactly.
 - **Release:** a minor version. The changeset names the behaviour change first and the bug fix
   second, in that order, because that is the order an upgrading adopter meets them.
@@ -454,7 +455,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   the set before it ships, §7 names the remedy and the rollback trigger, and §6 pins both arms.
 - applied: `gate-run-resume-after-archive` — `core/run/**` watch, and the record's own subject
   is what FR-5 answers: a resume enters the chain past the early gate, so an invariant that
-  lives only there is skippable by design. FR-6 therefore evaluates it a second time inside
+  lives only there is skippable by design. FR-5 therefore evaluates it a second time inside
   `operatorGateOk`, which every `--from-phase` path reaches, and the resume-after-archive case
   the record describes is one of the paths the test matrix must cover.
 - applied: `state-model-before-mechanism` — iteration 2's open findings were all one thing: the
@@ -583,4 +584,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Third cross-item sweep (found while scoring PRD-043, iteration 4): §5 cited FR-9 for the METHOD.md statement and §7 cited FR-8 for the audit — both off by one after the renumbering; the audit's `refusal` classification and the unreadable-input rollback trigger were PRD-043's and are gone, leaving this item's four counting sources as the only classifications and no refusal it could roll back. Fifth restatement instance in this file |
 | 2026-08-07 | owner  | Fourth cross-item sweep (found while scoring PRD-043, iteration 6): §5's METHOD reference and the `known-red`/resume/state-model dispositions were still on the pre-renumbering FR ids; §5's interim claim said "each contributes zero rows" where the MEASUREMENT says the separator-less table goes 2→0 and the narrow row 2→1; the audit classifications omitted the zero-row acceptance population; the rollback aside still mentioned refusals this item does not perform; `surface-set-without-its-predicate` still described a lint surface that left with the Phase-2 warning. And the escape-parity example in §6 and §11 showed the SAME source string for both arms — `a\|b` twice — while claiming one cell and two; the odd/even pair is now written out. Sixth restatement instance in this file |
 | 2026-08-07 | owner  | Fifth cross-item sweep (PRD-043 iteration 7). The fourth sweep had reported success while leaving every twin in place: `str.replace(..., 1)` fixes the FIRST occurrence, and this file restates each rule two or three times. Measured this round instead of assumed — occurrence counts checked before and after every edit. Closed: §5's interim outcomes (measured, none refuses), §7's `refusal` classification and the rollback aside that named refusals this item does not perform, the resume (FR-6→FR-5) and state-model (FR-5/FR-6→FR-4/FR-5) dispositions, `surface-set-without-its-predicate` rewritten around FR-6's acknowledgement predicate, and `narrow-the-grammar`'s interim reference repointed from FR-4 to §7/FR-2–FR-3 |
+| 2026-08-07 | owner  | Sixth cross-item sweep (PRD-043 iteration 8): two live survivors of the fifth sweep — §7 Migration still recorded PRD-043's unreadable-artifact population as if this item audited it, and `gate-run-resume-after-archive` still credited FR-6 for the second evaluation FR-5 performs. Both closed, occurrence-counted |
 
