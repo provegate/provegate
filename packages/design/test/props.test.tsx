@@ -71,7 +71,9 @@ describe('each component renders under its contract props', () => {
   });
 
   it('GateLine renders the glyph + name + status', () => {
-    const { container } = render(<DS.GateLine status="passed" name="phase 5" command="pnpm test" code={0} />);
+    const { container } = render(
+      <DS.GateLine status="passed" name="phase 5" command="pnpm test" code={0} />,
+    );
     expect(container.textContent).toContain('phase 5');
     expect(container.textContent).toContain('passed');
     expect(container.textContent).toContain('✓');
@@ -187,9 +189,7 @@ describe('CopyableCodeBlock (FR-9)', () => {
   });
 
   it('a missing clipboard does not throw', () => {
-    const { getByLabelText } = render(
-      <CopyableCodeBlock filename="x">gate run</CopyableCodeBlock>,
-    );
+    const { getByLabelText } = render(<CopyableCodeBlock filename="x">gate run</CopyableCodeBlock>);
     expect(() => (getByLabelText(/copy/i) as HTMLButtonElement).click()).not.toThrow();
   });
 
@@ -212,7 +212,11 @@ describe('CopyableCodeBlock (FR-9)', () => {
 
   it('a spread cannot smuggle the slot through the public surface — Codex round-2 [P1]', () => {
     const sneak = { headerControl: <span>copy</span> } as Record<string, unknown>;
-    const { container } = render(<DS.CodeBlock filename="x" {...sneak}>gate init</DS.CodeBlock>);
+    const { container } = render(
+      <DS.CodeBlock filename="x" {...sneak}>
+        gate init
+      </DS.CodeBlock>,
+    );
     // the wrapper drops the field after the spread: no control, no span
     expect(container.querySelector('button')).toBeNull();
     expect(container.textContent).not.toContain('copy');

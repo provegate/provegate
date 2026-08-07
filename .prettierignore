@@ -7,3 +7,53 @@ pnpm-lock.yaml
 next-env.d.ts
 docs/research/
 CHANGELOG.md
+
+# Workflow artifacts are a historical record, not source. Reflowing them rewrites
+# closed items, and two recorded traps live here: prettier reflows long ADR
+# frontmatter lists into a block form the memory subset rejects, and re-padding a
+# table breaks every edit-by-string that reads it.
+_prds/
+_readiness/
+_tasks/
+_docs/
+_brain/
+_state/
+STATUS.md
+
+# The generated prompt store installs one way and its bytes must equal what the
+# CLI renders — `gate check --prompts` compares them.
+.provegate/
+
+# Method content is extracted from the source snapshot, never edited in place.
+# A formatter is an edit.
+packages/provegate/prompts/
+packages/provegate/templates/
+packages/provegate/practices/
+packages/provegate/examples/
+packages/provegate/METHOD.md
+packages/provegate/QUICKSTART.md
+
+# Research and design notes, dated and kept as written.
+docs/design/
+
+# The repo-side halves of the pack-drift pairs. Each of these is ONE artifact in
+# two places, pinned byte-for-byte against its packed twin under
+# `packages/provegate/practices/` (scripts/verify/pack-drift-ledger.json); the
+# twin is method content and unformattable, so formatting this side alone would
+# manufacture the exact drift that gate exists to catch.
+AGENT_BOOTSTRAP.md
+commitlint.config.mjs
+.githooks/
+scripts/verify/
+scripts/base-branch-guard.mjs
+scripts/secret-scan.mjs
+
+# Generated from the token source and asserted byte-identical to a fresh
+# generation (packages/design/test/tokens.test.ts). The generator is the format.
+packages/design/src/tokens/colors.css
+packages/design/src/cli/theme.ts
+
+# Published prose with machine-checked spans: case-study.mdx carries the
+# byte-checked self-hosting region (verify:doc-claims) and quickstart.mdx is the
+# parity twin of the prettier-ignored QUICKSTART.md (verify:quickstart-parity).
+apps/docs/content/

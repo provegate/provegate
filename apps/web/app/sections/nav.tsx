@@ -138,18 +138,30 @@ export function Nav(): React.JSX.Element {
         borderBottom: '1px solid var(--pg-border)',
       }}
     >
-      <div style={{ ...shell, padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 9 }} aria-label="ProveGate home">
+      <div
+        style={{ ...shell, padding: '13px 28px', display: 'flex', alignItems: 'center', gap: 12 }}
+      >
+        <a
+          href="#top"
+          style={{ display: 'flex', alignItems: 'center', gap: 9 }}
+          aria-label="ProveGate home"
+        >
           <Mark size={25} />
           <Wordmark />
         </a>
-        <nav style={{ display: 'flex', gap: 22, marginLeft: 30 }} className="pg-navlinks" aria-label="Primary">
+        <nav
+          style={{ display: 'flex', gap: 22, marginLeft: 30 }}
+          className="pg-navlinks"
+          aria-label="Primary"
+        >
           {C.NAV_LINKS.map(([label, href]) => (
             <a
               key={href}
               href={href}
               aria-current={active === href.slice(1) ? 'location' : undefined}
-              style={active === href.slice(1) ? { ...linkStyle, color: 'var(--pg-text)' } : linkStyle}
+              style={
+                active === href.slice(1) ? { ...linkStyle, color: 'var(--pg-text)' } : linkStyle
+              }
             >
               {label}
             </a>
@@ -209,7 +221,11 @@ export function Nav(): React.JSX.Element {
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              style={{ ...linkStyle, padding: '10px 0', borderBottom: '1px solid var(--pg-border)' }}
+              style={{
+                ...linkStyle,
+                padding: '10px 0',
+                borderBottom: '1px solid var(--pg-border)',
+              }}
             >
               {label}
             </a>
@@ -224,7 +240,13 @@ export function Nav(): React.JSX.Element {
             >
               GitHub
             </Button>
-            <Button as="a" href="#install" variant="primary" size="sm" onClick={() => setOpen(false)}>
+            <Button
+              as="a"
+              href="#install"
+              variant="primary"
+              size="sm"
+              onClick={() => setOpen(false)}
+            >
               Get started
             </Button>
           </div>

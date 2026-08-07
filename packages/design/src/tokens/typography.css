@@ -6,38 +6,38 @@
    ledger excerpts, logs, verdicts, paths, package/CLI names.
    ============================================================ */
 :root {
-  --pg-font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --pg-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  --pg-font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pg-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 
   /* weights */
-  --pg-fw-regular: 400;  /* @kind font */
-  --pg-fw-medium:  500;  /* @kind font */
-  --pg-fw-semibold:600;  /* @kind font */
-  --pg-fw-bold:    700;  /* @kind font */
+  --pg-fw-regular: 400; /* @kind font */
+  --pg-fw-medium: 500; /* @kind font */
+  --pg-fw-semibold: 600; /* @kind font */
+  --pg-fw-bold: 700; /* @kind font */
 
   /* Type scale (1.200 minor-third-ish, tuned) — rem based */
-  --pg-text-xs:   0.75rem;   /* 12 */
-  --pg-text-sm:   0.875rem;  /* 14 */
-  --pg-text-base: 1rem;      /* 16 */
-  --pg-text-md:   1.125rem;  /* 18 */
-  --pg-text-lg:   1.375rem;  /* 22 */
-  --pg-text-xl:   1.75rem;   /* 28 */
-  --pg-text-2xl:  2.25rem;   /* 36 */
-  --pg-text-3xl:  3rem;      /* 48 */
-  --pg-text-4xl:  4rem;      /* 64 */
+  --pg-text-xs: 0.75rem; /* 12 */
+  --pg-text-sm: 0.875rem; /* 14 */
+  --pg-text-base: 1rem; /* 16 */
+  --pg-text-md: 1.125rem; /* 18 */
+  --pg-text-lg: 1.375rem; /* 22 */
+  --pg-text-xl: 1.75rem; /* 28 */
+  --pg-text-2xl: 2.25rem; /* 36 */
+  --pg-text-3xl: 3rem; /* 48 */
+  --pg-text-4xl: 4rem; /* 64 */
 
   /* line heights */
-  --pg-leading-tight:  1.1;
-  --pg-leading-snug:   1.28;
+  --pg-leading-tight: 1.1;
+  --pg-leading-snug: 1.28;
   --pg-leading-normal: 1.55;
-  --pg-leading-relaxed:1.7;
-  --pg-leading-mono:   1.6;
+  --pg-leading-relaxed: 1.7;
+  --pg-leading-mono: 1.6;
 
   /* tracking */
-  --pg-tracking-tight:  -0.02em;
+  --pg-tracking-tight: -0.02em;
   --pg-tracking-normal: 0;
-  --pg-tracking-wide:   0.04em;
-  --pg-tracking-caps:   0.08em; /* eyebrows / labels */
+  --pg-tracking-wide: 0.04em;
+  --pg-tracking-caps: 0.08em; /* eyebrows / labels */
 }
 
 /* Semantic role helpers (optional to use; tokens above are the contract) */
@@ -48,11 +48,53 @@
   line-height: var(--pg-leading-tight);
   letter-spacing: var(--pg-tracking-tight);
 }
-.pg-h1 { font-family: var(--pg-font-sans); font-weight: var(--pg-fw-bold); font-size: var(--pg-text-3xl); line-height: var(--pg-leading-tight); letter-spacing: var(--pg-tracking-tight); }
-.pg-h2 { font-family: var(--pg-font-sans); font-weight: var(--pg-fw-semibold); font-size: var(--pg-text-2xl); line-height: var(--pg-leading-snug); letter-spacing: var(--pg-tracking-tight); }
-.pg-h3 { font-family: var(--pg-font-sans); font-weight: var(--pg-fw-semibold); font-size: var(--pg-text-xl); line-height: var(--pg-leading-snug); }
-.pg-body { font-family: var(--pg-font-sans); font-weight: var(--pg-fw-regular); font-size: var(--pg-text-base); line-height: var(--pg-leading-normal); }
-.pg-body-lg { font-family: var(--pg-font-sans); font-weight: var(--pg-fw-regular); font-size: var(--pg-text-md); line-height: var(--pg-leading-relaxed); }
-.pg-eyebrow { font-family: var(--pg-font-mono); font-weight: var(--pg-fw-medium); font-size: var(--pg-text-xs); letter-spacing: var(--pg-tracking-caps); text-transform: uppercase; }
-.pg-mono { font-family: var(--pg-font-mono); font-size: var(--pg-text-sm); line-height: var(--pg-leading-mono); }
-.pg-caption { font-family: var(--pg-font-sans); font-size: var(--pg-text-sm); line-height: var(--pg-leading-normal); color: var(--pg-text-subtle); }
+.pg-h1 {
+  font-family: var(--pg-font-sans);
+  font-weight: var(--pg-fw-bold);
+  font-size: var(--pg-text-3xl);
+  line-height: var(--pg-leading-tight);
+  letter-spacing: var(--pg-tracking-tight);
+}
+.pg-h2 {
+  font-family: var(--pg-font-sans);
+  font-weight: var(--pg-fw-semibold);
+  font-size: var(--pg-text-2xl);
+  line-height: var(--pg-leading-snug);
+  letter-spacing: var(--pg-tracking-tight);
+}
+.pg-h3 {
+  font-family: var(--pg-font-sans);
+  font-weight: var(--pg-fw-semibold);
+  font-size: var(--pg-text-xl);
+  line-height: var(--pg-leading-snug);
+}
+.pg-body {
+  font-family: var(--pg-font-sans);
+  font-weight: var(--pg-fw-regular);
+  font-size: var(--pg-text-base);
+  line-height: var(--pg-leading-normal);
+}
+.pg-body-lg {
+  font-family: var(--pg-font-sans);
+  font-weight: var(--pg-fw-regular);
+  font-size: var(--pg-text-md);
+  line-height: var(--pg-leading-relaxed);
+}
+.pg-eyebrow {
+  font-family: var(--pg-font-mono);
+  font-weight: var(--pg-fw-medium);
+  font-size: var(--pg-text-xs);
+  letter-spacing: var(--pg-tracking-caps);
+  text-transform: uppercase;
+}
+.pg-mono {
+  font-family: var(--pg-font-mono);
+  font-size: var(--pg-text-sm);
+  line-height: var(--pg-leading-mono);
+}
+.pg-caption {
+  font-family: var(--pg-font-sans);
+  font-size: var(--pg-text-sm);
+  line-height: var(--pg-leading-normal);
+  color: var(--pg-text-subtle);
+}

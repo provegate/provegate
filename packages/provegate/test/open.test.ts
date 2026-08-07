@@ -431,7 +431,10 @@ describe('control-artifact introduction (FR-6, W5)', () => {
 
     // The introduction: both control files land on the base.
     writeFileSync(join(root, 'workflow.config.json'), '{ "memory": { "enabled": true } }\n');
-    writeFileSync(join(root, 'gates.manifest.json'), '{ "phases": { "7": ["node -e \\"0\\""] } }\n');
+    writeFileSync(
+      join(root, 'gates.manifest.json'),
+      '{ "phases": { "7": ["node -e \\"0\\""] } }\n',
+    );
     git(root, ['add', '-A']);
     git(root, ['commit', '-m', 'feat: introduce control artifacts']);
 

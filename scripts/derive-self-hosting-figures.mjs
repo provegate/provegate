@@ -19,11 +19,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const STATE_PATH =
-  process.env.DERIVE_FIGURES_STATE ?? join(ROOT, '_state', 'prds.json');
+const STATE_PATH = process.env.DERIVE_FIGURES_STATE ?? join(ROOT, '_state', 'prds.json');
 const DOC_PATH =
-  process.env.DERIVE_FIGURES_DOC ??
-  join(ROOT, 'apps', 'docs', 'content', 'docs', 'case-study.mdx');
+  process.env.DERIVE_FIGURES_DOC ?? join(ROOT, 'apps', 'docs', 'content', 'docs', 'case-study.mdx');
 
 const START = '{/* self-hosting-figures:start */}';
 const END = '{/* self-hosting-figures:end */}';
@@ -127,8 +125,7 @@ export function spanDigitViolations(doc) {
   const span = doc.slice(afterHeading, next < 0 ? doc.length : next);
   const rs = span.indexOf(START);
   const re = span.indexOf(END);
-  const outside =
-    rs >= 0 && re > rs ? span.slice(0, rs) + span.slice(re + END.length) : span;
+  const outside = rs >= 0 && re > rs ? span.slice(0, rs) + span.slice(re + END.length) : span;
   return outside
     .split('\n')
     .filter((line) => /[0-9]/.test(line))
@@ -213,6 +210,5 @@ function main() {
   process.exit(0);
 }
 
-const invokedDirectly =
-  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) main();

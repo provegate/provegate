@@ -2,11 +2,11 @@
    Import order matters: fonts first, then the generated colour tokens, then the
    static layers. `colors.css` is GENERATED from src/tokens.ts — never hand-edit
    it; edit the token source and re-run `generate-tokens`. */
-@import url("./tokens/fonts.css");
-@import url("./tokens/colors.css");
-@import url("./tokens/typography.css");
-@import url("./tokens/spacing.css");
-@import url("./tokens/effects.css");
+@import url('./tokens/fonts.css');
+@import url('./tokens/colors.css');
+@import url('./tokens/typography.css');
+@import url('./tokens/spacing.css');
+@import url('./tokens/effects.css');
 /* One base layer, not a token file: shared element styling every consumer
    wants identical (scrollbars). Anything page-specific stays in the app. */
-@import url("./scrollbars.css");
+@import url('./scrollbars.css');

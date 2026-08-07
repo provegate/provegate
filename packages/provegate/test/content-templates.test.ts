@@ -115,7 +115,10 @@ describe('prd-template round-trip (lintPrd)', () => {
     expect(guidance).toContain('`- Deferred to [{{ID_PREFIX}}-NNN](<path>)`');
     // and the shipped §9 body is exactly the marker plus section furniture
     const body = raw.slice(headingAt).split('\n').slice(1).join('\n').split('\n## ')[0]!;
-    const lines = body.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    const lines = body
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     expect(lines).toEqual(['- (none)', '---']);
   });
 
@@ -279,9 +282,7 @@ describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
   });
 
   it('an entry without a rationale is refused', () => {
-    const decl = parseMemoryDeclarations(
-      section('Memory Inputs', ['- reviewed: `some-record`']),
-    );
+    const decl = parseMemoryDeclarations(section('Memory Inputs', ['- reviewed: `some-record`']));
     expect(decl.inputs.entries).toEqual([]);
     expect(decl.issues).toEqual(["Memory Inputs: 'some-record' requires a rationale after ' — '"]);
   });
@@ -318,9 +319,7 @@ describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
 
   it('a section present but empty declares neither form', () => {
     const decl = parseMemoryDeclarations('## Memory Inputs\n\nprose only, no bullets.\n');
-    expect(decl.issues).toEqual([
-      'Memory Inputs: declares neither an entry nor a reasoned `none`',
-    ]);
+    expect(decl.issues).toEqual(['Memory Inputs: declares neither an entry nor a reasoned `none`']);
   });
 
   it('an absent section is reported as absent, not as a grammar issue', () => {
@@ -360,9 +359,7 @@ describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
       ),
     ).toEqual(['packages/provegate/src/core/run/chain.ts']);
     // the false negative this normalization exists to prevent
-    expect(
-      watchMatches(['packages/provegate/src/core/run/*.ts'], ['docs/method.mdx']),
-    ).toEqual([]);
+    expect(watchMatches(['packages/provegate/src/core/run/*.ts'], ['docs/method.mdx'])).toEqual([]);
   });
 
   it('every declared output must also be a Durable Artifact', () => {
@@ -374,22 +371,17 @@ describe('FR-1 memory contract grammar (addendum A1 §5)', () => {
       '_brain/learnings/y.md',
     ]);
     expect(
-      outputsMissingFromDurable(outputs, [
-        '_brain/adr/ADR-0001-x.md',
-        '_brain/learnings/y.md',
-      ]),
+      outputsMissingFromDurable(outputs, ['_brain/adr/ADR-0001-x.md', '_brain/learnings/y.md']),
     ).toEqual([]);
   });
 
-  it("the shipped template satisfies its own pairing rule", () => {
+  it('the shipped template satisfies its own pairing rule', () => {
     // The template is the first thing an adopter copies, so a template that
     // violates the contract it teaches would fail on their first close.
     const filled = fill(template('prd-template.md'));
     const decl = parseMemoryDeclarations(filled);
     expect(decl.outputs.entries.map((o) => o.path)).toEqual(['_brain/learnings/[slug].md']);
-    expect(outputsMissingFromDurable(decl.outputs.entries, declaredArtifacts(filled))).toEqual(
-      [],
-    );
+    expect(outputsMissingFromDurable(decl.outputs.entries, declaredArtifacts(filled))).toEqual([]);
   });
 });
 
@@ -420,10 +412,7 @@ describe('phase 6 round 3 self-attack (before the independent round returned)', 
     // would have had every correctly-placed output rejected.
     const entries = parseMemoryDeclarations(outputs('_brain/learnings/x.md')).outputs.entries;
     for (const root of ['_brain', '_brain/', './_brain', './_brain/']) {
-      expect(
-        outputPlacementIssues(entries, { ...cfg.memory, root }),
-        `root: ${root}`,
-      ).toEqual([]);
+      expect(outputPlacementIssues(entries, { ...cfg.memory, root }), `root: ${root}`).toEqual([]);
     }
   });
 
@@ -447,9 +436,14 @@ describe('phase 6 round 3 self-attack (before the independent round returned)', 
     // then reads as ABSENT, which the gates refuse; the dangerous direction
     // would be reading a shadowed section as valid.
     const decl = parseMemoryDeclarations(
-      ['# PRD', '', '```', 'an example that was never closed', '', outputs('_brain/learnings/x.md')].join(
-        '\n',
-      ),
+      [
+        '# PRD',
+        '',
+        '```',
+        'an example that was never closed',
+        '',
+        outputs('_brain/learnings/x.md'),
+      ].join('\n'),
     );
     expect(decl.outputs.present).toBe(false);
   });
@@ -744,7 +738,11 @@ describe('phase 6 round 6 regressions', () => {
     roots.push(root);
     mkdirSync(join(root, '_brain/learnings'), { recursive: true });
     writeFileSync(join(root, '_brain/INDEX.md'), '# index\n');
-    const store = loadMemoryStore(root, { ...cfg.memory, enabled: true, index: '_brain\\INDEX.md' });
+    const store = loadMemoryStore(root, {
+      ...cfg.memory,
+      enabled: true,
+      index: '_brain\\INDEX.md',
+    });
     expect(store.issues).toEqual([]);
   });
 });
@@ -1282,15 +1280,9 @@ describe('phase 6 round 13 (reframed) regressions', () => {
     // The block was ended at the blank line, so a declaration below it was read.
     // The section refuses the block outright now, which is what the narrowed
     // grammar buys: the reader does not have to model HTML block lifetimes.
-    const doc = [
-      '## Memory Outputs',
-      '',
-      '<script>',
-      '',
-      '- none — forged.',
-      '</script>',
-      '',
-    ].join('\n');
+    const doc = ['## Memory Outputs', '', '<script>', '', '- none — forged.', '</script>', ''].join(
+      '\n',
+    );
     expect(parseMemoryDeclarations(doc).issues).toContainEqual(
       expect.stringContaining('a raw HTML block'),
     );
@@ -1620,7 +1612,9 @@ describe('phase 6 round 18 regressions', () => {
     // scanner masked the fence opener as span content and never opened the
     // fence — leaving an entire forged contract to be read out of rendered code.
     for (const interrupt of ['~~~ `', '<div> `']) {
-      const doc = ['Prose `open', interrupt, '## Memory Outputs', '- none — forged.', ''].join('\n');
+      const doc = ['Prose `open', interrupt, '## Memory Outputs', '- none — forged.', ''].join(
+        '\n',
+      );
       const decl = parseMemoryDeclarations(doc);
       expect(decl.outputs.none, interrupt).toBe(false);
       expect(decl.outputs.entries, interrupt).toEqual([]);
@@ -1642,9 +1636,14 @@ describe('phase 6 round 18 regressions', () => {
     // But the stop must use the scanner's own fence predicate: ` ```` ` ` is NOT
     // a fence, because a backtick fence's info string may not contain a
     // backtick, so the span closes there and the heading below it is real.
-    const notAFence = ['Prose `open', '```` `', '## Memory Outputs', '', '- none — shown.', ''].join(
-      '\n',
-    );
+    const notAFence = [
+      'Prose `open',
+      '```` `',
+      '## Memory Outputs',
+      '',
+      '- none — shown.',
+      '',
+    ].join('\n');
     expect(parseMemoryDeclarations(notAFence).outputs.none).toBe(true);
   });
 
@@ -1798,14 +1797,9 @@ describe('phase 6 round 19 regressions — one scan, one authority', () => {
     // Comments are block type 2 and live in the scanner's own state rather than
     // in `htmlBlockEnd`, so the round 18 fix missed them — the same exploit with
     // `<!--` substituted for `<div>`.
-    const doc = [
-      'Prose `open',
-      '<!-- `',
-      '## Memory Outputs',
-      '- none — forged.',
-      '-->',
-      '',
-    ].join('\n');
+    const doc = ['Prose `open', '<!-- `', '## Memory Outputs', '- none — forged.', '-->', ''].join(
+      '\n',
+    );
     const decl = parseMemoryDeclarations(doc);
     expect(decl.outputs.present).toBe(false);
     expect(decl.outputs.none).toBe(false);

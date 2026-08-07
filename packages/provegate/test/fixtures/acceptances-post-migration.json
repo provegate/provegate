@@ -115,9 +115,7 @@
     {
       "prd": "PRD-017",
       "owner": "owner",
-      "items": [
-        "10.0 operator acceptance of autonomous close"
-      ],
+      "items": ["10.0 operator acceptance of autonomous close"],
       "reason": "owner directed the close in chat after the twelve-round independent audit; accepting autonomous close via gate land - push stays human",
       "date": "2026-07-25",
       "method": "agent-directed by owner in chat; not an interactive owner confirmation",

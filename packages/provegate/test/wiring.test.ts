@@ -251,7 +251,7 @@ describe('interpreterInvokedFile (no flag semantics at all)', () => {
     expect(file('node scripts/verify/verify-foo.mjs')).toBe('scripts/verify/verify-foo.mjs');
     // the four table rows, one rule, one verdict
     expect(file('node --check scripts/verify/verify-foo.mjs')).toBeNull();
-    expect(file("node -e \"import('./scripts/verify/verify-foo.mjs')\"")).toBeNull();
+    expect(file('node -e "import(\'./scripts/verify/verify-foo.mjs\')"')).toBeNull();
     expect(file('node --require verify-foo.mjs app.mjs')).toBeNull();
     expect(file('node --enable-source-maps scripts/verify/verify-foo.mjs')).toBeNull();
   });
@@ -373,10 +373,7 @@ describe('bundleMembers (line- and column-anchored, fail closed)', () => {
     // out-of-package read — recorded in the task file's Deferrals and handed
     // to PRD-036's input census (CI checks out fresh; the local cache gap is
     // that PRD's subject).
-    const real = readFileSync(
-      repoPath('scripts/verify/verify-workflow.mjs'),
-      'utf8',
-    );
+    const real = readFileSync(repoPath('scripts/verify/verify-workflow.mjs'), 'utf8');
     const members = bundleMembers(real);
     expect(members).not.toBeNull();
     // Shape, not count — the membership moved three times in two days
@@ -575,12 +572,10 @@ describe('auditWiring key derivation hardening (review round 1)', () => {
   });
 
   it('the eval and preload shapes stay unwired through the audit, each beside its control', () => {
-    expect(fooWired(hookRepo('node -e "import(\'scripts/verify/verify-foo.mjs\')"\n'))).toBe(
+    expect(fooWired(hookRepo('node -e "import(\'scripts/verify/verify-foo.mjs\')"\n'))).toBe(false);
+    expect(fooWired(hookRepo('node --require ./setup.mjs scripts/verify/verify-foo.mjs\n'))).toBe(
       false,
     );
-    expect(
-      fooWired(hookRepo('node --require ./setup.mjs scripts/verify/verify-foo.mjs\n')),
-    ).toBe(false);
     expect(fooWired(hookRepo('node scripts/verify/verify-foo.mjs\n'))).toBe(true);
   });
 });
@@ -671,8 +666,7 @@ describe('auditWiring round-3 hardening', () => {
     const root = repo({
       scripts: {
         ...FLOOR,
-        'verify:both':
-          'node scripts/verify/verify-a.mjs && node scripts/verify/verify-b.mjs',
+        'verify:both': 'node scripts/verify/verify-a.mjs && node scripts/verify/verify-b.mjs',
       },
       ci: 'jobs:\n  a:\n    steps:\n      - run: pnpm verify:both\n',
       scriptFiles: ['verify-a.mjs', 'verify-b.mjs'],
@@ -723,9 +717,7 @@ describe('auditWiring round-4 hardening', () => {
     writeFileSync(resolve(root, 'verify-foo.mjs'), '// local file with the same basename');
     const report = auditWiring(dotCfg, defaultManifest(dotCfg), root);
     // no key from the absolute body → the hook cannot wire it
-    expect(report.issues).toContainEqual(
-      expect.stringContaining('"verify:foo" is wired nowhere'),
-    );
+    expect(report.issues).toContainEqual(expect.stringContaining('"verify:foo" is wired nowhere'));
     // control: the same body written repo-relative derives the key and wires
     const rel = repo({
       scripts: { ...FLOOR, 'verify:foo': 'node verify-foo.mjs' },

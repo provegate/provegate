@@ -42,7 +42,10 @@ describe('the recompute (FR-2)', () => {
   it('names BOTH numbers on a mismatch', () => {
     // A failure that says only "wrong" makes the author recompute by hand to
     // find out which side moved.
-    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.15 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
+    const issue = valueScoreIssue(
+      DEFAULT_CONFIG,
+      prd('> **Value**: 4.15 (MF/UI/TL/AR/RM: 5/4/4/4/3)'),
+    );
     expect(issue).toBe('value header declares 4.15 but its dimensions recompute to 4.10');
   });
 
@@ -57,7 +60,9 @@ describe('the recompute (FR-2)', () => {
   });
 
   it('reads the total with one or two decimals, and 4.1 means 4.10', () => {
-    expect(scoreValueHeader(DEFAULT_CONFIG, prd('> **Value**: 4.1 (MF/UI/TL/AR/RM: 5/4/4/4/3)')).problem).toBeNull();
+    expect(
+      scoreValueHeader(DEFAULT_CONFIG, prd('> **Value**: 4.1 (MF/UI/TL/AR/RM: 5/4/4/4/3)')).problem,
+    ).toBeNull();
   });
 
   it('rejects a BARE INTEGER total as malformed — the spec requires the decimals', () => {
@@ -65,7 +70,10 @@ describe('the recompute (FR-2)', () => {
     // parsed as 4.00 and then failed as a MISMATCH against 4.10. That sends the
     // author to re-derive numbers that were never wrong. It is a malformed
     // declaration and the message must say so.
-    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
+    const issue = valueScoreIssue(
+      DEFAULT_CONFIG,
+      prd('> **Value**: 4 (MF/UI/TL/AR/RM: 5/4/4/4/3)'),
+    );
     expect(issue).toMatch(/malformed: total "4" must be written with one or two decimal places/);
     expect(issue).not.toMatch(/recompute/);
   });
@@ -91,8 +99,13 @@ describe('the recompute (FR-2)', () => {
   it('rejects a total with three decimals, as malformed rather than as a mismatch', () => {
     // Two different failures that read differently on purpose: one says the
     // number is unreadable, the other says the arithmetic is wrong.
-    const issue = valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.100 (MF/UI/TL/AR/RM: 5/4/4/4/3)'));
-    expect(issue).toMatch(/malformed: total "4\.100" must be written with one or two decimal places/);
+    const issue = valueScoreIssue(
+      DEFAULT_CONFIG,
+      prd('> **Value**: 4.100 (MF/UI/TL/AR/RM: 5/4/4/4/3)'),
+    );
+    expect(issue).toMatch(
+      /malformed: total "4\.100" must be written with one or two decimal places/,
+    );
     expect(issue).not.toMatch(/recompute/);
   });
 });
@@ -121,7 +134,10 @@ describe('the header grammar (FR-2)', () => {
     // consistently and pass; 6-9 are outside the rubric. Note this is ALSO a
     // divergence from the snapshot, whose groups are [0-5] — it accepts a 0.
     for (const dims of ['0/4/4/4/3', '5/4/4/4/6']) {
-      const issue = valueScoreIssue(DEFAULT_CONFIG, prd(`> **Value**: 4.10 (MF/UI/TL/AR/RM: ${dims})`));
+      const issue = valueScoreIssue(
+        DEFAULT_CONFIG,
+        prd(`> **Value**: 4.10 (MF/UI/TL/AR/RM: ${dims})`),
+      );
       expect(issue, dims).toMatch(/malformed: does not match the configured axes/);
       expect(issue, dims).not.toMatch(/recompute/);
     }
@@ -142,9 +158,9 @@ describe('the header grammar (FR-2)', () => {
   it('rejects the right names in the wrong ORDER', () => {
     // Order is contractual because the dimensions are positional; a reordered
     // header silently scores each dimension against the wrong weight.
-    expect(valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.10 (UI/MF/TL/AR/RM: 4/5/4/4/3)'))).toMatch(
-      /malformed: does not match the configured axes/,
-    );
+    expect(
+      valueScoreIssue(DEFAULT_CONFIG, prd('> **Value**: 4.10 (UI/MF/TL/AR/RM: 4/5/4/4/3)')),
+    ).toMatch(/malformed: does not match the configured axes/);
   });
 });
 
@@ -153,7 +169,10 @@ describe('scoping and duplicates (FR-2)', () => {
     // A PRD documenting the format carries matching lines in prose and fences.
     // Scoping to the metadata block is what lets it do that; the snapshot has
     // no such problem only because it takes the first hit anywhere.
-    const doc = prd(VALID, ['Example:', '', '```', '> **Value**: 9.99 (MF/UI/TL/AR/RM: 5/5/5/5/5)', '```'].join('\n'));
+    const doc = prd(
+      VALID,
+      ['Example:', '', '```', '> **Value**: 9.99 (MF/UI/TL/AR/RM: 5/5/5/5/5)', '```'].join('\n'),
+    );
     expect(scoreValueHeader(DEFAULT_CONFIG, doc).problem).toBeNull();
   });
 
@@ -190,7 +209,9 @@ describe('the cutoff (FR-2, FR-6)', () => {
 
   it('with a cutoff, a pre-cutoff item may omit the header and one at it may not', () => {
     expect(valueScoreIssue(at17, prd(''), 16)).toBeNull();
-    expect(valueScoreIssue(at17, prd(''), 17)).toMatch(/missing the value header — required from id 17/);
+    expect(valueScoreIssue(at17, prd(''), 17)).toMatch(
+      /missing the value header — required from id 17/,
+    );
     expect(valueScoreIssue(at17, prd(''), 21)).toMatch(/missing the value header/);
   });
 
@@ -211,7 +232,9 @@ describe('the cutoff (FR-2, FR-6)', () => {
   });
 
   it('enforceFrom 0 enforces everywhere', () => {
-    expect(valueScoreIssue(withScoring({ enforceFrom: 0 }), prd(''), 1)).toMatch(/missing the value header/);
+    expect(valueScoreIssue(withScoring({ enforceFrom: 0 }), prd(''), 1)).toMatch(
+      /missing the value header/,
+    );
   });
 });
 

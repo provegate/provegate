@@ -67,7 +67,7 @@ describe('cli.mdx documents the flag without dropping what was there (FR-5, FR-7
     expect(section.toLowerCase()).toMatch(/manual|creates files only/);
   });
 
-  it('and PRD-019\'s memory commands are still there', () => {
+  it("and PRD-019's memory commands are still there", () => {
     // This edit was additive. A rewrite that dropped a shipped section would
     // pass every assertion above and remove a documented command surface.
     const text = page();
@@ -117,11 +117,8 @@ describe('brownfield.mdx is a ladder with named failure modes (FR-4, FR-7)', () 
     // is the only place the scaffolded manifest is written, and this reads the
     // literal out of it — a change there fails this test instead of quietly
     // making the page false.
-    const init = readFileSync(
-      join(pkgRoot, 'src/core/run/init.ts'),
-      'utf8',
-    );
-    const line = init.split('\n').find((l) => l.includes("memory ? { phases:"));
+    const init = readFileSync(join(pkgRoot, 'src/core/run/init.ts'), 'utf8');
+    const line = init.split('\n').find((l) => l.includes('memory ? { phases:'));
     expect(line, 'init.ts no longer writes the manifest on one line').toBeDefined();
     expect(line).toContain("{ phases: { '7': [PACK_BRAIN_GATE] } }");
     expect(line).toContain("{ phases: { '4': [] }, postMerge: [] }");
@@ -159,9 +156,9 @@ describe('the cookbook cross-links resolve (FR-6, FR-7)', () => {
       expect(targets, `${entry} is not a Markdown link target`).toContain(entry);
       expect(existsSync(join(pkgRoot, 'examples', entry)), entry).toBe(true);
       // …and the entry it points at ships the manifest it describes.
-      expect(existsSync(join(pkgRoot, 'examples', entry.replace('README.md', 'gates.manifest.json')))).toBe(
-        true,
-      );
+      expect(
+        existsSync(join(pkgRoot, 'examples', entry.replace('README.md', 'gates.manifest.json'))),
+      ).toBe(true);
     }
   });
 

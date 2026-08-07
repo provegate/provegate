@@ -10,7 +10,12 @@ export {
   type AcceptanceEntry,
   type OperatorGateResult,
 } from './acceptance.js';
-export { declaredArtifacts, durableArtifactsOk, durableDeclarationIssue, type DurableGateResult } from './durable.js';
+export {
+  declaredArtifacts,
+  durableArtifactsOk,
+  durableDeclarationIssue,
+  type DurableGateResult,
+} from './durable.js';
 export { appendMetric, type MetricEntry } from './metrics.js';
 export { handoffCard, stopCard, type GateResultRow } from './cards.js';
 export {

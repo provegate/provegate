@@ -46,7 +46,6 @@ export function declaredArtifactsStrict(content: string): StrictArtifacts {
   return { paths: artifactPaths(body), ambiguous: false };
 }
 
-
 function artifactPaths(section: string): string[] {
   const paths: string[] = [];
   for (const line of section.split('\n')) {

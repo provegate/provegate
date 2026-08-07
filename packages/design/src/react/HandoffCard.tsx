@@ -21,7 +21,13 @@ const GLYPH: Record<GateStatus, [string, string]> = {
   blocked: ['!', 'var(--pg-term-stale)'],
 };
 
-function Line({ children, style }: { children?: React.ReactNode; style?: React.CSSProperties }): React.JSX.Element {
+function Line({
+  children,
+  style,
+}: {
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+}): React.JSX.Element {
   return <div style={{ whiteSpace: 'pre', ...style }}>{children}</div>;
 }
 

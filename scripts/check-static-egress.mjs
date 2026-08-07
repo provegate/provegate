@@ -67,7 +67,10 @@ function scanHtml(text) {
   const patterns = [
     new RegExp(`<script[^>]*\\ssrc=["']${URL_RE}`, 'gi'),
     new RegExp(`<link[^>]*\\shref=["']${URL_RE}`, 'gi'),
-    new RegExp(`<(?:img|iframe|source|audio|video|embed|track|object)[^>]*\\s(?:src|data)=["']${URL_RE}`, 'gi'),
+    new RegExp(
+      `<(?:img|iframe|source|audio|video|embed|track|object)[^>]*\\s(?:src|data)=["']${URL_RE}`,
+      'gi',
+    ),
   ];
   for (const re of patterns) {
     for (const m of text.matchAll(re)) if (isExternal(m[1])) hits.push(m[1]);
@@ -117,8 +120,7 @@ for (const root of ROOTS) {
     const ext = extname(file);
     if (!['.css', '.js', '.mjs', '.html', '.json'].includes(ext)) continue;
     const text = readFileSync(file, 'utf8');
-    const hits =
-      ext === '.css' ? scanCss(text) : ext === '.html' ? scanHtml(text) : scanJs(text);
+    const hits = ext === '.css' ? scanCss(text) : ext === '.html' ? scanHtml(text) : scanJs(text);
     for (const h of hits) violations.push(`${file}: third-party fetch → ${h}`);
   }
 }

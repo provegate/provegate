@@ -8,7 +8,12 @@ import sans700 from '@provegate/design/assets/fonts/ibm-plex-sans-latin-700-norm
 import mono400 from '@provegate/design/assets/fonts/ibm-plex-mono-latin-400-normal.woff2';
 import { VercelAnalytics } from './analytics';
 import { ConsentedAnalytics } from './consent';
-import { PRODUCT_NAME, SITE_DESCRIPTION as description, SITE_TITLE, SITE_URL } from './sections/content';
+import {
+  PRODUCT_NAME,
+  SITE_DESCRIPTION as description,
+  SITE_TITLE,
+  SITE_URL,
+} from './sections/content';
 
 // The three above-the-fold faces: body prose (sans 400), the hero display
 // (sans 700), the hero terminal (mono 400). The remaining weights load on

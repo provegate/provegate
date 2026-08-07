@@ -483,14 +483,17 @@ describe('FR-4 memory close gates', () => {
 
   it('passes when every declared output is durable and in the diff', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
-    expect(gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs')).toEqual(
-      { ok: true },
-    );
+    expect(
+      gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs'),
+    ).toEqual({ ok: true });
   });
 
   it('refuses a declared output that never reached the merge diff', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
-    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: [] }), 'declared outputs');
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: [] }),
+      'declared outputs',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain("'_brain/learnings/new-thing.md' is declared but was not added");
     expect(result.why).toContain('a deletion is not a capture');
@@ -499,7 +502,10 @@ describe('FR-4 memory close gates', () => {
   it('refuses an output that is not also a Durable Artifact', () => {
     const content = prd({ durable: ['- `_brain/learnings/other.md` — something else'] });
     const root = gitRepo({ '_prds/wip/p.md': content, ...STORE() });
-    const result = gate(chainFor({ root, prdContent: content, changedFiles: CHANGED }), 'declared outputs');
+    const result = gate(
+      chainFor({ root, prdContent: content, changedFiles: CHANGED }),
+      'declared outputs',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('is not listed in Durable Artifacts');
   });
@@ -532,27 +538,41 @@ describe('FR-4 memory close gates', () => {
   it('fails closed on a missing section and on an unreadable store', () => {
     const noOutputs = prd().replace('## Memory Outputs', '## Something Else');
     const root = gitRepo({ '_prds/wip/p.md': noOutputs, ...STORE() });
-    expect(gate(chainFor({ root, prdContent: noOutputs, changedFiles: CHANGED }), 'declared outputs').why).toContain(
-      'missing `## Memory Outputs` section',
-    );
+    expect(
+      gate(chainFor({ root, prdContent: noOutputs, changedFiles: CHANGED }), 'declared outputs')
+        .why,
+    ).toContain('missing `## Memory Outputs` section');
 
     const noStore = gitRepo({ '_prds/wip/p.md': prd() });
-    expect(gate(chainFor({ root: noStore, prdContent: prd(), changedFiles: CHANGED }), 'declared outputs').why).toContain(
-      "memory index '_brain/INDEX.md' does not exist",
-    );
+    expect(
+      gate(
+        chainFor({ root: noStore, prdContent: prd(), changedFiles: CHANGED }),
+        'declared outputs',
+      ).why,
+    ).toContain("memory index '_brain/INDEX.md' does not exist");
   });
 
   it('--dry-run prints every memory check it would perform', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
-    const plan = planChain(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), null).join('\n');
+    const plan = planChain(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), null).join(
+      '\n',
+    );
     expect(plan).toContain('memory: declared outputs in Durable Artifacts and the merge diff');
     expect(plan).toContain('memory: no weakening against main');
   });
 
   it('the configured validator runs after capture, never before', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
-    const withValidator = { ...memOn, memory: { ...memOn.memory, verifyCommand: 'pnpm verify:brain' } };
-    const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, config: withValidator });
+    const withValidator = {
+      ...memOn,
+      memory: { ...memOn.memory, verifyCommand: 'pnpm verify:brain' },
+    };
+    const chain = chainFor({
+      root,
+      prdContent: prd(),
+      changedFiles: CHANGED,
+      config: withValidator,
+    });
     const labels = chain.map((g) => g.label ?? (g.cmds ?? []).map((c) => c.cmd).join(','));
     const capture = labels.findIndex((l) => l.includes('declared outputs'));
     const validator = labels.findIndex((l) => l.includes('configured validator'));
@@ -587,7 +607,9 @@ describe('FR-5 base-ref weakening', () => {
 
   it('passes when the working declaration matches the baseline', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
-    expect(gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening')).toEqual({
+    expect(
+      gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening'),
+    ).toEqual({
       ok: true,
     });
   });
@@ -595,14 +617,19 @@ describe('FR-5 base-ref weakening', () => {
   it('allows appending an output discovered during implementation', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() });
     const appended = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
-    expect(gate(chainFor({ root, prdContent: appended, changedFiles: CHANGED }), 'no weakening')).toEqual({
+    expect(
+      gate(chainFor({ root, prdContent: appended, changedFiles: CHANGED }), 'no weakening'),
+    ).toEqual({
       ok: true,
     });
   });
 
   it('W2 — a PRD absent from the base ref names the cause AND the remedy', () => {
     const root = gitRepo({ 'README.md': 'no PRD committed here', ...STORE() });
-    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toBe(
       'PRD-002 has no committed copy on `main`; commit the PRD to the base branch before ' +
@@ -630,7 +657,10 @@ describe('FR-5 base-ref weakening', () => {
   it('an operator-gated PRD needs a changelog approval naming the path', () => {
     const baseline = prd({ outputs: TWO_OUTPUTS, durable: TWO_DURABLE });
     const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() });
-    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('no owner approval row in the Changelog naming');
     expect(result.why).toContain("'_brain/adr/ADR-0001-x.md'");
@@ -644,7 +674,10 @@ describe('FR-5 base-ref weakening', () => {
         '| 2026-07-25 | owner | dropped `_brain/adr/ADR-0001-x.md` — the decision moved to PRD-022 |',
       ],
     });
-    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('no valid owner acceptance entry exists for PRD-002');
   });
@@ -674,7 +707,10 @@ describe('FR-5 base-ref weakening', () => {
       }),
       ...STORE(),
     });
-    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(true);
     expect(result.waived).toBe(true);
   });
@@ -684,11 +720,17 @@ describe('FR-5 base-ref weakening', () => {
     const retyped = prd({
       outputs: ['- adr: `_brain/learnings/new-thing.md` — same path, different type.'],
     });
-    const retypedResult = gate(chainFor({ root, prdContent: retyped, changedFiles: CHANGED }), 'no weakening');
+    const retypedResult = gate(
+      chainFor({ root, prdContent: retyped, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(retypedResult.why).toContain("was declared 'learning' on the base ref and is now 'adr'");
 
     const noned = prd({ outputs: ['- none — turns out nothing durable came of it.'] });
-    const nonedResult = gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening');
+    const nonedResult = gate(
+      chainFor({ root, prdContent: noned, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(nonedResult.why).toContain('the working PRD declares `none`');
   });
 });
@@ -732,7 +774,10 @@ describe('phase 6 round 1 regressions', () => {
     // The reviewer pointed the comparison at README.md and got {ok:true}: zero
     // baseline entries read as "nothing was promised".
     const root = gitRepo({ '_prds/wip/p.md': '# PRD-002\n\nno sections at all.\n', ...STORE() });
-    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('cannot serve as a baseline');
     expect(result.why).toContain('has no `## Memory Outputs` section');
@@ -741,7 +786,10 @@ describe('phase 6 round 1 regressions', () => {
   it('[P1-1] a base-ref copy whose Memory Outputs do not parse also fails closed', () => {
     const broken = prd({ outputs: ['- learning: `_brain/learnings/x.md`'] }); // no rationale
     const root = gitRepo({ '_prds/wip/p.md': broken, ...STORE() });
-    const result = gate(chainFor({ root, prdContent: prd(), changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: prd(), changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('do not parse');
   });
@@ -749,9 +797,9 @@ describe('phase 6 round 1 regressions', () => {
   it('[P1-1] a baseline that deliberately declared `none` still promises nothing', () => {
     const noned = prd({ outputs: ['- none — nothing durable was expected.'], durable: ['- none'] });
     const root = gitRepo({ '_prds/wip/p.md': noned, ...STORE() }, CAPTURED_RECORD);
-    expect(gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening')).toEqual(
-      { ok: true },
-    );
+    expect(
+      gate(chainFor({ root, prdContent: noned, changedFiles: CHANGED }), 'no weakening'),
+    ).toEqual({ ok: true });
   });
 
   it('[P1-2] an owner row that merely MENTIONS the path does not approve the removal', () => {
@@ -760,7 +808,11 @@ describe('phase 6 round 1 regressions', () => {
       changelog: ['| 2026-07-25 | owner | documentation audit covered _brain/adr/ADR-0001-x.md |'],
     });
     const root = gitRepo(
-      { '_prds/wip/p.md': baseline, '_state/acceptances.json': acceptance(['anything']), ...STORE() },
+      {
+        '_prds/wip/p.md': baseline,
+        '_state/acceptances.json': acceptance(['anything']),
+        ...STORE(),
+      },
       CAPTURED_RECORD,
     );
     const result = gate(
@@ -782,7 +834,10 @@ describe('phase 6 round 1 regressions', () => {
       },
       CAPTURED_RECORD,
     );
-    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('does not name');
     expect(result.why).toContain("'_brain/adr/ADR-0001-x.md'");
@@ -792,7 +847,10 @@ describe('phase 6 round 1 regressions', () => {
     // git diff --name-only lists deletions, so the old membership test passed.
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE(), ...CAPTURED_RECORD });
     execFileSync('git', ['checkout', '-b', 'feat/x'], { cwd: root, stdio: 'ignore' });
-    execFileSync('git', ['rm', '-q', '_brain/learnings/new-thing.md'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['rm', '-q', '_brain/learnings/new-thing.md'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
     execFileSync('git', ['commit', '-m', 'remove the record', '--no-verify'], {
       cwd: root,
       stdio: 'ignore',
@@ -876,7 +934,10 @@ describe('phase 6 round 2 self-attack (before the independent round returned)', 
       },
       CAPTURED_RECORD,
     );
-    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('does not name');
   });
@@ -1046,7 +1107,10 @@ describe('phase 6 round 2 regressions', () => {
       },
       CAPTURED_RECORD,
     );
-    const result = gate(chainFor({ root, prdContent: forged, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: forged, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('no owner approval row in the Changelog naming');
   });
@@ -1065,7 +1129,9 @@ describe('phase 6 round 2 regressions', () => {
       'declared outputs',
     );
     expect(result.ok).toBe(false);
-    expect(result.why).toContain("is declared 'learning', so it must live under '_brain/learnings/'");
+    expect(result.why).toContain(
+      "is declared 'learning', so it must live under '_brain/learnings/'",
+    );
   });
 
   it('[R2-P1-4] an `adr` output may not sit in the learnings directory', () => {
@@ -1239,7 +1305,10 @@ describe('phase 6 round 3 regressions', () => {
       },
       CAPTURED_RECORD,
     );
-    const result = gate(chainFor({ root, prdContent: approved, changedFiles: CHANGED }), 'no weakening');
+    const result = gate(
+      chainFor({ root, prdContent: approved, changedFiles: CHANGED }),
+      'no weakening',
+    );
     expect(result.ok).toBe(false);
     expect(result.why).toContain('does not name');
   });
@@ -1683,14 +1752,25 @@ describe('phase 6 round 21 — the rename source and the root-level artifact', (
     // passed the caller's list instead — evidence gathered and discarded.
     const content = prd({ inputs: ['- none — nothing applied.'] });
     const root = gitRepo(
-      { '_prds/wip/p.md': content, 'packages/x/old.ts': 'export const a = 1;\n', ...STORE('packages/x/old.ts') },
+      {
+        '_prds/wip/p.md': content,
+        'packages/x/old.ts': 'export const a = 1;\n',
+        ...STORE('packages/x/old.ts'),
+      },
       CAPTURED_RECORD,
     );
-    execFileSync('git', ['mv', 'packages/x/old.ts', 'packages/x/new.ts'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['mv', 'packages/x/old.ts', 'packages/x/new.ts'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
     execFileSync('git', ['commit', '-qm', 'rename', '--no-verify'], { cwd: root, stdio: 'ignore' });
     // The caller's list carries only what `--name-only` reports.
     const result = gate(
-      chainFor({ root, prdContent: content, changedFiles: ['_brain/learnings/new-thing.md', 'packages/x/new.ts'] }),
+      chainFor({
+        root,
+        prdContent: content,
+        changedFiles: ['_brain/learnings/new-thing.md', 'packages/x/new.ts'],
+      }),
       'declared outputs',
     );
     expect(result.ok).toBe(false);
@@ -1698,9 +1778,9 @@ describe('phase 6 round 21 — the rename source and the root-level artifact', (
   });
 
   it('[R21-11] a root-level Durable Artifact is not silently dropped', () => {
-    expect(declaredArtifactsStrict('## Durable Artifacts\n\n- `RELEASING.md` — the note\n')).toEqual(
-      { paths: ['RELEASING.md'], ambiguous: false },
-    );
+    expect(
+      declaredArtifactsStrict('## Durable Artifacts\n\n- `RELEASING.md` — the note\n'),
+    ).toEqual({ paths: ['RELEASING.md'], ambiguous: false });
     // A prose word in backticks is still not a path.
     expect(
       declaredArtifactsStrict('## Durable Artifacts\n\n- none — `nothing` durable here\n').paths,
@@ -1819,7 +1899,8 @@ describe('phase 6 round 22 regressions — one step over each round-21 fix', () 
     });
     const prose = gitRepo(store({ ...GOOD_ENTRY, date: 'July 25, 2026' }));
     expect(
-      gate(chainFor({ root: prose, prdContent: approved, changedFiles: CHANGED }), 'no weakening').ok,
+      gate(chainFor({ root: prose, prdContent: approved, changedFiles: CHANGED }), 'no weakening')
+        .ok,
     ).toBe(false);
     const stranger = gitRepo(store({ ...GOOD_ENTRY, owner: 'someone-else' }));
     const result = gate(
@@ -1942,7 +2023,10 @@ describe('phase 6 round 23 — the enforcement machinery, one step over', () => 
 
   it('[R23-1] an ordinary operator acceptance must be committed too', () => {
     const root = gitRepo({ '_prds/wip/p.md': prd(), ...STORE() }, CAPTURED_RECORD);
-    const withRows: StateRecord = { ...record(), task: { ...record().task, operatorHandoffCount: 1 } };
+    const withRows: StateRecord = {
+      ...record(),
+      task: { ...record().task, operatorHandoffCount: 1 },
+    };
     const chain = chainFor({ root, prdContent: prd(), changedFiles: CHANGED, rec: withRows });
     // Written only in the working tree, after the branch was committed.
     mkdirSync(join(root, '_state'), { recursive: true });
@@ -2084,7 +2168,9 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
     // acceptance path that had never been implemented.
     const base = {
       '_prds/wip/p.md': prd(),
-      'gates.manifest.json': JSON.stringify({ phases: { '7': ['pnpm verify:brain', 'pnpm lint'] } }),
+      'gates.manifest.json': JSON.stringify({
+        phases: { '7': ['pnpm verify:brain', 'pnpm lint'] },
+      }),
       ...STORE(),
     };
     const kept = {
@@ -2104,7 +2190,9 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
       });
 
     const refused = gitRepo(base, CAPTURED_RECORD);
-    const guard = build(refused).find((g) => (g.label ?? '').includes('validator may not be removed'));
+    const guard = build(refused).find((g) =>
+      (g.label ?? '').includes('validator may not be removed'),
+    );
     const why = guard!.fn!().why ?? '';
     expect(why).toContain("'lint'");
     // It names a Phase 7 GATE, not a store validator it did not remove.
@@ -2172,9 +2260,7 @@ describe('phase 6 round 26 — the readiness assessment’s blocking defects', (
       ],
     });
     const approved = prd({
-      changelog: [
-        '| 2026-07-25 | owner | removed `_brain/adr/ADR-0001-x.md` — moved to PRD-022 |',
-      ],
+      changelog: ['| 2026-07-25 | owner | removed `_brain/adr/ADR-0001-x.md` — moved to PRD-022 |'],
     });
     const root = gitRepo({ '_prds/wip/p.md': baseline, ...STORE() }, CAPTURED_RECORD);
     const outside = join(root, 'outside-acceptances.json');

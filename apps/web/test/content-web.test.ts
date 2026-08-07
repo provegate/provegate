@@ -107,8 +107,9 @@ describe('FR-3 — the install command is authored once, app-wide', () => {
   });
 
   it('no source outside content.ts authors the install literal', () => {
-    const offenders = FILES.filter((f) => f !== CONTENT)
-      .filter((f) => /npm install -D provegate/.test(stripComments(readFileSync(f, 'utf8'))));
+    const offenders = FILES.filter((f) => f !== CONTENT).filter((f) =>
+      /npm install -D provegate/.test(stripComments(readFileSync(f, 'utf8'))),
+    );
     expect(offenders.map((f) => f.split('/app/')[1] ?? f)).toEqual([]);
   });
 
@@ -137,9 +138,7 @@ describe('FR-7 — no landing content export is unreferenced', () => {
     const others = FILES.filter((f) => f !== CONTENT).map((f) =>
       stripComments(readFileSync(f, 'utf8')),
     );
-    const orphans = names.filter(
-      (n) => !others.some((src) => new RegExp(`\\b${n}\\b`).test(src)),
-    );
+    const orphans = names.filter((n) => !others.some((src) => new RegExp(`\\b${n}\\b`).test(src)));
     expect(orphans, `unreferenced exports: ${orphans.join(', ')}`).toEqual([]);
   });
 

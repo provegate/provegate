@@ -198,7 +198,9 @@ describe('the ten planted deny causes fail by name (FR-3)', () => {
     // failure comes from the read-side breach alone (independent cause)
     writeFileSync(
       root + '/packages/provegate/test/helpers/repo-reads.ts',
-      `import { readFileSync } from 'node:fs';\n` + GOOD_READS + `const probe = readFileSync('LICENSE', 'utf8');\n`,
+      `import { readFileSync } from 'node:fs';\n` +
+        GOOD_READS +
+        `const probe = readFileSync('LICENSE', 'utf8');\n`,
     );
     const { status, output } = run(root);
     expect(status).toBe(1);
@@ -234,7 +236,10 @@ describe('the ten planted deny causes fail by name (FR-3)', () => {
     const root = makeRoot();
     writeFileSync(
       root + '/packages/provegate/test/helpers/escape-fixtures.ts',
-      GOOD_FIXTURES.replace("export const QUICKSTART_TASKS_FIXTURE = 'w';", 'export const QUICKSTART_TASKS_FIXTURE = 1 + 1;'),
+      GOOD_FIXTURES.replace(
+        "export const QUICKSTART_TASKS_FIXTURE = 'w';",
+        'export const QUICKSTART_TASKS_FIXTURE = 1 + 1;',
+      ),
     );
     const { status, output } = run(root);
     expect(status).toBe(1);
@@ -243,7 +248,7 @@ describe('the ten planted deny causes fail by name (FR-3)', () => {
 });
 
 describe('the round-2 review closures', () => {
-  it("13 — B4 catches the backtick-template variant of the base-literal read", () => {
+  it('13 — B4 catches the backtick-template variant of the base-literal read', () => {
     const root = makeRoot();
     plant(
       root,
@@ -251,7 +256,7 @@ describe('the round-2 review closures', () => {
       "import { readFileSync } from 'node:fs';\n" +
         "import { join } from 'node:path';\n" +
         "import { repoPath } from './helpers/repo-reads.js';\n" +
-        'const t = readFileSync(join(repoPath(\'.\'), `commitlint.config.mjs`), \'utf8\');\n',
+        "const t = readFileSync(join(repoPath('.'), `commitlint.config.mjs`), 'utf8');\n",
     );
     const { status, output } = run(root);
     expect(status).toBe(1);
@@ -318,7 +323,7 @@ describe('the round-3 review closures', () => {
       "import { readFileSync } from 'node:fs';\n" +
         "import { repoPath } from './helpers/repo-reads.js';\n" +
         "const base = repoPath('.');\n" +
-        'const t = readFileSync(`${base}/commitlint.config.mjs`, \'utf8\');\n',
+        "const t = readFileSync(`${base}/commitlint.config.mjs`, 'utf8');\n",
     );
     const { status, output } = run(root);
     expect(status).toBe(1);
@@ -352,7 +357,7 @@ describe('the round-4 review closure', () => {
         "import { repoPath } from './helpers/repo-reads.js';\n" +
         "const base = repoPath('.');\n" +
         "const rel = 'anything';\n" +
-        'const p = readFile(`${base}/${rel}`, \'utf8\');\n' +
+        "const p = readFile(`${base}/${rel}`, 'utf8');\n" +
         'void p;\n',
     );
     const { status, output } = run(root);
@@ -368,7 +373,7 @@ describe('the round-4 review closure', () => {
       "import { readFile } from 'node:fs/promises';\n" +
         "import { repoPath } from './helpers/repo-reads.js';\n" +
         "const base = repoPath('.');\n" +
-        'const p = readFile(`${base}/commitlint.config.mjs`, \'utf8\');\n' +
+        "const p = readFile(`${base}/commitlint.config.mjs`, 'utf8');\n" +
         'void p;\n',
     );
     const { status, output } = run(root);
@@ -387,7 +392,7 @@ describe('the round-5 review closure', () => {
         "import { repoPath } from './helpers/repo-reads.js';\n" +
         "const base = repoPath('.');\n" +
         "const rel = 'anything';\n" +
-        'const p = readFile(`${base}/./${rel}`, \'utf8\');\n' +
+        "const p = readFile(`${base}/./${rel}`, 'utf8');\n" +
         'void p;\n',
     );
     const { status, output } = run(root);

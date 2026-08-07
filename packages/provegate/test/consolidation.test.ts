@@ -57,7 +57,9 @@ describe('sweepReviewArtifacts (FR-1: selection then binding)', () => {
     expect(sweepReviewArtifacts(cfg, wrong)).toEqual([
       expect.objectContaining({
         file: 'review-023-fixture.md',
-        issues: expect.arrayContaining([expect.stringContaining('does not match expected PRD-023')]),
+        issues: expect.arrayContaining([
+          expect.stringContaining('does not match expected PRD-023'),
+        ]),
       }),
     ]);
     // paired control on the same shape
@@ -167,16 +169,17 @@ describe('manifest resolution after the consolidation (FR-4)', () => {
         scripts: Record<string, string>;
       }
     ).scripts;
-    const commands = [
-      ...Object.values(manifest.phases).flat(),
-      ...manifest.postMerge,
-    ] as string[];
+    const commands = [...Object.values(manifest.phases).flat(), ...manifest.postMerge] as string[];
     for (const cmd of commands) {
       const m = /^pnpm\s+([\w:@/.-]+)$/.exec(cmd.trim());
       if (m === null) continue; // not a bare package-manager invocation
       expect(scripts[m[1]!], cmd).toBeDefined();
     }
-    for (const gone of ['verify:review-artifact', 'verify:durable-artifacts', 'verify:gates-wired']) {
+    for (const gone of [
+      'verify:review-artifact',
+      'verify:durable-artifacts',
+      'verify:gates-wired',
+    ]) {
       expect(scripts[gone]).toBeUndefined();
       expect(commands.some((c) => c.includes(gone))).toBe(false);
     }
@@ -346,7 +349,11 @@ function ledgerRepo(
   mkdirSync(resolve(root, '_brain/adr'), { recursive: true });
   writeFileSync(resolve(root, 'scripts/verify/script-classes.json'), JSON.stringify(ledger));
   for (const f of onDisk) writeFileSync(resolve(root, 'scripts/verify', f), '// fixture');
-  const table = ['| Script | Class |', '| --- | --- |', ...adrRows.map(([s, c]) => `| ${s} | ${c} |`)];
+  const table = [
+    '| Script | Class |',
+    '| --- | --- |',
+    ...adrRows.map(([s, c]) => `| ${s} | ${c} |`),
+  ];
   writeFileSync(
     resolve(root, '_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'),
     ['# ADR-0004', '', '## Classification', '', ...table, ''].join('\n'),
@@ -431,7 +438,7 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
   });
 
   it('a method row whose script is GONE is stale — method is never a resting place', () => {
-    const [, , ] = GREEN;
+    const [, ,] = GREEN;
     const ledger = {
       'verify-a.mjs': { class: 'repo' },
       'verify-gone.mjs': { class: 'method', supersededBy: 'gate check --gone' },
@@ -484,10 +491,7 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
     expect(output).toContain('PASS');
     expect(status).toBe(0);
     const ledger = readFileSync(repoPath('scripts/verify/script-classes.json'), 'utf8');
-    const adr = readFileSync(
-      repoPath('_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'),
-      'utf8',
-    );
+    const adr = readFileSync(repoPath('_brain/adr/ADR-0004-method-rule-vs-repo-rule.md'), 'utf8');
     // The ADR's PROSE names the trio once, deliberately — the born-agreeing
     // note explaining why they are unlisted. The stores are the ledger and the
     // Classification TABLE, so the assertion reads table rows, not prose.
@@ -495,7 +499,11 @@ describe('verify:script-classes (FR-8) — every deny mutates one green baseline
       .split('\n')
       .filter((l) => /^\|/.test(l))
       .join('\n');
-    for (const gone of ['verify-review-artifact', 'verify-durable-artifacts', 'verify-gates-wired']) {
+    for (const gone of [
+      'verify-review-artifact',
+      'verify-durable-artifacts',
+      'verify-gates-wired',
+    ]) {
       expect(ledger.includes(gone)).toBe(false);
       expect(tableRows.includes(gone)).toBe(false);
     }

@@ -42,7 +42,11 @@ export function PhaseDetail(): React.JSX.Element {
                   alignItems: 'center',
                   gap: 8,
                   cursor: 'pointer',
-                  background: active ? (isHuman ? 'var(--pg-human-bg)' : 'var(--pg-bg-subtle)') : 'transparent',
+                  background: active
+                    ? isHuman
+                      ? 'var(--pg-human-bg)'
+                      : 'var(--pg-bg-subtle)'
+                    : 'transparent',
                   border: `1px solid ${active ? chipTone : 'var(--pg-border)'}`,
                   borderRadius: isHuman ? 'var(--pg-radius-pill)' : 'var(--pg-radius-md)',
                   padding: '7px 13px',
@@ -52,7 +56,9 @@ export function PhaseDetail(): React.JSX.Element {
                   fontWeight: active ? 600 : 500,
                 }}
               >
-                <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: chipTone }}>{p.n}</span>
+                <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: chipTone }}>
+                  {p.n}
+                </span>
                 {p.label}
               </button>
             );
@@ -88,7 +94,15 @@ export function PhaseDetail(): React.JSX.Element {
             <Icon name={human ? 'human' : 'machine'} size={26} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 8,
+                flexWrap: 'wrap',
+              }}
+            >
               <h3
                 style={{
                   fontSize: 'var(--pg-text-xl)',

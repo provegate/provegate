@@ -2,8 +2,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from '
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { WorkflowConfig } from '../config/index.js';
 import { globToRegExp } from '../locks/glob.js';
-import { contractView,
-  lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
+import { contractView, lintMemoryContract, loadMemoryStore } from '../memory/artifacts.js';
 import { scanDocument, sectionBounds } from '../memory/scan.js';
 import { declaredArtifactsStrict, durableDeclarationIssue } from '../run/durable.js';
 import { formatId, parseArtifactName } from '../state/artifacts.js';

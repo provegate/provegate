@@ -62,7 +62,10 @@ export function validateManifest(value: unknown): ManifestIssue[] {
           });
         }
         if (!isCommandArray(cmds)) {
-          issues.push({ path: `phases.${phase}`, message: 'must be an array of non-empty commands' });
+          issues.push({
+            path: `phases.${phase}`,
+            message: 'must be an array of non-empty commands',
+          });
         }
       }
     }
@@ -215,10 +218,14 @@ export function Playground(): React.JSX.Element {
           lineHeight: 'var(--pg-leading-relaxed)',
         }}
       >
-        <div style={{ color: 'var(--pg-term-plan)', marginBottom: 10 }}>$ gate run --dry-run PRD-001</div>
+        <div style={{ color: 'var(--pg-term-plan)', marginBottom: 10 }}>
+          $ gate run --dry-run PRD-001
+        </div>
         {plan.issues.length > 0 ? (
           <div aria-live="polite">
-            <div style={{ color: 'var(--pg-term-red)' }}>[run] gates.manifest.json is invalid — nothing planned</div>
+            <div style={{ color: 'var(--pg-term-red)' }}>
+              [run] gates.manifest.json is invalid — nothing planned
+            </div>
             {plan.issues.map((issue, i) => (
               <div key={`${i}:${issue.path}`} style={{ color: 'var(--pg-term-red)' }}>
                 {`  - ${issue.path}: ${issue.message}`}

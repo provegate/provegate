@@ -191,9 +191,7 @@ describe('cookbook manifests load through the real parser (FR-3)', () => {
     // nobody told them to delete. Measured in a scratch adopter repo before the
     // pattern was changed; this is the regression that keeps it changed.
     const template = readFileSync(resolve(here, '../templates/prd-template.md'), 'utf8');
-    const placeholder = template
-      .split('\n')
-      .find((l) => l.includes('Deny test:'));
+    const placeholder = template.split('\n').find((l) => l.includes('Deny test:'));
     expect(placeholder, 'template no longer carries the placeholder').toBeDefined();
 
     const cap = loadExample('monorepo').hardCaps[0]!;

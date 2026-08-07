@@ -167,7 +167,9 @@ export function createPrd(
   }
   const resolvedTemplate =
     templatePath ??
-    (config.templates.prd !== '' ? containedPath(root, config.templates.prd) : defaultTemplatePath());
+    (config.templates.prd !== ''
+      ? containedPath(root, config.templates.prd)
+      : defaultTemplatePath());
   const template = readFileSync(resolvedTemplate, 'utf8');
   const prdKind = config.dirs.artifacts.prd;
   // Role-keyed, never position-keyed: states[0] is not necessarily wip.
@@ -177,80 +179,83 @@ export function createPrd(
   // scan — is serialized by a workspace mutex: scan-based protocols alone
   // cannot durably reserve an id (or a slug) across processes. The re-scan
   // below stays as a belt for mutex-less writers.
-  return withWorkspaceMutex(resolve(dirname(containedPath(root, config.dirs.stateFile)), '.gate-new.mutex'), () => {
-    const holder = slugHolder(config, root, slug);
-    if (holder !== null) {
-      throw new Error(`slug "${slug}" is already used by ${holder} — pick a distinct slug`);
-    }
-    const MAX_RETRIES = 3;
-    let retries = 0;
-    for (;;) {
-    const num = highestPrdNumber(config, root) + 1;
-    const padded = String(num).padStart(config.idPattern.width, '0');
-    if (padded.length > config.idPattern.width) {
-      throw new Error(
-        `id width exhausted (${num} does not fit ${config.idPattern.width} digits) — bump idPattern.width`,
-      );
-    }
-    const id = `${config.idPattern.prefix}-${padded}`;
-    const relPath = `${prdKind.dir}/${wipState}/${prdKind.prefix}-${padded}-${slug}.md`;
-    const full = containedPath(root, relPath);
-
-    const parentDir = dirname(full);
-    let createdParents = false;
-    try {
-      readdirSync(parentDir);
-    } catch {
-      // Uninitialized repo (W2): create just the needed parents — additive,
-      // contained — and let the caller point at `gate init` for the full tree.
-      mkdirSync(parentDir, { recursive: true });
-      createdParents = true;
-    }
-
-    const content = instantiateTemplate(config, template, id, slug, cls, now);
-    raceWindow?.(full);
-    try {
-      writeFileSync(full, content, { flag: 'wx' });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
-      // Same id + same slug already on disk: a rival `gate new` won the exact
-      // path inside the race window. Never overwrite — count it as a raced
-      // attempt and retry with the next number.
-      retries += 1;
-      if (retries > MAX_RETRIES) {
-        throw new Error(
-          `id allocation raced ${MAX_RETRIES} times for ${id} — concurrent gate new storm; retry manually`,
-          { cause: err },
-        );
+  return withWorkspaceMutex(
+    resolve(dirname(containedPath(root, config.dirs.stateFile)), '.gate-new.mutex'),
+    () => {
+      const holder = slugHolder(config, root, slug);
+      if (holder !== null) {
+        throw new Error(`slug "${slug}" is already used by ${holder} — pick a distinct slug`);
       }
-      continue;
-    }
+      const MAX_RETRIES = 3;
+      let retries = 0;
+      for (;;) {
+        const num = highestPrdNumber(config, root) + 1;
+        const padded = String(num).padStart(config.idPattern.width, '0');
+        if (padded.length > config.idPattern.width) {
+          throw new Error(
+            `id width exhausted (${num} does not fit ${config.idPattern.width} digits) — bump idPattern.width`,
+          );
+        }
+        const id = `${config.idPattern.prefix}-${padded}`;
+        const relPath = `${prdKind.dir}/${wipState}/${prdKind.prefix}-${padded}-${slug}.md`;
+        const full = containedPath(root, relPath);
 
-    // W1: id-allocation race. Another `gate new` may have computed the same
-    // number and written a different slug. Re-scan; if the number is now
-    // duplicated, withdraw OUR file and retry with the next number.
-    const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${padded}-.+\\.md$`);
-    let holders = 0;
-    for (const state of config.dirs.states) {
-      try {
-        holders += readdirSync(containedPath(root, `${prdKind.dir}/${state}`)).filter((n) =>
-          fileRe.test(n),
-        ).length;
-      } catch {
-        /* state dir absent */
+        const parentDir = dirname(full);
+        let createdParents = false;
+        try {
+          readdirSync(parentDir);
+        } catch {
+          // Uninitialized repo (W2): create just the needed parents — additive,
+          // contained — and let the caller point at `gate init` for the full tree.
+          mkdirSync(parentDir, { recursive: true });
+          createdParents = true;
+        }
+
+        const content = instantiateTemplate(config, template, id, slug, cls, now);
+        raceWindow?.(full);
+        try {
+          writeFileSync(full, content, { flag: 'wx' });
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+          // Same id + same slug already on disk: a rival `gate new` won the exact
+          // path inside the race window. Never overwrite — count it as a raced
+          // attempt and retry with the next number.
+          retries += 1;
+          if (retries > MAX_RETRIES) {
+            throw new Error(
+              `id allocation raced ${MAX_RETRIES} times for ${id} — concurrent gate new storm; retry manually`,
+              { cause: err },
+            );
+          }
+          continue;
+        }
+
+        // W1: id-allocation race. Another `gate new` may have computed the same
+        // number and written a different slug. Re-scan; if the number is now
+        // duplicated, withdraw OUR file and retry with the next number.
+        const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${padded}-.+\\.md$`);
+        let holders = 0;
+        for (const state of config.dirs.states) {
+          try {
+            holders += readdirSync(containedPath(root, `${prdKind.dir}/${state}`)).filter((n) =>
+              fileRe.test(n),
+            ).length;
+          } catch {
+            /* state dir absent */
+          }
+        }
+        if (holders > 1) {
+          unlinkSync(full);
+          retries += 1;
+          if (retries > MAX_RETRIES) {
+            throw new Error(
+              `id allocation raced ${MAX_RETRIES} times for ${id} — concurrent gate new storm; retry manually`,
+            );
+          }
+          continue;
+        }
+        return { id, path: full, relPath, createdParents, retries };
       }
-    }
-    if (holders > 1) {
-      unlinkSync(full);
-      retries += 1;
-      if (retries > MAX_RETRIES) {
-        throw new Error(
-          `id allocation raced ${MAX_RETRIES} times for ${id} — concurrent gate new storm; retry manually`,
-        );
-      }
-      continue;
-    }
-      return { id, path: full, relPath, createdParents, retries };
-    }
-  });
+    },
+  );
 }

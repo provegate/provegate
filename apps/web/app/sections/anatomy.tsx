@@ -68,7 +68,9 @@ export function Anatomy(): React.JSX.Element {
                       padding: '2px 4px',
                       borderRadius: 'var(--pg-radius-sm)',
                       background:
-                        active === p.seg ? 'color-mix(in srgb, var(--pg-human) 22%, transparent)' : 'transparent',
+                        active === p.seg
+                          ? 'color-mix(in srgb, var(--pg-human) 22%, transparent)'
+                          : 'transparent',
                       transition: 'background var(--pg-dur-fast) var(--pg-ease)',
                     }}
                   >
@@ -107,7 +109,14 @@ export function Anatomy(): React.JSX.Element {
                 transition: 'border-color var(--pg-dur-fast) var(--pg-ease)',
               }}
             >
-              <div style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text)', marginBottom: 4 }}>
+              <div
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-sm)',
+                  color: 'var(--pg-text)',
+                  marginBottom: 4,
+                }}
+              >
                 {p.seg}
               </div>
               <div

@@ -36,9 +36,7 @@ describe('handoffCard (byte-exact)', () => {
   });
 
   it('carries the load-bearing final line verbatim', () => {
-    expect(card).toContain(
-      '│ → READY TO PUSH — run `git push` yourself (the runner never pushes)',
-    );
+    expect(card).toContain('│ → READY TO PUSH — run `git push` yourself (the runner never pushes)');
     expect(card).toContain('│ operator rows: 0 | Autonomous Close: operator-gated');
   });
 });
@@ -66,9 +64,9 @@ describe('stopCard (byte-exact)', () => {
 
 describe('statusLine', () => {
   it('renders the glyph · phase · name · detail · verdict grammar', () => {
-    expect(statusLine({ phase: '4', name: 'implementation', detail: 'exit 0', verdict: 'passed' })).toBe(
-      '✓ phase 4 · implementation · exit 0 · passed',
-    );
+    expect(
+      statusLine({ phase: '4', name: 'implementation', detail: 'exit 0', verdict: 'passed' }),
+    ).toBe('✓ phase 4 · implementation · exit 0 · passed');
     expect(statusLine({ phase: '5', name: 'testing', verdict: 'failed' })).toBe(
       '✗ phase 5 · testing · failed',
     );

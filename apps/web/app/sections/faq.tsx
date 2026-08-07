@@ -67,7 +67,12 @@ export function FaqAndQuickstart(): React.JSX.Element {
     <section id="faq" style={{ ...shell, ...section }}>
       <div
         className="pg-faq-grid"
-        style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 56, alignItems: 'start' }}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '0.9fr 1.1fr',
+          gap: 56,
+          alignItems: 'start',
+        }}
       >
         <div>
           <SectionHead eyebrow="// quickstart" title="Green in four steps." />
@@ -79,7 +84,8 @@ export function FaqAndQuickstart(): React.JSX.Element {
                     display: 'flex',
                     gap: 16,
                     padding: '14px 0',
-                    borderBottom: i < C.QUICKSTART.length - 1 ? '1px solid var(--pg-border)' : 'none',
+                    borderBottom:
+                      i < C.QUICKSTART.length - 1 ? '1px solid var(--pg-border)' : 'none',
                   }}
                 >
                   <span

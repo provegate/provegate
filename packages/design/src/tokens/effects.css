@@ -5,10 +5,10 @@
    ============================================================ */
 :root {
   /* Elevation — soft, low-spread, subtle */
-  --pg-shadow-sm: 0 1px 2px rgba(20,19,13,0.06), 0 1px 1px rgba(20,19,13,0.04);
-  --pg-shadow-md: 0 2px 4px rgba(20,19,13,0.06), 0 4px 12px rgba(20,19,13,0.07);
-  --pg-shadow-lg: 0 8px 24px rgba(20,19,13,0.10), 0 2px 6px rgba(20,19,13,0.06);
-  --pg-shadow-inset: inset 0 1px 0 rgba(255,255,255,0.5);
+  --pg-shadow-sm: 0 1px 2px rgba(20, 19, 13, 0.06), 0 1px 1px rgba(20, 19, 13, 0.04);
+  --pg-shadow-md: 0 2px 4px rgba(20, 19, 13, 0.06), 0 4px 12px rgba(20, 19, 13, 0.07);
+  --pg-shadow-lg: 0 8px 24px rgba(20, 19, 13, 0.1), 0 2px 6px rgba(20, 19, 13, 0.06);
+  --pg-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 
   /* Focus ring — human-authority blue, 2px offset outline */
   --pg-ring: 0 0 0 3px color-mix(in srgb, var(--pg-focus-ring) 40%, transparent);
@@ -20,13 +20,17 @@
   --pg-dur: 160ms; /* @kind other */
   --pg-dur-slow: 240ms; /* @kind other */
 }
-[data-theme="dark"] {
-  --pg-shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-  --pg-shadow-md: 0 2px 4px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35);
-  --pg-shadow-lg: 0 10px 30px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.4);
-  --pg-shadow-inset: inset 0 1px 0 rgba(255,255,255,0.04);
+[data-theme='dark'] {
+  --pg-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --pg-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --pg-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --pg-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --pg-dur-fast: 0ms; /* @kind other */ --pg-dur: 0ms; /* @kind other */ --pg-dur-slow: 0ms; /* @kind other */ }
+  :root {
+    --pg-dur-fast: 0ms; /* @kind other */
+    --pg-dur: 0ms; /* @kind other */
+    --pg-dur-slow: 0ms; /* @kind other */
+  }
 }

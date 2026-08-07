@@ -13,12 +13,48 @@ interface VerdictStyle {
 // Colour law encoded: green (pass tokens) only for `passed`; `skipped` is muted,
 // never green. Glyphs are the closed CLI grammar.
 const MAP: Record<Verdict, VerdictStyle> = {
-  passed: { glyph: '✓', label: 'passed', fg: 'var(--pg-pass-text)', bg: 'var(--pg-pass-bg)', bd: 'var(--pg-pass)' },
-  failed: { glyph: '✗', label: 'failed', fg: 'var(--pg-fail-text)', bg: 'var(--pg-fail-bg)', bd: 'var(--pg-fail)' },
-  partial: { glyph: '⚠', label: 'partial', fg: 'var(--pg-warn-text)', bg: 'var(--pg-warn-bg)', bd: 'var(--pg-warn)' },
-  skipped: { glyph: '=', label: 'skipped', fg: 'var(--pg-muted)', bg: 'var(--pg-bg-subtle)', bd: 'var(--pg-border-strong)' },
-  operator: { glyph: '→', label: 'operator', fg: 'var(--pg-human-text)', bg: 'var(--pg-human-bg)', bd: 'var(--pg-human)' },
-  blocked: { glyph: '!', label: 'blocked', fg: 'var(--pg-stale-text)', bg: 'var(--pg-stale-bg)', bd: 'var(--pg-stale)' },
+  passed: {
+    glyph: '✓',
+    label: 'passed',
+    fg: 'var(--pg-pass-text)',
+    bg: 'var(--pg-pass-bg)',
+    bd: 'var(--pg-pass)',
+  },
+  failed: {
+    glyph: '✗',
+    label: 'failed',
+    fg: 'var(--pg-fail-text)',
+    bg: 'var(--pg-fail-bg)',
+    bd: 'var(--pg-fail)',
+  },
+  partial: {
+    glyph: '⚠',
+    label: 'partial',
+    fg: 'var(--pg-warn-text)',
+    bg: 'var(--pg-warn-bg)',
+    bd: 'var(--pg-warn)',
+  },
+  skipped: {
+    glyph: '=',
+    label: 'skipped',
+    fg: 'var(--pg-muted)',
+    bg: 'var(--pg-bg-subtle)',
+    bd: 'var(--pg-border-strong)',
+  },
+  operator: {
+    glyph: '→',
+    label: 'operator',
+    fg: 'var(--pg-human-text)',
+    bg: 'var(--pg-human-bg)',
+    bd: 'var(--pg-human)',
+  },
+  blocked: {
+    glyph: '!',
+    label: 'blocked',
+    fg: 'var(--pg-stale-text)',
+    bg: 'var(--pg-stale-bg)',
+    bd: 'var(--pg-stale)',
+  },
 };
 
 const SIZES = {
@@ -48,7 +84,11 @@ export function VerdictBadge({
   const sz = SIZES[size];
   const solidStyle: React.CSSProperties = solid
     ? { background: v.bd, color: 'var(--pg-term-bg)', borderColor: v.bd }
-    : { background: v.bg, color: v.fg, borderColor: `color-mix(in srgb, ${v.bd} 35%, transparent)` };
+    : {
+        background: v.bg,
+        color: v.fg,
+        borderColor: `color-mix(in srgb, ${v.bd} 35%, transparent)`,
+      };
   return (
     <span
       className={`pg-verdict pg-verdict--${verdict} ${className}`}

@@ -4,14 +4,7 @@
   "title": "Independent Review Artifact Metadata",
   "description": "Contract for the metadata block of an independent-review artifact (markdown blockquote header, parsed by core/gates review). Documented as JSON for tooling; the artifact itself is markdown. The `prd` pattern shows the DEFAULT id pattern; runtime validation derives it from workflow.config idPattern. Invariant: verdict `pass` requires `critical` = 0.",
   "type": "object",
-  "required": [
-    "prd",
-    "verdict",
-    "reviewer",
-    "baseSha",
-    "critical",
-    "quorum"
-  ],
+  "required": ["prd", "verdict", "reviewer", "baseSha", "critical", "quorum"],
   "additionalProperties": false,
   "properties": {
     "prd": {
@@ -20,10 +13,7 @@
     },
     "verdict": {
       "type": "string",
-      "enum": [
-        "pass",
-        "fail"
-      ]
+      "enum": ["pass", "fail"]
     },
     "reviewer": {
       "type": "string",

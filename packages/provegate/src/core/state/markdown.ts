@@ -321,4 +321,3 @@ function rejectionReason(token: string): string | null {
 export function declaredGlobs(content: string): string[] {
   return parseConflictSurface(content).globs;
 }
-

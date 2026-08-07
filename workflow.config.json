@@ -1,11 +1,7 @@
 {
   "memory": {
     "enabled": true,
-    "entrypoints": [
-      "AGENT_BOOTSTRAP.md",
-      "CLAUDE.md",
-      ".cursor/rules/brain.mdc"
-    ]
+    "entrypoints": ["AGENT_BOOTSTRAP.md", "CLAUDE.md", ".cursor/rules/brain.mdc"]
   },
   "sharedAppendOnly": [
     "package.json",
@@ -21,11 +17,7 @@
   "prompts": {
     "enabled": true,
     "dir": ".provegate",
-    "adapters": [
-      "claude-code",
-      "cursor",
-      "codex"
-    ],
+    "adapters": ["claude-code", "cursor", "codex"],
     "values": {
       "PROJECT_NAME": "provegate",
       "CMD_TEST_SCOPED": "pnpm test --filter provegate",

@@ -3,19 +3,19 @@
    4px base grid. Aerospace-checklist density: tight, aligned.
    ============================================================ */
 :root {
-  --pg-space-0:  0;
-  --pg-space-1:  0.25rem; /* 4  */
-  --pg-space-2:  0.5rem;  /* 8  */
-  --pg-space-3:  0.75rem; /* 12 */
-  --pg-space-4:  1rem;    /* 16 */
-  --pg-space-5:  1.5rem;  /* 24 */
-  --pg-space-6:  2rem;    /* 32 */
-  --pg-space-7:  3rem;    /* 48 */
-  --pg-space-8:  4rem;    /* 64 */
-  --pg-space-9:  6rem;    /* 96 */
+  --pg-space-0: 0;
+  --pg-space-1: 0.25rem; /* 4  */
+  --pg-space-2: 0.5rem; /* 8  */
+  --pg-space-3: 0.75rem; /* 12 */
+  --pg-space-4: 1rem; /* 16 */
+  --pg-space-5: 1.5rem; /* 24 */
+  --pg-space-6: 2rem; /* 32 */
+  --pg-space-7: 3rem; /* 48 */
+  --pg-space-8: 4rem; /* 64 */
+  --pg-space-9: 6rem; /* 96 */
 
   /* Radii — restrained. Terminal/engineered, not soft. */
-  --pg-radius-0:  0;
+  --pg-radius-0: 0;
   --pg-radius-sm: 3px;
   --pg-radius-md: 6px;
   --pg-radius-lg: 10px;

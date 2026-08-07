@@ -29,11 +29,15 @@ interface Run {
 
 function run(root: string): Run {
   try {
-    const out = execFileSync(process.execPath, [join(root, 'scripts/verify/verify-doc-claims.mjs')], {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const out = execFileSync(
+      process.execPath,
+      [join(root, 'scripts/verify/verify-doc-claims.mjs')],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
     return { code: 0, out };
   } catch (error) {
     const e = error as { status?: number; stdout?: string; stderr?: string };
@@ -50,7 +54,12 @@ interface RepoSpec {
   statusExtra?: string[];
 }
 
-function repo({ bootstrap, scripts = ['verify:brain'], allowlist = [], statusExtra = [] }: RepoSpec): string {
+function repo({
+  bootstrap,
+  scripts = ['verify:brain'],
+  allowlist = [],
+  statusExtra = [],
+}: RepoSpec): string {
   const root = mkdtempSync(join(tmpdir(), 'provegate-claims-'));
   roots.push(root);
   mkdirSync(join(root, 'scripts/verify'), { recursive: true });
@@ -61,11 +70,21 @@ function repo({ bootstrap, scripts = ['verify:brain'], allowlist = [], statusExt
   cpSync(LIB, join(root, 'scripts/verify/lib.mjs'));
   writeFileSync(
     join(root, 'package.json'),
-    JSON.stringify({ name: 'fixture', scripts: Object.fromEntries(scripts.map((s) => [s, 'node x.mjs'])) }, null, 2),
+    JSON.stringify(
+      { name: 'fixture', scripts: Object.fromEntries(scripts.map((s) => [s, 'node x.mjs'])) },
+      null,
+      2,
+    ),
   );
-  writeFileSync(join(root, 'scripts/verify/doc-claims-allowlist.json'), JSON.stringify(allowlist, null, 2));
+  writeFileSync(
+    join(root, 'scripts/verify/doc-claims-allowlist.json'),
+    JSON.stringify(allowlist, null, 2),
+  );
   writeFileSync(join(root, 'AGENT_BOOTSTRAP.md'), `${bootstrap.join('\n')}\n`);
-  writeFileSync(join(root, 'STATUS.md'), `# Status\n\n## Recent activity\n\n${statusExtra.join('\n')}\n`);
+  writeFileSync(
+    join(root, 'STATUS.md'),
+    `# Status\n\n## Recent activity\n\n${statusExtra.join('\n')}\n`,
+  );
   // Every file in the scanned set must exist — an absent one is a finding, so
   // the fixture provides them all and varies only what is under test.
   for (const rel of [
@@ -170,7 +189,12 @@ describe('verify:doc-claims — the allowlist is shrink-only (FR-7)', () => {
       repo({
         bootstrap: staleLine,
         allowlist: [
-          { file: 'AGENT_BOOTSTRAP.md', claim: 'lands in wave 2', reason: 'r', reviewBy: YESTERDAY },
+          {
+            file: 'AGENT_BOOTSTRAP.md',
+            claim: 'lands in wave 2',
+            reason: 'r',
+            reviewBy: YESTERDAY,
+          },
         ],
       }),
     );

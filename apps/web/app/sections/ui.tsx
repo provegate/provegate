@@ -120,7 +120,9 @@ export function SectionHead({
       >
         {title}
       </h2>
-      {sub ? <p style={{ ...lede, marginTop: 14, marginBottom: 0, textWrap: 'pretty' }}>{sub}</p> : null}
+      {sub ? (
+        <p style={{ ...lede, marginTop: 14, marginBottom: 0, textWrap: 'pretty' }}>{sub}</p>
+      ) : null}
     </div>
   );
 }
@@ -155,7 +157,8 @@ export function Wordmark({ size = 'var(--pg-text-lg)' }: { size?: string }): Rea
         color: 'var(--pg-text)',
       }}
     >
-      {PRODUCT_NAME_PARTS[0]}<span style={{ color: 'var(--pg-accent)' }}>{PRODUCT_NAME_PARTS[1]}</span>
+      {PRODUCT_NAME_PARTS[0]}
+      <span style={{ color: 'var(--pg-accent)' }}>{PRODUCT_NAME_PARTS[1]}</span>
     </span>
   );
 }
@@ -165,7 +168,16 @@ export function TermDots(): React.JSX.Element {
   return (
     <span style={{ display: 'flex', gap: 6 }} aria-hidden="true">
       {['var(--pg-red-500)', 'var(--pg-amber-500)', 'var(--pg-green-500)'].map((c) => (
-        <span key={c} style={{ width: 10, height: 10, borderRadius: 'var(--pg-radius-pill)', background: c, opacity: 0.85 }} />
+        <span
+          key={c}
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 'var(--pg-radius-pill)',
+            background: c,
+            opacity: 0.85,
+          }}
+        />
       ))}
     </span>
   );
@@ -190,7 +202,14 @@ export function TermBar({
       }}
     >
       <TermDots />
-      <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-term-dim)', marginLeft: 6 }}>
+      <span
+        style={{
+          ...mono,
+          fontSize: 'var(--pg-text-xs)',
+          color: 'var(--pg-term-dim)',
+          marginLeft: 6,
+        }}
+      >
         {title}
       </span>
       {children}

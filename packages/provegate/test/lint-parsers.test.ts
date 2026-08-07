@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join,  } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { loadConfig } from '../src/core/config/load.js';

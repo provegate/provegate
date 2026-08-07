@@ -3,8 +3,10 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const pkg = (rel: string): string => resolve(__dirname, '..', rel);
-const cssFiles = ['src/styles.css', ...readdirSync(pkg('src/tokens')).map((f) => `src/tokens/${f}`)]
-  .filter((f) => f.endsWith('.css'));
+const cssFiles = [
+  'src/styles.css',
+  ...readdirSync(pkg('src/tokens')).map((f) => `src/tokens/${f}`),
+].filter((f) => f.endsWith('.css'));
 
 describe('no shipped CSS makes a third-party request (FR-5)', () => {
   it('contains no http/https URL anywhere', () => {
@@ -26,7 +28,7 @@ describe('fonts are self-hosted with provenance (FR-5, W2/W3)', () => {
     expect(existsSync(pkg('assets/fonts/OFL.txt'))).toBe(true);
   });
 
-  it("every @font-face src resolves to a real vendored woff2 (W3)", () => {
+  it('every @font-face src resolves to a real vendored woff2 (W3)', () => {
     const fontsCss = pkg('src/tokens/fonts.css');
     const css = readFileSync(fontsCss, 'utf8');
     const urls = [...css.matchAll(/url\(["']([^"']+)["']\)/g)].map((m) => m[1]!);

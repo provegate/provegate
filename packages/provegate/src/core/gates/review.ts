@@ -79,9 +79,7 @@ export function validateReviewArtifact(
       if (total < 1 || n > total) {
         issues.push(`Quorum "${quorum}" is invalid — need N <= M and M >= 1`);
       } else if (verdict === 'pass' && n * 5 < total * 3) {
-        issues.push(
-          `Verdict is pass but quorum ${n}/${total} is below the 3/5 panel gate`,
-        );
+        issues.push(`Verdict is pass but quorum ${n}/${total} is below the 3/5 panel gate`);
       }
     }
   }

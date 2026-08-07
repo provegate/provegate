@@ -64,7 +64,14 @@ export function GateRun(): React.JSX.Element {
         <div style={{ color: 'var(--pg-term-green)', marginBottom: 10 }}>$ gate run PRD-001</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {C.RUN_LINES.slice(0, shown).map((r) => (
-            <GateLine key={r.name} bare status={r.status} name={r.name} command={r.command} code={r.code} />
+            <GateLine
+              key={r.name}
+              bare
+              status={r.status}
+              name={r.name}
+              command={r.command}
+              code={r.code}
+            />
           ))}
         </div>
         {shown >= C.RUN_LINES.length ? (

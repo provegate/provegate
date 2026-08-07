@@ -34,7 +34,7 @@ touched.
 - **A fictional CLI surface.** The prototype presents four commands
   (`gate init/run/push/ledger`) over a TOML gate config. The shipped tool has
   **thirteen** commands (`init new open renew release status queue check doctor
-  memory run land push`), uses `workflow.config.json` + `gates.manifest.json`,
+memory run land push`), uses `workflow.config.json` + `gates.manifest.json`,
   and has neither of the prototype's invented config file nor its `ledger`
   subcommand. This page uses the **real** surface, and `landing.test.tsx` asserts
   the two fictional tokens never render.
@@ -75,16 +75,16 @@ on the pages is scoped to them. Fonts are self-hosted via `@provegate/design`.
 interactive ones, so `page.tsx` and the tests see one module surface. Anything
 that needs state gets its own `'use client'` module:
 
-| Module | Section |
-|---|---|
-| `nav.tsx` | theme toggle + mobile drawer |
-| `hero-terminal.tsx` | the typing hero terminal |
-| `gate-run.tsx` | the staged `gate run` with replay |
-| `playground.tsx` | the manifest validator + dry-run plan |
-| `tabs.tsx` | `InstallTabs`, `CIIntegration` |
-| `phase-detail.tsx` | the seven-phase selector |
-| `faq.tsx` | quickstart + FAQ accordion |
-| `anatomy.tsx` | the status-line breakdown |
+| Module              | Section                               |
+| ------------------- | ------------------------------------- |
+| `nav.tsx`           | theme toggle + mobile drawer          |
+| `hero-terminal.tsx` | the typing hero terminal              |
+| `gate-run.tsx`      | the staged `gate run` with replay     |
+| `playground.tsx`    | the manifest validator + dry-run plan |
+| `tabs.tsx`          | `InstallTabs`, `CIIntegration`        |
+| `phase-detail.tsx`  | the seven-phase selector              |
+| `faq.tsx`           | quickstart + FAQ accordion            |
+| `anatomy.tsx`       | the status-line breakdown             |
 
 Shared layout helpers (`SectionHead`, `Mark`, `Wordmark`, the fluid type ramp)
 live in `ui.tsx` and are hook-free, so both server and client sections import

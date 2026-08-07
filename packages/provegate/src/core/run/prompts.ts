@@ -624,9 +624,7 @@ export function renderPrompts(packageDir: string, config: RenderConfig): RenderR
   // diagnostic and not a config-load one — the legal key set is the corpus,
   // which is package Markdown the config loader must not read.
   const consumed = new Set(corpusTokens(packageDir, planned));
-  const configBacked = new Set(
-    registry.filter((r) => r.configField !== null).map((r) => r.token),
-  );
+  const configBacked = new Set(registry.filter((r) => r.configField !== null).map((r) => r.token));
   for (const key of Object.keys(supplied)) {
     // A config-backed token IS consumed by the corpus, so occurrence alone
     // cannot see this case — and it is the one class of dead key the registry
@@ -647,7 +645,9 @@ export function renderPrompts(packageDir: string, config: RenderConfig): RenderR
       file: 'workflow.config.json',
       line: null,
       message: `prompts.values.${key} is consumed by no rendered protocol${
-        byToken.has(key) ? ' (the registry declares it, but only for a file the store does not render)' : ''
+        byToken.has(key)
+          ? ' (the registry declares it, but only for a file the store does not render)'
+          : ''
       }`,
     });
   }
@@ -836,10 +836,7 @@ export function renderAdapters(
       // agent-entrypoint files are deliberately absent so an existing entrypoint
       // is never touched or shadowed; a provegate-namespaced generated adapter
       // is a different class, and the adopter pastes this one themselves.
-      out.set(
-        `${dir}/AGENTS.md.provegate.snippet`,
-        `## Phase protocols\n\n${table}\n`,
-      );
+      out.set(`${dir}/AGENTS.md.provegate.snippet`, `## Phase protocols\n\n${table}\n`);
     }
   }
   return out;
@@ -1022,7 +1019,12 @@ export function reconcilePrompts(
             `${canonical} — its nearest existing ancestor resolves to ${ancestorReal}`,
           ]);
         }
-        findings.push({ path: canonical, kind: 'missing', bannerVersion: null, installedVersion: version });
+        findings.push({
+          path: canonical,
+          kind: 'missing',
+          bannerVersion: null,
+          installedVersion: version,
+        });
         continue;
       }
       throw new PromptsError('reconcile cannot read a planned path', [
@@ -1061,7 +1063,12 @@ export function reconcilePrompts(
     }
 
     if (onDisk.equals(Buffer.from(expected, 'utf8'))) {
-      findings.push({ path: canonical, kind: 'current', bannerVersion: null, installedVersion: version });
+      findings.push({
+        path: canonical,
+        kind: 'current',
+        bannerVersion: null,
+        installedVersion: version,
+      });
       continue;
     }
     const parsedBannerVersion = bannerVersion(onDisk.toString('utf8'));
@@ -1123,14 +1130,9 @@ export const PROMPT_STALE_REMEDY: readonly string[] = [
  */
 export function evaluatePromptReconciliation(
   findings: PromptFinding[],
-  {
-    exceptions = [],
-    todayUtc,
-  }: { exceptions?: readonly PromptExceptionLike[]; todayUtc: string },
+  { exceptions = [], todayUtc }: { exceptions?: readonly PromptExceptionLike[]; todayUtc: string },
 ): PromptReconciliationReport {
-  const modifiedPaths = new Set(
-    findings.filter((f) => f.kind === 'modified').map((f) => f.path),
-  );
+  const modifiedPaths = new Set(findings.filter((f) => f.kind === 'modified').map((f) => f.path));
   const suppressed = new Map<string, string>();
   const problems: string[] = [];
   for (const entry of exceptions) {
@@ -1159,12 +1161,16 @@ export function evaluatePromptReconciliation(
         break;
       case 'missing':
         counts.missing += 1;
-        lines.push(`${f.path}: missing — planned by the installed package and the current config, absent on disk`);
+        lines.push(
+          `${f.path}: missing — planned by the installed package and the current config, absent on disk`,
+        );
         break;
       case 'stale':
         counts.stale += 1;
         anyStale = true;
-        lines.push(`${f.path}: stale — banner ${f.bannerVersion ?? '?'}, installed ${f.installedVersion}`);
+        lines.push(
+          `${f.path}: stale — banner ${f.bannerVersion ?? '?'}, installed ${f.installedVersion}`,
+        );
         break;
       case 'modified': {
         const expires = suppressed.get(f.path);
@@ -1181,7 +1187,9 @@ export function evaluatePromptReconciliation(
       }
       case 'unattributable':
         counts.unattributable += 1;
-        lines.push(`${f.path}: unattributable — bytes differ from the fresh render and no banner is parseable`);
+        lines.push(
+          `${f.path}: unattributable — bytes differ from the fresh render and no banner is parseable`,
+        );
         break;
     }
   }

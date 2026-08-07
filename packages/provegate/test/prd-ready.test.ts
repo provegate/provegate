@@ -133,7 +133,6 @@ afterEach(() => {
 });
 
 describe('FR-2 memory readiness gate', () => {
-
   const on: WorkflowConfig = { ...cfg, memory: { ...cfg.memory, enabled: true } };
 
   const record = (over: Partial<Record<string, string>> = {}): string =>
@@ -248,9 +247,7 @@ describe('FR-2 memory readiness gate', () => {
     });
 
     it('an input naming a superseded record', () => {
-      const root = fixture([
-        { slug: 'sample-record', content: record({ status: 'superseded' }) },
-      ]);
+      const root = fixture([{ slug: 'sample-record', content: record({ status: 'superseded' }) }]);
       expect(lintPrd(on, manifest, VALID, root).issues).toEqual([
         "Memory Inputs: 'sample-record' is superseded — it cannot be an input",
       ]);
@@ -421,7 +418,9 @@ describe('FR-2 memory readiness gate', () => {
       const content = VALID.replace('`sample-record`', '`unindexed`');
       const issues = lintPrd(on, manifest, content, root).issues;
       expect(issues).toContainEqual("Memory Inputs: 'unindexed' is not an active indexed record");
-      expect(issues).toContainEqual(expect.stringContaining('learnings/unindexed.md has no pointer'));
+      expect(issues).toContainEqual(
+        expect.stringContaining('learnings/unindexed.md has no pointer'),
+      );
     });
 
     it('enabled without a root fails closed rather than skipping', () => {

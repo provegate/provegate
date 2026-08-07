@@ -192,10 +192,7 @@ describe('declaredGlobs', () => {
     // control file with no conflict reported. Template tokens and `none` are
     // still excluded; a backticked token in a real bullet is taken at its word,
     // and over-claiming only ever detects MORE conflicts.
-    expect(declaredGlobs(content)).toEqual([
-      'packages/provegate/src/**',
-      'workflow.config.json',
-    ]);
+    expect(declaredGlobs(content)).toEqual(['packages/provegate/src/**', 'workflow.config.json']);
   });
 
   it('returns empty when the section is missing', () => {

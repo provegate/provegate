@@ -97,7 +97,10 @@ export function PhasePipeline({
       {/* The push node highlights when active is 'push' (its canonical name) or
           '→' (its rendered symbol) — per the contract, `active` may be 'push'. */}
       {showPush
-        ? node({ n: '→', label: 'Push (you)', authority: 'human' }, active === 'push' || active === '→')
+        ? node(
+            { n: '→', label: 'Push (you)', authority: 'human' },
+            active === 'push' || active === '→',
+          )
         : null}
     </div>
   );

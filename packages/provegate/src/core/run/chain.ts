@@ -104,7 +104,10 @@ export function shouldSkipGate(gate: ChainGate, fromPhase: FromPhase): boolean {
  * status cannot be read, and the caller then falls back to the name list rather
  * than silently treating every output as uncaptured.
  */
-function capturedDiffFiles(root: string, base: string): { captured: string[]; touched: string[] } | null {
+function capturedDiffFiles(
+  root: string,
+  base: string,
+): { captured: string[]; touched: string[] } | null {
   try {
     // The LOCAL base, and only the local base. `collectDiffFiles` prefers
     // `origin/<base>`, which is the wrong question here: `mergeToLocalBase`
@@ -199,7 +202,10 @@ function baseMemoryShapeProblem(memory: Record<string, unknown>): string | null 
   return null;
 }
 
-function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig & {
+function baseMemoryConfig(
+  root: string,
+  config: WorkflowConfig,
+): MemoryConfig & {
   malformed?: boolean;
 } {
   const raw = blobAt(root, config.branches.base, CONFIG_FILENAME);
@@ -213,7 +219,11 @@ function baseMemoryConfig(root: string, config: WorkflowConfig): MemoryConfig & 
     // to nothing, so the defaults' `enabled: false` came back and every memory
     // gate went unbuilt — the unreadable-config path fails closed and this one
     // walked around it.
-    if (parsed.memory === null || typeof parsed.memory !== 'object' || Array.isArray(parsed.memory)) {
+    if (
+      parsed.memory === null ||
+      typeof parsed.memory !== 'object' ||
+      Array.isArray(parsed.memory)
+    ) {
       return { ...DEFAULT_CONFIG.memory, enabled: true, malformed: true };
     }
     // The FIELDS are checked, not just the container. `{"memory":{"enable":true}}`
@@ -401,7 +411,9 @@ function memoryWeakeningGate(options: {
     };
   }
 
-  const unapproved = weakenings.filter((w) => !changelogApproves(prdContent, config.owners, w.path));
+  const unapproved = weakenings.filter(
+    (w) => !changelogApproves(prdContent, config.owners, w.path),
+  );
   if (unapproved.length > 0) {
     return {
       ok: false,
@@ -573,14 +585,15 @@ export function buildGateChain(options: {
       label: `memory: disabling the contract needs an owner acceptance`,
       fn: () => ({
         ok: false,
-        why: basePolicy.malformed === true
-          ? `\`${config.branches.base}\` has a malformed \`memory\` block in ` +
-            `${CONFIG_FILENAME}, so the policy in force there cannot be read — and an ` +
-            `unreadable policy is not permission to run without one. Repair the base ` +
-            `configuration, then close`
-          : `\`memory.enabled\` is true on \`${config.branches.base}\` and false here — this ` +
-            `merge would disable the memory contract for the repository. That is a policy ` +
-            `change, not a close: revert it, or land it as its own owner-accepted work item`,
+        why:
+          basePolicy.malformed === true
+            ? `\`${config.branches.base}\` has a malformed \`memory\` block in ` +
+              `${CONFIG_FILENAME}, so the policy in force there cannot be read — and an ` +
+              `unreadable policy is not permission to run without one. Repair the base ` +
+              `configuration, then close`
+            : `\`memory.enabled\` is true on \`${config.branches.base}\` and false here — this ` +
+              `merge would disable the memory contract for the repository. That is a policy ` +
+              `change, not a close: revert it, or land it as its own owner-accepted work item`,
       }),
     });
   }

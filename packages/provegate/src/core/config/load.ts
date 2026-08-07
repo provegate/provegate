@@ -292,7 +292,10 @@ function promptsExceptionsValid(config: WorkflowConfig): ConfigIssue[] {
     }
     const date = EXCEPTION_DATE.exec(entry.expires);
     if (date === null) {
-      issues.push({ path: `${at}.expires`, message: 'must be a YYYY-MM-DD calendar date (compared in UTC; valid THROUGH that date)' });
+      issues.push({
+        path: `${at}.expires`,
+        message: 'must be a YYYY-MM-DD calendar date (compared in UTC; valid THROUGH that date)',
+      });
     } else {
       const [year, month, day] = [Number(date[1]), Number(date[2]), Number(date[3])];
       const utc = new Date(Date.UTC(year, month - 1, day));
@@ -301,14 +304,20 @@ function promptsExceptionsValid(config: WorkflowConfig): ConfigIssue[] {
         utc.getUTCMonth() !== month - 1 ||
         utc.getUTCDate() !== day
       ) {
-        issues.push({ path: `${at}.expires`, message: `${entry.expires} is not a real calendar date` });
+        issues.push({
+          path: `${at}.expires`,
+          message: `${entry.expires} is not a real calendar date`,
+        });
       }
     }
     // Byte-wise after NO transformation: two spellings a canonicalizing
     // contract would merge are two strings here, and each must be legal on
     // its own terms.
     if (seen.has(entry.path)) {
-      issues.push({ path: `${at}.path`, message: `duplicates ${entry.path} — paths are compared byte-wise` });
+      issues.push({
+        path: `${at}.path`,
+        message: `duplicates ${entry.path} — paths are compared byte-wise`,
+      });
     }
     seen.add(entry.path);
   });

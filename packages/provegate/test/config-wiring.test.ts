@@ -38,9 +38,9 @@ describe('wiring config defaults', () => {
   });
 
   it('accepts a conforming wiring block and rejects unknown keys inside it', () => {
-    expect(
-      validateConfig({ wiring: { scriptsDir: 'tools/checks', hooksDir: '.hooks' } }),
-    ).toEqual([]);
+    expect(validateConfig({ wiring: { scriptsDir: 'tools/checks', hooksDir: '.hooks' } })).toEqual(
+      [],
+    );
     expect(validateConfig({ wiring: { bundleDir: 'x' } })).toContainEqual(
       expect.objectContaining({ path: 'wiring.bundleDir', message: 'unknown key' }),
     );
@@ -51,9 +51,10 @@ describe('wiring config defaults', () => {
 });
 
 describe('wiring path validation (lexical)', () => {
-  const resolved = (wiring: Partial<typeof DEFAULT_CONFIG.wiring>): ReturnType<
-    typeof validateResolvedConfig
-  > => validateResolvedConfig({ ...DEFAULT_CONFIG, wiring: { ...DEFAULT_CONFIG.wiring, ...wiring } });
+  const resolved = (
+    wiring: Partial<typeof DEFAULT_CONFIG.wiring>,
+  ): ReturnType<typeof validateResolvedConfig> =>
+    validateResolvedConfig({ ...DEFAULT_CONFIG, wiring: { ...DEFAULT_CONFIG.wiring, ...wiring } });
 
   it('rejects an absolute path, per key', () => {
     for (const key of ['scriptsDir', 'hooksDir', 'bundlePath'] as const) {

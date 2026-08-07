@@ -340,7 +340,12 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
   it('refuses while another agent holds an unexpired lease, and names it', () => {
     const root = fixtureRepo();
     lease(root, 'prd-009-other-work');
-    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    const result = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root,
+      id: 'PRD-002',
+    });
     expect(result.ok).toBe(false);
     expect(result.why).toContain('a foreign lease is active');
     expect(result.why).toContain('prd-009-other-work.json (other-agent)');
@@ -357,12 +362,20 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
     const root = fixtureRepo();
     // The base already has it on, so this merge activates nothing.
     git(root, ['checkout', '-q', 'main']);
-    writeFileSync(resolve(root, 'workflow.config.json'), JSON.stringify({ memory: { enabled: true } }));
+    writeFileSync(
+      resolve(root, 'workflow.config.json'),
+      JSON.stringify({ memory: { enabled: true } }),
+    );
     git(root, ['add', '.']);
     git(root, ['commit', '-q', '-m', 'chore: memory already on']);
     git(root, ['checkout', '-q', 'feat/x']);
     lease(root, 'prd-009-other-work');
-    const after = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    const after = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root,
+      id: 'PRD-002',
+    });
     expect(after.ok).toBe(true);
     expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
   });
@@ -370,7 +383,12 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
   it('ignores this work item’s own lease', () => {
     const root = fixtureRepo();
     lease(root, 'prd-002-x', { prd: 'PRD-002' });
-    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    const result = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root,
+      id: 'PRD-002',
+    });
     expect(result.ok).toBe(true);
     expect(git(root, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('main');
   });
@@ -394,7 +412,12 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
       join(resolve(root, cfg.dirs.locksDir), 'prd-009-shape.json'),
       JSON.stringify({ expiresAt: '2020-01-01T00:00:00.000Z' }),
     );
-    const shaped = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    const shaped = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root,
+      id: 'PRD-002',
+    });
     expect(shaped.ok).toBe(false);
     expect(shaped.why).toContain('invalid:');
 
@@ -415,7 +438,12 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
     const root = fixtureRepo();
     mkdirSync(resolve(root, cfg.dirs.locksDir), { recursive: true });
     writeFileSync(join(resolve(root, cfg.dirs.locksDir), 'prd-009-broken.json'), '{ not json');
-    const result = mergeToLocalBase({ config: memOn, manifest: okManifest(memOn), root, id: 'PRD-002' });
+    const result = mergeToLocalBase({
+      config: memOn,
+      manifest: okManifest(memOn),
+      root,
+      id: 'PRD-002',
+    });
     expect(result.ok).toBe(false);
     expect(result.why).toContain('prd-009-broken.json (unreadable');
   });
@@ -431,7 +459,12 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
   it('a memory-disabled repository merges with the same foreign lease present', () => {
     const root = fixtureRepo();
     lease(root, 'prd-009-other-work');
-    const result = mergeToLocalBase({ config: cfg, manifest: okManifest(cfg), root, id: 'PRD-002' });
+    const result = mergeToLocalBase({
+      config: cfg,
+      manifest: okManifest(cfg),
+      root,
+      id: 'PRD-002',
+    });
     expect(result.ok).toBe(true);
   });
 
@@ -520,6 +553,9 @@ describe('FR-6 land barrier: a foreign lease refuses the merge', () => {
       'prd-009-a.json (other-agent)',
       'prd-010-b.json (agent-b)',
     ]);
-    expect(foreignActiveLeases(memOn, root, 'PRD-009')).toEqual(['prd-002-mine.json (other-agent)', 'prd-010-b.json (agent-b)']);
+    expect(foreignActiveLeases(memOn, root, 'PRD-009')).toEqual([
+      'prd-002-mine.json (other-agent)',
+      'prd-010-b.json (agent-b)',
+    ]);
   });
 });

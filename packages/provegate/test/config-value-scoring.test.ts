@@ -156,7 +156,9 @@ describe('valueScoring validation (FR-1)', () => {
     const exact = withAxes(['MF', 'MF'], { MF: 1 });
     const folded = withAxes(['MF', 'mf'], { MF: 0.5, mf: 0.5 });
     for (const issues of [exact, folded]) {
-      expect(issues.join(' ')).toMatch(/duplicates "MF" — axis identifiers are unique ignoring case/);
+      expect(issues.join(' ')).toMatch(
+        /duplicates "MF" — axis identifiers are unique ignoring case/,
+      );
       expect(issues.join(' ')).not.toMatch(/must match \^\[A-Za-z\]/);
     }
   });
@@ -232,7 +234,10 @@ describe('editing workflow.config.json advances the base for held leases (FR-5)'
     initWorkspace(DEFAULT_CONFIG, root);
     // The file this PRD edits — present and committed BEFORE the claim, which
     // is what makes this the edit case rather than the introduction case.
-    writeFileSync(join(root, 'workflow.config.json'), `${JSON.stringify({ owners: ['a'] }, null, 2)}\n`);
+    writeFileSync(
+      join(root, 'workflow.config.json'),
+      `${JSON.stringify({ owners: ['a'] }, null, 2)}\n`,
+    );
 
     const { id, path } = createPrd(DEFAULT_CONFIG, root, { slug: 'cutoff' });
     writeFileSync(

@@ -522,7 +522,8 @@ export function auditWiring(
   const scriptsDirNorm = normLexical(config.wiring.scriptsDir);
   // `.` (and its spellings) legally mean the repository root: the prefix is
   // then empty and every non-traversal relative path is under it.
-  const scriptsDirPrefix = scriptsDirNorm === '.' || scriptsDirNorm === '' ? '' : scriptsDirNorm + '/';
+  const scriptsDirPrefix =
+    scriptsDirNorm === '.' || scriptsDirNorm === '' ? '' : scriptsDirNorm + '/';
   const keyOf = new Map<string, string>();
   // FR-1 registration is by FILE, not by basename: a script invoking
   // `scripts/verify/nested/verify-foo.mjs` must not make the top-level

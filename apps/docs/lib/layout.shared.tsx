@@ -10,14 +10,16 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       // JSX supported
       title: (
-        <span
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-          aria-label={appName}
-        >
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} aria-label={appName}>
           <span style={{ color: 'var(--pg-accent)', display: 'inline-flex' }} aria-hidden="true">
             <svg width={21} height={21} viewBox="0 0 32 32" fill="none">
               <path d="M7 5 L7 27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
-              <path d="M25 5 L25 27" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+              <path
+                d="M25 5 L25 27"
+                stroke="currentColor"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
               <path
                 d="M11 15.5 L14.5 19.5 L21.5 11"
                 stroke="currentColor"

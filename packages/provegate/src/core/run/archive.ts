@@ -61,13 +61,7 @@ export function archivePrdArtifacts(
   // `--no-verify` is NOT used: consumer hooks stay in force. The commit's own
   // identity comes from `rev-parse` on the ref written by THIS commit, read
   // before returning so the caller can detect a post-commit rewrite.
-  const out = git(root, [
-    'commit',
-    '-m',
-    archiveCommitMessage(record.prd),
-    '--',
-    ...paths,
-  ]);
+  const out = git(root, ['commit', '-m', archiveCommitMessage(record.prd), '--', ...paths]);
   // `git commit` prints `[<branch> <abbrev>] <subject>`. Branch names may
   // legally contain `]`, so anchor on the hash: the LAST space-delimited hex
   // token closing the bracket group (codex prd-007 r25 P2). Falls back to

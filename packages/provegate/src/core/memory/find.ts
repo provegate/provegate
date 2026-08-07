@@ -36,12 +36,7 @@ export interface FindSelectors {
   limit?: number;
 }
 
-export type MatchReason =
-  | 'watch'
-  | 'exact-name'
-  | 'exact-tag'
-  | 'description-token'
-  | 'name-token';
+export type MatchReason = 'watch' | 'exact-name' | 'exact-tag' | 'description-token' | 'name-token';
 
 export interface FindHit {
   slug: string;
@@ -122,11 +117,7 @@ export function memoryFind(
   if (query.length === 0 && tag.length === 0 && paths.length === 0) {
     // A selectorless find would return the whole store in slug order, which is
     // `cat INDEX.md` with extra steps and teaches the wrong habit.
-    return refuse(
-      'no selector given',
-      'pass at least one of --query, --paths, or --tag',
-      limit,
-    );
+    return refuse('no selector given', 'pass at least one of --query, --paths, or --tag', limit);
   }
 
   // Path selectors are validated the same way a configured path is: repo-
@@ -136,11 +127,7 @@ export function memoryFind(
   for (const path of paths) {
     // Lexical first: absolute, drive-rooted, UNC, and `..` forms are all
     // non-repo-relative and none of them can match a watch glob.
-    if (
-      /^[/\\]/.test(path) ||
-      /^[A-Za-z]:/.test(path) ||
-      path.split(/[/\\]/).includes('..')
-    ) {
+    if (/^[/\\]/.test(path) || /^[A-Za-z]:/.test(path) || path.split(/[/\\]/).includes('..')) {
       return refuse(
         `--paths entry '${path}' is not a repo-relative path`,
         'watch globs are repo-relative, so a selector must be too',

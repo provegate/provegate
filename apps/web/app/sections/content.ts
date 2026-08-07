@@ -119,8 +119,7 @@ export const PHASES: Phase[] = [
   { n: 7, label: 'Learn', authority: 'machine' },
 ];
 
-export const PHASE_CUT =
-  'Humans own intent and release. The machine owns the verified middle.';
+export const PHASE_CUT = 'Humans own intent and release. The machine owns the verified middle.';
 
 /**
  * Per-phase detail for the interactive selector. `push` is the eighth chip and
@@ -221,7 +220,12 @@ export const COMMANDS = [
 ] as const;
 
 /** Real `gate run` status lines (selectable text, not a live simulation). */
-export const RUN_LINES: { status: 'passed' | 'operator'; name: string; command?: string; code?: number }[] = [
+export const RUN_LINES: {
+  status: 'passed' | 'operator';
+  name: string;
+  command?: string;
+  code?: number;
+}[] = [
   { status: 'passed', name: 'phase 4 · implementation', command: 'tsc + lint + build', code: 0 },
   { status: 'passed', name: 'phase 5 · §11 verification commands', command: 'pnpm test', code: 0 },
   { status: 'passed', name: 'phase 6 · review artifact (Critical 0)' },
@@ -248,15 +252,40 @@ export const HANDOFF_LINES = [
   { gate: 'passed' as const, text: 'phase 6: review artifact (verdict pass, Critical 0)' },
   { gate: 'passed' as const, text: 'post-merge: build green' },
   { blank: true } as const,
-  { arrow: true as const, text: 'READY TO PUSH — run `git push` yourself (the runner never pushes)' },
+  {
+    arrow: true as const,
+    text: 'READY TO PUSH — run `git push` yourself (the runner never pushes)',
+  },
 ];
 
 /** Real evidence ledger rows. */
 export const LEDGER_ROWS = [
-  { check: 'types', command: 'pnpm check-types', verdict: 'passed' as const, code: 0, evidence: '0 errors' },
-  { check: 'test', command: 'pnpm test', verdict: 'passed' as const, code: 0, evidence: '481 passed' },
-  { check: 'staging smoke', command: 'manual', verdict: 'operator' as const, evidence: 'owner-signed' },
-  { check: 'perf budget', command: 'pnpm bench', verdict: 'blocked' as const, evidence: 'dependency broken' },
+  {
+    check: 'types',
+    command: 'pnpm check-types',
+    verdict: 'passed' as const,
+    code: 0,
+    evidence: '0 errors',
+  },
+  {
+    check: 'test',
+    command: 'pnpm test',
+    verdict: 'passed' as const,
+    code: 0,
+    evidence: '481 passed',
+  },
+  {
+    check: 'staging smoke',
+    command: 'manual',
+    verdict: 'operator' as const,
+    evidence: 'owner-signed',
+  },
+  {
+    check: 'perf budget',
+    command: 'pnpm bench',
+    verdict: 'blocked' as const,
+    evidence: 'dependency broken',
+  },
 ] as const;
 
 /**
@@ -264,11 +293,36 @@ export const LEDGER_ROWS = [
  * `@provegate/design/cli` — `<glyph> phase N · <name> · <detail> · <verdict>`.
  */
 export const ANATOMY_PARTS = [
-  { seg: 'glyph', text: '✓', tone: 'pass' as const, desc: 'the status — and the source of truth when NO_COLOR strips the colour' },
-  { seg: 'phase', text: 'phase 4', tone: 'fg' as const, desc: 'which of the seven phases produced this line' },
-  { seg: 'name', text: 'pnpm test', tone: 'fg' as const, desc: 'the gate’s declared name: a command, or a built-in check' },
-  { seg: 'detail', text: 'exit 0', tone: 'dim' as const, desc: 'optional evidence — an exit code, a count, a note' },
-  { seg: 'verdict', text: 'passed', tone: 'pass' as const, desc: 'one word from the closed ledger set, never a synonym' },
+  {
+    seg: 'glyph',
+    text: '✓',
+    tone: 'pass' as const,
+    desc: 'the status — and the source of truth when NO_COLOR strips the colour',
+  },
+  {
+    seg: 'phase',
+    text: 'phase 4',
+    tone: 'fg' as const,
+    desc: 'which of the seven phases produced this line',
+  },
+  {
+    seg: 'name',
+    text: 'pnpm test',
+    tone: 'fg' as const,
+    desc: 'the gate’s declared name: a command, or a built-in check',
+  },
+  {
+    seg: 'detail',
+    text: 'exit 0',
+    tone: 'dim' as const,
+    desc: 'optional evidence — an exit code, a count, a note',
+  },
+  {
+    seg: 'verdict',
+    text: 'passed',
+    tone: 'pass' as const,
+    desc: 'one word from the closed ledger set, never a synonym',
+  },
 ] as const;
 
 /** Self-attestation vs. evidence. */
@@ -366,15 +420,29 @@ export const FEATURES = [
 /** Install tabs — the two package managers the tool actually ships through. */
 export const INSTALLERS = [
   { id: 'npm', label: 'npm', file: 'terminal', code: HERO.install },
-  { id: 'pnpm', label: 'pnpm', file: 'terminal', code: 'pnpm add -D provegate\npnpm exec gate init' },
+  {
+    id: 'pnpm',
+    label: 'pnpm',
+    file: 'terminal',
+    code: 'pnpm add -D provegate\npnpm exec gate init',
+  },
 ] as const;
 
 /** Four steps to a first green run. */
 export const QUICKSTART = [
   { t: 'Install the CLI', d: 'One package, no runtime dependencies. Node ≥ 22.' },
-  { t: 'gate init', d: 'Scaffolds the workflow tree and starter configs. Nothing is ever overwritten.' },
-  { t: 'Declare your gates', d: 'Per-phase commands in gates.manifest.json; per-PRD verification commands in the PRD itself.' },
-  { t: 'gate run', d: 'Runs phases 4–7, merges into your LOCAL base branch, prints the handoff card. You push.' },
+  {
+    t: 'gate init',
+    d: 'Scaffolds the workflow tree and starter configs. Nothing is ever overwritten.',
+  },
+  {
+    t: 'Declare your gates',
+    d: 'Per-phase commands in gates.manifest.json; per-PRD verification commands in the PRD itself.',
+  },
+  {
+    t: 'gate run',
+    d: 'Runs phases 4–7, merges into your LOCAL base branch, prints the handoff card. You push.',
+  },
 ] as const;
 
 export const FAQS = [

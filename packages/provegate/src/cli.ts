@@ -10,7 +10,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
-import { ConfigError, DEFAULT_CONFIG, loadConfig, type WorkflowConfig } from './core/config/index.js';
+import {
+  ConfigError,
+  DEFAULT_CONFIG,
+  loadConfig,
+  type WorkflowConfig,
+} from './core/config/index.js';
 import {
   buildQueue,
   buildState,
@@ -215,9 +220,7 @@ function runInit(args: string[]): number {
       console.log('       Add the block below to workflow.config.json, then re-run:');
       console.log('');
       console.log(promptsConfigBlock(config, packageDir));
-      console.log(
-        '[init] an existing config is never edited — this block is the activation path.',
-      );
+      console.log('[init] an existing config is never edited — this block is the activation path.');
       return 1;
     }
     try {
@@ -253,9 +256,7 @@ function runInit(args: string[]): number {
       if (action.kind === 'file') console.log(`    ${action.path}`);
     }
     console.log('');
-    console.log(
-      '[init] this store installs ONE WAY. To reinstall after a package upgrade,',
-    );
+    console.log('[init] this store installs ONE WAY. To reinstall after a package upgrade,');
     console.log(
       '       delete EVERY path above — not just the store directory — and run this again.',
     );
@@ -291,10 +292,14 @@ function runNew(args: string[]): number {
     const result = createPrd(config, root, { slug, cls, templatePath });
     console.log(`[new] created ${result.relPath} (${result.id})`);
     if (result.retries > 0) {
-      console.log(`[new] id allocation raced ${result.retries}x with a concurrent gate new — resolved`);
+      console.log(
+        `[new] id allocation raced ${result.retries}x with a concurrent gate new — resolved`,
+      );
     }
     if (result.createdParents) {
-      console.log('[new] parent directories were missing — run `gate init` for the full workflow tree');
+      console.log(
+        '[new] parent directories were missing — run `gate init` for the full workflow tree',
+      );
     }
     console.log(`[new] next: fill the template, then \`gate check ${result.id}\``);
     return 0;
@@ -320,7 +325,9 @@ function runOpen(args: string[]): number {
   }
   const id = args.find((a) => !a.startsWith('--'));
   if (!id) {
-    console.error('usage: gate open <PRD-XXX> [--steal] [--worktree] [--hours=N] [--agent=identity]');
+    console.error(
+      'usage: gate open <PRD-XXX> [--steal] [--worktree] [--hours=N] [--agent=identity]',
+    );
     return 1;
   }
   const steal = args.includes('--steal');
@@ -363,9 +370,7 @@ function runOpen(args: string[]): number {
     );
     console.log(`[open] lease: ${result.leasePath}`);
     if (result.worktree) {
-      console.log(
-        `[open] worktree: ${result.worktree.relPath} (branch ${result.worktree.branch})`,
-      );
+      console.log(`[open] worktree: ${result.worktree.relPath} (branch ${result.worktree.branch})`);
     }
     for (const warning of result.issues) console.error(`[open] WARNING: ${warning}`);
     return 0;
@@ -378,7 +383,9 @@ function runOpen(args: string[]): number {
 function runRenew(args: string[]): number {
   const unknown = unknownOption(args, ['--hours', '--agent']);
   if (unknown !== null) {
-    console.error(`[renew] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[renew] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   const id = args.find((a) => !a.startsWith('--'));
@@ -414,7 +421,9 @@ function runRenew(args: string[]): number {
 function runRelease(args: string[]): number {
   const unknown = unknownOption(args, ['--force', '--agent']);
   if (unknown !== null) {
-    console.error(`[release] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[release] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   const id = args.find((a) => !a.startsWith('--'));
@@ -438,7 +447,9 @@ function runRelease(args: string[]): number {
       return 0;
     }
     for (const lease of result.released) {
-      const who = lease.foreign ? ` (FORCED — agent ${lease.agent}, expired ${lease.expiresAt})` : '';
+      const who = lease.foreign
+        ? ` (FORCED — agent ${lease.agent}, expired ${lease.expiresAt})`
+        : '';
       console.log(`[release] released ${lease.prd}${who}`);
     }
     for (const note of result.issues) console.error(`[release] ${note}`);
@@ -468,7 +479,9 @@ function runStatus(args: string[]): number {
   // machine output. `gate queue --json` is the command that has it.
   const unknown = unknownOption(args, []);
   if (unknown !== null) {
-    console.error(`[status] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[status] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   const { root, config } = loadConfig();
@@ -499,7 +512,11 @@ function runStatus(args: string[]): number {
     });
     const width = cols.map((h, i) => Math.max(h.length, ...rows.map((row) => row[i]!.length)));
     const pad = (cells: string[]): string[] => cells.map((c, i) => c.padEnd(width[i]!));
-    console.log(pad([...cols]).join('  ').trimEnd());
+    console.log(
+      pad([...cols])
+        .join('  ')
+        .trimEnd(),
+    );
     for (const row of rows) {
       const padded = pad(row);
       padded[2] = paintReadiness(padded[2]!, tier); // colour the readiness verdict
@@ -552,16 +569,12 @@ function runQueue(json: boolean): number {
     for (const s of queue.surfaceRejections)
       for (const r of s.rejected) lines.push(`    ${s.prd}: \`${r.token}\` — ${r.reason}`);
   }
-  push(
-    'IN-FLIGHT',
-    queue.inFlight,
-    (r) => {
-      // Stale leases render their countdown in stale-amber; live leases plain.
-      const remaining = formatLeaseRemaining(r.expiresInSeconds, r.stale);
-      const badge = r.stale ? paint('stale', remaining, tier) : remaining;
-      return `${r.prd}  agent=${r.agent} ${r.phase}  ${badge}${r.worktree ? ` ${r.worktree}` : ''}`;
-    },
-  );
+  push('IN-FLIGHT', queue.inFlight, (r) => {
+    // Stale leases render their countdown in stale-amber; live leases plain.
+    const remaining = formatLeaseRemaining(r.expiresInSeconds, r.stale);
+    const badge = r.stale ? paint('stale', remaining, tier) : remaining;
+    return `${r.prd}  agent=${r.agent} ${r.phase}  ${badge}${r.worktree ? ` ${r.worktree}` : ''}`;
+  });
   push(
     'BLOCKED',
     queue.blocked,
@@ -597,7 +610,9 @@ function findRecord(
 function runDoctor(args: string[]): number {
   const unknown = unknownOption(args, ['--memory', '--json']);
   if (unknown !== null) {
-    console.error(`[doctor] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[doctor] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   if (!args.includes('--memory')) {
@@ -640,7 +655,9 @@ function runDoctor(args: string[]): number {
   const slot = { pass: 'green', warn: 'amber', fail: 'red' } as const;
   console.log(`[doctor --memory] ${config.memory.enabled ? 'contract ON' : 'contract OFF'}`);
   for (const check of report.checks) {
-    console.log(`  ${paint(slot[check.severity], glyph[check.severity], tier)} ${check.id}: ${check.detail}`);
+    console.log(
+      `  ${paint(slot[check.severity], glyph[check.severity], tier)} ${check.id}: ${check.detail}`,
+    );
     if (check.remedy !== undefined) console.log(`      → ${check.remedy}`);
   }
   const fails = report.checks.filter((c) => c.severity === 'fail').length;
@@ -671,7 +688,9 @@ function runMemory(args: string[]): number {
   const rest = args.filter((a) => a !== 'find');
   const unknown = unknownOption(rest, ['--query', '--paths', '--tag', '--limit', '--json']);
   if (unknown !== null) {
-    console.error(`[memory] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[memory] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   const value = (name: string): string | undefined =>
@@ -743,12 +762,20 @@ function runValueScoreSweep(config: WorkflowConfig, root: string): number {
     } catch (error) {
       // A record naming a file we cannot read is a finding, not a skip: the
       // state snapshot and the tree disagree.
-      failures.push(`${record.prd}: cannot read ${rel} (${error instanceof Error ? error.message : String(error)})`);
+      failures.push(
+        `${record.prd}: cannot read ${rel} (${error instanceof Error ? error.message : String(error)})`,
+      );
       continue;
     }
     const cutoff = config.valueScoring.enforceFrom;
-    if (cutoff !== undefined && record.number < cutoff && scoreValueHeader(config, content).problem?.kind === 'absent') {
-      skipped.push(`${record.prd}: no header, and id ${record.number} is before the cutoff of ${cutoff}`);
+    if (
+      cutoff !== undefined &&
+      record.number < cutoff &&
+      scoreValueHeader(config, content).problem?.kind === 'absent'
+    ) {
+      skipped.push(
+        `${record.prd}: no header, and id ${record.number} is before the cutoff of ${cutoff}`,
+      );
       continue;
     }
     if (scoreValueHeader(config, content).problem?.kind === 'absent') headerless++;
@@ -769,9 +796,17 @@ function runValueScoreSweep(config: WorkflowConfig, root: string): number {
 }
 
 function runCheck(args: string[]): number {
-  const unknown = unknownOption(args, ['--wiring', '--value-score', '--review-artifacts', '--durable-artifacts', '--prompts']);
+  const unknown = unknownOption(args, [
+    '--wiring',
+    '--value-score',
+    '--review-artifacts',
+    '--durable-artifacts',
+    '--prompts',
+  ]);
   if (unknown !== null) {
-    console.error(`[check] unknown option ${unknown} — refusing rather than guessing what it meant`);
+    console.error(
+      `[check] unknown option ${unknown} — refusing rather than guessing what it meant`,
+    );
     return 1;
   }
   const { root, config } = loadConfig();
@@ -871,7 +906,9 @@ function runCheck(args: string[]): number {
 
   const idArg = args.find((a) => !a.startsWith('-'));
   if (!idArg) {
-    console.error('usage: gate check PRD-XXX | gate check --wiring | gate check --prompts | gate check --review-artifacts | gate check --durable-artifacts');
+    console.error(
+      'usage: gate check PRD-XXX | gate check --wiring | gate check --prompts | gate check --review-artifacts | gate check --durable-artifacts',
+    );
     return 1;
   }
   const found = findRecord(config, root, idArg);
@@ -1184,9 +1221,9 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
           id,
           phase: 'merge',
           why:
-          `the checkout at ${stamps.worktree} carries workflow artifacts differing from ` +
-          `'${config.branches.base}' (${unauthorized.join(', ')}) — merge or rebase ` +
-          `${config.branches.base} into ${stamps.branch} first — nothing ran, nothing merged`,
+            `the checkout at ${stamps.worktree} carries workflow artifacts differing from ` +
+            `'${config.branches.base}' (${unauthorized.join(', ')}) — merge or rebase ` +
+            `${config.branches.base} into ${stamps.branch} first — nothing ran, nothing merged`,
           results: [],
         }),
       );
@@ -1308,7 +1345,12 @@ function runRun(args: string[], { mergeOnly = false } = {}): number {
           : null;
     if (drift !== null) {
       console.error(
-        stopCard({ id, phase: 'merge', why: `${drift} — nothing was merged`, results: outcome.results }),
+        stopCard({
+          id,
+          phase: 'merge',
+          why: `${drift} — nothing was merged`,
+          results: outcome.results,
+        }),
       );
       return 1;
     }
@@ -1478,7 +1520,9 @@ export function main(argv: string[]): number {
       // written by listing the verbs that sound mutating.
       const unknown = unknownOption(rest, ['--json']);
       if (unknown !== null) {
-        console.error(`[queue] unknown option ${unknown} — refusing rather than guessing what it meant`);
+        console.error(
+          `[queue] unknown option ${unknown} — refusing rather than guessing what it meant`,
+        );
         return 1;
       }
       return runQueue(rest.includes('--json'));

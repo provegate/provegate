@@ -90,7 +90,15 @@ export function Hero(): React.JSX.Element {
         >
           {C.HERO.thesis}
         </h1>
-        <p style={{ ...lede, fontSize: 'var(--pg-text-lg)', maxWidth: 540, marginTop: 22, textWrap: 'pretty' }}>
+        <p
+          style={{
+            ...lede,
+            fontSize: 'var(--pg-text-lg)',
+            maxWidth: 540,
+            marginTop: 22,
+            textWrap: 'pretty',
+          }}
+        >
           {C.HERO.sub}
         </p>
         <div style={{ marginTop: 26, maxWidth: 440 }}>
@@ -100,11 +108,24 @@ export function Hero(): React.JSX.Element {
           <Button as="a" href={C.LINKS.spec} variant="primary" size="lg">
             Read the spec
           </Button>
-          <Button as="a" href="#how" variant="ghost" size="lg" rightIcon={<Icon name="arrowRight" size={17} />}>
+          <Button
+            as="a"
+            href="#how"
+            variant="ghost"
+            size="lg"
+            rightIcon={<Icon name="arrowRight" size={17} />}
+          >
             How gates work
           </Button>
         </div>
-        <div style={{ marginTop: 22, ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-subtle)' }}>
+        <div
+          style={{
+            marginTop: 22,
+            ...mono,
+            fontSize: 'var(--pg-text-xs)',
+            color: 'var(--pg-text-subtle)',
+          }}
+        >
           {C.PRINCIPLES}
         </div>
       </div>
@@ -172,7 +193,10 @@ export function Problem(): React.JSX.Element {
         title="Strong generators. Unreliable narrators."
         sub="Neither the agent's claim, nor a panel of agents' consensus, nor a human's felt sense of progress can serve as a gate. Only executed evidence can."
       />
-      <div className="pg-problem-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+      <div
+        className="pg-problem-grid"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}
+      >
         {C.PROOF_STATS.map((s) => (
           <Reveal key={s.source} style={{ height: '100%' }}>
             <div style={card}>
@@ -199,7 +223,14 @@ export function Problem(): React.JSX.Element {
               >
                 {s.body}
               </p>
-              <div style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-subtle)', marginTop: 14 }}>
+              <div
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-xs)',
+                  color: 'var(--pg-text-subtle)',
+                  marginTop: 14,
+                }}
+              >
                 {s.source}
               </div>
             </div>
@@ -280,7 +311,13 @@ export function RunWalkthrough(): React.JSX.Element {
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-subtle)' }}>
+                    <span
+                      style={{
+                        ...mono,
+                        fontSize: 'var(--pg-text-xs)',
+                        color: 'var(--pg-text-subtle)',
+                      }}
+                    >
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <h3
@@ -331,8 +368,16 @@ export function Playground(): React.JSX.Element {
           sub="This is the whole model: gates in, evidence out. gates.manifest.json declares the per-phase commands; phases 5, 6 and 7 carry built-in gates it cannot remove. Edit it and the plan below re-reads it live."
         />
         <ManifestPlayground />
-        <p style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text-subtle)', marginTop: 14 }}>
-          a plan, not a run — validation and chain order are the shipped ones; verdicts come only from `gate run`.
+        <p
+          style={{
+            ...mono,
+            fontSize: 'var(--pg-text-sm)',
+            color: 'var(--pg-text-subtle)',
+            marginTop: 14,
+          }}
+        >
+          a plan, not a run — validation and chain order are the shipped ones; verdicts come only
+          from `gate run`.
         </p>
       </div>
     </section>
@@ -389,11 +434,27 @@ export function OperatorFlow(): React.JSX.Element {
             padding: '36px 28px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', flexWrap: 'wrap', gap: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: 4,
+            }}
+          >
             {C.OPERATOR_FLOW.nodes.map((n, i) => (
               <React.Fragment key={n.label}>
                 {i > 0 ? connector(i === 1) : null}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 8,
+                    textAlign: 'center',
+                  }}
+                >
                   <div
                     style={{
                       width: 58,
@@ -409,20 +470,43 @@ export function OperatorFlow(): React.JSX.Element {
                   >
                     <Icon name={n.icon} size={24} />
                   </div>
-                  <span style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text-muted)', maxWidth: 140 }}>
+                  <span
+                    style={{
+                      ...mono,
+                      fontSize: 'var(--pg-text-sm)',
+                      color: 'var(--pg-text-muted)',
+                      maxWidth: 140,
+                    }}
+                  >
                     {n.label}
                   </span>
                 </div>
               </React.Fragment>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 28, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 10,
+              marginTop: 28,
+              flexWrap: 'wrap',
+            }}
+          >
             <VerdictBadge verdict="operator" label="owner accepts" />
             <VerdictBadge verdict="passed" label="merge" />
           </div>
         </div>
       </Reveal>
-      <p style={{ ...lede, fontSize: 'var(--pg-text-sm)', maxWidth: 720, margin: '18px auto 0', textAlign: 'center' }}>
+      <p
+        style={{
+          ...lede,
+          fontSize: 'var(--pg-text-sm)',
+          maxWidth: 720,
+          margin: '18px auto 0',
+          textAlign: 'center',
+        }}
+      >
         {C.OPERATOR_FLOW.note}
       </p>
     </section>
@@ -444,7 +528,9 @@ export function Refusal(): React.JSX.Element {
             ...mono,
           }}
         >
-          <div style={{ color: 'var(--pg-term-dim)', fontSize: 'var(--pg-text-sm)' }}>$ {C.REFUSAL.command}</div>
+          <div style={{ color: 'var(--pg-term-dim)', fontSize: 'var(--pg-text-sm)' }}>
+            $ {C.REFUSAL.command}
+          </div>
           <div
             style={{
               display: 'flex',
@@ -490,8 +576,8 @@ export function EvidenceLedger(): React.JSX.Element {
       </Reveal>
       <p style={{ ...lede, marginTop: 'var(--pg-space-4)' }}>
         The vocabulary is closed: <VerdictBadge verdict="passed" size="sm" />{' '}
-        <VerdictBadge verdict="operator" size="sm" /> <VerdictBadge verdict="blocked" size="sm" /> — never a silent
-        pass.
+        <VerdictBadge verdict="operator" size="sm" /> <VerdictBadge verdict="blocked" size="sm" /> —
+        never a silent pass.
       </p>
     </section>
   );
@@ -515,10 +601,20 @@ export function Proof(): React.JSX.Element {
         title="Showing the limits next to the proof is the point."
         sub="ProveGate is measured, not breathless. The evidence is real — and so are the conditions under which it doesn't apply."
       />
-      <div className="pg-proof-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div
+        className="pg-proof-grid"
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}
+      >
         <Reveal style={{ height: '100%' }}>
           <div style={card}>
-            <div style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-accent-text)', marginBottom: 18 }}>
+            <div
+              style={{
+                ...mono,
+                fontSize: 'var(--pg-text-sm)',
+                color: 'var(--pg-accent-text)',
+                marginBottom: 18,
+              }}
+            >
               evidence
             </div>
             {C.PROOF_EVIDENCE.map((t) => (
@@ -533,7 +629,14 @@ export function Proof(): React.JSX.Element {
         </Reveal>
         <Reveal style={{ height: '100%' }}>
           <div style={card}>
-            <div style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text-subtle)', marginBottom: 18 }}>
+            <div
+              style={{
+                ...mono,
+                fontSize: 'var(--pg-text-sm)',
+                color: 'var(--pg-text-subtle)',
+                marginBottom: 18,
+              }}
+            >
               limits we state out loud
             </div>
             {C.LIMITS.map((t) => (
@@ -611,7 +714,10 @@ export function Comparison(): React.JSX.Element {
           center
           sub="An agent saying it's done and a gate proving it are not the same event. ProveGate only records the second one."
         />
-        <div className="pg-cmp-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div
+          className="pg-cmp-grid"
+          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}
+        >
           <Reveal style={{ height: '100%' }}>
             {column(
               C.COMPARISON.attestation.title,
@@ -665,11 +771,23 @@ export function Positioning(): React.JSX.Element {
 export function Features(): React.JSX.Element {
   return (
     <section id="features" style={{ ...shell, ...section }}>
-      <SectionHead eyebrow="// why provegate" title="Built for engineers who don't trust vibes." center />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+      <SectionHead
+        eyebrow="// why provegate"
+        title="Built for engineers who don't trust vibes."
+        center
+      />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 16,
+        }}
+      >
         {C.FEATURES.map((f) => (
           <Reveal key={f.title} style={{ height: '100%' }}>
-            <div style={{ ...card, borderRadius: 'var(--pg-radius-md)', padding: '22px 22px 24px' }}>
+            <div
+              style={{ ...card, borderRadius: 'var(--pg-radius-md)', padding: '22px 22px 24px' }}
+            >
               <div style={{ color: 'var(--pg-text-muted)', marginBottom: 14 }}>
                 <Icon name={f.icon} size={22} />
               </div>
@@ -734,13 +852,20 @@ export function CommandRef(): React.JSX.Element {
                 flexWrap: 'wrap',
               }}
             >
-              <span style={{ color: 'var(--pg-term-green)', flex: 'none', userSelect: 'none' }} aria-hidden="true">
+              <span
+                style={{ color: 'var(--pg-term-green)', flex: 'none', userSelect: 'none' }}
+                aria-hidden="true"
+              >
                 $
               </span>
-              <span style={{ color: 'var(--pg-term-fg)', fontSize: 'var(--pg-text-sm)', minWidth: 210 }}>
+              <span
+                style={{ color: 'var(--pg-term-fg)', fontSize: 'var(--pg-text-sm)', minWidth: 210 }}
+              >
                 gate {name}
               </span>
-              <span style={{ color: 'var(--pg-term-dim)', fontSize: 'var(--pg-text-sm)', flex: 1 }}>{desc}</span>
+              <span style={{ color: 'var(--pg-term-dim)', fontSize: 'var(--pg-text-sm)', flex: 1 }}>
+                {desc}
+              </span>
             </div>
           ))}
           <div
@@ -754,10 +879,19 @@ export function CommandRef(): React.JSX.Element {
               flexWrap: 'wrap',
             }}
           >
-            <span style={{ color: 'var(--pg-term-human)', flex: 'none', userSelect: 'none' }} aria-hidden="true">
+            <span
+              style={{ color: 'var(--pg-term-human)', flex: 'none', userSelect: 'none' }}
+              aria-hidden="true"
+            >
               $
             </span>
-            <span style={{ color: 'var(--pg-term-human)', fontSize: 'var(--pg-text-sm)', minWidth: 210 }}>
+            <span
+              style={{
+                color: 'var(--pg-term-human)',
+                fontSize: 'var(--pg-text-sm)',
+                minWidth: 210,
+              }}
+            >
               gate push
             </span>
             <span style={{ color: 'var(--pg-term-dim)', fontSize: 'var(--pg-text-sm)', flex: 1 }}>
@@ -766,7 +900,14 @@ export function CommandRef(): React.JSX.Element {
           </div>
         </div>
       </Reveal>
-      <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-subtle)', marginTop: 14 }}>
+      <p
+        style={{
+          ...mono,
+          fontSize: 'var(--pg-text-xs)',
+          color: 'var(--pg-text-subtle)',
+          marginTop: 14,
+        }}
+      >
         {C.PRINCIPLES}
       </p>
     </section>
@@ -789,11 +930,12 @@ export function Install(): React.JSX.Element {
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Admonition type="tip" title="No lock-in">
-              Gates are just commands. Delete ProveGate and your checks still run in CI exactly as before.
+              Gates are just commands. Delete ProveGate and your checks still run in CI exactly as
+              before.
             </Admonition>
             <Admonition type="human" title="Push stays with you">
-              ProveGate never pushes or deploys on your behalf. It verifies and merges locally; you decide what
-              propagates.
+              ProveGate never pushes or deploys on your behalf. It verifies and merges locally; you
+              decide what propagates.
             </Admonition>
           </div>
         </div>
@@ -831,7 +973,15 @@ export function Install(): React.JSX.Element {
           {C.CTA.title}
         </h2>
         <p style={{ ...lede, margin: '12px auto 0', maxWidth: 520 }}>{C.CTA.body}</p>
-        <div style={{ display: 'flex', gap: 12, marginTop: 26, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            marginTop: 26,
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <Button
             as="a"
             href={C.LINKS.github}
@@ -861,14 +1011,27 @@ export function Footer(): React.JSX.Element {
     <footer style={{ borderTop: '1px solid var(--pg-border)', background: 'var(--pg-bg-subtle)' }}>
       <div
         className="pg-footer-grid"
-        style={{ ...shell, padding: '48px 28px 28px', display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr', gap: 32 }}
+        style={{
+          ...shell,
+          padding: '48px 28px 28px',
+          display: 'grid',
+          gridTemplateColumns: '1.4fr 1fr 1fr 1fr',
+          gap: 32,
+        }}
       >
         <div style={{ maxWidth: 280 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
             <Mark size={22} />
             <Wordmark />
           </div>
-          <p style={{ fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text-subtle)', lineHeight: 'var(--pg-leading-normal)', margin: 0 }}>
+          <p
+            style={{
+              fontSize: 'var(--pg-text-sm)',
+              color: 'var(--pg-text-subtle)',
+              lineHeight: 'var(--pg-leading-normal)',
+              margin: 0,
+            }}
+          >
             Gate autonomous coding agents on machine-checkable evidence.
           </p>
         </div>
@@ -888,7 +1051,11 @@ export function Footer(): React.JSX.Element {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {col.links.map(([label, href]) => (
-                <a key={label} href={href} style={{ color: 'var(--pg-text-muted)', fontSize: 'var(--pg-text-sm)' }}>
+                <a
+                  key={label}
+                  href={href}
+                  style={{ color: 'var(--pg-text-muted)', fontSize: 'var(--pg-text-sm)' }}
+                >
                   {label}
                 </a>
               ))}

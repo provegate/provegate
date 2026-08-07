@@ -61,9 +61,13 @@ export function EvidenceTable({
       }}
       {...rest}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--pg-font-sans)' }}>
+      <table
+        style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--pg-font-sans)' }}
+      >
         {caption ? (
-          <caption style={{ ...TH, textAlign: 'left', borderBottom: 'none', padding: '12px 14px 4px' }}>
+          <caption
+            style={{ ...TH, textAlign: 'left', borderBottom: 'none', padding: '12px 14px 4px' }}
+          >
             {caption}
           </caption>
         ) : null}
@@ -85,7 +89,13 @@ export function EvidenceTable({
                 <VerdictBadge verdict={r.verdict} size="sm" />
               </td>
               {/* Exit cell turns red ONLY on a real failure. */}
-              <td style={{ ...TD, ...MONO, color: r.verdict === 'failed' ? 'var(--pg-fail-text)' : 'var(--pg-text-muted)' }}>
+              <td
+                style={{
+                  ...TD,
+                  ...MONO,
+                  color: r.verdict === 'failed' ? 'var(--pg-fail-text)' : 'var(--pg-text-muted)',
+                }}
+              >
                 {r.code != null ? r.code : '—'}
               </td>
               <td style={{ ...TD, ...MONO }}>{r.evidence ?? '—'}</td>

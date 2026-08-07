@@ -2,7 +2,7 @@
   "name": "provegate-monorepo",
   "version": "0.0.0",
   "private": true,
-  "description": "ProveGate monorepo \u2014 CLI, landing page, and docs for the Gated Autonomy workflow",
+  "description": "ProveGate monorepo — CLI, landing page, and docs for the Gated Autonomy workflow",
   "license": "MIT",
   "engines": {
     "node": ">=22"
@@ -46,7 +46,7 @@
     "verify:memory-corpus": "node scripts/verify/verify-memory-record-corpus.mjs",
     "verify:prompts": "node scripts/verify/verify-prompts.mjs",
     "verify:workflow": "node scripts/verify/verify-workflow.mjs",
-    "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green \u2014 ready to push; run git push yourself (push is always human)')\"",
+    "ship:pre": "node scripts/verify/verify-workflow.mjs && node -e \"console.log('ship:pre green — ready to push; run git push yourself (push is always human)')\"",
     "verify:quickstart-parity": "node scripts/verify/verify-quickstart-parity.mjs",
     "verify:test-inputs": "node scripts/verify/verify-test-inputs.mjs",
     "verify:review-quorum": "node scripts/verify/verify-review-quorum-authority.mjs",
@@ -58,7 +58,7 @@
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^9.39.5",
-    "prettier": "^3.9.6",
+    "prettier": "3.9.6",
     "turbo": "^2.10.5",
     "typescript-eslint": "^8.65.0"
   }

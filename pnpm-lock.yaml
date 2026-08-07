@@ -29,7 +29,7 @@ importers:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)
       prettier:
-        specifier: ^3.9.6
+        specifier: 3.9.6
         version: 3.9.6
       turbo:
         specifier: ^2.10.5

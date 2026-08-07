@@ -114,7 +114,11 @@ function Nav(): React.JSX.Element {
       }}
     >
       <div style={{ ...shell, display: 'flex', alignItems: 'center', gap: 22, height: 58 }}>
-        <a href="/alt" aria-label="ProveGate — alt landing" style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+        <a
+          href="/alt"
+          aria-label="ProveGate — alt landing"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}
+        >
           <Mark size={20} />
           <Wordmark size="var(--pg-text-base)" />
         </a>
@@ -125,15 +129,16 @@ function Nav(): React.JSX.Element {
             ['Commands', '#commands'],
             ['Proof', '#proof'],
           ].map(([label, href]) => (
-            <a key={href} href={href} style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-muted)' }}>
+            <a
+              key={href}
+              href={href}
+              style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-text-muted)' }}
+            >
               {label}
             </a>
           ))}
         </nav>
-        <a
-          href={LINKS.github}
-          style={{ ...ghostBtn, marginLeft: 'auto', padding: '8px 14px' }}
-        >
+        <a href={LINKS.github} style={{ ...ghostBtn, marginLeft: 'auto', padding: '8px 14px' }}>
           <Icon name="github" width={15} height={15} aria-hidden="true" />
           GitHub
         </a>
@@ -155,15 +160,34 @@ function HeroTerminal(): React.JSX.Element {
         }}
       >
         <TermDots />
-        <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-term-dim)', marginLeft: 6 }}>
+        <span
+          style={{
+            ...mono,
+            fontSize: 'var(--pg-text-xs)',
+            color: 'var(--pg-term-dim)',
+            marginLeft: 6,
+          }}
+        >
           gate run PRD-001
         </span>
       </div>
-      <div style={{ ...mono, fontSize: 'var(--pg-text-sm)', lineHeight: 'var(--pg-leading-mono)', padding: '18px 18px 20px', overflowX: 'auto' }}>
+      <div
+        style={{
+          ...mono,
+          fontSize: 'var(--pg-text-sm)',
+          lineHeight: 'var(--pg-leading-mono)',
+          padding: '18px 18px 20px',
+          overflowX: 'auto',
+        }}
+      >
         <div style={{ color: 'var(--pg-term-dim)' }}>$ gate run PRD-001</div>
         {RUN_LINES.map((l) => (
           <div key={l.name} style={{ whiteSpace: 'nowrap' }}>
-            <span style={{ color: l.status === 'passed' ? 'var(--pg-term-green)' : 'var(--pg-term-human)' }}>
+            <span
+              style={{
+                color: l.status === 'passed' ? 'var(--pg-term-green)' : 'var(--pg-term-human)',
+              }}
+            >
               {l.status === 'passed' ? '✓' : '→'}
             </span>{' '}
             <span style={{ color: 'var(--pg-term-fg)' }}>{l.name}</span>
@@ -176,8 +200,12 @@ function HeroTerminal(): React.JSX.Element {
             ) : null}
           </div>
         ))}
-        <div style={{ marginTop: 14, color: 'var(--pg-term-green)', whiteSpace: 'nowrap' }}>{RUN_SUMMARY.earned}</div>
-        <div style={{ color: 'var(--pg-term-human)', whiteSpace: 'nowrap' }}>{RUN_SUMMARY.human}</div>
+        <div style={{ marginTop: 14, color: 'var(--pg-term-green)', whiteSpace: 'nowrap' }}>
+          {RUN_SUMMARY.earned}
+        </div>
+        <div style={{ color: 'var(--pg-term-human)', whiteSpace: 'nowrap' }}>
+          {RUN_SUMMARY.human}
+        </div>
       </div>
     </div>
   );
@@ -202,7 +230,16 @@ function Hero(): React.JSX.Element {
             >
               {HERO.thesis}
             </h1>
-            <p style={{ fontSize: 'var(--pg-text-md)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: '0 0 26px', maxWidth: 560, textWrap: 'pretty' }}>
+            <p
+              style={{
+                fontSize: 'var(--pg-text-md)',
+                ...muted,
+                lineHeight: 'var(--pg-leading-relaxed)',
+                margin: '0 0 26px',
+                maxWidth: 560,
+                textWrap: 'pretty',
+              }}
+            >
               {HERO.sub}
             </p>
             <div
@@ -252,7 +289,14 @@ function CoreRule(): React.JSX.Element {
           maxWidth: 'calc(var(--pg-container) - 56px)',
         }}
       >
-        <p style={{ fontSize: 'var(--pg-text-md)', lineHeight: 'var(--pg-leading-relaxed)', margin: 0, textWrap: 'pretty' }}>
+        <p
+          style={{
+            fontSize: 'var(--pg-text-md)',
+            lineHeight: 'var(--pg-leading-relaxed)',
+            margin: 0,
+            textWrap: 'pretty',
+          }}
+        >
           {CORE_RULE}
         </p>
       </div>
@@ -272,8 +316,19 @@ function Features(): React.JSX.Element {
               <span style={{ color: 'var(--pg-accent)', display: 'inline-flex', marginBottom: 12 }}>
                 <Icon name={f.icon} width={20} height={20} aria-hidden="true" />
               </span>
-              <h3 style={{ fontSize: 'var(--pg-text-base)', fontWeight: 600, margin: '0 0 8px' }}>{f.title}</h3>
-              <p style={{ fontSize: 'var(--pg-text-sm)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: 0 }}>{f.body}</p>
+              <h3 style={{ fontSize: 'var(--pg-text-base)', fontWeight: 600, margin: '0 0 8px' }}>
+                {f.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: 'var(--pg-text-sm)',
+                  ...muted,
+                  lineHeight: 'var(--pg-leading-relaxed)',
+                  margin: 0,
+                }}
+              >
+                {f.body}
+              </p>
             </div>
           ))}
         </div>
@@ -295,18 +350,38 @@ function Pipeline(): React.JSX.Element {
     >
       <div style={shell}>
         <p style={eyebrow}>The seven phases</p>
-        <h2 style={{ ...h2, marginBottom: 8 }}>Humans own intent and release. The machine owns the verified middle.</h2>
+        <h2 style={{ ...h2, marginBottom: 8 }}>
+          Humans own intent and release. The machine owns the verified middle.
+        </h2>
         <div style={{ margin: '30px 0 36px', overflowX: 'auto' }}>
           <PhasePipeline phases={PHASES} showPush />
         </div>
         <div className="alt-duo">
           {PHASE_DETAIL.filter((p) => p.n === 6 || p.n === 'push').map((p) => (
             <div key={String(p.n)} style={card}>
-              <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', margin: '0 0 8px', color: p.authority === 'human' ? 'var(--pg-human-text)' : 'var(--pg-accent-text)' }}>
+              <p
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-xs)',
+                  margin: '0 0 8px',
+                  color: p.authority === 'human' ? 'var(--pg-human-text)' : 'var(--pg-accent-text)',
+                }}
+              >
                 {p.authority === 'human' ? 'human authority' : 'machine gate'} · {String(p.n)}
               </p>
-              <h3 style={{ fontSize: 'var(--pg-text-base)', fontWeight: 600, margin: '0 0 8px' }}>{p.label}</h3>
-              <p style={{ fontSize: 'var(--pg-text-sm)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: 0 }}>{p.body}</p>
+              <h3 style={{ fontSize: 'var(--pg-text-base)', fontWeight: 600, margin: '0 0 8px' }}>
+                {p.label}
+              </h3>
+              <p
+                style={{
+                  fontSize: 'var(--pg-text-sm)',
+                  ...muted,
+                  lineHeight: 'var(--pg-leading-relaxed)',
+                  margin: 0,
+                }}
+              >
+                {p.body}
+              </p>
             </div>
           ))}
         </div>
@@ -320,7 +395,9 @@ function Commands(): React.JSX.Element {
     <section id="commands" style={{ padding: '72px 28px' }}>
       <div style={shell}>
         <p style={eyebrow}>CLI reference</p>
-        <h2 style={{ ...h2, marginBottom: 30 }}>Twelve commands. No daemon, no dashboard, no account.</h2>
+        <h2 style={{ ...h2, marginBottom: 30 }}>
+          Twelve commands. No daemon, no dashboard, no account.
+        </h2>
         <div className="alt-cmd">
           {COMMANDS.map(([name, desc]) => (
             <div
@@ -333,7 +410,14 @@ function Commands(): React.JSX.Element {
                 borderBottom: '1px solid var(--pg-border)',
               }}
             >
-              <code style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-accent-text)', minWidth: 118 }}>
+              <code
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-sm)',
+                  color: 'var(--pg-accent-text)',
+                  minWidth: 118,
+                }}
+              >
                 gate {name}
               </code>
               <span style={{ fontSize: 'var(--pg-text-sm)', ...muted }}>{desc}</span>
@@ -362,11 +446,30 @@ function Proof(): React.JSX.Element {
         <div className="alt-stats">
           {PROOF_STATS.map((s) => (
             <div key={s.stat} style={card}>
-              <div style={{ fontSize: fluid.stat, fontWeight: 700, letterSpacing: 'var(--pg-tracking-tight)', color: 'var(--pg-text)', marginBottom: 10 }}>
+              <div
+                style={{
+                  fontSize: fluid.stat,
+                  fontWeight: 700,
+                  letterSpacing: 'var(--pg-tracking-tight)',
+                  color: 'var(--pg-text)',
+                  marginBottom: 10,
+                }}
+              >
                 {s.stat}
               </div>
-              <p style={{ fontSize: 'var(--pg-text-sm)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: '0 0 12px' }}>{s.body}</p>
-              <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', ...subtle, margin: 0 }}>{s.source}</p>
+              <p
+                style={{
+                  fontSize: 'var(--pg-text-sm)',
+                  ...muted,
+                  lineHeight: 'var(--pg-leading-relaxed)',
+                  margin: '0 0 12px',
+                }}
+              >
+                {s.body}
+              </p>
+              <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', ...subtle, margin: 0 }}>
+                {s.source}
+              </p>
             </div>
           ))}
         </div>
@@ -382,20 +485,38 @@ function OperatorAndRefusal(): React.JSX.Element {
         <div className="alt-duo">
           <div style={card}>
             <p style={eyebrow}>Operator gates</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '6px 0 16px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '6px 0 16px' }}
+            >
               {OPERATOR_FLOW.nodes.map((n, i) => (
                 <div key={n.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ color: n.human ? 'var(--pg-human)' : 'var(--pg-accent)', display: 'inline-flex' }}>
+                  <span
+                    style={{
+                      color: n.human ? 'var(--pg-human)' : 'var(--pg-accent)',
+                      display: 'inline-flex',
+                    }}
+                  >
                     <Icon name={n.icon} width={16} height={16} aria-hidden="true" />
                   </span>
-                  <span style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text)' }}>{n.label}</span>
+                  <span style={{ ...mono, fontSize: 'var(--pg-text-sm)', color: 'var(--pg-text)' }}>
+                    {n.label}
+                  </span>
                   {i < OPERATOR_FLOW.nodes.length - 1 ? (
                     <span style={{ ...subtle, ...mono, fontSize: 'var(--pg-text-xs)' }}>↓</span>
                   ) : null}
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 'var(--pg-text-sm)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: 0 }}>{OPERATOR_FLOW.note}</p>
+            <p
+              style={{
+                fontSize: 'var(--pg-text-sm)',
+                ...muted,
+                lineHeight: 'var(--pg-leading-relaxed)',
+                margin: 0,
+              }}
+            >
+              {OPERATOR_FLOW.note}
+            </p>
           </div>
           <div style={{ ...terminal, height: '100%' }}>
             <div
@@ -408,12 +529,37 @@ function OperatorAndRefusal(): React.JSX.Element {
               }}
             >
               <TermDots />
-              <span style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-term-dim)', marginLeft: 6 }}>the refusal</span>
+              <span
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-xs)',
+                  color: 'var(--pg-term-dim)',
+                  marginLeft: 6,
+                }}
+              >
+                the refusal
+              </span>
             </div>
-            <div style={{ ...mono, fontSize: 'var(--pg-text-sm)', lineHeight: 'var(--pg-leading-mono)', padding: '20px 18px' }}>
+            <div
+              style={{
+                ...mono,
+                fontSize: 'var(--pg-text-sm)',
+                lineHeight: 'var(--pg-leading-mono)',
+                padding: '20px 18px',
+              }}
+            >
               <div style={{ color: 'var(--pg-term-dim)' }}>$ {REFUSAL.command}</div>
-              <div style={{ color: 'var(--pg-term-red)', margin: '6px 0 16px' }}>{REFUSAL.output}</div>
-              <div style={{ color: 'var(--pg-term-dim)', fontFamily: 'var(--pg-font-sans)', fontSize: 'var(--pg-text-sm)', lineHeight: 'var(--pg-leading-relaxed)' }}>
+              <div style={{ color: 'var(--pg-term-red)', margin: '6px 0 16px' }}>
+                {REFUSAL.output}
+              </div>
+              <div
+                style={{
+                  color: 'var(--pg-term-dim)',
+                  fontFamily: 'var(--pg-font-sans)',
+                  fontSize: 'var(--pg-text-sm)',
+                  lineHeight: 'var(--pg-leading-relaxed)',
+                }}
+              >
                 {REFUSAL.note}
               </div>
             </div>
@@ -433,11 +579,36 @@ function Quickstart(): React.JSX.Element {
         <div className="alt-steps">
           {QUICKSTART.map((s, i) => (
             <div key={s.t} style={card}>
-              <div style={{ ...mono, fontSize: 'var(--pg-text-xs)', color: 'var(--pg-accent-text)', marginBottom: 10 }}>
+              <div
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-xs)',
+                  color: 'var(--pg-accent-text)',
+                  marginBottom: 10,
+                }}
+              >
                 {String(i + 1).padStart(2, '0')}
               </div>
-              <h3 style={{ ...mono, fontSize: 'var(--pg-text-sm)', fontWeight: 'var(--pg-fw-semibold)', margin: '0 0 8px' }}>{s.t}</h3>
-              <p style={{ fontSize: 'var(--pg-text-sm)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: 0 }}>{s.d}</p>
+              <h3
+                style={{
+                  ...mono,
+                  fontSize: 'var(--pg-text-sm)',
+                  fontWeight: 'var(--pg-fw-semibold)',
+                  margin: '0 0 8px',
+                }}
+              >
+                {s.t}
+              </h3>
+              <p
+                style={{
+                  fontSize: 'var(--pg-text-sm)',
+                  ...muted,
+                  lineHeight: 'var(--pg-leading-relaxed)',
+                  margin: 0,
+                }}
+              >
+                {s.d}
+              </p>
             </div>
           ))}
         </div>
@@ -458,12 +629,27 @@ function FinalCta(): React.JSX.Element {
     >
       <div style={{ ...shell, maxWidth: 640 }}>
         <h2 style={{ ...h2, fontSize: fluid.statement, marginBottom: 14 }}>{CTA.title}</h2>
-        <p style={{ fontSize: 'var(--pg-text-md)', ...muted, lineHeight: 'var(--pg-leading-relaxed)', margin: '0 0 28px' }}>{CTA.body}</p>
+        <p
+          style={{
+            fontSize: 'var(--pg-text-md)',
+            ...muted,
+            lineHeight: 'var(--pg-leading-relaxed)',
+            margin: '0 0 28px',
+          }}
+        >
+          {CTA.body}
+        </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href={LINKS.github} style={primaryBtn}>{CTA.primary}</a>
-          <a href={LINKS.docs} style={ghostBtn}>{CTA.secondary}</a>
+          <a href={LINKS.github} style={primaryBtn}>
+            {CTA.primary}
+          </a>
+          <a href={LINKS.docs} style={ghostBtn}>
+            {CTA.secondary}
+          </a>
         </div>
-        <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', ...subtle, marginTop: 34 }}>{PRINCIPLES}</p>
+        <p style={{ ...mono, fontSize: 'var(--pg-text-xs)', ...subtle, marginTop: 34 }}>
+          {PRINCIPLES}
+        </p>
       </div>
     </section>
   );
@@ -488,9 +674,15 @@ function Footer(): React.JSX.Element {
           <Mark size={16} />
           <Wordmark size="var(--pg-text-sm)" />
         </span>
-        <a href="/" style={{ color: 'var(--pg-text-subtle)' }}>current landing</a>
-        <a href={LINKS.github} style={{ color: 'var(--pg-text-subtle)' }}>GitHub</a>
-        <a href={LINKS.license} style={{ color: 'var(--pg-text-subtle)' }}>MIT license</a>
+        <a href="/" style={{ color: 'var(--pg-text-subtle)' }}>
+          current landing
+        </a>
+        <a href={LINKS.github} style={{ color: 'var(--pg-text-subtle)' }}>
+          GitHub
+        </a>
+        <a href={LINKS.license} style={{ color: 'var(--pg-text-subtle)' }}>
+          MIT license
+        </a>
         <span style={{ marginLeft: 'auto' }}>prove it, then let it propagate.</span>
       </div>
     </footer>

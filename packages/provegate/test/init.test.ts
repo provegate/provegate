@@ -253,7 +253,10 @@ describe('FR-6 memory-enabled scaffold (practices only)', () => {
     initWorkspace(cfg, root, { extra: practices() });
     const manifest = JSON.parse(readFileSync(join(root, 'gates.manifest.json'), 'utf8'));
     for (const cmd of manifest.phases['7']) {
-      expect(cfg.commands.allowedPrefixes.some((p: string) => cmd.startsWith(p)), cmd).toBe(true);
+      expect(
+        cfg.commands.allowedPrefixes.some((p: string) => cmd.startsWith(p)),
+        cmd,
+      ).toBe(true);
     }
   });
 
@@ -496,7 +499,9 @@ describe('the pack upgrade over an old-shape install (PRD-026 FR-5)', () => {
     }
     // (c) the pre-seeded retained file is skipped and byte-identical
     expect(report.skipped).toContain('scripts/verify/lib.mjs');
-    expect(readFileSync(join(root, 'scripts/verify/lib.mjs'), 'utf8')).toBe('// locally modified\n');
+    expect(readFileSync(join(root, 'scripts/verify/lib.mjs'), 'utf8')).toBe(
+      '// locally modified\n',
+    );
     // (d) positive control, created branch: a retained absent file is created
     expect(report.created).toContain('scripts/verify/verify-workflow.mjs');
   });

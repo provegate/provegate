@@ -16,7 +16,6 @@ import {
 
 export { contractSection, contractView, contractViewProblem } from './scan.js';
 
-
 /**
  * The PRD memory contract (addendum A1 §5): two sections, fixed grammar, parsed
  * rather than read.
@@ -113,7 +112,6 @@ function pathProblem(value: string): string | null {
   if (!value.endsWith('.md')) return 'is not a `.md` record path';
   return null;
 }
-
 
 /**
  * The block construct that makes a section unreadable as a plain bullet list, or
@@ -367,7 +365,6 @@ function visibleLength(rationale: string | null): number {
  * BOM), and the two Unicode separators. */
 const INVISIBLE = /[\p{Cc}\p{Cf}\u00ad\u180e\u200b-\u200f\u2028\u2029\u2060-\u2064\ufeff]/gu;
 
-
 /** Index just past the tag starting at `from`, scanning to an UNQUOTED `>`, or
  * -1 when there is none. A quoted attribute may contain `>`. */
 function tagEnd(text: string, from: number): number {
@@ -456,7 +453,6 @@ const INVISIBLE_NAMED_ENTITIES = new Set([
   'InvisibleTimes',
   'it',
 ]);
-
 
 function splitRationale(block: string): { head: string; rationale: string | null } {
   const idx = block.indexOf('—');
@@ -873,7 +869,8 @@ export function memoryCloseIssues(options: MemoryCloseOptions): string[] {
   // case that must never read as "no obligations".
   issues.push(
     ...(options.baseStore?.issues ?? []).map(
-      (issue) => `the base ref's memory store cannot be read, so its watches cannot fire — ${issue}`,
+      (issue) =>
+        `the base ref's memory store cannot be read, so its watches cannot fire — ${issue}`,
     ),
   );
   if (!decl.inputs.present) issues.push(`missing \`## ${INPUTS_HEADING}\` section`);
@@ -1024,7 +1021,8 @@ export function baselineProblem(baselineContent: string): string | null {
   const decl = parseMemoryDeclarations(baselineContent);
   if (!decl.outputs.present) return `it has no \`## ${OUTPUTS_HEADING}\` section`;
   const outputIssues = decl.issues.filter((issue) => issue.startsWith(`${OUTPUTS_HEADING}:`));
-  if (outputIssues.length > 0) return `its ${OUTPUTS_HEADING} do not parse: ${outputIssues.join('; ')}`;
+  if (outputIssues.length > 0)
+    return `its ${OUTPUTS_HEADING} do not parse: ${outputIssues.join('; ')}`;
   if (!decl.outputs.none && decl.outputs.entries.length === 0) {
     return `its ${OUTPUTS_HEADING} declare neither an entry nor a reasoned \`none\``;
   }
@@ -1105,7 +1103,12 @@ export function changelogApproves(
     // any owner row that happened to name the file in prose — a documentation
     // audit, a moved-file note — waive a removal it never considered. A
     // backticked span is a deliberate reference to that exact path.
-    const quoted = [...parts.slice(2).join(' ').matchAll(/`([^`]+)`/g)].map((m) => m[1]!.trim());
+    const quoted = [
+      ...parts
+        .slice(2)
+        .join(' ')
+        .matchAll(/`([^`]+)`/g),
+    ].map((m) => m[1]!.trim());
     if (quoted.includes(path)) return true;
   }
   return false;

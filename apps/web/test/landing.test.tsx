@@ -113,7 +113,16 @@ describe('the landing narrative (FR-2/FR-9)', () => {
   it('PhaseDetail names all seven phases plus the human push', () => {
     const { container } = render(<S.PhaseDetail />);
     const t = container.textContent ?? '';
-    for (const label of ['PRD', 'Readiness', 'Tasks', 'Implement', 'Test', 'Audit', 'Learn', 'Push']) {
+    for (const label of [
+      'PRD',
+      'Readiness',
+      'Tasks',
+      'Implement',
+      'Test',
+      'Audit',
+      'Learn',
+      'Push',
+    ]) {
       expect(t, label).toContain(label);
     }
   });
@@ -178,7 +187,10 @@ describe('the playground plans, it never runs (FR-3)', () => {
   });
 
   it('rejects an unknown top-level key and a non-command array', () => {
-    expect(validateManifest({ gates: {} })).toContainEqual({ path: 'gates', message: 'unknown key' });
+    expect(validateManifest({ gates: {} })).toContainEqual({
+      path: 'gates',
+      message: 'unknown key',
+    });
     expect(validateManifest({ phases: { '4': [''] } })).toContainEqual({
       path: 'phases.4',
       message: 'must be an array of non-empty commands',
@@ -207,7 +219,9 @@ describe('the playground plans, it never runs (FR-3)', () => {
     // manifest's own phase-7 block) and a manifest may declare the same command
     // twice — both produce duplicate line text, which is legal output but an
     // illegal React key. The id must stay unique regardless.
-    const plan = planFor('{"phases":{"4":["pnpm test","pnpm test"],"6":["pnpm audit"],"7":["pnpm verify:brain"]}}');
+    const plan = planFor(
+      '{"phases":{"4":["pnpm test","pnpm test"],"6":["pnpm audit"],"7":["pnpm verify:brain"]}}',
+    );
     const texts = plan.lines.map((l) => l.text);
     const ids = plan.lines.map((l) => l.id);
     expect(new Set(texts).size).toBeLessThan(texts.length); // text really does repeat
@@ -269,8 +283,8 @@ describe('FR-2 — the hero copy control', () => {
 describe('FR-4 — anchor closure over the real composition', () => {
   it('every rendered href="#…" resolves to a rendered id — nav and footer included', () => {
     const { container } = render(<Page />);
-    const hrefs = Array.from(container.querySelectorAll('a[href^="#"]')).map(
-      (a) => (a.getAttribute('href') ?? '').slice(1),
+    const hrefs = Array.from(container.querySelectorAll('a[href^="#"]')).map((a) =>
+      (a.getAttribute('href') ?? '').slice(1),
     );
     expect(hrefs.length).toBeGreaterThanOrEqual(12); // the pre-change floor
     const ids = new Set(Array.from(container.querySelectorAll('[id]')).map((el) => el.id));
@@ -330,14 +344,14 @@ describe('FR-5 — the retained-ratio scrollspy', () => {
       expect(current?.getAttribute('href')).toBe('#how');
       // 'how' exits; 'method' is now the maximum
       act(() => fire([{ target: { id: 'how' }, intersectionRatio: 0 }]));
-      expect(
-        container.querySelector('[aria-current="location"]')?.getAttribute('href'),
-      ).toBe('#method');
+      expect(container.querySelector('[aria-current="location"]')?.getAttribute('href')).toBe(
+        '#method',
+      );
       // everything at 0 → the previous active stays, no flicker to none
       act(() => fire([{ target: { id: 'method' }, intersectionRatio: 0 }]));
-      expect(
-        container.querySelector('[aria-current="location"]')?.getAttribute('href'),
-      ).toBe('#method');
+      expect(container.querySelector('[aria-current="location"]')?.getAttribute('href')).toBe(
+        '#method',
+      );
     });
   });
 

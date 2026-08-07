@@ -60,5 +60,5 @@ read CSS custom properties.
 Self-hosted fonts, no CDN, no analytics. `scripts/check-static-egress.mjs`
 scans `apps/docs/.next` for any external origin.
 
-`lucide-react` **stays**: the "no third-party icon pack" rule governs *our* `Icon`
+`lucide-react` **stays**: the "no third-party icon pack" rule governs _our_ `Icon`
 component, not Fumadocs' internals, which depend on it.

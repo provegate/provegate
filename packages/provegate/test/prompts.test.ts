@@ -1,4 +1,13 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -290,7 +299,6 @@ describe('generated banner (PRD-029 FR-3)', () => {
 
 // --- FR-5: the installer contract and the reinstall unit --------------------
 
-
 /** Every required value supplied, so the render succeeds. */
 function filledConfig(dir = '.provegate') {
   const packageDir = promptsPackageDir();
@@ -475,8 +483,7 @@ describe('adapter grammar (PRD-029 FR-6)', () => {
     // report the one thing that is supposed to be shared. That is a property of
     // the check, not an exemption for the adapter — the first version of this
     // test failed on it, which is how the filter got written.
-    const stripBanner = (text: string): string =>
-      text.replace(/<!-- GENERATED[\s\S]*?-->\n?/g, '');
+    const stripBanner = (text: string): string => text.replace(/<!-- GENERATED[\s\S]*?-->\n?/g, '');
     const protocolBodies = [...files.values()].map(stripBanner);
     for (const [path, body] of adapters) {
       for (const line of stripBanner(body).split('\n')) {

@@ -52,15 +52,7 @@ function acceptancesPath(config: WorkflowConfig, root: string): string {
 const ACCEPTANCE_SCHEMA_VERSION = 1;
 
 /** The fields an entry must carry, and the only ones it may. */
-const ENTRY_FIELDS = [
-  'prd',
-  'owner',
-  'items',
-  'reason',
-  'date',
-  'method',
-  'authorship',
-] as const;
+const ENTRY_FIELDS = ['prd', 'owner', 'items', 'reason', 'date', 'method', 'authorship'] as const;
 
 /**
  * Why the acceptance STORE is not the documented one, or null when it is.

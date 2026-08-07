@@ -217,11 +217,7 @@ export function memoryDoctor(options: DoctorOptions): DoctorReport {
   // would produce a second opinion the gates do not share.
   const store = loadMemoryStore(root, memory);
   if (store.issues.length === 0 && store.unreadable.length === 0) {
-    add(
-      'memory.records.valid',
-      'pass',
-      `${store.records.length} indexed record(s), all parsing`,
-    );
+    add('memory.records.valid', 'pass', `${store.records.length} indexed record(s), all parsing`);
   } else {
     for (const issue of store.issues) {
       add('memory.records.valid', 'fail', issue, 'repair the store, then re-run');

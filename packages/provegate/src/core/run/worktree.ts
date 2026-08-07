@@ -54,7 +54,6 @@ function git(dir: string, args: string[]): string {
   return execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
 }
 
-
 function branchExists(mainRoot: string, branch: string): boolean {
   try {
     git(mainRoot, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]);
@@ -273,9 +272,7 @@ export function snapshotsNotMatchingRef(
   ref: string,
   snapshots: ArtifactSnapshot[],
 ): string[] {
-  return snapshots
-    .filter((s) => blobShaOnRef(mainRoot, ref, s.rel) !== s.sha)
-    .map((s) => s.rel);
+  return snapshots.filter((s) => blobShaOnRef(mainRoot, ref, s.rel) !== s.sha).map((s) => s.rel);
 }
 
 /** What {@link revalidateControlArtifacts} needs to decide drift. Both call
@@ -345,7 +342,9 @@ export function revalidateControlArtifacts(input: RevalidateInput): RevalidateRe
   // `open.ts`: an unresolvable base makes every present artifact mismatch,
   // which refuses rather than passes.
   const baseRef =
-    input.baseRef ?? resolveRef(mainRoot, `refs/heads/${displayBase}`) ?? `refs/heads/${displayBase}`;
+    input.baseRef ??
+    resolveRef(mainRoot, `refs/heads/${displayBase}`) ??
+    `refs/heads/${displayBase}`;
   const refuseWith = (drifted: string[]): RevalidateResult => ({
     drifted,
     refusal: `the checkout at ${relPath} carries workflow artifacts differing from '${displayBase}' (${drifted.join(', ')}) — merge or rebase ${displayBase} into ${branch} first`,
@@ -379,7 +378,8 @@ export function revalidateControlArtifacts(input: RevalidateInput): RevalidateRe
     // error. Loading in this function instead turned that case into a
     // different refusal and broke open.test.ts's introduction case.
     const parsed = control === CONFIG_FILENAME ? configSourceFor(root) : manifestSourceFor(root);
-    const sha = parsed !== null ? blobShaOfBuffer(root, control, parsed) : blobShaOfFile(root, control);
+    const sha =
+      parsed !== null ? blobShaOfBuffer(root, control, parsed) : blobShaOfFile(root, control);
     // Fail closed on the one case the comparators read as agreement: a file
     // present but unhashable, with nothing committed on base to disagree with,
     // makes both comparators see null === null and report no drift.
@@ -526,7 +526,9 @@ export function createWorktree(
     throw new Error(`branch ${branch} is checked out in another worktree — resolve it first`);
   }
   if (existsSync(path)) {
-    throw new Error(`worktree path ${relPath} already exists — remove it or claim without --worktree`);
+    throw new Error(
+      `worktree path ${relPath} already exists — remove it or claim without --worktree`,
+    );
   }
 
   // Local-only ignore (never a tracked-file mutation): the worktree dir lives
@@ -538,7 +540,10 @@ export function createWorktree(
     const current = existsSync(excludePath) ? readFileSync(excludePath, 'utf8') : '';
     if (!current.split('\n').includes(entry)) {
       mkdirSync(join(mainRoot, '.git', 'info'), { recursive: true });
-      appendFileSync(excludePath, `${current.endsWith('\n') || current === '' ? '' : '\n'}${entry}\n`);
+      appendFileSync(
+        excludePath,
+        `${current.endsWith('\n') || current === '' ? '' : '\n'}${entry}\n`,
+      );
     }
   } catch {
     /* best-effort — the merge-side coordination rule covers the dirt check */
@@ -717,7 +722,9 @@ export function removeWorktree(
   try {
     const wtRootProbe = resolve(mainRoot, wtDirGuard);
     if (existsSync(wtRootProbe) && realpathSync(wtRootProbe) === realpathSync(mainRoot)) {
-      warnings.push('cleanup refused: worktree.dir resolves to the repository root — fix the config');
+      warnings.push(
+        'cleanup refused: worktree.dir resolves to the repository root — fix the config',
+      );
       return { removed, branchDeleted, leaseReleased, warnings };
     }
   } catch {
@@ -736,9 +743,7 @@ export function removeWorktree(
       throw new Error(`lease worktree ${worktree} is outside ${config.worktree.dir}/`);
     }
   } catch (err) {
-    warnings.push(
-      `worktree not removed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    warnings.push(`worktree not removed: ${err instanceof Error ? err.message : String(err)}`);
     return { removed, branchDeleted, leaseReleased, warnings };
   }
 

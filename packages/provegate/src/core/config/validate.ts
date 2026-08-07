@@ -191,14 +191,20 @@ function walk(spec: Spec, value: unknown, path: string, issues: ConfigIssue[]): 
       // is an owner's recorded decision, and a silently dropped field is a
       // decision the record no longer says.
       if (!Array.isArray(value)) {
-        issues.push({ path, message: 'must be an array of { path, reason, owner, expires } records' });
+        issues.push({
+          path,
+          message: 'must be an array of { path, reason, owner, expires } records',
+        });
         return;
       }
       const FIELDS = ['path', 'reason', 'owner', 'expires'];
       value.forEach((entry, i) => {
         const at = `${path}[${i}]`;
         if (!isPlainObject(entry)) {
-          issues.push({ path: at, message: 'must be an object with exactly path, reason, owner, expires' });
+          issues.push({
+            path: at,
+            message: 'must be an object with exactly path, reason, owner, expires',
+          });
           return;
         }
         for (const key of Object.keys(entry)) {
@@ -341,9 +347,10 @@ export function validateResolvedConfig(config: {
     ['dirs.reviewsDir', config.dirs.reviewsDir],
     ['dirs.metricsFile', config.dirs.metricsFile],
     ...config.dirs.states.map((v, i): [string, string] => [`dirs.states[${i}]`, v]),
-    ...Object.entries(config.dirs.stateRoles).map(
-      ([role, v]): [string, string] => [`dirs.stateRoles.${role}`, v],
-    ),
+    ...Object.entries(config.dirs.stateRoles).map(([role, v]): [string, string] => [
+      `dirs.stateRoles.${role}`,
+      v,
+    ]),
     // PRD-029. The comment above is the reason this line exists: containment is
     // a property of a configured path, and `prompts.dir` did not join the list
     // when it was added. Without it `~/store` was accepted, a literal `./~`

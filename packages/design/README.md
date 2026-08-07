@@ -38,12 +38,12 @@ proof-green once → web and terminal move together.
 The package exposes sub-paths so a web bundle never pulls the CLI and the CLI
 never pulls CSS or React:
 
-| Import | What |
-| --- | --- |
-| `@provegate/design/styles.css` | web token entry (`@import`s all of `tokens/`) |
-| `@provegate/design/tokens` | raw token values + the colour law (TS) |
-| `@provegate/design/cli` | ANSI theme + card / status-line string builders |
-| `@provegate/design/react` | reserved for the web components (PRD-012) |
+| Import                         | What                                            |
+| ------------------------------ | ----------------------------------------------- |
+| `@provegate/design/styles.css` | web token entry (`@import`s all of `tokens/`)   |
+| `@provegate/design/tokens`     | raw token values + the colour law (TS)          |
+| `@provegate/design/cli`        | ANSI theme + card / status-line string builders |
+| `@provegate/design/react`      | reserved for the web components (PRD-012)       |
 
 **Why the CLI entry is separate.** The provegate CLI publishes with **zero runtime
 dependencies**. `./cli` therefore contains only ANSI strings, glyphs, and pure

@@ -253,7 +253,7 @@ interface Fixture {
  * not assumed. `postMerge: []` lets a recovered `gate land` actually merge
  * instead of reverting on a toolchain this temp repo does not have. */
 const MANIFEST = {
-  phases: { '4': ['node -e "require(\'fs\').writeFileSync(\'ran.txt\',\'1\')"'] },
+  phases: { '4': ["node -e \"require('fs').writeFileSync('ran.txt','1')\""] },
   postMerge: [],
 };
 
@@ -405,7 +405,12 @@ describe('gate run / gate land refuse a drifted checkout (FR-2, FR-4)', () => {
 
   it('the read-only commands and the plan are unaffected by the same drift', () => {
     const fx = fixture('unaffected');
-    for (const args of [['check', 'PRD-001'], ['status'], ['queue'], ['run', 'PRD-001', '--dry-run']]) {
+    for (const args of [
+      ['check', 'PRD-001'],
+      ['status'],
+      ['queue'],
+      ['run', 'PRD-001', '--dry-run'],
+    ]) {
       const result = cli(fx.wt, args);
       expect(result.code, `${args.join(' ')}: ${result.stderr}`).toBe(0);
       expect(result.stdout + result.stderr, args.join(' ')).not.toContain(

@@ -17,7 +17,10 @@ const LOCK_DIR = join(
   tmpdir(),
   // Keyed by this helper's own absolute path: unique per checkout, and not a
   // repo read — the test-inputs boundary refuses process.cwd() here.
-  `pg-snapshot-lock-${createHash('sha256').update(fileURLToPath(import.meta.url)).digest('hex').slice(0, 12)}`,
+  `pg-snapshot-lock-${createHash('sha256')
+    .update(fileURLToPath(import.meta.url))
+    .digest('hex')
+    .slice(0, 12)}`,
 );
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));

@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join,  } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, type WorkflowConfig } from '../src/core/config/index.js';
 import { loadConfig } from '../src/core/config/load.js';
@@ -248,9 +248,9 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
 
   it('a path escaping the artifact root is refused, lexically and canonically', () => {
     const root = workspace();
-    expect(oq(doc(['- Deferred to [PRD-123](../elsewhere/prd-123-followup.md)']), root).join('; ')).toContain(
-      'repository-relative with no `..` segments',
-    );
+    expect(
+      oq(doc(['- Deferred to [PRD-123](../elsewhere/prd-123-followup.md)']), root).join('; '),
+    ).toContain('repository-relative with no `..` segments');
     writeFileSync(join(root, 'prd-123-outside.md'), '# PRD-123: Outside\n');
     expect(oq(doc(['- Deferred to [PRD-123](prd-123-outside.md)']), root).join('; ')).toContain(
       'inside the configured artifact root',
@@ -279,7 +279,10 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
   it('[R1-P1-2] a hardlinked target is refused — realpath canonicalizes names, not identity', () => {
     const root = workspace();
     writeFileSync(join(root, '_prds/completed/prd-130-done.md'), '# PRD-130: Done\n');
-    linkSync(join(root, '_prds/completed/prd-130-done.md'), join(root, '_prds/wip/prd-130-alias.md'));
+    linkSync(
+      join(root, '_prds/completed/prd-130-done.md'),
+      join(root, '_prds/wip/prd-130-alias.md'),
+    );
     expect(
       oq(doc(['- Deferred to [PRD-130](_prds/wip/prd-130-alias.md)']), root).join('; '),
     ).toContain('multiple hard links');
@@ -313,11 +316,14 @@ describe('FR-1 — the sixteen-row deny matrix, each row paired with its positiv
     };
     const root = mkdtempSync(join(tmpdir(), 'provegate-oq-'));
     roots.push(root);
-    for (const state of custom.dirs.states) mkdirSync(join(root, '_prds', state), { recursive: true });
+    for (const state of custom.dirs.states)
+      mkdirSync(join(root, '_prds', state), { recursive: true });
     writeFileSync(join(root, '_prds/doing/prd-042-declaring.md'), '# PRD-042: Declaring\n');
     writeFileSync(join(root, '_prds/doing/prd-123-followup.md'), '# PRD-123: Followup\n');
     writeFileSync(join(root, '_prds/done/prd-125-done.md'), '# PRD-125: Done\n');
-    expect(oq(doc(['- Deferred to [PRD-123](_prds/doing/prd-123-followup.md)']), root, 42, custom)).toEqual([]);
+    expect(
+      oq(doc(['- Deferred to [PRD-123](_prds/doing/prd-123-followup.md)']), root, 42, custom),
+    ).toEqual([]);
     expect(
       oq(doc(['- Deferred to [PRD-125](_prds/done/prd-125-done.md)']), root, 42, custom).join('; '),
     ).toContain("'done' is not the configured wip or deferred role");
@@ -425,10 +431,7 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
   });
 
   it('a heading that merely contains the words is not the section', () => {
-    const renamed = doc(['- (none)']).replace(
-      '## 9. Open Questions',
-      '## Resolved Open Questions',
-    );
+    const renamed = doc(['- (none)']).replace('## 9. Open Questions', '## Resolved Open Questions');
     expect(oq(renamed, root()).join('; ')).toContain('section missing');
     const suffixed = doc(['- (none)']).replace(
       '## 9. Open Questions',
@@ -438,17 +441,20 @@ describe('FR-2 — the raw-line grammar and section cardinality', () => {
   });
 
   it('the ordinal is optional: `## Open Questions` is the section', () => {
-    expect(oq(doc(['- (none)']).replace('## 9. Open Questions', '## Open Questions'), root())).toEqual(
-      [],
-    );
+    expect(
+      oq(doc(['- (none)']).replace('## 9. Open Questions', '## Open Questions'), root()),
+    ).toEqual([]);
   });
 
   it('[R2-P1-3] a requirement written inside a fence is an example, not an FR', () => {
     const fenced = doc(['- (none)']).replace(
       '1. **FR-1**: does a thing.\n   - **Targets:** `packages/x/src/a.ts`',
-      ['```markdown', '1. **FR-1**: does a thing.', '   - **Targets:** `packages/x/src/a.ts`', '```'].join(
-        '\n',
-      ),
+      [
+        '```markdown',
+        '1. **FR-1**: does a thing.',
+        '   - **Targets:** `packages/x/src/a.ts`',
+        '```',
+      ].join('\n'),
     );
     expect(lintPrd(cfg, manifest, fenced, workspace(), 42).issues.join('; ')).toContain(
       'no functional requirements found',

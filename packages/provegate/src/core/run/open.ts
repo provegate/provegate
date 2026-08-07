@@ -215,7 +215,10 @@ function claimPrdLocked(
   // Empty/whitespace agent is treated as absent — a lease with an empty agent
   // would violate the lock schema while the command reports success.
   const trimmedAgent = agent?.trim();
-  const leaseAgent = trimmedAgent !== undefined && trimmedAgent !== '' ? trimmedAgent : (config.owners[0] ?? 'operator');
+  const leaseAgent =
+    trimmedAgent !== undefined && trimmedAgent !== ''
+      ? trimmedAgent
+      : (config.owners[0] ?? 'operator');
   const base: Omit<ClaimResult, 'ok' | 'issues'> = {
     id: normalized,
     refreshed: false,
@@ -455,10 +458,7 @@ function claimPrdLocked(
   const IDENTITY_FIELDS = ['lockId', 'prd', 'agent', 'startedAt', 'expiresAt'] as const;
   const quarantined: { from: string; to: string; victim: StolenLease }[] = [];
   let quarantineSeq = 0;
-  const quarantineDir = join(
-    locksDir(config, root),
-    `.quarantine-${process.pid}-${now.getTime()}`,
-  );
+  const quarantineDir = join(locksDir(config, root), `.quarantine-${process.pid}-${now.getTime()}`);
   let quarantineDirMade = false;
   const moveAside = (from: string): string => {
     if (!quarantineDirMade) {
@@ -582,9 +582,7 @@ function claimPrdLocked(
       typeof priorWt === 'string' && typeof priorBranch === 'string'
         ? { relPath: priorWt, branch: priorBranch }
         : null;
-    const wtNames = worktree
-      ? (priorStamps ?? worktreeNamesFor(config, normalized, slug))
-      : null;
+    const wtNames = worktree ? (priorStamps ?? worktreeNamesFor(config, normalized, slug)) : null;
     const carried =
       wtNames === null && typeof priorWt === 'string' && typeof priorBranch === 'string'
         ? { worktree: priorWt, branch: priorBranch }
@@ -696,7 +694,10 @@ function claimPrdLocked(
         globs,
         ok: false,
         issues: [
-          ...surfaceNotes,`claim aborted, victims restored: ${installIssue} — re-run gate open`, ...stranded],
+          ...surfaceNotes,
+          `claim aborted, victims restored: ${installIssue} — re-run gate open`,
+          ...stranded,
+        ],
       };
     }
 
@@ -789,8 +790,7 @@ function claimPrdLocked(
       // manually managed checkout that happens to sit at the deterministic
       // path must hit the collision refusal, never be adopted — a later green
       // close would remove a worktree we never created (codex r1 P2).
-      const ourStamps =
-        priorWt === wtNames.relPath && priorBranch === wtNames.branch;
+      const ourStamps = priorWt === wtNames.relPath && priorBranch === wtNames.branch;
       const reusable = samePlace && expected !== null && ourStamps;
       // Reuse must also prove the checkout is CURRENT: base may have moved
       // since the first claim, and a refreshed lease protecting the new PRD
@@ -821,8 +821,7 @@ function claimPrdLocked(
           ...base,
           globs,
           ok: false,
-          issues: [
-            ...surfaceNotes,`claim rolled back: ${reuse.refusal}`, ...notes],
+          issues: [...surfaceNotes, `claim rolled back: ${reuse.refusal}`, ...notes],
         };
       }
       if (reusable) {

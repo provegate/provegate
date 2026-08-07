@@ -170,7 +170,12 @@ describe('FR-6 practices manifest semantics (deep-merge, not style)', () => {
     // What `gate init --practices` writes: phase 7 only.
     const root = tempRepo({ phases: { '7': ['node scripts/verify/verify-brain.mjs'] } });
     const loaded = loadManifest(cfg, root);
-    expect(loaded.phases['4']).toEqual(['pnpm check-types', 'pnpm lint', 'pnpm build', 'pnpm test']);
+    expect(loaded.phases['4']).toEqual([
+      'pnpm check-types',
+      'pnpm lint',
+      'pnpm build',
+      'pnpm test',
+    ]);
     expect(loaded.phases['7']).toEqual(['node scripts/verify/verify-brain.mjs']);
   });
 
@@ -181,7 +186,10 @@ describe('FR-6 practices manifest semantics (deep-merge, not style)', () => {
 
   it('the difference is the whole rule: absent inherits, empty erases', () => {
     const absent = loadManifest(cfg, tempRepo({ phases: { '7': ['node -e "process.exit(0)"'] } }));
-    const emptied = loadManifest(cfg, tempRepo({ phases: { '4': [], '7': ['node -e "process.exit(0)"'] } }));
+    const emptied = loadManifest(
+      cfg,
+      tempRepo({ phases: { '4': [], '7': ['node -e "process.exit(0)"'] } }),
+    );
     expect(absent.phases['4']).toHaveLength(4);
     expect(emptied.phases['4']).toHaveLength(0);
     expect(absent.phases['7']).toEqual(emptied.phases['7']);

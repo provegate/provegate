@@ -40,7 +40,6 @@ function normalizeLineEndings(content: string): string {
   return content.replace(/\r\n|\r/g, '\n');
 }
 
-
 /** Does a backtick run of `length` close on this line's remainder, or on a
  * later line of the SAME paragraph? A blank line ends the paragraph, and a span
  * cannot span one. */

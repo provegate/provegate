@@ -117,10 +117,12 @@ export function CIIntegration(): React.JSX.Element {
       <div style={{ maxWidth: 680 }}>
         <Reveal>
           <Tabs tabs={C.CI_SNIPPETS} value={tab} onChange={setTab} idPrefix="ci" />
-          <div role="tabpanel" id={`ci-panel-${current.id}`} aria-labelledby={`ci-tab-${current.id}`}>
-            <CopyableCodeBlock filename={current.file}>
-              {current.code}
-            </CopyableCodeBlock>
+          <div
+            role="tabpanel"
+            id={`ci-panel-${current.id}`}
+            aria-labelledby={`ci-tab-${current.id}`}
+          >
+            <CopyableCodeBlock filename={current.file}>{current.code}</CopyableCodeBlock>
           </div>
         </Reveal>
       </div>

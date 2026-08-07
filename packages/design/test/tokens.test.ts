@@ -2,14 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { emitColorsCss, emitTheme } from '../scripts/emit.js';
-import {
-  hexToRgb,
-  ramps,
-  terminal,
-  tints,
-  VERDICTS,
-  verdictStyles,
-} from '../src/tokens.js';
+import { hexToRgb, ramps, terminal, tints, VERDICTS, verdictStyles } from '../src/tokens.js';
 
 const read = (rel: string): string => readFileSync(resolve(__dirname, '..', rel), 'utf8');
 

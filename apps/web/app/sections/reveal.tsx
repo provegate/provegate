@@ -9,7 +9,9 @@ export function Reveal({
   children,
   as: Tag = 'div',
   ...rest
-}: React.HTMLAttributes<HTMLElement> & { as?: keyof React.JSX.IntrinsicElements }): React.JSX.Element {
+}: React.HTMLAttributes<HTMLElement> & {
+  as?: keyof React.JSX.IntrinsicElements;
+}): React.JSX.Element {
   const ref = React.useRef<HTMLElement>(null);
   React.useEffect(() => {
     const el = ref.current;

@@ -31,6 +31,12 @@ jobs:
       - name: lint
         run: pnpm lint
 
+      # Nobody ran format:check for months and it was red across 107 files while
+      # every other gate stayed green. A formatter that no gate executes is a
+      # preference, not a rule.
+      - name: format-check
+        run: pnpm format:check
+
       - name: test
         run: pnpm test
 

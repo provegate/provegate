@@ -53,7 +53,9 @@ describe('FR-1 source level — the coherence triple', () => {
 describe('FR-1 emitted level — the built product page', () => {
   it('index.html emits an absolute og:image with 1200x630 and a twitter:image', () => {
     const html = built('index.html');
-    const og = /property="og:image"[^>]*content="([^"]+)"/.exec(html) ?? /content="([^"]+)"[^>]*property="og:image"/.exec(html);
+    const og =
+      /property="og:image"[^>]*content="([^"]+)"/.exec(html) ??
+      /content="([^"]+)"[^>]*property="og:image"/.exec(html);
     expect(og, 'og:image missing from built index.html').not.toBeNull();
     expect(og![1]).toMatch(/^https:\/\/provegate\.dev\//);
     expect(html).toMatch(/og:image:width"[^>]*content="1200"|content="1200"[^>]*og:image:width/);
@@ -68,12 +70,20 @@ describe('FR-8 — /alt stops competing, in search and in unfurls', () => {
     const PINNED = 'ProveGate — alternative landing concept';
     const title = /<title>([^<]*)<\/title>/.exec(html);
     expect(title?.[1]).toBe(PINNED);
-    expect(html).toMatch(new RegExp(`property="og:title"[^>]*content="${PINNED}"|content="${PINNED}"[^>]*property="og:title"`));
+    expect(html).toMatch(
+      new RegExp(
+        `property="og:title"[^>]*content="${PINNED}"|content="${PINNED}"[^>]*property="og:title"`,
+      ),
+    );
     const PINNED_DESC =
       'An alternative landing concept for internal comparison — denser, terminal-forward, docs-style. Not the product page.';
-    const desc = /name="description"[^>]*content="([^"]+)"/.exec(html) ?? /content="([^"]+)"[^>]*name="description"/.exec(html);
+    const desc =
+      /name="description"[^>]*content="([^"]+)"/.exec(html) ??
+      /content="([^"]+)"[^>]*name="description"/.exec(html);
     expect(desc?.[1]).toBe(PINNED_DESC);
-    const ogDesc = /property="og:description"[^>]*content="([^"]+)"/.exec(html) ?? /content="([^"]+)"[^>]*property="og:description"/.exec(html);
+    const ogDesc =
+      /property="og:description"[^>]*content="([^"]+)"/.exec(html) ??
+      /content="([^"]+)"[^>]*property="og:description"/.exec(html);
     expect(ogDesc?.[1]).toBe(PINNED_DESC);
     // and the product description does NOT leak onto the concept page
     expect(html).not.toContain('is not evidence. Seven phases');
@@ -95,8 +105,7 @@ describe('FR-8 — /alt stops competing, in search and in unfurls', () => {
   });
 
   it('the two routes no longer emit identical metadata', () => {
-    const grab = (f: string): string =>
-      (built(f).match(/<meta[^>]*>/g) ?? []).sort().join();
+    const grab = (f: string): string => (built(f).match(/<meta[^>]*>/g) ?? []).sort().join();
     expect(grab('index.html')).not.toBe(grab('alt.html'));
   });
 });

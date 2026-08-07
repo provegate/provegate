@@ -83,14 +83,18 @@ export function emitTheme(): string {
   l.push('  env: NodeJS.ProcessEnv = process.env,');
   l.push('  isTTY: boolean = Boolean(process.stdout && process.stdout.isTTY),');
   l.push('): ColorTier {');
-  l.push("  if (!isTTY || (env['NO_COLOR'] !== undefined && env['NO_COLOR'] !== '')) return 'none';");
+  l.push(
+    "  if (!isTTY || (env['NO_COLOR'] !== undefined && env['NO_COLOR'] !== '')) return 'none';",
+  );
   l.push("  const ct = env['COLORTERM'];");
   l.push("  if (ct === 'truecolor' || ct === '24bit') return 'truecolor';");
   l.push("  return 'ansi16';");
   l.push('}');
   l.push('');
   l.push('/** Paint `text` in a slot for the given tier. `none` returns text as-is. */');
-  l.push('export function paint(slot: TermSlot, text: string, tier: ColorTier = colorTier()): string {');
+  l.push(
+    'export function paint(slot: TermSlot, text: string, tier: ColorTier = colorTier()): string {',
+  );
   l.push("  if (tier === 'none') return text;");
   l.push("  if (tier === 'truecolor') {");
   l.push('    const [r, g, b] = TRUECOLOR[slot];');
