@@ -5,9 +5,9 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-041-close-writes-its-own-state.md` |
-| Score                  | 7.8/10 |
+| Score                  | 7.9/10 |
 | Verdict                | ITERATE |
-| Iteration              | 6 |
+| Iteration              | 7 |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit)     | — |
 | Scored by              | Codex (gpt-5), fresh independent scorer |
@@ -22,8 +22,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign — fix PRD first | The repository-specific hardcode is gone, but replay and rollback semantics for `manifest.phases['7']` remain underspecified. |
-| Phase 6 (Audit)     | — | Re-score after the post-state hook transaction, output path capture, scope, and stale restatements are resolved. |
+| Phase 4 (Execution) | Do not assign — fix PRD first | The replay/relocation defect is closed, but the new manifest command surface lacks its complete safety predicate, transactional output boundary, and resume-idempotency contract. |
+| Phase 6 (Audit)     | — | Re-score after the `postState` execution and rollback contract is closed. |
 
 ---
 
@@ -31,63 +31,67 @@
 
 ### 1. Technical Depth & Architecture
 
-Archive remains the correct status-write point. `archivePrdArtifacts` owns the final artifact bytes, and its path-scoped commit includes both the old and completed artifact paths. A status edit made after prevalidation and before that commit therefore travels with the renames. The current implementation also stages `config.dirs.stateFile` when present, although it does not yet regenerate it.
+Archive remains the correct write point. `archivePrdArtifacts` owns the wip→completed moves, path-scopes the archive commit to old and new artifact paths, and includes the configured state file when staged. A terminal-status edit made before the move therefore travels with the final artifact bytes.
 
-The terminal source is correct. `defaults.ts` has `statusVocab.aliases.complete`, not `statusVocab.complete`; FR-1 consistently requires `normalizeStatus(config.statusVocab, 'complete')` rather than a literal.
+The terminal-value source is correct: `defaults.ts` defines `statusVocab.aliases.complete`, not `statusVocab.complete`, and FR-1 requires `normalizeStatus(config.statusVocab, 'complete')`.
 
-The auto-revert model remains correct. The archive commit exists on the feature ref before merge. A failed post-merge gate reverts the base merge; it does not erase the feature archive commit. Section 6 states both feature-ref and base-ref outcomes and gives the committed unarchive followed by `--from-phase=7` recovery.
+The auto-revert model is now explicit and correct. The terminal write belongs to the feature archive commit. A failed post-merge gate reverts the merge on the base while leaving the feature archive commit intact; §6 distinguishes both refs and provides the committed-unarchive recovery.
 
-The iteration-5 portability objection is closed: the shipped runner no longer names `derive-self-hosting-figures.mjs`, and a repository with no phase-7 commands has a legal no-op.
+The iteration-6 replay/relocation finding is closed. `manifest.postState` is a separate key, while `manifest.phases['7']` retains its existing timing and meaning.
 
-The replacement creates a different contract gap. `buildGateChain` already executes `manifest.phases['7']` before archive. The revised PRD requires those same commands after status/state regeneration and before the archive commit, but never says whether they are:
+The new key nevertheless creates an incomplete command-execution contract. Current `manifest.ts`:
 
-- replayed a second time, changing the existing manifest contract; or
-- moved out of the normal Phase-7 chain, which requires an undeclared `chain.ts` change.
+- rejects unknown keys;
+- validates each command-array shape;
+- applies `assertCommandsSafe` through `manifestCommands`;
+- documents `manifestCommands` as every command the manifest can execute.
 
-A replay is not backward-compatible by default. Existing adopters may have Phase-7 validators that expect wip paths, run only once, or are not idempotent. Calling them again after the artifacts move can fail an otherwise valid close.
+FR-1 does not require `postState` to join `manifestCommands` or the safety check, and §11 has no unsafe-command refusal paired with a positive control. An implementation can therefore add a valid-looking execution path that bypasses the manifest’s existing runnable-command predicate. This also means the declared application of `surface-set-without-its-predicate` is not yet true.
 
-The current archive commit is explicitly path-scoped to moved artifacts and the state file. “Include whatever the hook wrote” therefore needs an output-discovery and staging rule. The PRD does not define handling for created, modified, deleted, untracked, ignored, or concurrently changed paths.
+Output discovery also needs a closed boundary. Plain `git status --porcelain` after the hook does not specify:
+
+- a pre-hook baseline or how runner-owned archive changes are separated from hook outputs;
+- NUL-safe parsing for renamed paths or filenames containing control characters;
+- whether ignored outputs are forbidden, since ordinary porcelain omits them;
+- whether hooks may modify HEAD, refs, or the index;
+- restoration of created, modified, deleted, and renamed hook outputs after failure.
+
+The repository projection is benign, but `postState` is a shipped adopter-facing command surface. The contract must constrain arbitrary configured hooks, not only describe this repository’s script.
 
 ### 2. Edge Cases & Failure Modes
 
-FR-2 is tight enough for the repository’s recorded resume path: after committed unarchive moves, `--from-phase=7` reaches terminal artifacts, treats the terminal value as a no-op, and archives them again. Missing and duplicate status lines refuse before either artifact is mutated.
+FR-2 is idempotent only at the status-line level. The recorded recovery path unarchives and commits the moves, then re-enters with `--from-phase=7`; that reruns the entire archive transaction, including `postState`. Nothing requires a configured hook to be deterministic or idempotent, and nothing defines whether a hook whose projection is already current must run again. A status no-op alone is therefore insufficient for the resume case highlighted by `gate-run-resume-after-archive`.
 
-FR-3 is now precise:
+The failure-atomicity statement covers artifact paths and bytes plus index staging, but not the complete hook-written workspace delta. A failing hook can create one file, delete another, alter an ignored output, or mutate the index before exiting. The failing-hook test row does not explicitly exercise created/modified/deleted outputs or pre-existing staging.
 
-- Base checkout: `merge.baseDir`.
-- Timing: after green post-merge gates and before the handoff card.
-- Commit: `chore(state): release PRD-NNN lease`.
-- Tracked lease: commit the deletion.
-- Untracked, ignored, or absent lease: no commit, with an explicit result.
-- Recreated lease: preserve and warn.
-- Hook failure: exit 1, preserve the staged deletion, print hook output, and provide the exact path-scoped retry.
+The §6 state table does not contain the archive-abort transition that the `state-model-before-mechanism` disposition claims it contains. It also places the `post-merge green` pipe row after intervening prose, so Markdown no longer renders it as part of the table. The state model therefore omits the new failure state introduced this round.
 
-`scripts/base-branch-guard.mjs` confirms `_state/` is allowed on `main`, and its staged-path parser includes deletions.
+FR-3 is otherwise precise:
 
-The post-state hook failure is not specified. If a command fails after artifact moves, status edits, and `_state/prds.json` regeneration, the current archive path will throw before committing and leave those mutations behind. FR-1’s atomic prevalidation protects only malformed status headers; it does not define rollback for a failed hook or partial hook output.
+- branch: `merge.baseDir`;
+- timing: after green post-merge gates and before the handoff card;
+- message: `chore(state): release PRD-NNN lease`;
+- tracked deletion: committed;
+- untracked, ignored, or absent lease: no commit;
+- recreated lease: preserved under the claim mutex;
+- hook failure: exit 1, preserve the staged deletion, print output, and name the base-checkout path-scoped retry.
 
-The adopter smoke contains exactly the two PRD-041 known-red entries, `terminal-status` and `clean-tree`, and its manifest has no phase-7 list. It is therefore a useful empty-list adopter regression once those entries are removed.
+`scripts/base-branch-guard.mjs` confirms `_state/` is allowed on `main`, including deletions.
 
 ### 3. Maintainability & DX
 
-The corpus evidence is accurate:
+The current corpus supports the revised FR-4 explanation:
 
-- 37 `Ship Verified`
-- 38 statuses accepted by `statusVocab.implemented`
-- 39 PRDs in the completed location
-- `PRD-023` is `Superseded`, has a completed PRD, and has no summary
+- 37 `Ship Verified`;
+- 38 records accepted by `statusVocab.implemented`;
+- 39 PRDs in the completed location;
+- `PRD-023` is `Superseded`, has a completed PRD, and has no summary.
 
-FR-4 correctly removes both location and summary fallbacks. After PRD-041 closes, the status-implemented count becomes 39 and the `Ship Verified` projection becomes 38.
+Removing the fallbacks changes the pre-close implemented result from 39 to 38. Closing PRD-041 then adds one terminal record, returning the implemented count to 39 while moving the published `Ship Verified` figure from 37 to 38. The PRD now says this consistently.
 
-`node scripts/check-implemented-predicate.mjs` is correctly specified as a direct, uncached repository command. `pnpm verify:doc-claims` is runnable and currently passes; its implementation runs the projection’s `--check` mode.
+`pnpm verify:doc-claims` is runnable: the root script invokes `scripts/verify/verify-doc-claims.mjs`, which executes the projection’s `--check` mode. The cross-cutting floor now correctly requires the committed projection to match fresh regeneration.
 
-One stale restatement remains:
-
-`pnpm verify:doc-claims` — the published figure does not move
-
-That contradicts §7 and the FR-4 row, which correctly say PRD-041 moves the figure from 37 to 38.
-
-The declaration sweep is incomplete. `gates.manifest.json` and `apps/docs/content/docs/case-study.mdx` now appear in Implementation Scope and Conflict Surface, but `_state/prds.json` still does not. FR-1’s Targets line names only `archivePrdArtifacts`, despite requiring `runRun` to supply or relocate the manifest execution and requiring multiple generated paths to enter the commit.
+FR Targets, §8, and the Conflict Surface now align on `_state/prds.json`, `manifest.ts`, `cli.ts`, `gates.manifest.json`, and the case-study projection file. That previous scope finding is closed.
 
 Value arithmetic is correct:
 
@@ -95,42 +99,40 @@ Value arithmetic is correct:
 
 Axis judgment:
 
-- MF 4: justified; close-generated state becomes durable and gate-derived.
-- UI 5: justified by the reproduced misleading status and dirty-tree adopter failures.
-- TL 3: justified; this corrects central close and state-query paths.
-- AR 2: justified; reliability improves, but reach does not materially expand.
-- RM 3: still optimistic. Replaying an existing phase command list under new path and timing semantics, without rollback, creates compatibility and recovery risk. RM is effectively 2 until that contract is closed.
+- MF 4: justified; close-generated state becomes a gate-owned durable result.
+- UI 5: justified by the reproduced false status and dirty-tree adopter failures.
+- TL 3: justified; the change repairs central archive and state-query paths.
+- AR 2: justified; reliability improves without materially expanding reach.
+- RM 3: not justified yet. A generic mutating command surface, path discovery, index preservation, rollback, and a second base commit create above-moderate regression risk. RM is effectively 2 until those contracts are pinned.
 
 ### 4. Migration & Rollback
 
-Status, merge, auto-revert, archived-state recovery, and lease-deletion rollback are coherent.
+Archive/merge/auto-revert recovery and lease-deletion recovery are well specified.
 
-The post-state lifecycle is not. Migration & Rollback still describes the archive commit as “status + regenerated state,” omitting hook outputs. It also does not address repositories that already have non-idempotent or wip-dependent Phase-7 commands.
+The new post-state lifecycle is not yet backward-safe for retries. A repository can configure a command that is safe and successful once but non-idempotent on the committed-unarchive `--from-phase=7` path. The PRD must either constrain `postState` to deterministic, rerunnable projections or define a runner rule that avoids replay without leaving state-derived outputs stale.
 
-The required atomic boundary is status edits → moves → state regeneration → configured post-state work → one archive commit. A failure before the commit needs an explicit outcome for every mutation and staged path. That outcome is absent.
+Rollback also needs to cover the entire hook delta and forbid or detect repository-control mutations. Restoring only artifact paths, artifact bytes, and index staging does not restore an arbitrary hook-created or hook-deleted workspace path.
 
 ### 5. Memory Inputs
 
-- `no-completed-done-status-alias`: relevant and applied appropriately to a runner-owned output; the written value is normalized rather than literal.
+- `no-completed-done-status-alias`: relevant and applied; the runner writes a gate-derived canonical output, not a self-declared terminal input.
+- `surface-set-without-its-predicate`: relevant but **not successfully applied**; the new surface lacks an explicit `manifestCommands`/`assertCommandsSafe` requirement and paired deny fixture.
+- `recompute-beats-recorded-state`: relevant and applied; the projection is regenerated and byte-checked rather than compared to a stored receipt.
+- `state-model-before-mechanism`: relevant but **not successfully applied**; §6 omits the archive-abort transition and the final row is outside the table.
+- `locks-on-main-not-worktree`: relevant and reviewed; cleanup and any deletion commit are placed on `merge.baseDir`, while ignored/untracked leases remain no-commit runtime state.
 - `cleanup-after-verified-merge`: relevant and applied; lease teardown follows verified merge.
-- `known-red-ledger-must-expire`: relevant and applied; FR-5 removes both owned entries.
-- `turbo-cache-masks-out-of-input-reads`: relevant and applied; the corpus script runs directly and uncached.
-- `metadata-declares-what-it-cannot-provide`: relevant and applied to handoff/status coherence.
-- `gate-run-resume-after-archive`: directly relevant and applied through committed unarchive moves and phase-7 resume.
-- `assert-absent-needs-an-independent-cause`: relevant; the intended fixtures are described, though the final test must preserve the independent cause.
-- `strictness-added-during-extraction-is-a-behavior-change`: relevant and reviewed; the new refusal behavior is intentional and pinned.
-- `fixture-must-reach-production-shape`: relevant and applied through `runRun`-level cleanup testing.
-- `free-text-field-is-the-unread-drift-ledger`: peripheral but adequately reviewed.
+- `known-red-ledger-must-expire`: relevant and applied; FR-5 removes exactly `terminal-status` and `clean-tree`.
+- `turbo-cache-masks-out-of-input-reads`: relevant and applied; the corpus predicate runs directly and uncached.
+- `metadata-declares-what-it-cannot-provide`: relevant and applied to the handoff/artifact mismatch.
+- `gate-run-resume-after-archive`: directly relevant but only partially applied; artifact status is idempotent, while the new hook transaction is not.
+- `assert-absent-needs-an-independent-cause`: relevant; the missing-status fixture retains an independently testable refusal cause.
+- `strictness-added-during-extraction-is-a-behavior-change`: relevant and reviewed; existing Phase-7 semantics remain unchanged.
+- `fixture-must-reach-production-shape`: relevant and applied through the real `runRun` cleanup path.
+- `free-text-field-is-the-unread-drift-ledger`: peripheral but adequately reviewed; no lease schema field is added.
 - `docs-outlive-the-gate-they-promise`: relevant and applied to the STATUS deferral deletion.
-- `a-rule-corrected-survives-where-it-is-restated`: relevant but not applied successfully; §11 and Migration still carry stale lifecycle descriptions.
+- `a-rule-corrected-survives-where-it-is-restated`: relevant but not successfully applied; the Memory Input claims an archive-abort table row that §6 does not contain.
 
-No undispositioned active record has a `watch` overlapping the current declared FR Targets.
-
-Materially relevant records remain missing:
-
-- `locks-on-main-not-worktree` governs FR-3’s base-owned lease and cleanup placement.
-- `recompute-beats-recorded-state` governs the generated projection’s recompute/write/check model.
-- `state-model-before-mechanism` is relevant to the six-round flat trajectory and watches the modified `_prds/wip/**` path.
+No undispositioned active record has a `watch` overlapping the declared FR Targets. The issue is unsuccessful application of declared records, not a missing watched record.
 
 The Memory Output is appropriate and repeated under Durable Artifacts.
 
@@ -140,41 +142,48 @@ The Memory Output is appropriate and repeated under Durable Artifacts.
 
 | #         | Dimension                | Weight | Score | Notes |
 | --------- | ------------------------ | ------ | ----- | ----- |
-| 1         | Clarity                  | 15% | 7/10 | The structural Clarity gate passes, but Phase-7 replay versus relocation and hook output capture remain ambiguous. |
-| 2         | Completeness             | 20% | 7/10 | Core status, predicate, resume, and lease cases are covered; hook failure and output-path cases are not. |
-| 3         | Technical Depth          | 25% | 8/10 | The main state models are strong, but the existing Phase-7 gate list is overloaded as a post-state mutation hook without a compatibility contract. |
-| 4         | Multi-Tenancy & Security | 20% | 10/10 | Repository-local workflow state only; no tenant, auth, endpoint, permission, or protected-data surface. |
-| 5         | Scope & Testability      | 10% | 7/10 | Empty-list and ordering tests are named, but written paths and call-graph targets remain incomplete. |
-| 6         | Migration & Rollback     | 10% | 6/10 | Archive and lease recovery are precise; existing Phase-7 configurations and failed post-state commands have no safe migration or rollback rule. |
-| **Total** | **Weighted**             |        | **7.8/10** | **ITERATE** |
+| 1         | Clarity                  | 15% | 7/10 | The structural Clarity gate passes, but hook safety, allowed mutations, output-delta handling, and resume semantics require implementation-time design decisions. |
+| 2         | Completeness             | 20% | 8/10 | Previous scope and lifecycle gaps are mostly closed; the generic hook’s safety and full rollback cases remain. |
+| 3         | Technical Depth          | 25% | 8/10 | Write point and branch-state reasoning are strong; the new command and git-transaction boundary is not closed. |
+| 4         | Multi-Tenancy & Security | 20% | 8/10 | No tenant/auth surface, but the new executable manifest key is not explicitly bound to the existing command-safety predicate. |
+| 5         | Scope & Testability      | 10% | 8/10 | Scope alignment is fixed; deny-path, output-shape, and resume-replay tests are missing. |
+| 6         | Migration & Rollback     | 10% | 8/10 | Archive and lease rollback are strong; arbitrary hook-output rollback and retry idempotency remain underspecified. |
+| **Total** | **Weighted**             |        | **7.9/10** | **ITERATE** |
 
-Weighted total: 7.75, reported as 7.8.
+Weighted total: 7.85, reported as 7.9.
 
 Hard caps checked:
 
-- Security cap: not tripped — no protected route, endpoint, authorization, permission, or tenant-query surface is touched.
+- Security cap: not tripped — no protected route, endpoint, query, authorization, or tenant surface is touched. The manifest command-safety gap remains a readiness finding.
 - Contract cap: not tripped — no client→server payload or schema contract is introduced.
-- Lint cap: not tripped — supplied `gate check PRD-041` evidence passes; the independent rerun failed only on the sandbox’s prohibited `_state/prds.json` write.
+- Lint cap: not tripped — supplied `gate check PRD-041` evidence passes; the independent rerun failed only because the sandbox prohibited refreshing `_state/prds.json`.
 - Runtime-dependency cap: not tripped — Dependencies is `none`.
 - Push cap: not tripped — no remote-push path is introduced.
-- Method-content cap: not tripped — no prompt, template, schema, or source-snapshot-controlled method content changes.
+- Method-content cap: not tripped — no prompt, template, schema, or source-snapshot-controlled content changes.
 
 ---
 
 ## Missing Pieces (to reach 10/10)
 
-### Iteration-5 Missing Piece Closure Audit
+### Iteration-6 Missing Piece Closure Audit
 
-| Iteration-5 item | State | Evidence checked and exact change |
-| ---------------- | ----- | --------------------------------- |
-| 1. Portable projection opt-in, absence, failure, and adopter test | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §7 Architecture, §7 Migration & Rollback, and §11. The repository-specific hardcode and empty-list case are **CLOSED**. Exact remaining change: state whether `manifest.phases['7']` is replayed or relocated; specify compatibility for existing commands; define command-failure rollback and output discovery; name a regression for a failing hook as well as the empty-list adopter. |
-| 2. Align every written path across Targets, Scope, and Conflict Surface | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1 Targets, §8, and Conflict Surface. `gates.manifest.json` and `apps/docs/content/docs/case-study.mdx` are now declared. Exact remaining change: add `_state/prds.json` to §8 and Conflict Surface; add `packages/provegate/src/cli.ts::runRun`, `gates.manifest.json::phases.7`, `_state/prds.json`, and the generated case-study region to FR-1 Targets; add `packages/provegate/src/core/run/chain.ts` if existing Phase-7 execution moves. |
-| 3. Projection transaction, rollback, and published-figure restatement | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §7 Migration & Rollback and §11 Cross-cutting floor. Exact change: describe the archive commit as status + regenerated state + hook outputs; require restoration of pre-archive paths, bytes, and staging on hook failure; replace “the published figure does not move” with “the committed projection matches regenerated state; PRD-041 moves it from 37 to 38.” |
-| 4. Missing memory dispositions and consistency sweep | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — Memory Inputs, §7, §8, §11, §12, and Changelog. Exact change: add reasoned dispositions for `locks-on-main-not-worktree`, `recompute-beats-recorded-state`, and `state-model-before-mechanism`; then reconcile every post-state-hook restatement, removing claims that the lifecycle or declaration sweep is already complete. |
+| Iteration-6 report item | State | Evidence checked and exact change |
+| ----------------------- | ----- | --------------------------------- |
+| 1. Portable hook relationship, failure, output discovery, and adopter test | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §7 Architecture, §7 Migration & Rollback, and §11 now define a separate `manifest.postState`, preserve `phases['7']`, make absent/empty legal, state atomic failure, name status-based discovery, and add ordering/empty/failure rows. New contract defects are recorded separately below rather than preserving the old finding as debt. |
+| 2. Align every written path across Targets, Scope, and Conflict Surface | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1 Targets, §8, and Conflict Surface all name `manifest.ts`, `cli.ts::runRun`, `gates.manifest.json`, `_state/prds.json`, and `apps/docs/content/docs/case-study.mdx`. No `chain.ts` relocation is proposed. |
+| 3. Projection transaction, rollback, and published-figure restatement | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §7 Migration & Rollback now describes status + state + hook outputs, failure restoration, and a single commit; §11 requires the committed projection to match fresh regeneration and correctly states the figure becomes 38. |
+| 4. Missing memory dispositions and consistency sweep | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — Memory Inputs and §6. The four dispositions were added, but `surface-set-without-its-predicate` lacks the existing command-safety predicate and deny fixture, while `state-model-before-mechanism` falsely claims §6 includes an archive-abort row. Exact change: correct both dispositions only after adding the requirements and state-table row described below. |
+| 5. Define replay versus relocation of `manifest.phases['7']` | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1 and §7 explicitly introduce `manifest.postState` and state that `phases['7']` retains its existing timing and meaning. |
 
-### Iteration-6 Finding
+### Iteration-7 Findings
 
-1. `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §7 Architecture, §7 Migration & Rollback, and §11: define the semantic relationship between the existing pre-archive execution of `manifest.phases['7']` and the proposed post-state execution. Either introduce a separately named, explicitly opted-in post-state hook with declared outputs, or specify that Phase-7 commands run twice and require them to be idempotent and valid after artifact moves. Add tests for a wip-dependent existing validator, a failing command, and modified/created/deleted output capture.
+1. `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §7 Architecture, Memory Inputs, and §11: require `postState` to be validated as a command array and included in `manifestCommands`/`assertCommandsSafe`. Add a named test that an unsafe `postState` command is refused before archive mutation, paired with a safe-command positive control.
+
+2. `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §7 Projection Lifecycle, §7 Migration & Rollback, and §11: define the exact output transaction. Require a pre-hook baseline, NUL-safe `git status --porcelain=v1 -z --untracked-files=all` delta parsing, explicit treatment of ignored outputs, and rejection or restoration of HEAD/ref/index mutations. Add created, modified, deleted, renamed, and failing-partial-output cases that prove every hook-written byte and the prior index are restored.
+
+3. `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-2, §6, §7 Migration & Rollback, and §11: make the entire archive transaction idempotent, not only the status edit. Either require `postState` commands to be deterministic rerunnable projections or define when the runner suppresses replay. Add a committed-unarchive → `--from-phase=7` regression proving the hook can run again without duplication or failure.
+
+4. `_prds/wip/prd-041-close-writes-its-own-state.md` — §6 state-transition table and the `state-model-before-mechanism` disposition: add an in-table `postState exits non-zero` row naming restored status, wip paths, held lease, unchanged HEAD/index, and the exact retry. Move `post-merge green` above the explanatory prose so it renders inside the table.
 
 ---
 
@@ -187,7 +196,8 @@ Hard caps checked:
 | 3   | 2026-08-07 | 7.6 | ITERATE | Vocabulary and branch states passed; the new `gate release` retry, archived retries, and absolute corpus pins regressed. |
 | 4   | 2026-08-07 | 7.9 | ITERATE | Exact lease retry and archived-state recovery passed; projection regeneration, corpus description, and two memory dispositions remained. |
 | 5   | 2026-08-07 | 7.9 | ITERATE | Corpus and projection arithmetic were corrected; the projection fix introduced a self-host-only command into the shipped CLI. |
-| 6   | 2026-08-07 | 7.8 | ITERATE | Repository-specific hardcoding was removed and empty-list portability added; the replacement overloads the existing Phase-7 gate list without replay, output-capture, failure, or migration semantics. |
+| 6   | 2026-08-07 | 7.8 | ITERATE | Repository hardcoding was removed, but the replacement overloaded the existing Phase-7 command list without replay, output-capture, failure, or migration semantics. |
+| 7   | 2026-08-07 | 7.9 | ITERATE | The separate hook, path declarations, projection restatements, and stated atomicity close the prior findings; the new hook still lacks command safety, full git-delta rollback, whole-transaction idempotency, and its claimed abort-state row. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
@@ -202,20 +212,26 @@ Hard caps checked:
 - ADR compliance: PASS — no active ADR is contradicted.
 - Canonical status vocabulary: PASS — terminal output is resolved through `normalizeStatus`.
 - Archive write point: PASS — archive owns and commits the final artifact bytes.
-- Auto-revert model: PASS — base merge is reverted while the feature archive commit remains.
-- Protected-base legality: PASS — `_state/` deletions are allowed and inspected by `base-branch-guard.mjs`.
-- Lease cleanup: PASS — branch, message, timing, missing-file behavior, path scoping, and hook retry are specified.
+- Auto-revert model: PASS — the base merge is reverted while the feature archive commit remains.
+- Protected-base legality: PASS — `_state/` deletions are permitted and inspected by `base-branch-guard.mjs`.
+- Lease cleanup: PASS — branch, message, timing, tracked/untracked behavior, recreated-file behavior, and hook retry are specified.
 - Known-red targets: PASS — `terminal-status` and `clean-tree` are the two PRD-041 entries.
 - Current corpus: PASS — 37 Ship Verified, 38 status-implemented, 39 completed-location.
 - `PRD-023`: PASS — `Superseded`, completed PRD, summary missing.
-- Post-close figure: PASS in §7 and FR-4 — 38 Ship Verified.
-- Published projection portability: PARTIAL — repository hardcoding is gone and empty lists work, but existing Phase-7 command compatibility is unspecified.
-- Projection transaction: ITERATE — hook output discovery and failure rollback are absent.
-- Scope consistency: ITERATE — `_state/prds.json` and call-graph targets remain incomplete.
+- Post-close figure: PASS — the projection moves from 37 to 38 Ship Verified.
+- `verify:doc-claims`: PASS — runnable root script invoking the projection’s `--check` mode.
+- Published projection portability: PASS — repository wiring is in `gates.manifest.json`; adopters default to no hook.
+- Existing Phase-7 compatibility: PASS — no replay or relocation.
+- Manifest command safety: ITERATE — `postState` is not explicitly included in the existing safe-command predicate or its deny tests.
+- Projection transaction: ITERATE — discovery and rollback do not close created/deleted/renamed/ignored or git-control mutations.
+- Resume idempotency: ITERATE — the status write is idempotent, but the newly added hook transaction is not.
+- Scope consistency: PASS — FR Targets, §8, and Conflict Surface align.
 - Value header: arithmetic PASS at 3.60; MF/UI/TL/AR are justified, while RM 3 remains unsupported.
 
 ---
 
 ## Verdict
 
-ITERATE — the original portability objection is genuinely closed: the shipped runner no longer knows this repository’s projection script, and an empty phase-7 list is legal. The replacement is not yet implementation-ready, however. The same command list already runs before archive, while the PRD neither declares replay nor relocation, does not define how arbitrary hook outputs enter the path-scoped commit, and provides no rollback for a failed post-state command. The stale §11 figure claim, incomplete path declarations, and missing memory dispositions also remain open.
+ITERATE — the iteration-6 findings about phase-7 replay, portability, path declarations, stale projection wording, and stated atomic failure are genuinely closed. The separate `postState` key is the right direction.
+
+The new key is not yet implementation-ready, however. It introduces a generic executable manifest surface without explicitly joining the existing command-safety predicate, discovers outputs without a closed git-delta contract, and reruns on the repository’s required `--from-phase=7` recovery without an idempotency rule. The Memory Inputs also claim an archive-abort transition that §6 does not contain.
