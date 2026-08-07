@@ -82,22 +82,45 @@ so that I do not have to reconstruct it from git history.
 
 ## 4. Functional Requirements
 
-1. **FR-1**: At the archive step, the runner writes the configured terminal status
-   (`statusVocab.complete`, never a literal) into the PRD and task artifacts, and that write is
-   part of the archive commit. A close that reaches archive has passed every gate the status
-   asserts.
+1. **FR-1**: At the archive step the runner writes the **terminal status** into both the PRD and
+   the task artifact, and that write is part of the archive commit. Terminal means the canonical
+   value the `complete` alias resolves to — `normalizeStatus(config.statusVocab, 'complete')`
+   (`core/state/status.ts:28`), which is `Ship Verified` under the shipped vocabulary. There is
+   no `statusVocab.complete` field; the normalizer is the only config-driven source, and a
+   literal is forbidden.
+   Both artifacts are **prevalidated before either is mutated**: each must contain exactly one
+   status line matching the reader the state builder uses. Zero lines or more than one is a
+   refusal that names the file and the count, and nothing is written — a partial write across
+   two artifacts is worse than no write.
+   The archive commit also carries the regenerated `_state/prds.json`, so a `gate status` run
+   immediately after the close leaves the tree clean.
    - **Targets:** `packages/provegate/src/core/run/archive.ts::archivePrdArtifacts`
-2. **FR-2**: The status write refuses rather than guesses when the artifact's status line is
-   absent or already terminal: absent is template drift, already-terminal is a resumed close,
-   and neither is a silent overwrite.
+2. **FR-2**: The write is idempotent. An artifact whose status is already the terminal value is
+   an explicit **no-op** — not a refusal — because that is what a `--from-phase=7` resume looks
+   like after a previous run wrote it (`gate-run-resume-after-archive`). A status that is
+   neither terminal nor readable is the refusal case in FR-1. The two are distinguished by the
+   value, never by whether the file changed.
    - **Targets:** `packages/provegate/src/core/run/archive.ts::archivePrdArtifacts`
 3. **FR-3**: The runner commits the lease deletion its own cleanup performs, so a close leaves
-   the tree exactly as clean as it found it. `_state/` is a coordination path, so the commit is
-   legal on a protected base by the existing guard.
-   - **Targets:** `packages/provegate/src/cli.ts::runRun`
-4. **FR-4**: `isImplemented` reads the record's status against `statusVocab.implemented`
-   instead of the artifact's location. Archiving is where a thing sits; shipping is what it
-   says.
+   the tree exactly as clean as it found it. Placement: on the base checkout
+   (`merge.baseDir`), **after** the post-merge gates pass and **before** the handoff card,
+   under the same claim mutex the cleanup already holds. The commit is path-scoped to the lease
+   file with a conventional message (`chore(state): release PRD-NNN lease`). `_state/` is a
+   coordination path, so the base-branch guard permits it (`scripts/base-branch-guard.mjs`,
+   `ALLOWED_DIR_PREFIXES`).
+   Cases, each with its own behaviour: the file is **tracked** → commit the deletion; **untracked
+   or ignored** → nothing to commit, and the run says so; **absent** → no-op; **recreated by a
+   parallel claim between cleanup and commit** → leave it alone and warn, never delete another
+   claimant's lease; **commit hook fails** → surface the hook's output verbatim and leave the
+   tree as it is, because a close that hides a hook failure is the defect this repository
+   already refuses elsewhere.
+   - **Targets:** `packages/provegate/src/cli.ts::runRun`,
+     `packages/provegate/src/core/run/release.ts`
+4. **FR-4**: The configured status becomes the **sole** `isImplemented` predicate. Both
+   fallbacks are removed: `record.artifactStates.prd === completed` (archiving is a location)
+   and `record.artifactStates.summary !== 'missing'` (a summary is a document, not a verdict).
+   A record is implemented when `config.statusVocab.implemented` contains its status, and not
+   otherwise.
    - **Targets:** `packages/provegate/src/core/state/query.ts::isImplemented`
 5. **FR-5**: The board's `isImplemented reads location as achievement` deferral row is deleted
    in the same change that closes it, and the two known-red entries this work fixes are removed
@@ -118,14 +141,34 @@ so that I do not have to reconstruct it from git history.
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** a PRD that passes every gate, **When** `gate run` archives it, **Then** the
-  committed artifact carries the configured terminal status.
-- **Given** an artifact whose status is already terminal, **When** a resumed close reaches
-  archive, **Then** the write is a no-op and the run continues.
-- **Given** a close that released a committed lease, **When** the run ends, **Then**
+- **Given** a PRD that passes every gate, **When** `gate run` archives it, **Then** the PRD and
+  the task artifact both carry `normalizeStatus(config.statusVocab, 'complete')` in the archive
+  commit, and `_state/prds.json` in that commit agrees.
+- **Given** an artifact carrying two status lines, or none, **When** archive runs, **Then** it
+  refuses naming the file and the count, and **neither** artifact is modified.
+- **Given** an artifact whose status is already terminal, **When** a `--from-phase=7` resume
+  reaches archive, **Then** the write is a no-op and the run continues.
+- **Given** a close whose post-merge gates pass and whose lease file is tracked, **When** the
+  run ends, **Then** a `chore(state): release PRD-NNN lease` commit exists on the base and
   `git status --short` is empty.
-- **Given** an archived PRD whose status is not in `statusVocab.implemented`, **When**
-  `gate status` runs, **Then** it is not counted as implemented.
+- **Given** a lease file recreated by another claim between cleanup and commit, **When** the
+  commit step runs, **Then** it warns and leaves the file, and no other claimant's lease is
+  deleted.
+- **Given** an archived PRD whose status is `Superseded`, **When** `gate status` runs, **Then**
+  it is not counted as implemented — measured: the board's implemented count moves 39 → 38.
+- **Given** a record with a completed-location PRD and a present summary but a non-implemented
+  status, **When** `isImplemented` runs, **Then** it is false.
+
+**State transitions the close must honour** (artifact paths, statuses, lease, and the exact
+retry):
+
+| Point | PRD/tasks status | artifact location | lease | on failure, retry with |
+| ----- | ---------------- | ----------------- | ----- | ---------------------- |
+| gates green, pre-archive | unchanged | `wip` | held | `gate run --from-phase=N PRD-NNN` |
+| archive commit written | terminal | `completed` | held | `gate run --from-phase=7 PRD-NNN` on an un-archived tree, per `gate-run-resume-after-archive` |
+| merge fails | terminal | `completed` | held | fix, then `gate run --from-phase=merge PRD-NNN` |
+| post-merge gate fails → auto-revert | terminal (the archive commit is not reverted; only the merge is) | `completed` | held | `gate run --from-phase=merge PRD-NNN` after the fix |
+| post-merge green | terminal | `completed` | released, deletion committed | — |
 
 ---
 
@@ -135,14 +178,45 @@ so that I do not have to reconstruct it from git history.
 
 The status write belongs at archive, not at merge: archive is the last step that owns the
 artifact bytes, and its commit already stages the wip→completed moves. Writing at merge would
-put the change in a commit whose auto-revert would silently undo the status too.
+put the change in a commit whose auto-revert would silently undo the status too — which is also
+why the transition table in §6 records that an auto-revert reverts the MERGE and leaves the
+archive commit standing.
 
 The status line is matched by the same reader the state builder uses, so one grammar governs
-both the read and the write — a second regex here is how the two would drift.
+both the read and the write — a second regex here is how the two would drift. The terminal
+value comes from `normalizeStatus`, never from a literal.
 
-FR-4 changes a count this repository publishes (`verify:doc-claims` reads the shipped figure),
-so run that check before and after: every historical item carries a terminal status, so the
-number must not move. If it does, an artifact is lying and that is the finding.
+**Measured, not asserted.** FR-4 changes what the board counts. Executed against
+`_state/prds.json` on 2026-08-07:
+
+```
+Ship Verified 37 · Superseded 1 · Archived 1 · Draft 4
+status-implemented (statusVocab.implemented): 38
+prd artifact in completed location:           39
+```
+
+So the board's implemented count moves **39 → 38**: `PRD-023` is `Superseded` and sits in the
+completed location, which is exactly the defect. The independently derived `Ship Verified`
+figure that `verify:doc-claims` publishes is 37 and does **not** move. §11 asserts both — the
+doc-claims check for the published figure, and a state-query assertion that exercises
+`isImplemented` itself, since a green doc-claims run would not notice the predicate changing.
+
+### Migration & Rollback
+
+- **Commit ordering:** archive commit (status + regenerated state) → merge → post-merge gates →
+  lease-deletion commit → handoff. Each step is separately revertible and none rewrites an
+  earlier one.
+- **Closes begun with the previous CLI:** an artifact left at `Draft` in the completed location
+  by an older run keeps that status; nothing back-fills history. It stops counting as
+  implemented under FR-4, which is the correct reading of what it says, and the remedy is to
+  write the terminal status by hand once.
+- **Recovery:** to undo a status write, revert the archive commit; the artifacts return to
+  `wip` with their previous status. To undo the lease-deletion commit, revert it — the lease
+  file returns, and `gate release` drops it cleanly. Never recreate a lease file by hand: a
+  hand-written lease that another session then steals is worse than a missing one.
+- **Rollback trigger:** if the archive commit's prevalidation refuses on existing artifacts in
+  a real corpus, stop — that means the status grammar this PRD assumes does not match what the
+  repository actually contains, and the grammar is the finding.
 
 ### Dependencies
 
@@ -155,9 +229,11 @@ number must not move. If it does, an artifact is lying and that is the finding.
 ### In Scope
 
 - [ ] `packages/provegate/src/core/run/archive.ts`
+- [ ] `packages/provegate/src/core/run/release.ts`
 - [ ] `packages/provegate/src/cli.ts`
 - [ ] `packages/provegate/src/core/state/query.ts`
-- [ ] `packages/provegate/test/chain.test.ts`, `packages/provegate/test/cli-state.test.ts`
+- [ ] `packages/provegate/test/chain.test.ts`, `packages/provegate/test/cli.test.ts`,
+      `packages/provegate/test/cli-state.test.ts`
 - [ ] `STATUS.md`, `scripts/adopter-smoke.sh`
 
 ---
@@ -214,11 +290,15 @@ number must not move. If it does, an artifact is lying and that is the finding.
 ## Conflict Surface
 
 - `packages/provegate/src/core/run/archive.ts`
+- `packages/provegate/src/core/run/release.ts`
 - `packages/provegate/src/core/state/query.ts`
 - `packages/provegate/src/cli.ts`
 - `packages/provegate/test/chain.test.ts`
+- `packages/provegate/test/cli.test.ts`
 - `packages/provegate/test/cli-state.test.ts`
 - `scripts/adopter-smoke.sh`
+- `STATUS.md`
+- `_brain/learnings/the-close-must-record-what-it-changed.md`
 
 ---
 
@@ -232,14 +312,18 @@ number must not move. If it does, an artifact is lying and that is the finding.
 
 ## 11. Verification Commands
 
-| FR   | Command / Check                | Scope              | Notes                                    |
-| ---- | ------------------------------ | ------------------ | ---------------------------------------- |
-| FR-1 | `pnpm test --filter provegate` | chain.test.ts      | archived artifact carries statusVocab.complete |
-| FR-2 | `pnpm test --filter provegate` | chain.test.ts      | absent line refuses, terminal line no-ops |
-| FR-3 | `pnpm test --filter provegate` | cli.test.ts        | tree clean after a close that released a lease |
-| FR-4 | `pnpm test --filter provegate` | cli-state.test.ts  | archived non-terminal item is not implemented |
-| FR-5 | `pnpm verify:deferred`         | board              | the closed row is gone, cap arithmetic holds |
-| FR-5 | `pnpm smoke:adopter`           | adopter fixture    | both known-red entries gone, run green    |
+| FR   | Command / Check                | Scope              | Notes                                             |
+| ---- | ------------------------------ | ------------------ | ------------------------------------------------- |
+| FR-1 | `pnpm test --filter provegate` | chain.test.ts      | both artifacts carry the normalized terminal value; the archive commit carries the regenerated state |
+| FR-1 | `pnpm test --filter provegate` | chain.test.ts      | two status lines, and zero, each refuse with neither file modified |
+| FR-2 | `pnpm test --filter provegate` | chain.test.ts      | already-terminal is a no-op and the run continues  |
+| FR-3 | `pnpm test --filter provegate` | cli.test.ts        | tracked lease deletion committed on the base; tree clean afterwards |
+| FR-3 | `pnpm test --filter provegate` | cli.test.ts        | untracked, absent, and recreated-by-another-claim each behave as §4 states |
+| FR-4 | `pnpm test --filter provegate` | cli-state.test.ts  | completed location plus present summary plus non-implemented status is NOT implemented |
+| FR-4 | `node packages/provegate/dist/cli.js queue --json` | repo corpus | implemented count is 38, exercising isImplemented on the real corpus |
+| FR-4 | `pnpm verify:doc-claims`       | published figures  | the Ship Verified figure stays 37                  |
+| FR-5 | `pnpm verify:deferred`         | board              | the closed row is gone, cap arithmetic holds       |
+| FR-5 | `pnpm smoke:adopter`           | adopter fixture    | both known-red entries gone, run green             |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -260,6 +344,10 @@ Before Phase 2 PASS, run: `gate check PRD-041`
 - DO NOT hardcode `Ship Verified`; read `statusVocab.complete`.
 - DO NOT write the status at merge time, where an auto-revert would silently undo it.
 - DO NOT add a second status-line regex; use the reader the state builder already uses.
+- DO NOT add a code path that pushes to a git remote, in the CLI or in CI.
+- DO NOT add a runtime dependency to `packages/provegate`, or any telemetry or network call.
+- DO NOT bypass a hook with `--no-verify`, and never swallow a hook's output.
+- DO NOT introduce method content that does not trace to the source snapshot or an addendum.
 
 ---
 
@@ -268,3 +356,5 @@ Before Phase 2 PASS, run: `gate check PRD-041`
 | Date       | Author | Changes                                                          |
 | ---------- | ------ | ---------------------------------------------------------------- |
 | 2026-08-07 | owner  | Initial draft — from the first external adopter run, both defects measured |
+| 2026-08-07 | owner  | Iteration 1 rework (Codex 6.2 ITERATE): `statusVocab.complete` does not exist — the terminal value now comes from `normalizeStatus(config.statusVocab, 'complete')` (`state/status.ts:28`), with both artifacts prevalidated before either is written and already-terminal an explicit no-op rather than a refusal; §6 gained the archive/merge/post-merge transition table with lease state and the exact retry command; FR-3 pinned to `merge.baseDir` after post-merge and before handoff, under the claim mutex, with five cases incl. a lease recreated by another claim; FR-4 removes BOTH fallbacks (location and summary presence); §7 carries the measured counts (39→38 implemented, Ship Verified 37 unmoved) and §11 asserts the predicate itself, not only the published figure; Migration & Rollback added; scope, surface, test paths and the project-wide DO NOTs corrected |
+

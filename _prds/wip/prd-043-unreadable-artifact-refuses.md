@@ -11,10 +11,14 @@
 > **PRD Class**: feature
 > **Class Rationale**: n/a — feature class.
 > **Autonomous Close**: eligible
-> **Value**: 3.60 (MF/UI/TL/AR/RM: 5/4/3/2/3)
+> **Value**: 3.45 (MF/UI/TL/AR/RM: 5/4/3/2/2)
 
-<!-- 0.25*5 + 0.25*4 + 0.20*3 + 0.15*2 + 0.15*3
-     = 1.25 + 1.00 + 0.60 + 0.30 + 0.45 = 3.60 -->
+<!-- 0.25*5 + 0.25*4 + 0.20*3 + 0.15*2 + 0.15*2
+     = 1.25 + 1.00 + 0.60 + 0.30 + 0.30 = 3.45 -->
+
+<!-- Value history: born 3.60 (RM 3) → iteration 1 ruled RM 2: a public export changes its
+runtime behaviour (it throws where it returned), and the parser it changes is read by the gate
+that authorizes every close. Accepted rather than argued. -->
 
 ---
 
@@ -75,42 +79,67 @@ so that a formatting mistake cannot silently drop my operator gate.
 
 ## 4. Functional Requirements
 
-1. **FR-1**: `readOperatorHandoff(content)` returns `{ count, problem }`. `problem` is non-null
-   for: a table with a header row and no separator row; a pipe table written without leading
-   and trailing pipes (the predicate is a header-row candidate followed by a separator-row
-   candidate, so ordinary prose containing `|` is never mistaken for a table); a ledger section
-   with no `Result` column; a ledger with two `Result` columns; a data row whose cell count
-   differs from its header's; and a document whose `scanDocument` returns a non-null
-   `unreliable` — the same signal `core/memory/artifacts.ts:641` already refuses on.
+1. **FR-1**: `readOperatorHandoff(content)` returns `{ count, problem }`, where a non-null
+   `problem` makes `count` **unusable** — not zero, not partial: no consumer may read the first
+   field without checking the second, and the tests assert that contract at each consumer
+   rather than asserting a number.
+   The predicates, closed:
+   - a **header candidate** is a line that begins and ends with an unescaped `|` and holds at
+     least one non-empty cell; a **separator candidate** is a line of only `|`, `-`, `:` and
+     whitespace with a cell count equal to the header candidate's.
+   - a **table block** is a header candidate immediately followed by a separator candidate; it
+     ends at the first line that is not boundary-piped. A header candidate NOT followed by a
+     separator candidate is a `problem` (`table at line N has no separator row`) — that shape
+     counts 2 today, per §7 of PRD-040.
+   - a **boundaryless** line (cells separated by `|` without leading and trailing pipes) is a
+     `problem` only when it is followed by a separator-shaped line; otherwise it is prose and is
+     ignored. Ordinary prose containing `|` is therefore never a table.
+   - **cells** split on unescaped pipes by backslash parity; a data row whose cell count differs
+     from its block header's is a `problem` naming the line and both counts.
+   - a ledger section with no `Result` column, or with two, is a `problem` naming the section.
+   - `scanDocument(content).unreliable !== null` is a `problem` naming the dangling construct.
+   Multiple problems are **aggregated**, reported in document order, and the first is the one a
+   refusal message leads with.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::readOperatorHandoff`
-2. **FR-2**: The exported `countOperatorHandoff(content): number` keeps its signature and
-   throws a named diagnostic error when `readOperatorHandoff` reports a problem. It is public
-   API — `core/state/index.ts` re-exports it and `scripts/adopter-smoke.sh` imports it from an
-   installed copy — so the signature may not change; returning a zero it cannot justify is the
-   defect this item closes, and throwing is the honest alternative.
-   - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`
-3. **FR-3**: `buildState` stores both results on `StateRecord.task` (`operatorHandoffCount` and
-   a new optional `operatorHandoffProblem`), and `operatorGateOk` refuses on
-   `record.task.operatorHandoffProblem` **before** the acceptance lookup — an unreadable
-   artifact is not a close that merely lacks a signature.
+2. **FR-2**: The exported `countOperatorHandoff(content): number` keeps its signature and throws
+   a **stable, exported** diagnostic identity — `OperatorHandoffUnreadableError` with a
+   `code: 'OPERATOR_HANDOFF_UNREADABLE'` — when `readOperatorHandoff` reports a problem. An
+   unchanged source signature is NOT runtime compatibility: a caller that received `0` now
+   receives an exception, and the changeset says so, names the export, and gives the migration
+   (call `readOperatorHandoff` and branch on `problem`). The throw is tested through the
+   INSTALLED package export, the way `scripts/adopter-smoke.sh` imports it, not through a
+   source-relative import.
+   - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`,
+     `packages/provegate/src/core/state/index.ts`
+3. **FR-3**: `buildState` stores both results on `StateRecord.task`: `operatorHandoffCount` and
+   a new optional `operatorHandoffProblem: string | null`. `operatorGateOk` refuses on the
+   problem **before** the acceptance lookup — an unreadable artifact is not a close that merely
+   lacks a signature.
    - **Targets:** `packages/provegate/src/core/state/build.ts::buildState`,
+     `packages/provegate/src/core/state/build.ts::StateRecord`,
      `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-4. **FR-4**: `lintPrd` gains a sixth parameter carrying the task read (`{ count, problem }`),
-   and `runCheck` passes `found.record.task` at `cli.ts:920`. `PrdReadyReport` gains
-   `warnings: string[]`, which `runCheck` prints without changing its exit code. A `problem` is
-   a **fatal** `issues` entry. The declaration/count contradiction PRD-040 enforces at the chain
-   and the merge gate is reported here as a non-fatal `warnings` entry when the task file
-   exists, and nothing is said when it does not — at Phase 2 the task file legitimately does not
-   exist yet. That warning lives here rather than in PRD-040 because it needs this parameter and
-   this plumbing; splitting one contract across two items half-specifies both. Both are asserted through the CLI with the arguments a user types, not
-   against `lintPrd` called one level below the production path.
+4. **FR-4**: `lintPrd` gains a sixth parameter
+   `task: { present: boolean; count: number; problem: string | null } | undefined`, and
+   `runCheck` passes `found.record.task` when the record has a task artifact and `undefined`
+   when it does not — **presence is part of the contract**, because "no task file" and "a task
+   file with zero rows" are different facts and a lint that cannot tell them apart cannot warn
+   correctly. `PrdReadyReport` gains `warnings: string[]`, printed by `runCheck` without
+   changing the exit code. A `problem` is a fatal `issues` entry; the declaration/count
+   contradiction PRD-040 enforces is reported here as a non-fatal warning, and only when
+   `present` is true.
    - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
      `packages/provegate/src/cli.ts::runCheck`
-5. **FR-5**: The audit from PRD-040 is re-run before this item ships and reports every existing
-   artifact that would newly REFUSE. A refusal on a historical artifact stops the work by
-   default: it means the corpus contains something the reader cannot parse, and that is a
-   finding about the reader, not about the corpus.
-   - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`
+5. **FR-5**: **Preflight, before any implementation:** PRD-040 must be merged, its grammar
+   fixtures present, and `scripts/audit-operator-rows.mjs` must exist and expose the
+   `--assert-acknowledged` interface PRD-040 defines. A missing or incompatible script fails the
+   preflight and the work does not start — this is a Phase-3/Phase-4 precondition, not a note.
+   The audit then gains a third population: artifacts that would newly **REFUSE** under FR-1.
+   Its fingerprint line and the acknowledgement it demands work exactly as PRD-040 specifies,
+   the decision is recorded in this PRD's Changelog, and the authorized actor is the owner. A
+   refusal on a historical artifact stops the work by default: it means the corpus contains
+   something the reader cannot parse, which is a finding about the reader.
+   - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`,
+     `_prds/wip/prd-043-unreadable-artifact-refuses.md`
 
 ---
 
@@ -220,25 +249,35 @@ therefore the only one it may assume.
   the honest label for this item: artifacts that passed silently will refuse. §7 states the
   blast radius, FR-5 measures it before the change ships, and a historical refusal is a default
   stop.
-- reviewed: `surface-set-without-its-predicate` — `core/gates/**` watch; FR-4 adds a parameter
-  and a predicate together, not an input set without one.
+- applied: `surface-set-without-its-predicate` — `core/gates/**` watch, and the record's exact
+  failure mode was in this item's first draft: FR-4 added an input (the task read) without the
+  predicate that says when it is absent. `present` closes it — the parameter and the predicate
+  that reads it now land together.
+- reviewed: `operator-row-must-be-a-table-row` — the record that started this family; PRD-040
+  closes it at the counting level and this item covers what happens when the shape cannot be
+  read at all. Nothing here re-decides what a row is.
 - reviewed: `exemption-marker-needs-no-prose` — `core/gates/prd-ready.ts` watch; no exemption
   syntax is added, so there is no author-typed field to close.
-- reviewed: `narrow-the-grammar-not-the-parser` — the refusals ARE the narrowing: what the
-  reader cannot parse is refused rather than approximated.
+- applied: `narrow-the-grammar-not-the-parser` — the refusals ARE the narrowing, and FR-1 now
+  states the predicates that draw the line (header candidate, separator candidate, block
+  boundary, cell parity, width equality) instead of describing the intention and leaving the
+  implementer to bound it.
 - reviewed: `a-rule-corrected-survives-where-it-is-restated` — `_prds/**` watch; the refusal
   list is restated in §4, §6 and §7, so a correction sweeps all three.
-- reviewed: `state-model-before-mechanism` — `_prds/wip/**` watch; the state model here is one
-  sentence and it is written before the mechanism: a read is either usable or it names why not,
-  and no consumer may act on the first field without checking the second.
+- applied: `state-model-before-mechanism` — `_prds/wip/**` watch. The state model is written
+  first and it has three states, not two: a read is usable, or it names why not, or the artifact
+  is absent — and FR-4's `present` field exists because the third state was missing from the
+  first draft, which is precisely what this record warns about.
 - reviewed: `two-parsers-wrong-together` — one reader serves both consumers; no second
   implementation is introduced that could agree with the first while both are wrong.
 
 ## Memory Outputs
 
-- none — the durable fact belongs to PRD-040's learning
-  (`count-every-shape-the-grammar-permits`), which this item extends rather than restates; a
-  second record saying "and refuse what you cannot read" would be the same lesson filed twice.
+- learning: `_brain/learnings/unreadable-input-needs-a-diagnostic-result.md` — a reader that
+  answers a question it could not read hands its consumers a number they cannot audit; the
+  durable shape is a result carrying its own problem, every consumer refusing on it before
+  acting, and the legacy numeric wrapper's compatibility consequence (an unchanged signature is
+  not unchanged runtime behaviour).
 
 ---
 
@@ -260,7 +299,9 @@ therefore the only one it may assume.
 
 ## Durable Artifacts
 
-- none
+- `_brain/learnings/unreadable-input-needs-a-diagnostic-result.md` — every Memory Output above
+  repeats here; the two lists are one contract and Phase 7 refuses when they disagree
+- ADR: `none`
 
 ---
 
@@ -304,4 +345,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | ---------- | ------ | ----------------------------------------------------------------------------------------- |
 | 2026-08-07 | owner  | Initial draft — split out of PRD-040 after two flat readiness rounds landed on this layer |
 | 2026-08-07 | owner  | Absorbed PRD-040's Phase-2 contradiction warning: it needs this item's `lintPrd` parameter and `runCheck` plumbing, and one contract split across two items half-specifies both. `PrdReadyReport.warnings` and the print-without-exit-change rule are stated here |
+| 2026-08-07 | owner  | Iteration 1 rework (Codex 6.4 ITERATE): FR-1 states the five predicates as a closed set (header candidate, separator candidate, block boundary, cell parity by backslash, width equality), aggregates problems in document order, and declares `count` UNUSABLE rather than zero when a problem exists; FR-2 gains a stable exported diagnostic identity (`OperatorHandoffUnreadableError` / `OPERATOR_HANDOFF_UNREADABLE`), states that an unchanged signature is not runtime compatibility, and is tested through the installed export; FR-3 adds `StateRecord` to Targets; FR-4 makes artifact PRESENCE part of the contract (`present` flag, `undefined` when absent) — the missing third state the first draft had; FR-5 converts the PRD-040 dependency into a hard preflight with the new refusal population and the owner as the authorized actor; Memory Outputs `none` replaced by a real learning; RM 3→2, value 3.60→3.45 |
 

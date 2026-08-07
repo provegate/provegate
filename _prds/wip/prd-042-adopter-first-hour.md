@@ -11,10 +11,14 @@
 > **PRD Class**: feature
 > **Class Rationale**: n/a — feature class.
 > **Autonomous Close**: eligible
-> **Value**: 3.75 (MF/UI/TL/AR/RM: 3/5/2/5/4)
+> **Value**: 3.45 (MF/UI/TL/AR/RM: 3/5/2/5/2)
 
-<!-- 0.25*3 + 0.25*5 + 0.20*2 + 0.15*5 + 0.15*4
-     = 0.75 + 1.25 + 0.40 + 0.75 + 0.60 = 3.75 -->
+<!-- 0.25*3 + 0.25*5 + 0.20*2 + 0.15*5 + 0.15*2
+     = 0.75 + 1.25 + 0.40 + 0.75 + 0.30 = 3.45 -->
+
+<!-- Value history: born 3.75 (RM 4) → iteration 1 ruled RM 2: this touches `gate new`, the
+readiness lint's view of a document, a drift detector's anchor, and a parity check, and every
+adopter traverses both `gate new` and QUICKSTART — which is also why AR stays 5. -->
 
 ---
 
@@ -88,32 +92,65 @@ so that my first close fails on my code and not on my paperwork.
 ## 4. Functional Requirements
 
 1. **FR-1**: `gate new --tasks <ID>` and `gate new --review <ID>` instantiate the shipped tasks
-   and review templates for an existing PRD, filling id, slug, dates and the cross-referenced
-   paths, refusing when the PRD does not exist or the target file already does (additive-only,
-   as `gate init` is).
+   and review templates for an existing PRD. The destination paths are derived from config, not
+   guessed:
+   `<dirs.artifacts.tasks.dir>/<dirs.stateRoles.wip>/<dirs.artifacts.tasks.prefix>-NNN-<slug>.md`
+   and `<dirs.reviewsDir>/review-NNN-<slug>.md`, where `NNN` is the id at
+   `idPattern.width` and `<slug>` is the PRD's own slug — the same shapes the phase-6 gate
+   reads. The two modes are mutually exclusive (`--tasks` with `--review` is a refusal, not a
+   both-at-once). The id must resolve to exactly one PRD: zero is a refusal naming the id, and
+   more than one is a refusal naming the candidates. Every write is `wx`-atomic and
+   containment-checked against the workspace root, exactly as `gate init` writes; an existing
+   destination is reported and left byte-untouched.
    - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`
-2. **FR-2**: `gate new` substitutes every template token the configuration can resolve —
-   the four `commands` entries, the memory root, the docs root — and prints the tokens it could
-   not resolve as a list the author must fill. An unresolvable token is reported, never left
-   silent.
+2. **FR-2**: `gate new` substitutes every template token whose value the configuration can
+   supply, from this closed table, in this precedence order:
+
+   | Token | Source | Precedence |
+   | ----- | ------ | ---------- |
+   | `{{CMD_CHECK_TYPES}}` | `config.commands.checkTypes` | config only |
+   | `{{CMD_LINT}}` | `config.commands.lint` | config only |
+   | `{{CMD_TEST}}` | `config.commands.test` | config only |
+   | `{{CMD_BUILD}}` | `config.commands.build` | config only |
+   | `{{CMD_TEST_SCOPED}}` | `config.prompts.values.CMD_TEST_SCOPED`, else `config.commands.test` | prompts value wins |
+   | `{{MEMORY_ROOT}}` | `config.memory.root` | config only |
+   | `{{DOCS_ROOT}}` | `config.prompts.values.DOCS_ROOT`, else the summary artifact dir | prompts value wins |
+
+   That is seven tokens — the exact set the adopter run found unsubstituted. A source whose
+   value is absent or an empty string is **not** a substitution: the token stays, and it joins
+   the unknown list. Unknown tokens are reported once each, sorted, deduplicated, on stdout as
+   a single `[new] unresolved tokens: …` line; the command still exits 0, because an unresolved
+   token is work for the author, not a failure of the command.
    - **Targets:** `packages/provegate/src/core/run/new.ts`
-3. **FR-3**: When `memory.enabled` is false, `gate new` omits the Memory Inputs and Memory
-   Outputs sections rather than shipping a contract that does not apply. A section that cannot
-   be enforced is instruction the reader must ignore.
+3. **FR-3**: When `memory.enabled` is false, `gate new` omits the `## Memory Inputs` and
+   `## Memory Outputs` sections — heading line through the last line before the next
+   `## ` heading at column zero, inclusive of the trailing `---` separator that belongs to the
+   removed section and nothing beyond it. The lint must agree that absence is legal when the
+   contract is off and fatal when it is on; a PRD created this way in a memory-enabled
+   repository must still fail `gate check`, so the omission can never be used to escape a
+   contract the repository has enabled.
    - **Targets:** `packages/provegate/src/core/run/new.ts`
-4. **FR-4**: The phase-6 stop names the artifact path it expected and the ledger row it reads,
-   in the message itself — not in a document the reader has to find.
-   - **Targets:** `packages/provegate/src/core/gates/review.ts`
-5. **FR-5**: `gate new` instantiates a RENDERED template: the id anchor matches both the
-   `{{ID_PREFIX}}` form and the substituted form, so a repository that installs its own prompt
-   store can still create work items. Template drift stays an error; a rendered template is not
-   drift.
+4. **FR-4**: The phase-6 stop names the artifact path it expected and the ledger row it reads.
+   The message is built in `buildGateChain` (`core/run/chain.ts`, the
+   `no tasks file — independent-review ledger missing` arm), and it must carry the configured
+   expected task path and the required `independent-review` row's columns (`Gate`,
+   `Command / Check` naming the review artifact path, `Result` = `passed`).
+   - **Targets:** `packages/provegate/src/core/run/chain.ts::buildGateChain`
+5. **FR-5**: `gate new` instantiates a RENDERED template. The id anchor becomes a closed
+   two-member alternation: the literal `{{ID_PREFIX}}` form, or exactly
+   `escapeRegExp(config.idPattern.prefix)` — nothing else. A foreign prefix, a malformed
+   heading, an absent anchor, and two competing anchors in one template each stay a
+   template-drift refusal, with a deny test apiece. Wildcard prefix matching is forbidden: it
+   would turn drift detection into a heading search.
    - **Targets:** `packages/provegate/src/core/run/new.ts::substituteAnchor`
-6. **FR-6**: QUICKSTART introduces the manifest before the close that executes it, in both
-   copies the parity check holds together, and the practices NEXT_STEPS heading numbering is
-   corrected.
+6. **FR-6**: In both quickstart copies, the manifest heading and its recipe precede the close
+   section (`## 5. Close` in `QUICKSTART.md` and its twin heading in the docs copy), so a linear
+   reader wires the floor before running the command that executes it. `verify:quickstart-parity`
+   gains a structural order assertion — command-sequence equality alone cannot see prose order,
+   and an unasserted ordering claim is the kind of documentation this repository already refuses.
+   The practices `NEXT_STEPS.md` duplicate `## 7` heading is corrected in the same pass.
    - **Targets:** `packages/provegate/QUICKSTART.md`, `apps/docs/content/docs/quickstart.mdx`,
-     `packages/provegate/practices/NEXT_STEPS.md`
+     `scripts/verify/verify-quickstart-parity.mjs`, `packages/provegate/practices/NEXT_STEPS.md`
 
 ---
 
@@ -130,14 +167,25 @@ so that my first close fails on my code and not on my paperwork.
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
-- **Given** an existing PRD, **When** `gate new --tasks PRD-001` runs, **Then** the task file
-  appears at the path the phase-6 gate reads, and re-running refuses instead of overwriting.
-- **Given** a repository with `memory.enabled: false`, **When** `gate new` runs, **Then** the
-  new PRD has no Memory Inputs or Memory Outputs section.
-- **Given** a repository whose configured template is rendered, **When** `gate new` runs,
-  **Then** the item is created.
+- **Given** an existing PRD, **When** `gate new --tasks PRD-001` runs, **Then** the file appears
+  at `<tasks.dir>/wip/tasks-001-<slug>.md` and the phase-6 gate finds it; re-running reports the
+  existing file and leaves it byte-identical.
+- **Given** `--tasks` and `--review` together, or an id matching zero or two PRDs, **When**
+  `gate new` runs, **Then** each is its own named refusal.
+- **Given** a repository whose `config.commands.lint` is an empty string, **When** `gate new`
+  runs, **Then** `{{CMD_LINT}}` stays in the file and appears once in the sorted unresolved-token
+  line, and the command exits 0.
+- **Given** a repository with `memory.enabled: false`, **When** `gate new` runs, **Then** the new
+  PRD has no Memory Inputs or Memory Outputs section and `gate check` passes it.
+- **Given** the same PRD copied into a repository with `memory.enabled: true`, **When**
+  `gate check` runs, **Then** it fails for the missing sections.
+- **Given** a repository whose configured template is rendered, **When** `gate new` runs, **Then**
+  the item is created; **Given** a template carrying a foreign prefix, a malformed heading, no
+  anchor, or two competing anchors, **Then** each refuses as template drift.
 - **Given** a close with no tasks file, **When** phase 6 stops, **Then** the message names the
-  expected path and the required row.
+  configured expected path and the `independent-review` row's required columns.
+- **Given** either quickstart copy, **When** `verify:quickstart-parity` runs, **Then** it fails
+  when the manifest recipe follows the close section in that copy.
 
 ---
 
@@ -169,10 +217,12 @@ the same commit or the check fails, which is the point of it.
 
 - [ ] `packages/provegate/src/core/run/new.ts`
 - [ ] `packages/provegate/src/cli.ts`
-- [ ] `packages/provegate/src/core/gates/review.ts`
+- [ ] `packages/provegate/src/core/run/chain.ts`
 - [ ] `packages/provegate/QUICKSTART.md`, `apps/docs/content/docs/quickstart.mdx`
+- [ ] `scripts/verify/verify-quickstart-parity.mjs`
 - [ ] `packages/provegate/practices/NEXT_STEPS.md`
-- [ ] `packages/provegate/test/new.test.ts`
+- [ ] `packages/provegate/test/new.test.ts`, `packages/provegate/test/prd-ready.test.ts`,
+      `packages/provegate/test/chain.test.ts`
 
 ---
 
@@ -193,37 +243,44 @@ the same commit or the check fails, which is the point of it.
 
 ## Memory Inputs
 
-- applied: `quickstart-is-a-fixture` — FR-6 moves prose in the document the parity check
-  executes, so both copies move in one commit and the tagged region stays runnable.
-- applied: `derive-the-requirement-from-the-consumer` — FR-2 takes its token set from what the
-  consumer can answer (`config.commands`, the roots) rather than from the template's full
-  catalogue; a token nothing can resolve is reported, not demanded.
-- applied: `shipped-content-needs-a-delivery-gate` — the whole item exists because packaging
-  proved nothing about delivery; the adopter smoke is the gate that measured it and FR-2's
-  test asserts the delivered artifact, not the template source.
-- applied: `metadata-declares-what-it-cannot-provide` — FR-3 is that rule for the memory
-  sections: a contract shipped into a repository that cannot enforce it declares a capability
-  with no asset.
-- applied: `assert-absent-needs-an-independent-cause` — FR-3's test must prove the sections are
-  absent because memory is off, not because the fixture template lacked them.
-- reviewed: `evidence-pattern-satisfied-by-the-template` — `templates/**` watch; FR-1
-  instantiates templates whose placeholder lines must not satisfy any gate's required-line
-  check, so the instantiated fixtures are asserted against the gates, not against the template.
-- reviewed: `docs-are-a-wiring-surface` — `practices/**` watch; FR-6 edits NEXT_STEPS
-  numbering only and registers or deregisters nothing.
+- applied: `quickstart-is-a-fixture` — binding, not cited: FR-6 moves prose inside the document
+  the parity check executes, so both copies move in one commit AND the check gains the order
+  assertion that makes the claim testable. The §11 row for FR-6 is that assertion.
+- applied: `derive-the-requirement-from-the-consumer` — FR-2's token table IS the record's rule
+  applied: the set is taken from what the configuration can answer, each row naming its source
+  and its precedence, and a token nothing can resolve is reported rather than demanded. The
+  binding test is the empty-value row in §11.
+- applied: `shipped-content-needs-a-delivery-gate` — the item exists because packaging proved
+  nothing about delivery. Binding form: FR-2's assertions run against the INSTANTIATED artifact,
+  never against the template source, and `pnpm smoke:adopter` stays in the floor so the
+  delivered CLI is what gets measured.
+- applied: `metadata-declares-what-it-cannot-provide` — FR-3 removes a contract a repository
+  cannot enforce. Binding form: the §11 pair that proves absence passes with memory off and
+  FAILS with memory on — the second half is what stops the omission becoming an escape hatch.
+- applied: `assert-absent-needs-an-independent-cause` — FR-3's absence test uses a template that
+  HAS the sections and a config that disables memory, so absence can only come from the
+  omission; a fixture whose template lacked them would prove nothing.
+- applied: `evidence-pattern-satisfied-by-the-template` — FR-1 instantiates templates whose
+  placeholder lines must not satisfy any gate. Binding form: the FR-4 §11 row asserts the
+  phase-6 gate against an instantiated ledger, so a template placeholder cannot stand in for a
+  recorded review.
+- applied: `strictness-added-during-extraction-is-a-behavior-change` — FR-5 LOOSENS a drift
+  detector, which is the same class in the opposite direction. Binding form: the four deny tests
+  (foreign prefix, malformed heading, absent anchor, competing anchors) pin what must still
+  refuse after the alternation widens.
+- applied: `a-rule-corrected-survives-where-it-is-restated` — the seven-token set is restated in
+  §1, §2's metric, §4's table and §11. FR-2's table is the single source; a correction sweeps all
+  four, and the §11 count row is what catches a stale restatement.
+- reviewed: `docs-are-a-wiring-surface` — `practices/**` watch; FR-6 corrects heading numbering
+  in NEXT_STEPS and registers or deregisters nothing.
 - reviewed: `fixture-must-reach-production-shape` — `cli.ts` watch; FR-1's tests drive the CLI
   entry point with the argument shapes a user types, not the helper beneath it.
-- reviewed: `strictness-added-during-extraction-is-a-behavior-change` — `core/run/**` watch;
-  FR-5 loosens an anchor rather than tightening one, and FR-1's refusals are new paths on a
-  command that previously had no such argument.
-- reviewed: `surface-set-without-its-predicate` — `core/gates/**` watch via `review.ts`; FR-4
-  rewrites a stop message and touches neither the input set the gate reads nor its predicate.
-- reviewed: `gate-run-resume-after-archive` — `core/run/**` watch via `new.ts`; this item
-  instantiates artifacts before a run and changes nothing about resuming a stopped close.
-- reviewed: `narrow-the-grammar-not-the-parser` — FR-3 removes whole sections by the same
-  heading grammar the reader already uses; no new Markdown reading is introduced.
-- reviewed: `a-rule-corrected-survives-where-it-is-restated` — `_prds/**` watch; the token list
-  is restated in §1, §2 and §4, so a correction sweeps all three.
+- reviewed: `surface-set-without-its-predicate` — `core/gates/**` is no longer a target (FR-4
+  moved to `chain.ts`), and no input set changes hands.
+- reviewed: `narrow-the-grammar-not-the-parser` — FR-3 removes sections by the heading grammar
+  the reader already uses; no new Markdown reading is introduced.
+- reviewed: `gate-run-resume-after-archive` — `core/run/**` watch via `new.ts` and `chain.ts`;
+  this item instantiates artifacts and rewrites one message, and changes nothing about resuming.
 
 ## Memory Outputs
 
@@ -236,12 +293,15 @@ the same commit or the check fails, which is the point of it.
 ## Conflict Surface
 
 - `packages/provegate/src/core/run/new.ts`
-- `packages/provegate/src/core/gates/review.ts`
+- `packages/provegate/src/core/run/chain.ts`
 - `packages/provegate/src/cli.ts`
 - `packages/provegate/QUICKSTART.md`
 - `apps/docs/content/docs/quickstart.mdx`
+- `scripts/verify/verify-quickstart-parity.mjs`
 - `packages/provegate/practices/NEXT_STEPS.md`
 - `packages/provegate/test/new.test.ts`
+- `packages/provegate/test/prd-ready.test.ts`
+- `packages/provegate/test/chain.test.ts`
 
 ---
 
@@ -255,14 +315,17 @@ the same commit or the check fails, which is the point of it.
 
 ## 11. Verification Commands
 
-| FR   | Command / Check                | Scope                  | Notes                                     |
-| ---- | ------------------------------ | ---------------------- | ----------------------------------------- |
-| FR-1 | `pnpm test --filter provegate` | new.test.ts            | tasks + review instantiated, re-run refuses |
-| FR-2 | `pnpm test --filter provegate` | new.test.ts            | no resolvable token survives, rest reported |
-| FR-3 | `pnpm test --filter provegate` | new.test.ts            | memory sections absent when contract is off |
-| FR-4 | `pnpm test --filter provegate` | chain.test.ts          | the stop names path and row                |
-| FR-5 | `pnpm test --filter provegate` | new.test.ts            | rendered template instantiates             |
-| FR-6 | `pnpm verify:quickstart-parity` | both quickstart copies | the tagged region still runs               |
+| FR   | Command / Check                 | Scope                  | Notes                                                     |
+| ---- | ------------------------------- | ---------------------- | --------------------------------------------------------- |
+| FR-1 | `pnpm test --filter provegate`  | new.test.ts            | both modes write the configured paths; re-run reports and leaves bytes |
+| FR-1 | `pnpm test --filter provegate`  | new.test.ts            | both modes together, id matching zero, id matching two — three refusals |
+| FR-2 | `pnpm test --filter provegate`  | new.test.ts            | all seven tokens substituted from the §4 table; empty value keeps the token |
+| FR-2 | `pnpm test --filter provegate`  | new.test.ts            | unresolved tokens reported once, sorted, exit code 0       |
+| FR-3 | `pnpm test --filter provegate`  | new.test.ts            | memory sections absent when the contract is off            |
+| FR-3 | `pnpm test --filter provegate`  | prd-ready.test.ts      | absence passes with memory off, fails with memory on       |
+| FR-4 | `pnpm test --filter provegate`  | chain.test.ts          | the stop names the configured path and the ledger row columns |
+| FR-5 | `pnpm test --filter provegate`  | new.test.ts            | rendered template instantiates; four drift shapes each refuse |
+| FR-6 | `pnpm verify:quickstart-parity` | both quickstart copies | order assertion fails when the recipe follows the close section |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -291,3 +354,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | Date       | Author | Changes                                                      |
 | ---------- | ------ | ------------------------------------------------------------ |
 | 2026-08-07 | owner  | Initial draft — the hand-work measured in the first adopter run |
+| 2026-08-07 | owner  | Iteration 1 rework (Codex 6.1 ITERATE): FR-1 destination paths derived from `dirs.artifacts.tasks` / `dirs.reviewsDir` with exact-id resolution, mutually exclusive modes, `wx`-atomic contained writes and three refusals; FR-2 replaced by a closed seven-row token→source table with precedence, empty-value behaviour, sorted unique reporting and exit 0; FR-3 states the removal grammar and the memory-on failure that stops it becoming an escape hatch; FR-4 retargeted to `chain.ts::buildGateChain` (the message lives there, not in `review.ts`) and names the required ledger columns; FR-5 closed to a two-member anchor alternation with four deny tests and wildcards forbidden; FR-6 adds the structural order assertion to the parity verifier; every memory input rewritten to name the test that binds it; RM 4→2, value 3.75→3.45 |
+
