@@ -538,6 +538,19 @@ export function buildGateChain(options: {
           // say so is a puzzle, not a gate.
           const tasksKind = config.dirs.artifacts.tasks;
           const expected = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${String(record.number).padStart(config.idPattern.width, '0')}-${record.slug}.md`;
+          // A prefix carrying a path separator names a file the state reader
+          // can never index, and `gate new --tasks` refuses it (phase-6 round
+          // 9, Medium). Recommending that command here would send an adopter
+          // to a refusal instead of to the configuration that caused it.
+          if (/[\\/]/.test(tasksKind.prefix)) {
+            return {
+              ok: false,
+              why:
+                `dirs.artifacts.tasks.prefix ("${tasksKind.prefix}") contains a path separator, ` +
+                'so the task artifact would be written where the state reader cannot index it — ' +
+                'fix the prefix before creating the file',
+            };
+          }
           return {
             ok: false,
             why:

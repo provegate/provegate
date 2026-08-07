@@ -1013,3 +1013,32 @@ describe('phase-6 round 8 fixes (PRD-042)', () => {
     expect(tasks).not.toContain('_docs/reviews/');
   });
 });
+
+describe('phase-6 round 9 fixes (PRD-042)', () => {
+  it('treats an id prefix containing $& as literal bytes', () => {
+    const root = tempRoot();
+    const config = { ...cfg, idPattern: { ...cfg.idPattern, prefix: '$&' } };
+    const path = join(root, 'dollar-prefix.md');
+    writeFileSync(path, readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', '$&'));
+    const text = readFileSync(
+      createPrd(config, root, { slug: 'dollar-prefix', templatePath: path }).path,
+      'utf8',
+    );
+    // A replacement STRING would have expanded `$&` to the matched heading.
+    expect(text).toContain('# $&-001: ');
+    expect(text).not.toContain('# # ');
+  });
+
+  it('does not rescan its own output when writing the review path', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      dirs: { ...cfg.dirs, reviewsDir: 'audits/review-XXX-{short-name}.md' },
+    };
+    createPrd(config, root, { slug: 'rescan' });
+    const tasks = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    // The directory's own bytes must survive: a second pass over the first
+    // pass's output rewrote them.
+    expect(tasks).toContain('audits/review-XXX-{short-name}.md/review-001-rescan.md');
+  });
+});

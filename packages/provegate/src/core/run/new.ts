@@ -192,11 +192,18 @@ export function fencedLines(lines: string[]): boolean[] {
 
 /** Substitute one anchored line; a missing anchor is a template-drift ERROR,
  * never a silent skip (W4). */
-function substituteAnchor(content: string, anchor: RegExp, replacement: string): string {
+function substituteAnchor(
+  content: string,
+  anchor: RegExp,
+  replacement: string | (() => string),
+): string {
   if (!anchor.test(content)) {
     throw new Error(`template anchor not found: ${anchor} — template drifted from gate new`);
   }
-  return content.replace(anchor, replacement);
+  // A CALLBACK replacement wherever configured bytes are involved (phase-6
+  // round 9, High): configuration accepts any prefix, and a prefix of `$&`
+  // used as a replacement string expanded to the matched heading.
+  return content.replace(anchor, typeof replacement === 'string' ? () => replacement : replacement);
 }
 
 /**
@@ -423,12 +430,12 @@ export function instantiateTemplate(
   // unchanged and the example rewritten.
   const anchorLine = assertSingleIdAnchor(config, template);
   const templateLines = template.split('\n');
-  templateLines[anchorLine] = templateLines[anchorLine]!.replace(idAnchor(config), `# ${id}: `);
+  templateLines[anchorLine] = templateLines[anchorLine]!.replace(idAnchor(config), () => `# ${id}: `);
   let out = templateLines.join('\n');
-  out = out.replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
-  out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`);
-  out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`);
-  out = substituteAnchor(out, /^> \*\*Slug\*\*: `\[short-name\]`$/m, `> **Slug**: \`${slug}\``);
+  out = out.replaceAll('{{ID_PREFIX}}', () => config.idPattern.prefix);
+  out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, () => `> **Created**: ${date}`);
+  out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, () => `> **Updated**: ${date}`);
+  out = substituteAnchor(out, /^> \*\*Slug\*\*: `\[short-name\]`$/m, () => `> **Slug**: \`${slug}\``);
   // Class anchor is ALWAYS validated (a template whose class line vanished is
   // drift even when --class is absent). The default is the FIRST configured
   // class, not the template's literal: a config without `feature` must never
@@ -436,7 +443,7 @@ export function instantiateTemplate(
   out = substituteAnchor(
     out,
     /^> \*\*PRD Class\*\*: feature$/m,
-    `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
+    () => `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
   );
   // Status anchor is verified even though its value is already correct — a
   // template whose lifecycle line vanished should fail loudly here too.
@@ -447,7 +454,7 @@ export function instantiateTemplate(
   out = substituteAnchor(
     out,
     /^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/m,
-    `| ${date} | [role] | Initial draft |`,
+    () => `| ${date} | [role] | Initial draft |`,
   );
   // A contract the repository cannot enforce is instruction the reader must
   // ignore (PRD-042 FR-3). When memory is off, the two sections come out; when
@@ -716,27 +723,31 @@ export function createCompanion(
     const hops = normalize(relPath).length - 1;
     const prdLink = `${'../'.repeat(hops)}${normalize(prdRel).join('/')}`;
     content = template
-      .replace(/^# Tasks: \[Feature Name\]$/m, `# Tasks: ${canonicalId} — ${slug}`)
+      .replace(/^# Tasks: \[Feature Name\]$/m, () => `# Tasks: ${canonicalId} — ${slug}`)
       .replace(
         /^> \*\*PRD\*\*: \[prd-XXX-\{short-name\}\.md\]\([^)]*\)$/m,
-        `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](${prdLink})`,
+        () => `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](${prdLink})`,
       )
-      .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`)
-      .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`)
-      .replaceAll('prd-XXX-{short-name}.md', `${prdKind.prefix}-${number}-${slug}.md`)
+      .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, () => `> **Created**: ${date}`)
+      .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, () => `> **Updated**: ${date}`)
+      .replaceAll('prd-XXX-{short-name}.md', () => `${prdKind.prefix}-${number}-${slug}.md`)
       // The ledger's review path comes from CONFIG (phase-6 round 7, High):
       // it hardcoded `_docs/reviews/` while `gate new --review` writes to
       // `dirs.reviewsDir`, so under any custom reviews directory the two
       // commands produced artifacts Phase 6 could not connect.
-      // Literal replacement (phase-6 round 8, High — introduced by round 7's
-      // own fix): a string replacement interprets `$&`, so a configured
-      // `reviewsDir` containing it expanded to the matched template text. Same
-      // class as the token pass's `$&` defect, one function over.
-      .replaceAll(
-        '`_docs/reviews/review-XXX-{short-name}.md`',
-        () => `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
-      )
-      .replaceAll('review-XXX-{short-name}.md', `review-${number}-${slug}.md`);
+      // ONE pass over both review spellings (phase-6 round 9, High): the
+      // literal-replacement fix still ran a SECOND `replaceAll` over the first
+      // one's output, so a `reviewsDir` that itself contains
+      // `review-XXX-{short-name}.md` had its own bytes rewritten. Alternation
+      // with a callback means each site is visited once and no output is
+      // rescanned.
+      .replace(
+        /`_docs\/reviews\/review-XXX-\{short-name\}\.md`|review-XXX-\{short-name\}\.md/g,
+        (match) =>
+          match.startsWith('`')
+            ? `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``
+            : `review-${number}-${slug}.md`,
+      );
     content = substituteConfiguredTokens(config, content);
   } else {
     relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
@@ -754,9 +765,9 @@ export function createCompanion(
     content = template
       .replace(
         /^# Independent Review: \{\{ID_PREFIX\}\}-XXX — \[Feature Name\]$/m,
-        `# Independent Review: ${canonicalId} — ${slug}`,
+        () => `# Independent Review: ${canonicalId} — ${slug}`,
       )
-      .replace(/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/m, `> **PRD:** ${canonicalId}`)
+      .replace(/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/m, () => `> **PRD:** ${canonicalId}`)
       .replace(/^> \*\*Verdict:\*\* .*$/m, '> **Verdict:**')
       .replace(/^> \*\*Reviewer:\*\* .*$/m, '> **Reviewer:**')
       .replace(/^> \*\*Base SHA:\*\* .*$/m, '> **Base SHA:**')
@@ -764,7 +775,7 @@ export function createCompanion(
       .replace(/^> \*\*High:\*\* .*$/m, '> **High:**')
       .replace(/^> \*\*Medium:\*\* .*$/m, '> **Medium:**')
       .replace(/^> \*\*Quorum:\*\* .*$/m, '> **Quorum:**')
-      .replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
+      .replaceAll('{{ID_PREFIX}}', () => config.idPattern.prefix);
   }
 
   const full = containedPath(root, relPath);
