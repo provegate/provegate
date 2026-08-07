@@ -293,8 +293,12 @@ describe('gate new argument grammar (PRD-042 FR-1)', () => {
     const root = tempRoot();
     createPrd(cfg, root, { slug: 'item' });
     const r = (await cli(root, ['a-slug', '--tasks', 'PRD-001'])) as { stderr: string };
-    expect(r.stderr).toContain('takes exactly one id');
+    // Round 7 sharpened the message: a positional BEFORE the flag is refused by
+    // position, since the declared production is `--tasks <ID>`.
+    expect(r.stderr).toContain('the id follows --tasks');
     expect(r.stderr).toContain('"a-slug"');
+    const after = (await cli(root, ['--tasks', 'PRD-001', 'extra'])) as { stderr: string };
+    expect(after.stderr).toContain('takes exactly one id');
   });
 
   it('--class beside --review refuses', async () => {
@@ -966,5 +970,33 @@ describe('phase-6 round 6 fixes (PRD-042)', () => {
     );
     expect(text).toContain('```text\na\n\n\n\nb\n```');
     expect(text).not.toContain('## Memory Inputs');
+  });
+});
+
+describe('phase-6 round 7 fixes (PRD-042)', () => {
+  const rendered = () =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', cfg.idPattern.prefix);
+
+  it('writes the ledger review path from the configured reviews directory', () => {
+    const root = tempRoot();
+    const config = { ...cfg, dirs: { ...cfg.dirs, reviewsDir: 'audits/independent' } };
+    createPrd(config, root, { slug: 'custom-reviews' });
+    const tasks = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    const review = createCompanion(config, root, 'review', 'PRD-001');
+    // The two commands must agree, or Phase 6 cannot connect the artifacts.
+    expect(review.relPath).toBe('audits/independent/review-001-custom-reviews.md');
+    expect(tasks).toContain('audits/independent/review-001-custom-reviews.md');
+    expect(tasks).not.toContain('_docs/reviews/');
+  });
+
+  it('refuses an indented or tab-separated foreign heading', () => {
+    for (const foreign of ['   # RFC-XXX: foreign', '#\tRFC-XXX: foreign']) {
+      const root = tempRoot();
+      const path = join(root, 'atx.md');
+      writeFileSync(path, rendered().replace('# PRD-XXX: ', `${foreign}\n\n# PRD-XXX: `));
+      expect(() => createPrd(cfg, root, { slug: 'atx', templatePath: path }), foreign).toThrow(
+        /id-shaped heading/,
+      );
+    }
   });
 });

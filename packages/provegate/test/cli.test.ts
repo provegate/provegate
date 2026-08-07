@@ -110,3 +110,11 @@ describe('gate new argument arity (PRD-042, phase-6 round 1)', () => {
     expect(result.stderr).toContain('one slug per PRD');
   });
 });
+
+describe('gate new id position (PRD-042, phase-6 round 7)', () => {
+  it('refuses an id that precedes its flag', async () => {
+    const result = await cli('new', 'prd-001', '--tasks');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('the id follows --tasks');
+  });
+});

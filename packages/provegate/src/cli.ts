@@ -335,8 +335,23 @@ function runNew(args: string[]): number {
     // `--tasks PRD-001` (two tokens) and `--tasks=PRD-001` are both accepted;
     // anything else positional alongside them is ambiguous.
     const inline = artifactFlag.includes('=') ? artifactFlag.split('=').slice(1).join('=') : undefined;
-    const id = inline ?? positional[0];
-    const extras = inline === undefined ? positional.slice(1) : positional;
+    // The id must FOLLOW its flag (phase-6 round 7, High). Taking the first
+    // positional regardless of order made `gate new prd-001 --tasks` write a
+    // tasks artifact, although the declared production is `--tasks <ID>` and
+    // that positional is slug-shaped — the command answered a question the
+    // author did not ask.
+    const flagAt = args.indexOf(artifactFlag);
+    const after = args.slice(flagAt + 1).filter((a) => !a.startsWith('--'));
+    const before = args.slice(0, flagAt).filter((a) => !a.startsWith('--'));
+    if (inline === undefined && before.length > 0) {
+      console.error(
+        `[new] the id follows --${kind}; "${before[0]}" precedes it — ` +
+          `write \`gate new --${kind} <ID>\``,
+      );
+      return 1;
+    }
+    const id = inline ?? after[0];
+    const extras = inline === undefined ? after.slice(1) : [...before, ...after];
     if (extras.length > 0) {
       const got = inline === undefined ? positional : [inline, ...positional];
       console.error(

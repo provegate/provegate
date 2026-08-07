@@ -222,7 +222,10 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): number {
   // A configured prefix may contain spaces (`AC ME`), so "first token" is the
   // wrong unit (phase-6 round 6, High). The shape is: a level-one heading whose
   // text begins with something ending in `-XXX:`.
-  const shaped = /^# .*?-XXX:/;
+  // The full ATX H1 shape (phase-6 round 7, High): up to three leading spaces,
+  // `#`, then a space OR a tab. `#\tRFC-XXX:` and `   # RFC-XXX:` are headings
+  // a renderer honours, and the guard has to see what the renderer sees.
+  const shaped = /^ {0,3}#[ \t].*?-XXX:/;
   const canonical: number[] = [];
   const foreign: number[] = [];
   lines.forEach((line, i) => {
@@ -721,6 +724,14 @@ export function createCompanion(
       .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`)
       .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`)
       .replaceAll('prd-XXX-{short-name}.md', `${prdKind.prefix}-${number}-${slug}.md`)
+      // The ledger's review path comes from CONFIG (phase-6 round 7, High):
+      // it hardcoded `_docs/reviews/` while `gate new --review` writes to
+      // `dirs.reviewsDir`, so under any custom reviews directory the two
+      // commands produced artifacts Phase 6 could not connect.
+      .replaceAll(
+        '`_docs/reviews/review-XXX-{short-name}.md`',
+        `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
+      )
       .replaceAll('review-XXX-{short-name}.md', `review-${number}-${slug}.md`);
     content = substituteConfiguredTokens(config, content);
   } else {

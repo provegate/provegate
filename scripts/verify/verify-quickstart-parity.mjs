@@ -155,10 +155,17 @@ for (const spec of DOCS) {
   // indented `~~~` pair could hide the real Close heading. Two parsers over one
   // grammar is how they agree while both are wrong; there is one now.
   const fenced = fencedLines(lines);
-  const findUnique = (heading) => {
-    const hits = lines.map((l, i) => (!fenced[i] && l === heading ? i : -1)).filter((i) => i >= 0);
-    return hits;
+  // ATX grammar, not raw equality (phase-6 round 7, High): `## 5. Close ##` is
+  // the SAME heading to a renderer, so prepending a closing-sequence form left
+  // the exact string unique while a rendered Close preceded the recipe.
+  const headingText = (line) => {
+    const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*(?:#+[ \t]*)?$/.exec(line);
+    return m ? `${m[1]} ${m[2]}` : null;
   };
+  const findUnique = (heading) =>
+    lines
+      .map((l, i) => (!fenced[i] && headingText(l) === heading ? i : -1))
+      .filter((i) => i >= 0);
   const beforeHits = findUnique(ORDER.before);
   const afterHits = findUnique(ORDER.after);
   if (beforeHits.length !== 1 || afterHits.length !== 1) {
