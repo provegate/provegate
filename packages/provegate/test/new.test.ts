@@ -920,3 +920,51 @@ describe('phase-6 round 5 fixes (PRD-042)', () => {
     ]);
   });
 });
+
+describe('phase-6 round 6 fixes (PRD-042)', () => {
+  const rendered = (prefix = cfg.idPattern.prefix) =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', prefix);
+
+  it('refuses a foreign anchor when the configured prefix contains a space', () => {
+    const root = tempRoot();
+    const config = { ...cfg, idPattern: { ...cfg.idPattern, prefix: 'AC ME' } };
+    const path = join(root, 'spaced.md');
+    writeFileSync(path, rendered('AC ME').replace('# AC ME-XXX: ', '# RFC ALT-XXX: foreign\n\n# AC ME-XXX: '));
+    expect(() => createPrd(config, root, { slug: 'spaced', templatePath: path })).toThrow(
+      /id-shaped heading/,
+    );
+  });
+
+  it('refuses an artifact prefix that is a path fragment', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'nested-prefix' });
+    const config = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: { ...cfg.dirs.artifacts, tasks: { dir: '_tasks', prefix: 'nested/tasks' } },
+      },
+    };
+    // The state reader matches basenames, so a nested prefix writes a file it
+    // can never index — and Phase 6 would keep reporting it missing.
+    expect(() => createCompanion(config, root, 'tasks', 'PRD-001')).toThrow(/filename prefix/);
+  });
+
+  it('does not reformat blank runs far from the removal seam', () => {
+    const root = tempRoot();
+    const path = join(root, 'blanks.md');
+    // Three blank lines inside a fenced example, nowhere near the memory
+    // sections: they must survive verbatim.
+    const base = rendered().replace(
+      '## 12. DO NOT (Anti-Patterns)',
+      '```text\na\n\n\n\nb\n```\n\n## 12. DO NOT (Anti-Patterns)',
+    );
+    writeFileSync(path, base);
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'blank-runs', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).toContain('```text\na\n\n\n\nb\n```');
+    expect(text).not.toContain('## Memory Inputs');
+  });
+});

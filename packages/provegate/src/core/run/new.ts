@@ -219,7 +219,10 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): number {
   // non-empty prefix, so `2FA`, `_RFC` and `RFC-ALT` are all legal ids
   // somewhere. The shape is "a heading whose first token ends in `-XXX:`",
   // which is what the anchor grammar means, rather than an ASCII-word guess.
-  const shaped = /^# \S+-XXX:/;
+  // A configured prefix may contain spaces (`AC ME`), so "first token" is the
+  // wrong unit (phase-6 round 6, High). The shape is: a level-one heading whose
+  // text begins with something ending in `-XXX:`.
+  const shaped = /^# .*?-XXX:/;
   const canonical: number[] = [];
   const foreign: number[] = [];
   lines.forEach((line, i) => {
@@ -380,15 +383,25 @@ function dropSection(content: string, heading: string): string {
   // found the previous walk-back left it standing.
   const dropped = new Set<number>();
   for (const [s, e] of spans) for (let i = s; i < e; i++) dropped.add(i);
-  const removed = raw.filter((_, i) => !dropped.has(i));
-  // Collapse a triple blank the removal may have created at the seam.
+  // Blank-line normalization is scoped to the SEAM (phase-6 round 6, Medium):
+  // collapsing every triple blank in the document also reformatted fenced
+  // examples the removal never touched.
+  const seams = new Set(spans.map(([s]) => s));
   const out: string[] = [];
-  for (const line of removed) {
-    if (line === '' && out.length >= 2 && out[out.length - 1] === '' && out[out.length - 2] === '') {
-      continue;
+  raw.forEach((line, i) => {
+    if (dropped.has(i)) return;
+    const atSeam = seams.has(i) || (i > 0 && dropped.has(i - 1));
+    if (
+      atSeam &&
+      line.trim() === '' &&
+      out.length >= 2 &&
+      out[out.length - 1]!.trim() === '' &&
+      out[out.length - 2]!.trim() === ''
+    ) {
+      return;
     }
     out.push(line);
-  }
+  });
   return out.join('\n');
 }
 
@@ -640,6 +653,20 @@ export function findWipPrd(
  * review artifact's `Base SHA` and `Quorum` are deliberately NOT filled — a
  * pre-filled SHA claims a diff nobody read, and a supplied quorum is a panel
  * nobody convened. */
+/** An artifact prefix is a FILENAME prefix, never a path fragment (phase-6
+ * round 6, High). `tasks.prefix: "nested/tasks"` writes
+ * `_tasks/wip/nested/tasks-NNN-slug.md`, which the state reader — matching
+ * basenames — never finds, so Phase 6 keeps reporting the file it just wrote as
+ * missing. Refusing beats writing an artifact nothing can see. */
+function assertFilenamePrefix(kind: string, prefix: string): void {
+  if (prefix === '' || /[\\/]/.test(prefix)) {
+    throw new Error(
+      `dirs.artifacts.${kind}.prefix must be a filename prefix, not a path ("${prefix}") — ` +
+        'the state reader matches basenames, so a nested prefix writes a file it can never index',
+    );
+  }
+}
+
 export function createCompanion(
   config: WorkflowConfig,
   root: string,
@@ -647,6 +674,8 @@ export function createCompanion(
   id: string,
   now: Date = new Date(),
 ): CompanionResult {
+  assertFilenamePrefix('prd', config.dirs.artifacts.prd.prefix);
+  if (kind === 'tasks') assertFilenamePrefix('tasks', config.dirs.artifacts.tasks.prefix);
   const { number, slug } = findWipPrd(config, root, id);
   const canonicalId = `${config.idPattern.prefix}-${number}`;
   const prdKind = config.dirs.artifacts.prd;

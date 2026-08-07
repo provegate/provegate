@@ -190,7 +190,11 @@ for (const spec of DOCS) {
   // fence's closer was invisible to `fenced[i] && !fenced[i-1]`.
   const recipes = [];
   for (const [i, close] of fenceSpans(lines)) {
-    if (!/^ {0,3}(```|~~~)+json\s*$/.test(lines[i])) continue;
+    // Any marker RUN of three or more, not "a multiple of three" (phase-6
+    // round 6, High): a four-backtick JSON fence was invisible to the old
+    // pattern, so a decoy triple fence before Close could carry the check while
+    // the real recipe sat after it.
+    if (!/^ {0,3}(?:`{3,}|~{3,})json[ \t]*$/.test(lines[i])) continue;
     let parsed;
     try {
       parsed = JSON.parse(lines.slice(i + 1, close).join('\n'));
@@ -198,7 +202,10 @@ for (const spec of DOCS) {
       continue;
     }
     const phases = parsed && typeof parsed === 'object' ? parsed.phases : undefined;
-    const commands = phases && typeof phases === 'object' ? Object.values(phases).flat() : [];
+    // A command is a NON-EMPTY string: `{"phases":{"4":""}}` used to qualify as
+    // a recipe, which is exactly the decoy shape.
+    const commands = (phases && typeof phases === 'object' ? Object.values(phases).flat() : [])
+      .filter((c) => typeof c === 'string' && c.trim() !== '');
     if (commands.length > 0) recipes.push({ start: i, end: close });
   }
   if (recipes.length !== 1) {
