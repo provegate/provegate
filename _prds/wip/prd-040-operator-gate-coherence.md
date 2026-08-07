@@ -171,8 +171,10 @@ so that the upgrade is a decision instead of a surprise at the next merge.
    rows. The header is never counted, whatever its first cell says — today only `| Task |` is
    excluded, so every other header spelling counts itself. Multiple table blocks in one section
    are parsed independently and summed. A row is read only when it carries both a leading and a
-   trailing pipe, which is what `splitTableCells` requires today; anything else is not a table
-   row and is not counted, exactly as now. Cells split on unescaped pipes by backslash parity:
+   trailing pipe, which is what `splitTableCells` requires today, and only inside a block whose
+   header is followed by a separator row. Measured consequences (§7): a table written without a
+   separator counts 2 today and 0 after this change; a header-plus-separator table with no data
+   rows counts 1 today and 0 after. Cells split on unescaped pipes by backslash parity:
    an even number of preceding backslashes separates, an odd number escapes. A data row whose
    cells are all empty is not a row — the shipped placeholder table is that shape and counts
    zero.
@@ -299,13 +301,42 @@ text is only mask characters. Fences, HTML comments and html blocks are not "exc
 `narrow-the-grammar-not-the-parser` rule: this reader will never reach renderer parity, so it
 restricts what it may be asked to read instead.
 
-**Interim behaviour for input this item does not refuse.** A pipe table with no separator row
-is not a table under FR-2, so its lines contribute zero rows. A data row whose cell count
-differs from its header's is still one row — the width is not read. A ledger with no `Result`
-column contributes zero ledger rows. A document that ends inside a fence is read as far as the
-scanner can read it. Each of those is a silent zero, each is wrong, and each is PRD-043's
-subject: this item states them so the interim is a decision on the record rather than an
-implication a reader has to reconstruct.
+**Measured, not asserted.** Every claim below about today's reader is the output of executing
+the shipped `countOperatorHandoff` against each shape on 2026-08-07 (probe:
+`node -e` over `packages/provegate/dist/index.js`, one document per row):
+
+```
+ 0  prose bullet
+ 0  nested bullet under a row
+ 1  checkbox
+ 2  table, header + 1 data row
+ 1  table, header + separator only
+ 2  table, header, NO separator
+ 2  row narrower than header
+ 1  all-empty placeholder row          (the 1 is the header; the empty row is 0)
+ 0  no leading/trailing pipes
+ 0  prose containing a pipe
+ 0  blockquote line
+ 0  ledger Result: operator
+ 0  ledger with no Result column
+ 0  unterminated fence
+```
+
+Two of this PRD's earlier drafts described that behaviour from reading the code and got it
+wrong in both directions, which is why the measurement is here rather than a paragraph.
+
+**What this item changes, per shape:** prose bullet 0→1, nested bullet 0→1, ledger
+`Result: operator` 0→1, header + 1 data row 2→1, header + separator only 1→0, all-empty
+placeholder 1→0.
+
+**Interim behaviour this item does NOT change** — each is a silent zero or an over-count, each
+is wrong, and each is PRD-043's subject: a table with no separator row counts 2 today and 0
+after FR-2 (it is not a table, so nothing in it is read — the change is stated here because it
+is a change, not a preserved behaviour); a row narrower than its header counts as one data row
+plus the header today and one data row after FR-2, with its width still unread; a ledger with
+no `Result` column contributes 0; a document ending inside a fence is read as far as the
+scanner reads it. None of them refuses, and refusing is exactly what A3 Clause 5 requires and
+PRD-043 delivers.
 
 The ledger read locates the `Result` column by normalized header name and then reads that cell,
 the same shape `parseVerificationTable` uses for the Command column (PRD-024). Never a
@@ -534,4 +565,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 4 rework (Codex 7.7 ITERATE; 7.3→7.7): all-empty placeholder table pinned at zero; leading/trailing pipe requirement stated with the alternative form refused; escaped-pipe backslash parity defined; nested items reconciled with A3 Clause 3 as a reading (detail about a row, not a second row) rather than an exception; per-shape fixture obligation enumerated; the legacy numeric export now THROWS a named diagnostic instead of returning an unjustifiable zero; `lintPrd`'s sixth parameter and `runCheck`'s `found.record.task` argument named at `cli.ts:920`, with fatal-vs-warning routing stated |
 | 2026-08-07 | owner  | Iteration 5 SCOPE MOVE (Codex 7.7, flat after 7.7): rounds 4 and 5 both landed on grammar minutiae and diagnostic plumbing, which `score-band-prescribes-the-action` and `scope-out-the-layer-the-rounds-keep-hitting` both name as a scope error. The refusal path left for **PRD-043** (diagnostic reader, both caller contracts, boundaryless-table predicate, fatal-vs-warning split); malformed input keeps today's behaviour here, as a stated Non-Goal. Nested list items are now COUNTED — A3 Clause 3 read literally — which removes the owner clarification the scorer asked for, since the acceptance demand is boolean either way. §11 enumerates a fixture per shape |
 | 2026-08-07 | owner  | Iteration 6 sweep (Codex 7.6): the scope move left restatements, which is `a-rule-corrected-survives-where-it-is-restated` verbatim — §7 still claimed a `{count, problem}` return shape and listed nesting as excluded. Swept: the counter keeps its signature, every reachable list item counts, and §7 now states the INTERIM behaviour for each input this item does not refuse (no-separator table, unequal-width row, missing Result column, unterminated fence) as a recorded decision rather than an implication. The Phase-2 lint warning moved WHOLE to PRD-043 with the `lintPrd`/`runCheck` contract it needs — splitting one contract across two items half-specifies both — so `prd-ready.ts`, `cli.ts` and `lint-parsers.test.ts` left this item's scope. FR-6 is now the audit's executable continuation gate: `--assert-acknowledged` recomputes a fingerprint and exits 1 on a missing or stale acknowledgement |
+| 2026-08-07 | owner  | Iteration 7 (Codex 7.6, flat after 7.6): stopped arguing about today's behaviour and MEASURED it — the shipped counter executed against fourteen shapes, verbatim output pasted into §7 with the per-shape delta this item makes. Two earlier drafts had described that behaviour from reading the code and were wrong in both directions (an all-empty placeholder row does count 0; the 1 was the header, and a separator-less table counts 2, not 0). FR-2's "exactly as now" claim corrected to the measured deltas |
 
