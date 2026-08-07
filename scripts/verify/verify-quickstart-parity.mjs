@@ -171,23 +171,47 @@ for (const spec of DOCS) {
   // heading could stay put while the JSON fence moved past the close — the
   // assertion has to end where the RECIPE ends, so find the manifest fence
   // inside the section and require its CLOSING line to precede the close.
-  let fenceEnd = -1;
-  for (let i = before + 1; i < lines.length; i++) {
-    if (!fenced[i] && lines[i].startsWith('## ')) break;
-    if (/^```/.test(lines[i]) && /"phases"/.test(lines.slice(i, i + 8).join('\n'))) {
-      for (let j = i + 1; j < lines.length; j++) {
-        if (/^```\s*$/.test(lines[j])) {
-          fenceEnd = j;
-          break;
-        }
+  // A recipe is identified STRUCTURALLY and must be UNIQUE in the document
+  // (phase-6 round 2, High): "any fence mentioning phases" let a decoy fence
+  // before Close satisfy the gate while the real floor recipe sat after it.
+  // The recipe is a ```json fence whose parsed object has a `phases` key whose
+  // value names at least one command — an empty decoy fails that test.
+  const recipes = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^```json\s*$/.test(lines[i])) continue;
+    let close = -1;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (/^```\s*$/.test(lines[j])) {
+        close = j;
+        break;
       }
-      break;
     }
+    if (close === -1) continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(lines.slice(i + 1, close).join('\n'));
+    } catch {
+      i = close;
+      continue;
+    }
+    const phases = parsed && typeof parsed === 'object' ? parsed.phases : undefined;
+    const commands = phases && typeof phases === 'object' ? Object.values(phases).flat() : [];
+    if (commands.length > 0) recipes.push({ start: i, end: close });
+    i = close;
   }
-  if (fenceEnd === -1) {
+  if (recipes.length !== 1) {
     r.fail(
-      `${spec.path}: no manifest recipe fence (a \`\`\` block containing "phases") inside ` +
-        `"${ORDER.before}" — the section without its recipe teaches nothing`,
+      `${spec.path}: expected exactly one manifest recipe (a \`\`\`json fence whose ` +
+        `\`phases\` names at least one command); found ${recipes.length}. A second ` +
+        'recipe-shaped fence makes the order assertion judge whichever it met first',
+    );
+    continue;
+  }
+  const fenceEnd = recipes[0].end;
+  if (recipes[0].start < before) {
+    r.fail(
+      `${spec.path}: the manifest recipe (line ${recipes[0].start + 1}) sits outside ` +
+        `"${ORDER.before}" (line ${before + 1}) — the section and its recipe belong together`,
     );
     continue;
   }

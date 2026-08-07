@@ -490,8 +490,10 @@ describe('rendered templates (PRD-042 FR-5)', () => {
     const root = tempRoot();
     const path = join(root, 'foreign.md');
     writeFileSync(path, rendered('RFC'));
+    // Round 2 sharpened this: an id-SHAPED heading naming another prefix is
+    // refused by name, rather than reported as a missing anchor.
     expect(() => createPrd(cfg, root, { slug: 'foreign', templatePath: path })).toThrow(
-      /template anchor not found/,
+      /id-shaped heading/,
     );
   });
 
@@ -660,5 +662,92 @@ describe('phase-6 round 1 fixes (PRD-042)', () => {
     expect(text.match(/^## Memory Inputs$/gm)).toHaveLength(1);
     expect(text).not.toContain('Records from the memory index');
     expect(text).not.toContain('## Memory Outputs');
+  });
+});
+
+describe('phase-6 round 2 fixes (PRD-042)', () => {
+  const rendered = () =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', cfg.idPattern.prefix);
+
+  it('refuses a foreign id-shaped heading beside the real anchor', () => {
+    const root = tempRoot();
+    const path = join(root, 'foreign-extra.md');
+    // One valid anchor plus `# RFC-XXX:` used to instantiate and keep the
+    // foreign heading — the artifact then had two id lines, one meaningless.
+    writeFileSync(path, rendered().replace('# PRD-XXX: ', '# RFC-XXX: foreign\n\n# PRD-XXX: '));
+    expect(() => createPrd(cfg, root, { slug: 'foreign-extra', templatePath: path })).toThrow(
+      /id-shaped heading/,
+    );
+  });
+
+  it('does not treat an info-tailed fence line as a closer', () => {
+    const root = tempRoot();
+    const path = join(root, 'crafted-fence.md');
+    // ```` ```still-open ```` is CONTENT of the open fence, not a closer. The
+    // previous scanner ended the fence there and read the heading below it as
+    // the real anchor.
+    const base = rendered().replace(/^# PRD-XXX: .*$/m, '# Untitled');
+    writeFileSync(path, `${base}\n\n\`\`\`md\n\`\`\`still-open\n# PRD-XXX: fenced\n\`\`\`\n`);
+    expect(() => createPrd(cfg, root, { slug: 'crafted', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('drops a memory section that really is the LAST section', () => {
+    const root = tempRoot();
+    const path = join(root, 'memory-last.md');
+    const base = rendered();
+    // Move the whole Memory Outputs section to the END, after the Changelog,
+    // so it genuinely is the last section — the round-2 finding was that the
+    // old fixture never made it so, while every anchor the instantiation needs
+    // stays present.
+    const start = base.indexOf('## Memory Outputs');
+    const end = base.indexOf('## Conflict Surface');
+    const moved = base.slice(0, start) + base.slice(end) + '\n' + base.slice(start, end);
+    writeFileSync(path, moved);
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'memory-last', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).not.toContain('## Memory Outputs');
+    // The section before it — the Changelog, now the last remaining one — is
+    // untouched, and so is its table.
+    expect(text).toContain('## Changelog');
+    expect(text).toMatch(/\| \d{4}-\d{2}-\d{2} \| \[role\] \| Initial draft \|/);
+  });
+
+  it('treats a configured value containing $& as literal bytes', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      memory: { ...cfg.memory, enabled: true },
+      prompts: { ...cfg.prompts, values: { DOCS_ROOT: 'docs/$&' } },
+    };
+    const text = readFileSync(
+      createPrd(config, root, { slug: 'dollar-amp', templatePath: undefined }).path,
+      'utf8',
+    );
+    // A string replacement would have written `docs/{{DOCS_ROOT}}` — the value
+    // re-inserting the token it replaced.
+    expect(text).toContain('docs/$&');
+    expect(text).not.toContain('{{DOCS_ROOT}}');
+  });
+
+  it('computes the PRD link from the normalized destination depth', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: { ...cfg.dirs.artifacts, tasks: { dir: 'workflow/./tasks', prefix: 'tasks' } },
+      },
+    };
+    createPrd(config, root, { slug: 'dotted' });
+    const text = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    const up = '..' + '/';
+    // `workflow/./tasks/wip/<file>` is three real directories deep, so three
+    // hops. Counting raw segments would have produced four and climbed above
+    // the repository root.
+    expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-dotted.md)`);
   });
 });

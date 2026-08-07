@@ -191,9 +191,9 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
 
 - [ ] 11.0 Phase 7 — Learning
   - [ ] 11.1 Knowledge ingest: capture any non-derivable trap as a `_brain/learnings/` record.
-  - [ ] 11.2 Durable-artifacts check against the PRD's declaration (`none` — the PRD declares no
-        learning output; if one is discovered, append it with a rationale, which is always
-        allowed).
+  - [ ] 11.2 Durable-artifacts check against the PRD's declaration. PRD-042 declares
+        `_brain/learnings/the-first-hour-is-a-surface.md` as its Memory Output, and Durable
+        Artifacts repeats it — the record must exist in the closing diff.
   - [ ] 11.3 Summary in `_docs/wip/`, then `gate run PRD-042` from the primary checkout.
 
 ---
@@ -227,12 +227,14 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 
 ## Deferrals & Decisions
 
-- **Decision (FR-2): the token pass skips any line that still carries an author placeholder**
-  (`[page]`, `[slug]`, `[Feature Name]`). Discovered by the executable quickstart stopping at
-  Phase 7: resolving `{{DOCS_ROOT}}/[page].md` to `_docs/[page].md` turns template scaffolding
-  into a DECLARED durable path, and the gate then demands a file nobody meant to declare.
-  Half-substituting a placeholder makes it look filled; leaving it whole keeps it visibly the
-  author's job. Pinned by two tests in `new.test.ts`.
+- **Decision (FR-2), REVERSED by phase-6 round 1: the token pass is unconditional.** The first
+  attempt skipped any line carrying an author placeholder, to keep `{{DOCS_ROOT}}/[page].md`
+  from becoming a plausible declared path. The reviewer showed the heuristic both over- and
+  under-fired — it skipped ordinary Markdown links whose tokens should resolve, and let
+  `[path/to/file]` through — so it could state neither what it governed nor why. The pass is
+  unconditional over the closed set; an unfilled Durable Artifacts section is refused at Phase 7
+  BY NAME, which is correct, and both the executable quickstart and the adopter smoke now
+  declare `none` the way an adopter must.
 - **Deferred (recorded on the board, owner, due 2026-10-07): an unfilled PRD now passes
   `gate check`.** FR-2 resolves the §11 commands at creation, and the refusal an adopter used to
   get fired on the placeholder command, not on the emptiness. Restoring the signal means refusing
@@ -245,6 +247,14 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `quickstart-e2e.test.ts` pinned the old Phase-6 message and a fixture that replaced
   `{{CMD_*}}` tokens FR-2 now resolves (it now replaces both spellings, so it still works against
   an older installed CLI).
+- **Scope expansion, recorded (phase-6 round 2 asked for exactly this): `scripts/adopter-smoke.sh`
+  and `scripts/adopter-smoke-fill.mjs` are edited by this item although the PRD's Conflict
+  Surface does not name them.** FR-3 breaks them by construction — the fill script fills the two
+  memory sections `gate new` now omits, and the smoke asserts a lint refusal FR-2 removes — so
+  leaving them untouched would have shipped a red delivery gate. The alternative, reverting the
+  edits, would have meant landing a change that knowingly breaks the only check that watches an
+  install. Both files are added to the PRD's Conflict Surface in the same change, which is the
+  declaration this repository requires rather than the silence it refuses.
 - **Base-branch mismatch surfaced, not resolved:** `workflow.config.json` has no `branches`
   block, so `branches.base` defaults to `main`, while this work and the last thirteen commits
   live on `development` under the repository's GitHub flow. `gate run`'s merge step would merge

@@ -300,6 +300,16 @@ function runNew(args: string[]): number {
       console.error(`[new] ${name} needs a value — write ${name}=<value>`);
       return 1;
     }
+    // Cardinality too (phase-6 round 2, Medium): `--class=feature
+    // --class=hotfix` used to take the first and drop the second, which is a
+    // choice the author did not make.
+    const given = args.filter((a) => a.startsWith(`${name}=`));
+    if (given.length > 1) {
+      console.error(
+        `[new] ${name} is given ${given.length} times (${given.join(', ')}) — one value per run`,
+      );
+      return 1;
+    }
   }
   const positional = args.filter((a) => !a.startsWith('--'));
   const tasksFlags = args.filter((a) => a === '--tasks' || a.startsWith('--tasks='));

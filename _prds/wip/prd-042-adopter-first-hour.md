@@ -385,6 +385,8 @@ the same commit or the check fails, which is the point of it.
 - `packages/provegate/test/chain.test.ts`
 - `packages/provegate/test/content-hygiene.test.ts`
 - `packages/provegate/test/cli.test.ts`
+- `scripts/adopter-smoke.sh`
+- `scripts/adopter-smoke-fill.mjs`
 
 ---
 
@@ -446,4 +448,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS): id resolution restricted to the configured wip role with the artifact BASENAME authoritative for number and slug (a heading an author edits is not an identifier); the eight refusals given a table of named `new.test.ts` test titles; `cli.ts::usage` added as a target so `gate --help` advertises both artifact modes, both quickstart copies teach them where they currently prescribe copying a template by hand, and a `cli.test.ts` content assertion fails while either is unadvertised — a feature the help text does not mention is a feature an adopter does not find |
 | 2026-08-07 | owner  | **Correction.** The iteration-3 and iteration-4 rows above claimed an FR-1 production grammar, identity rule and refusal table that were never written to this file — the edits silently no-opped (`python str.replace` on a prettier-formatted artifact, the trap this repository has recorded twice). The scorer caught it both times as MP-1 OPEN and the changelog kept saying otherwise. The content is now present and was verified by reading the file back, not by trusting the edit |
 | 2026-08-07 | owner  | Phase 4, task 1.0 — the three readiness watch items closed in the PRD before any code. W1: the artifact-substitution table is now closed, and it deliberately leaves `Base SHA` and `Quorum` EMPTY in the review artifact (a pre-filled SHA claims a diff nobody read; a supplied quorum is a panel nobody convened). W2: `cli.ts::usage` and `cli.test.ts` moved from FR-1 to FR-6, so the requirement owning discoverability owns its targets. W3: §6 and §11 now carry all eight refusal categories and their exact test titles, counted rather than read |
+| 2026-08-07 | owner  | Phase 4 scope expansion, declared: `scripts/adopter-smoke.sh` and `scripts/adopter-smoke-fill.mjs` join the Conflict Surface. FR-3 breaks both by construction — the fill script fills the memory sections `gate new` now omits, and the smoke asserts a lint refusal FR-2 removes — so leaving them untouched would have landed a change that knowingly reddens the only check watching an install. Recorded rather than taken silently, at phase-6 round 2's request |
 

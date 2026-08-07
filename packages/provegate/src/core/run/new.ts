@@ -119,16 +119,33 @@ export function slugHolder(config: WorkflowConfig, root: string, slug: string): 
  * reader that cannot tell shown from meant will edit the wrong one. */
 function fencedLines(lines: string[]): boolean[] {
   const fenced: boolean[] = [];
-  let open: string | null = null;
+  // CommonMark's rules, not an approximation (phase-6 round 2, High): the
+  // opener may carry an info string, a CLOSER may not, and the closer's run
+  // must be at least as long as the opener's. Treating any same-marker line as
+  // a closer let a fence containing ```` ```still-open ```` read as closed, and
+  // an anchor or a heading below it then counted as real.
+  let open: { char: string; len: number } | null = null;
   for (const line of lines) {
-    const m = /^(\s*)(`{3,}|~{3,})/.exec(line);
-    if (open === null && m) {
-      open = m[2]![0]!;
-      fenced.push(true);
-      continue;
-    }
-    if (open !== null && m && m[2]![0] === open) {
-      open = null;
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (m) {
+      const run = m[1]!;
+      const tail = m[2]!;
+      const char = run[0]!;
+      if (open === null) {
+        // A backtick opener's info string may not itself contain a backtick.
+        if (char === '`' && tail.includes('`')) {
+          fenced.push(false);
+          continue;
+        }
+        open = { char, len: run.length };
+        fenced.push(true);
+        continue;
+      }
+      if (char === open.char && run.length >= open.len && tail.trim() === '') {
+        open = null;
+        fenced.push(true);
+        continue;
+      }
       fenced.push(true);
       continue;
     }
@@ -157,19 +174,32 @@ function substituteAnchor(content: string, anchor: RegExp, replacement: string):
 function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
   const lines = content.split('\n');
   const fenced = fencedLines(lines);
-  const anchor = idAnchor(config);
-  const hits: number[] = [];
+  const anchor = new RegExp(idAnchor(config).source);
+  // Any heading SHAPED like an id anchor, whatever prefix it names. A template
+  // carrying `# RFC-XXX: …` beside the real anchor used to instantiate and keep
+  // the foreign heading (phase-6 round 2, High) — the artifact then had two id
+  // lines and only one of them meant anything.
+  const shaped = /^# [A-Za-z][A-Za-z0-9_]*-XXX: /;
+  const canonical: number[] = [];
+  const foreign: number[] = [];
   lines.forEach((line, i) => {
-    if (!fenced[i] && new RegExp(anchor.source).test(line)) hits.push(i + 1);
+    if (fenced[i]) return;
+    if (anchor.test(line)) canonical.push(i + 1);
+    else if (shaped.test(line)) foreign.push(i + 1);
   });
-  if (hits.length === 0) {
+  if (foreign.length > 0) {
     throw new Error(
-      `template anchor not found: ${anchor} — template drifted from gate new`,
+      `template has id-shaped heading(s) that are not \`${config.idPattern.prefix}\` ` +
+        `(lines ${foreign.join(', ')}) — one template, one id grammar; ` +
+        'remove them or point `templates.prd` at the template you meant',
     );
   }
-  if (hits.length > 1) {
+  if (canonical.length === 0) {
+    throw new Error(`template anchor not found: ${idAnchor(config)} — template drifted from gate new`);
+  }
+  if (canonical.length > 1) {
     throw new Error(
-      `template has ${hits.length} id anchors (lines ${hits.join(', ')}) — exactly one is required; ` +
+      `template has ${canonical.length} id anchors (lines ${canonical.join(', ')}) — exactly one is required; ` +
         'resolve the duplicate rather than letting gate new pick one',
     );
   }
@@ -245,9 +275,13 @@ export function unresolvedTokens(content: string): string[] {
  * is now what the executable quickstart demonstrates.
  */
 function substituteConfiguredTokens(config: WorkflowConfig, content: string): string {
-  let out = content;
-  for (const [token, value] of configuredTokens(config)) out = out.replaceAll(token, value);
-  return out;
+  const table = configuredTokens(config);
+  // ONE pass, with a CALLBACK replacement (phase-6 round 2, Medium): a string
+  // replacement interprets `$&` and friends, so a configured value like
+  // `docs/$&` wrote `docs/{{DOCS_ROOT}}` — a token that stayed unresolved
+  // because its own value re-inserted it. A single pass also means a value can
+  // never be re-scanned as a token by a later iteration.
+  return content.replace(/\{\{[A-Z0-9_]+\}\}/g, (match) => table.get(match) ?? match);
 }
 
 /**
@@ -546,8 +580,14 @@ export function createCompanion(
     // or shallower would otherwise get a link that resolves nowhere, and a
     // broken link in the artifact that names the PRD is a bad first impression
     // of a tool whose whole subject is traceability.
-    const hops = relPath.split('/').length - 1;
-    const prdLink = `${'../'.repeat(hops)}${prdRel}`;
+    // Depth from the NORMALIZED path (phase-6 round 2, Medium): a configured
+    // directory like `workflow/./tasks` writes to a two-deep location but has
+    // three raw segments, and the extra `../` produced a link that resolved
+    // above the repository root.
+    const normalize = (p: string): string[] =>
+      p.split('/').filter((seg) => seg !== '' && seg !== '.');
+    const hops = normalize(relPath).length - 1;
+    const prdLink = `${'../'.repeat(hops)}${normalize(prdRel).join('/')}`;
     content = template
       .replace(/^# Tasks: \[Feature Name\]$/m, `# Tasks: ${canonicalId} — ${slug}`)
       .replace(
