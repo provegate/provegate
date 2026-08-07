@@ -118,3 +118,30 @@ jobs:
 
       - name: verify-prompts-ci-order
         run: pnpm verify:prompts -- --assert-ci-order
+
+  # The delivery gate: install the packed CLI into a plain npm + tsc repo and
+  # drive one PRD to a merged close. Every other job reads this source tree, so
+  # none of them can observe what an install actually hands an adopter.
+  adopter-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: build-design
+        run: pnpm --filter @provegate/design build
+
+      - name: build-provegate
+        run: pnpm --filter provegate build
+
+      - name: adopter-smoke
+        run: pnpm smoke:adopter

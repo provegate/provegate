@@ -26,6 +26,7 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "smoke:adopter": "bash scripts/adopter-smoke.sh",
     "changeset": "changeset",
     "prepare": "git config core.hooksPath .githooks",
     "check-egress": "node scripts/check-static-egress.mjs",
