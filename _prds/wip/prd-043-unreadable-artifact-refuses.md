@@ -139,10 +139,26 @@ so that a formatting mistake cannot silently drop my operator gate.
    a new optional `operatorHandoffProblem: string | null`. `operatorGateOk` refuses on the
    problem **before** the acceptance lookup — an unreadable artifact is not a close that merely
    lacks a signature.
+   **Every reader of the count is a consumer of the contract**, and the inventory is closed:
+   `operatorGateOk` (refuses), `lintPrd` via FR-4 (fatal issue),
+   `core/state/query.ts::formatCompactRecord` (`query.ts:117` — must not report a number as a
+   fact; it carries the problem alongside or reports it in place of the count), and
+   `cli.ts::runRun`'s dry-run plan line (`cli.ts:1152`) plus the JSON summary
+   (`cli.ts:1470`), which print `operator rows: N` today and must print the problem instead of a
+   number they cannot justify. A consumer that reads `count` without reading `problem` is the
+   defect this item exists to remove, wherever it sits.
    - **Targets:** `packages/provegate/src/core/state/build.ts::buildState`,
      `packages/provegate/src/core/state/build.ts::StateRecord`,
-     `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-4. **FR-4**: `lintPrd` gains a sixth parameter
+     `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`,
+     `packages/provegate/src/core/state/query.ts::formatCompactRecord`,
+     `packages/provegate/src/cli.ts::runRun`
+4. **FR-4**: Adding `warnings: string[]` to `PrdReadyReport` is a **shape change with a known
+   regression surface**: `packages/provegate/test/prd-ready.test.ts` holds six exact
+   `{ ok: true, issues: [] }` expectations that fail the moment the field exists. They are
+   updated in this change, not discovered by it, and the update is deep-equality against the new
+   shape rather than a loosened matcher — a matcher relaxed to make a shape change pass stops
+   testing the shape.
+   `lintPrd` gains a sixth parameter
    `task: { present: true; count: number; problem: string | null } | { present: false } | undefined`
    — a discriminated union, so a caller cannot read `count` on an absent artifact and the
    compiler says so. `runCheck` builds it from `found.record`: `{ present: true, … }` when the
@@ -156,7 +172,7 @@ so that a formatting mistake cannot silently drop my operator gate.
    contradiction PRD-040 enforces is reported here as a non-fatal warning, and only when
    `present` is true.
    - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
-     `packages/provegate/src/cli.ts::runCheck`
+     `packages/provegate/src/cli.ts::runCheck`, `packages/provegate/test/prd-ready.test.ts`
 5. **FR-5**: **Preflight, before any implementation:** PRD-040 must be merged, its grammar
    fixtures present, and `scripts/audit-operator-rows.mjs` must exist and expose the
    `--assert-acknowledged` interface PRD-040 defines. A missing or incompatible script fails the
@@ -253,6 +269,8 @@ therefore the only one it may assume.
 - [ ] `packages/provegate/src/core/state/markdown.ts`, `packages/provegate/src/core/state/build.ts`
 - [ ] `packages/provegate/src/core/run/acceptance.ts`
 - [ ] `packages/provegate/src/core/gates/prd-ready.ts`, `packages/provegate/src/cli.ts`
+- [ ] `packages/provegate/src/core/state/query.ts` (`formatCompactRecord`)
+- [ ] `packages/provegate/test/prd-ready.test.ts` (six exact report-shape expectations)
 - [ ] `packages/provegate/test/markdown.test.ts`, `packages/provegate/test/acceptance.test.ts`,
       `packages/provegate/test/lint-parsers.test.ts`, `packages/provegate/test/cli-state.test.ts`
 - [ ] `scripts/adopter-smoke.sh` (the installed-export assertion)
@@ -334,6 +352,8 @@ therefore the only one it may assume.
 - `packages/provegate/src/core/run/acceptance.ts`
 - `packages/provegate/src/core/gates/prd-ready.ts`
 - `packages/provegate/src/cli.ts`
+- `packages/provegate/src/core/state/query.ts`
+- `packages/provegate/test/prd-ready.test.ts`
 - `packages/provegate/test/markdown.test.ts`
 - `packages/provegate/test/acceptance.test.ts`
 - `packages/provegate/test/lint-parsers.test.ts`
@@ -361,7 +381,9 @@ therefore the only one it may assume.
 | FR-2 | `pnpm test --filter provegate`         | markdown.test.ts     | legacy numeric export throws the named diagnostic          |
 | FR-2 | `pnpm smoke:adopter`                   | adopter fixture      | from the INSTALLED package root: `readOperatorHandoff` and the error class both import, the wrapper throws, and the thrown value's `code` is `OPERATOR_HANDOFF_UNREADABLE` |
 | FR-3 | `pnpm test --filter provegate`         | acceptance.test.ts   | merge gate refuses before the acceptance lookup            |
+| FR-3 | `pnpm test --filter provegate`         | cli-state.test.ts    | `formatCompactRecord` and both `runRun` printers report the problem, never a bare count |
 | FR-4 | `pnpm test --filter provegate`         | cli-state.test.ts    | problem is fatal, contradiction is a warning, via runCheck |
+| FR-4 | `pnpm test --filter provegate`         | prd-ready.test.ts    | the six report-shape expectations assert the new shape by deep equality, not a loosened matcher |
 | FR-4 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warning only when the task file exists; exit code unchanged |
 | FR-5 | `node scripts/audit-operator-rows.mjs` | repo corpus          | every artifact that would newly refuse is listed           |
 | FR-5 | `node scripts/audit-operator-rows.mjs --assert-acknowledged` | repo corpus | a three-field PRD-040 acknowledgement reports STALE; a matching four-field line passes |
@@ -400,4 +422,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS; the previous round's fix had introduced a contradiction): a MATCHING boundaryless table now has ONE outcome — a problem, because `splitTableCells` needs boundary pipes and PRD-040 measured that shape counting 0 — and the positive control for that predicate became a `|`-bearing sentence whose neighbour does not match, not the "legal boundaryless table" that contradicted the refusal; FR-2's §11 row now asserts that the reader AND the error class import from the installed package root, not only that the wrapper throws |
 | 2026-08-07 | owner  | **Correction.** The iteration-3 row's "one outcome per shape" paragraph never landed — the same silent `str.replace` no-op — so the file kept assigning both refusal and positive-control duty to a matching boundaryless table, exactly as iteration 4 reported. Written now via an exact-match edit and verified by reading it back |
 | 2026-08-07 | owner  | Iteration 6 (Codex 7.9; three findings, two of them about PRD-040): §1 said every unreadable shape "returns 0" — the measurement says otherwise (missing `Result` 0, separator-less table 2, narrow row 2, unterminated fence 0), and PRD-040 changes two of those values without making any of them refuse. Restated from the measurement, and the metric reworded from "counted as zero" to "answered with a number", because a number the reader could not justify is the defect at any value |
+| 2026-08-07 | owner  | Iteration 7 (Codex 7.8; the measured-baseline and escape-parity findings CLOSED): the unusable-count contract had an open consumer inventory — `query.ts::formatCompactRecord` (`:117`) and `cli.ts::runRun`'s two printers (`:1152`, `:1470`) read the count with no problem check, so the contract said "no consumer may read `count` without `problem`" while three consumers did exactly that. Inventory closed and each named in FR-3, Scope, Conflict Surface and §11. FR-4 now states its regression surface up front: `prd-ready.test.ts` holds six exact `{ok: true, issues: []}` expectations that the `warnings` field breaks, updated by deep equality rather than a loosened matcher |
 

@@ -241,7 +241,10 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 - **Refusing an unreadable task artifact**, and the Phase-2 warning that would report the
   declaration contradiction through the lint. A ledger with no `Result` column, a table with no
   separator row, a row whose width differs from its header's, a document ending inside a fence:
-  under this item each contributes zero rows, exactly as §7 states. Addendum A3 Clause 5 says they must refuse, and PRD-043 does it — with the
+  under this item their MEASURED outcomes are what §7 records — the separator-less table goes
+  `2 → 0`, the narrow row `2 → 1`, a ledger with no `Result` column stays `0`, and a document
+  ending inside a fence is read as far as the scanner permits. None of them refuses. Addendum A3
+  Clause 5 says they must, and PRD-043 does it — with the
   diagnostic reader, both caller contracts, and the fatal-versus-warning split that come with
   it. Two rounds of this item's readiness were spent specifying that plumbing in prose; it is
   its own work item, not a paragraph in this one. The warning goes with it: it needs the same
@@ -362,9 +365,9 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   behaviour change is written. It reports two populations, because they change for different
   reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
   changes while the count stays `0 → 0` — the second is invisible to a count diff and is the
-  one Clause 1 creates. Its classification is the decision input: a `refusal` classification on
-  an existing artifact stops the work by default, because it means the new grammar cannot read
-  something the corpus already contains — where "refusal" means an artifact PRD-043 will later
+  one Clause 1 creates. Its classification is the decision input, and the classifications are
+  the four counting sources plus the zero-row acceptance changes — nothing else. An
+  unreadable-artifact population belongs to PRD-043 — where "refusal" means an artifact PRD-043 will later
   refuse, recorded here as information only. This item performs no refusals, so no rollback of
   this item can be triggered by one.
 - **Remedy, per population:** a handoff row that is real work → flip `Autonomous Close` to
@@ -373,8 +376,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   `operator-gated` PRD with no rows → record the acceptance the declaration always implied, or
   declare `eligible`.
 - **Rollback trigger and plan:** revert the commit if the audit shows artifacts whose count
-  changes for reasons the grammar did not intend. Refusals on unreadable input are PRD-043's
-  trigger, not this item's — it adds none. The counter is pure and nothing is migrated on
+  changes for reasons the grammar did not intend. That is this item's only rollback trigger. The counter is pure and nothing is migrated on
   disk, so a revert restores previous behaviour exactly.
 - **Release:** a minor version. The changeset names the behaviour change first and the bug fix
   second, in that order, because that is the order an upgrading adopter meets them.
@@ -428,9 +430,10 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   now partitions the scanner's REAL outputs — unreachable (blanked fences, `indented-code`,
   `html`/`in-html`), masked (`COMMENT_MASK`), preserved (same-line code spans) — rather than
   describing an idealized Markdown; FR-2 states the one construct it deliberately still reads
-  wrong (a pipe inside a code span) as a Non-Goal instead of leaving it unstated; and FR-4
-  states the interim behaviour for everything outside that partition rather than refusing it —
-  the refusals, including the scanner's own `unreliable` signal, belong to PRD-043.
+  wrong (a pipe inside a code span) as a Non-Goal instead of leaving it unstated; and §7 records
+  the interim behaviour for everything FR-2 and FR-3 leave outside that partition rather than
+  refusing it — the refusals, including the scanner's own `unreliable` signal, belong to
+  PRD-043.
 - applied: `a-rule-that-exempts-itself` — the predicate FR-5 enforces was the author's to
   invent and is not; it moved to the owner as Addendum A3 before any method byte moved (the
   PRD-031 ordering), because a gated party writing its own exemption is not gated.
@@ -450,12 +453,12 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   existing artifact already made: prose handoffs merged before and refuse after. FR-7 measures
   the set before it ships, §7 names the remedy and the rollback trigger, and §6 pins both arms.
 - applied: `gate-run-resume-after-archive` — `core/run/**` watch, and the record's own subject
-  is what FR-6 answers: a resume enters the chain past the early gate, so an invariant that
+  is what FR-5 answers: a resume enters the chain past the early gate, so an invariant that
   lives only there is skippable by design. FR-6 therefore evaluates it a second time inside
   `operatorGateOk`, which every `--from-phase` path reaches, and the resume-after-archive case
   the record describes is one of the paths the test matrix must cover.
 - applied: `state-model-before-mechanism` — iteration 2's open findings were all one thing: the
-  mechanism was specified and the state model was not. FR-5 and FR-6 write it — which
+  mechanism was specified and the state model was not. FR-4 and FR-5 write it — which
   declaration demands what, at which two points it is evaluated, and what each contradiction is
   called — before any parser detail is settled.
 - applied: `scope-out-the-layer-the-rounds-keep-hitting` — applied as an action, not a
@@ -469,9 +472,10 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 - reviewed: `fixture-must-reach-production-shape` — the `cli.ts` surface left with the warning,
   and the record still binds FR-5: the chain test must build the real `buildGateChain` and run
   it, not call the gate function it inserts.
-- reviewed: `surface-set-without-its-predicate` — `core/gates/**` watch; FR-6 adds a predicate
-  to an existing lint surface rather than an input set, so the record's failure mode does not
-  apply here.
+- reviewed: `surface-set-without-its-predicate` — the lint surface left this item with the
+  Phase-2 warning (PRD-043 owns it now), and FR-6 is an audit acknowledgement predicate over a
+  fingerprint the script recomputes: no input set is introduced here without the rule that
+  reads it.
 - reviewed: `exemption-marker-needs-no-prose` — `core/gates/prd-ready.ts` no longer appears in
   this item's targets (the lint warning moved to PRD-043 with the contract it needs), and the
   acknowledgement line FR-6 checks is machine-derived: a fingerprint the script recomputes, with
@@ -578,4 +582,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Second cross-item sweep (found while scoring PRD-043, iteration 3): the `narrow-the-grammar-not-the-parser` disposition still claimed FR-4 refuses `scanDocument().unreliable`, and §12 still ordered a refusal this item no longer performs. Both now point at PRD-043. Fourth instance of the restatement trap in this file — the pattern is that a scope change must sweep dispositions and DO NOTs, not only the FRs |
 | 2026-08-07 | owner  | Third cross-item sweep (found while scoring PRD-043, iteration 4): §5 cited FR-9 for the METHOD.md statement and §7 cited FR-8 for the audit — both off by one after the renumbering; the audit's `refusal` classification and the unreadable-input rollback trigger were PRD-043's and are gone, leaving this item's four counting sources as the only classifications and no refusal it could roll back. Fifth restatement instance in this file |
 | 2026-08-07 | owner  | Fourth cross-item sweep (found while scoring PRD-043, iteration 6): §5's METHOD reference and the `known-red`/resume/state-model dispositions were still on the pre-renumbering FR ids; §5's interim claim said "each contributes zero rows" where the MEASUREMENT says the separator-less table goes 2→0 and the narrow row 2→1; the audit classifications omitted the zero-row acceptance population; the rollback aside still mentioned refusals this item does not perform; `surface-set-without-its-predicate` still described a lint surface that left with the Phase-2 warning. And the escape-parity example in §6 and §11 showed the SAME source string for both arms — `a\|b` twice — while claiming one cell and two; the odd/even pair is now written out. Sixth restatement instance in this file |
+| 2026-08-07 | owner  | Fifth cross-item sweep (PRD-043 iteration 7). The fourth sweep had reported success while leaving every twin in place: `str.replace(..., 1)` fixes the FIRST occurrence, and this file restates each rule two or three times. Measured this round instead of assumed — occurrence counts checked before and after every edit. Closed: §5's interim outcomes (measured, none refuses), §7's `refusal` classification and the rollback aside that named refusals this item does not perform, the resume (FR-6→FR-5) and state-model (FR-5/FR-6→FR-4/FR-5) dispositions, `surface-set-without-its-predicate` rewritten around FR-6's acknowledgement predicate, and `narrow-the-grammar`'s interim reference repointed from FR-4 to §7/FR-2–FR-3 |
 
