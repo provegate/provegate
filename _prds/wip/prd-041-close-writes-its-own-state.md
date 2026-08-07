@@ -111,9 +111,11 @@ so that I do not have to reconstruct it from git history.
    Cases, each with its own behaviour: the file is **tracked** → commit the deletion; **untracked
    or ignored** → nothing to commit, and the run says so; **absent** → no-op; **recreated by a
    parallel claim between cleanup and commit** → leave it alone and warn, never delete another
-   claimant's lease; **commit hook fails** → surface the hook's output verbatim and leave the
-   tree as it is, because a close that hides a hook failure is the defect this repository
-   already refuses elsewhere.
+   claimant's lease; **commit hook fails** → print the hook's output verbatim, leave the
+   tree as it is, and exit **1** with the retry named in the message
+   (`gate release PRD-NNN` once the hook passes); the merge has already landed, so the close is
+   complete and only the lease record is outstanding. A close that hides a hook failure is the
+   defect this repository already refuses elsewhere.
    - **Targets:** `packages/provegate/src/cli.ts::runRun`,
      `packages/provegate/src/core/run/release.ts`
 4. **FR-4**: The configured status becomes the **sole** `isImplemented` predicate. Both
@@ -165,9 +167,11 @@ retry):
 | Point | PRD/tasks status | artifact location | lease | on failure, retry with |
 | ----- | ---------------- | ----------------- | ----- | ---------------------- |
 | gates green, pre-archive | unchanged | `wip` | held | `gate run --from-phase=N PRD-NNN` |
-| archive commit written | terminal | `completed` | held | `gate run --from-phase=7 PRD-NNN` on an un-archived tree, per `gate-run-resume-after-archive` |
-| merge fails | terminal | `completed` | held | fix, then `gate run --from-phase=merge PRD-NNN` |
-| post-merge gate fails → auto-revert | terminal (the archive commit is not reverted; only the merge is) | `completed` | held | `gate run --from-phase=merge PRD-NNN` after the fix |
+| archive commit written | terminal | `completed` | held | un-archive the moved artifacts (`git mv` them back to `wip`, or revert the archive commit), then `gate run --from-phase=7 PRD-NNN` — the recorded recipe in `gate-run-resume-after-archive`, stated here as the exact steps rather than by reference |
+| merge fails — feature ref | terminal | `completed` | held | fix, then `gate run --from-phase=merge PRD-NNN` |
+| merge fails — base ref | unchanged (the base never received the commit) | `wip` on base | held | same |
+| post-merge gate fails → auto-revert, feature ref | terminal; the archive commit stands, only the merge is reverted | `completed` | held | `gate run --from-phase=merge PRD-NNN` after the fix |
+| post-merge gate fails → auto-revert, base ref | back to its prior status | back to `wip` on base | held | same |
 | post-merge green | terminal | `completed` | released, deletion committed | — |
 
 ---
@@ -254,7 +258,7 @@ doc-claims check for the published figure, and a state-query assertion that exer
 
 ## Memory Inputs
 
-- applied: `no-completed-done-status-alias` — FR-1 writes `statusVocab.complete` from config
+- applied: `no-completed-done-status-alias` — FR-1 writes the value `normalizeStatus(config.statusVocab, 'complete')` returns
   and never a literal, for the reason that record gives: the vocabulary is the contract, and a
   hardcoded terminal value is how an alias re-enters.
 - applied: `metadata-declares-what-it-cannot-provide` — the defect in one line: the close
@@ -319,8 +323,9 @@ doc-claims check for the published figure, and a state-query assertion that exer
 | FR-2 | `pnpm test --filter provegate` | chain.test.ts      | already-terminal is a no-op and the run continues  |
 | FR-3 | `pnpm test --filter provegate` | cli.test.ts        | tracked lease deletion committed on the base; tree clean afterwards |
 | FR-3 | `pnpm test --filter provegate` | cli.test.ts        | untracked, absent, and recreated-by-another-claim each behave as §4 states |
+| FR-3 | `pnpm test --filter provegate` | cli.test.ts        | a failing commit hook exits 1, prints the hook output verbatim, and names `gate release` as the retry |
 | FR-4 | `pnpm test --filter provegate` | cli-state.test.ts  | completed location plus present summary plus non-implemented status is NOT implemented |
-| FR-4 | `node packages/provegate/dist/cli.js queue --json` | repo corpus | implemented count is 38, exercising isImplemented on the real corpus |
+| FR-4 | `pnpm test --filter provegate` | cli-state.test.ts | a corpus test calls `isImplemented` over the real `_state/prds.json` and pins 38, with `PRD-023` (Superseded, completed location) proven false |
 | FR-4 | `pnpm verify:doc-claims`       | published figures  | the Ship Verified figure stays 37                  |
 | FR-5 | `pnpm verify:deferred`         | board              | the closed row is gone, cap arithmetic holds       |
 | FR-5 | `pnpm smoke:adopter`           | adopter fixture    | both known-red entries gone, run green             |
@@ -341,7 +346,7 @@ Before Phase 2 PASS, run: `gate check PRD-041`
 
 - DO NOT introduce `any`; use `unknown` + narrowing.
 - DO NOT touch paths outside the Conflict Surface without recording the decision.
-- DO NOT hardcode `Ship Verified`; read `statusVocab.complete`.
+- DO NOT hardcode `Ship Verified`; call `normalizeStatus(config.statusVocab, 'complete')` — there is no `statusVocab.complete` field to read.
 - DO NOT write the status at merge time, where an auto-revert would silently undo it.
 - DO NOT add a second status-line regex; use the reader the state builder already uses.
 - DO NOT add a code path that pushes to a git remote, in the CLI or in CI.
@@ -357,4 +362,5 @@ Before Phase 2 PASS, run: `gate check PRD-041`
 | ---------- | ------ | ---------------------------------------------------------------- |
 | 2026-08-07 | owner  | Initial draft — from the first external adopter run, both defects measured |
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.2 ITERATE): `statusVocab.complete` does not exist — the terminal value now comes from `normalizeStatus(config.statusVocab, 'complete')` (`state/status.ts:28`), with both artifacts prevalidated before either is written and already-terminal an explicit no-op rather than a refusal; §6 gained the archive/merge/post-merge transition table with lease state and the exact retry command; FR-3 pinned to `merge.baseDir` after post-merge and before handoff, under the claim mutex, with five cases incl. a lease recreated by another claim; FR-4 removes BOTH fallbacks (location and summary presence); §7 carries the measured counts (39→38 implemented, Ship Verified 37 unmoved) and §11 asserts the predicate itself, not only the published figure; Migration & Rollback added; scope, surface, test paths and the project-wide DO NOTs corrected |
+| 2026-08-07 | owner  | Iteration 2 sweep (Codex 7.8 ITERATE; 6.2→7.8, four items closed): the `statusVocab.complete` correction had not swept into Memory Inputs or §12 — same restatement failure the record warns about, now fixed in all three places; §6's merge-failure and auto-revert rows split into feature-ref and base-ref states and the resume recipe spelled out instead of cited; FR-3's commit-hook case now names exit 1, the verbatim hook output and `gate release` as the retry, with its own §11 row; §11's `gate queue --json` row replaced by a named corpus test that calls `isImplemented` and pins 38 with PRD-023 proven false |
 

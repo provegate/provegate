@@ -84,10 +84,10 @@ Non-Goal with its successor named rather than left as an implication.
 method-content and value findings and left four open, each of which moved a design decision
 rather than a sentence: the grammar is now written over `scanDocument`'s masked view (so a
 fenced or commented construct is unreachable, not "excluded", and a document that ends inside a
-fence is refused on the scanner's own `unreliable` signal); the diagnostic result is plumbed
-through `buildState` to both consumers while the exported numeric `countOperatorHandoff` keeps
-its signature, because the adopter smoke imports it from the installed package and it is public
-API; the lifecycle invariant is bound to a named chain entry AND re-evaluated inside the merge
+fence is refused on the scanner's own `unreliable` signal — that refusal has SINCE MOVED to
+PRD-043, and with it the diagnostic result, both caller contracts and the Phase-2 warning, so
+nothing in this item changes `countOperatorHandoff`'s return shape or `StateRecord`); the
+lifecycle invariant is bound to a named chain entry AND re-evaluated inside the merge
 gate, so no `--from-phase` resume can skip it; and the audit now runs first and decides, rather
 than being pasted in before review.
 
@@ -352,9 +352,10 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   adopter repository. Two distinct populations, and the audit reports them separately, because
   their remedies differ.
 - **Public API:** `countOperatorHandoff` is re-exported from the package root and the adopter
-  smoke imports it from an installed copy. Its signature does not change; the diagnostic reader
-  is additive, and `StateRecord.task` gains an optional field, so a generated `_state/prds.json`
-  from an older version still loads.
+  smoke imports it from an installed copy. This item changes WHAT IT COUNTS and nothing else —
+  same signature, same return type, same absence of a thrown error. The diagnostic result and
+  the `StateRecord` field belong to PRD-043; a reader of this PRD should find no promise of
+  either here.
 - **Measurement decides (FR-8):** the audit runs as the first task of Phase 4, before any
   behaviour change is written. It reports two populations, because they change for different
   reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
@@ -547,7 +548,8 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 - DO NOT edit the shipped tasks template — method content needs an owner-approved addendum.
 - DO NOT let the harness keep a known-red entry for a defect this work fixes.
 - DO NOT add a suppression flag that lets an author declare `eligible` and keep operator rows.
-- DO NOT widen this item back into the refusal path or the lint warning; PRD-043 owns both.
+- DO NOT widen this item back into the refusal path, the diagnostic result, the `StateRecord`
+  field or the lint warning; PRD-043 owns all four, and no FR here may promise them.
 - DO NOT treat the interim zeros in §7 as correct behaviour; they are recorded, not endorsed.
 - DO NOT enforce the invariant in only one place — an early gate alone is skippable by a resume.
 
@@ -566,4 +568,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 5 SCOPE MOVE (Codex 7.7, flat after 7.7): rounds 4 and 5 both landed on grammar minutiae and diagnostic plumbing, which `score-band-prescribes-the-action` and `scope-out-the-layer-the-rounds-keep-hitting` both name as a scope error. The refusal path left for **PRD-043** (diagnostic reader, both caller contracts, boundaryless-table predicate, fatal-vs-warning split); malformed input keeps today's behaviour here, as a stated Non-Goal. Nested list items are now COUNTED — A3 Clause 3 read literally — which removes the owner clarification the scorer asked for, since the acceptance demand is boolean either way. §11 enumerates a fixture per shape |
 | 2026-08-07 | owner  | Iteration 6 sweep (Codex 7.6): the scope move left restatements, which is `a-rule-corrected-survives-where-it-is-restated` verbatim — §7 still claimed a `{count, problem}` return shape and listed nesting as excluded. Swept: the counter keeps its signature, every reachable list item counts, and §7 now states the INTERIM behaviour for each input this item does not refuse (no-separator table, unequal-width row, missing Result column, unterminated fence) as a recorded decision rather than an implication. The Phase-2 lint warning moved WHOLE to PRD-043 with the `lintPrd`/`runCheck` contract it needs — splitting one contract across two items half-specifies both — so `prd-ready.ts`, `cli.ts` and `lint-parsers.test.ts` left this item's scope. FR-6 is now the audit's executable continuation gate: `--assert-acknowledged` recomputes a fingerprint and exits 1 on a missing or stale acknowledgement |
 | 2026-08-07 | owner  | Iteration 7 (Codex 7.6, flat after 7.6): stopped arguing about today's behaviour and MEASURED it — the shipped counter executed against fourteen shapes, verbatim output pasted into §7 with the per-shape delta this item makes. Two earlier drafts had described that behaviour from reading the code and were wrong in both directions (an all-empty placeholder row does count 0; the 1 was the header, and a separator-less table counts 2, not 0). FR-2's "exactly as now" claim corrected to the measured deltas |
+| 2026-08-07 | owner  | Cross-item sweep (found while scoring PRD-043, iteration 2): this file still carried present-tense claims that IT plumbs the diagnostic result through `buildState` and that `StateRecord.task` gains a field — both left PRD-040 with the split. §1's history paragraph now marks them as moved, the Migration bullet states that this item changes only WHAT IS COUNTED, and the DO NOT names all four moved surfaces. Third instance of a correction surviving where it was restated |
 

@@ -2,28 +2,28 @@
 
 ## Quick Meta
 
-| Field                  | Value                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| PRD                    | `_prds/wip/prd-043-unreadable-artifact-refuses.md`                                          |
-| Score                  | 6.4/10                                                                                      |
-| Verdict                | ITERATE                                                                                     |
-| Iteration              | 1                                                                                           |
-| Model Tier (Execution) | Do not assign — fix PRD first                                                               |
-| Model Tier (Audit)     | —                                                                                           |
-| Scored by              | Codex (gpt-5), fresh independent scorer                                                     |
-| Self-scored            | no                                                                                          |
-| Date                   | 2026-08-07                                                                                  |
-| PRD Lint               | passed — supplied measured result; sandbox rerun stopped before lint on read-only state write |
-| State Record           | pending — read-only assessment                                                              |
+| Field                  | Value |
+| ---------------------- | ----- |
+| PRD                    | `_prds/wip/prd-043-unreadable-artifact-refuses.md` |
+| Score                  | 7.2/10 |
+| Verdict                | ITERATE |
+| Iteration              | 2 |
+| Model Tier (Execution) | Do not assign — fix PRD first |
+| Model Tier (Audit)     | — |
+| Scored by              | Codex (gpt-5), fresh independent scorer |
+| Self-scored            | no |
+| Date                   | 2026-08-07 |
+| PRD Lint               | passed — measured `node packages/provegate/dist/cli.js check PRD-043` result supplied |
+| State Record           | pending — read-only assessment |
 
 ---
 
 ## Model Tier Recommendation
 
-| Phase               | Tier                          | Rationale                                                                 |
-| ------------------- | ----------------------------- | ------------------------------------------------------------------------- |
-| Phase 4 (Execution) | Do not assign — fix PRD first | Public-API compatibility, parser predicates, task-presence state, and sequencing remain underspecified. |
-| Phase 6 (Audit)     | —                             | Re-score after the contract is completed.                                 |
+| Phase               | Tier                          | Rationale |
+| ------------------- | ----------------------------- | --------- |
+| Phase 4 (Execution) | Do not assign — fix PRD first | FR-1 can classify valid data rows as separatorless headers, FR-4’s direct argument is not type-compatible with `StateRecord.task`, and PRD-040 retains contradictory refusal obligations. |
+| Phase 6 (Audit)     | —                             | Re-score after the executable contracts and split are reconciled. |
 
 ---
 
@@ -31,125 +31,139 @@
 
 ### 1. Technical Depth & Architecture
 
-The PRD identifies the correct defect and remains within Addendum A3. FR-1 through FR-3 implement Clause 5; FR-4’s contradiction warning derives from Clauses 2 and 4. It adds no unauthorized template prose and does not alter acceptance authorship.
+The central architecture is sound and remains within Addendum A3 Clause 5:
 
-The split is conceptually coherent:
+- `scanDocument().unreliable` is the correct fail-closed source, matching the precedent at `packages/provegate/src/core/memory/artifacts.ts:641`.
+- A diagnostic reader feeding `buildState`, `operatorGateOk`, and `lintPrd` avoids independent parsers.
+- `OperatorHandoffUnreadableError` and `OPERATOR_HANDOFF_UNREADABLE` provide a stable public diagnostic identity.
+- Refusal before acceptance lookup is the correct consumer order.
+- Aggregating diagnostics in document order and declaring `count` unusable closes the former partial/zero ambiguity.
 
-- PRD-040 owns the accepted row grammar and enforces the declaration invariant at the chain and merge gate.
-- PRD-043 owns unreadable-input diagnostics, propagation through state, the legacy numeric wrapper, and the Phase-2 reporting plumbing.
-- The warning is reasonably located here because it requires the same new `lintPrd` input and `runCheck` output channel. PRD-040 can still enforce its invariant correctly without that advisory warning.
+FR-1’s revised predicates nevertheless contain a new contradiction. A header candidate is defined as any non-empty boundary-piped line. Every ordinary data row in a valid table satisfies that definition. The unconditional rule that a header candidate not followed by a separator is a problem therefore makes the final data row of a valid table a separatorless-header problem unless candidates are evaluated only outside an already-consumed table block. The PRD never states that contextual restriction.
 
-The executable contract is nevertheless incomplete.
+The boundaryless branch uses the undefined term “separator-shaped line,” rather than the defined separator-candidate predicate. Because the latter is defined relative to a boundary-piped header candidate, it cannot automatically govern boundaryless input. It remains unclear whether equal width, a minimum of two cells, or a pipe in the separator is required. That matters for ordinary prose such as `A | B` followed by a thematic break or setext underline.
 
-FR-1 never defines “header-row candidate” or “separator-row candidate.” The intended two-line condition protects a lone prose line containing `|`, but it does not tell the implementer how many cells constitute a candidate, how boundary pipes affect classification, whether separator width must equal header width, or how adjacent prose/table blocks terminate. The measured header-without-separator and narrow-row cases are named, but the predicate that distinguishes them from prose remains open-ended.
-
-`readOperatorHandoff` also returns only one `problem`, without specifying precedence or aggregation when a document has multiple malformed sections. The meaning of `count` when `problem` is non-null is similarly unspecified, even though that value is stored in state.
-
-FR-4 has a state-model contradiction. It says `lintPrd` receives `{ count, problem }`, `runCheck` passes `found.record.task`, and no warning is emitted when the task artifact is absent. `StateRecord.task` always exists with zero-valued defaults, so that argument cannot distinguish “no task artifact” from “present, readable task with zero rows.” Production cannot implement the stated absence rule without an explicit presence signal or conditional omission by `runCheck`.
+FR-4 also still has an inconsistent state representation. Its sixth parameter requires `{ present, count, problem } | undefined`, while `runCheck` is told to pass `found.record.task` directly. The current `StateRecord.task` has no `present` property, and FR-3 only adds `operatorHandoffProblem`. As written, the required direct call cannot type-check. Moreover, allowing both `undefined` and `{ present: false, ... }` creates two encodings for absence rather than one closed three-state model.
 
 ### 2. Edge Cases & Failure Modes
 
-The desired outcomes for the measured shapes are directionally sound:
+Against the measured population:
 
-- A leading/trailing-pipe header with no separator should refuse.
-- A row narrower than its header should refuse.
-- A boundaryless header followed by a valid separator should refuse as an unsupported table form.
-- A lone prose line containing `|` should remain ordinary prose.
+- Boundary-piped header without separator: now explicitly refuses.
+- Unequal-width data row: now explicitly refuses and names both widths.
+- Boundaryless table header followed by a separator: intended to refuse, but the separator predicate remains incomplete.
+- Lone prose containing `|`: remains ignored.
+- Unterminated fence: refuses through `scanDocument().unreliable`.
+- Ledger with no or duplicate `Result` column: refuses by section.
+- Multiple problems: aggregate in document order; `count` is unusable.
 
-The missing candidate grammar means those distinctions are not yet testable as a closed contract.
+The positive-control side is insufficient. Section 11 requires one fixture per refusal cause but does not require a valid header/separator/data table to produce no problem under the new reader. That missing control would catch the newly introduced “data row is also a header candidate” defect.
 
-Other unclosed cases include:
-
-- Which diagnostic wins when malformed handoff and ledger tables coexist.
-- Whether duplicate tables or duplicate ledger sections return one problem or an aggregate.
-- Whether width validation covers separator, header, and every data row consistently.
-- What diagnostic identity direct API consumers can reliably catch.
-- How Phase-2 lint distinguishes absent tasks from present zero-row tasks.
-
-FR-5 is also underspecified. PRD-040’s audit is defined around count changes and acceptance changes, not PRD-043’s newly refusing population. PRD-043 does not state how the script is extended, whether its fingerprint changes, where acknowledgement is recorded, or who may override the default stop.
+The PRD-040 audit dependency is now a real preflight. The current repository has no `scripts/audit-operator-rows.mjs`, so the specified outcome today is correctly “do not start.” However, PRD-043 adds a third audit population without defining how PRD-040’s two-population fingerprint changes. “Works exactly as PRD-040 specifies” leaves unresolved whether the refusal count becomes a fourth fingerprint field or is included only in the hash.
 
 ### 3. Maintainability & DX
 
-Using `scanDocument().unreliable` follows the existing `artifacts.ts:641` fail-closed precedent. An optional `StateRecord.task.operatorHandoffProblem` preserves loading of older generated state.
+The public compatibility story is materially improved. The PRD now says plainly that keeping `(content: string) => number` does not preserve runtime behavior when malformed input starts throwing, names an exported class and code, and supplies a migration to the diagnostic reader.
 
-The public compatibility story is not complete. `countOperatorHandoff` is exported from `core/state/index.ts`, used internally by `buildState`, and imported from an installed package by `scripts/adopter-smoke.sh`. Unknown external consumers must also be assumed because it is a public export. Keeping the TypeScript signature does not preserve runtime compatibility when inputs that returned a number now throw.
+The installed-export verification is not actually wired into scope. The requirement says the throw is tested through the installed package export “the way `scripts/adopter-smoke.sh` imports it,” but:
 
-“Named diagnostic error” does not define whether this means `Error.name`, a concrete exported class, an error code, or a message prefix. Without a stable identity, adopters cannot safely distinguish malformed input from unrelated failures. The proposed minor changeset names artifact refusals and remedies, but does not explicitly promise to disclose the direct public-API throw or how callers migrate.
+- `scripts/adopter-smoke.sh` is absent from FR-2 Targets.
+- It is absent from Implementation Scope and Conflict Surface.
+- Section 11 maps FR-2 to `markdown.test.ts`, not to the installed-package smoke.
+- The migration tells adopters to call `readOperatorHandoff`, but the PRD does not explicitly require that reader and its result type to be re-exported through the package root.
 
-The source-only FR-2 unit test is insufficient for an installed public API already guarded by the adopter smoke.
+Current code confirms why this matters: `countOperatorHandoff` is re-exported through `core/state/index.ts`, and `scripts/adopter-smoke.sh` imports it from an installed `provegate` package. A source-relative unit test cannot prove the new diagnostic exports are packaged.
+
+The memory output is now substantive. `_brain/learnings/unreadable-input-needs-a-diagnostic-result.md` captures the non-derivable design rule and is repeated in Durable Artifacts.
 
 ### 4. Migration & Rollback
 
-The pure-reader rollback is credible: reverting restores behavior and no on-disk migration is required. The optional state field is also backward-readable.
+The rollback remains credible: the reader is pure, the state addition is optional, and reverting the implementation restores previous behavior without data migration.
 
-Deployment ordering is not adequately gated. “PRD-040 lands first” is currently a note, not a hard start condition. Both items modify `markdown.ts`, `acceptance.ts`, tests, the audit script, and changeset material. Starting PRD-043 against the old grammar risks implementing and testing a different reader contract.
+The sequencing closure is strong:
 
-FR-5 assumes PRD-040 delivers `scripts/audit-operator-rows.mjs`, but gives no preflight or fallback if the script or expected interface is absent. It also does not reconcile PRD-043’s new refusal population with PRD-040’s acknowledgement fingerprint.
+- PRD-040 must be merged before Phase 3 or Phase 4 begins.
+- Its grammar fixtures and `--assert-acknowledged` audit interface must exist.
+- Missing or incompatible prerequisites stop the work.
+- Newly refusing historical artifacts stop by default.
+- The owner is the decision actor.
 
-The declared minor release is questionable until the public throw is specified and classified. This is a source-compatible but behavior-breaking change for direct callers.
+The split itself is not coherent yet because PRD-040 retains obligations assigned to PRD-043:
 
-The value arithmetic is correct:
+- PRD-040 §7 says its diagnostic reader is additive and `StateRecord.task` gains an optional field, although neither belongs to its requirements or scope.
+- PRD-040 Memory Inputs says its FR-4 refuses `scanDocument().unreliable`; FR-4 actually governs declaration coherence, while PRD-043 owns scanner refusal.
+- PRD-040’s DO NOT section says not to return zero for unreadable input, while its Non-Goals and §7 explicitly preserve zero/non-refusal until PRD-043.
+- PRD-040 §7 refers to the audit as FR-8 although the audit is FR-7, and describes a refusal classification its two-population audit does not specify.
 
-`0.25×5 + 0.25×4 + 0.20×3 + 0.15×2 + 0.15×3 = 3.60`.
+Thus an implementing agent for the prerequisite item cannot satisfy both its Non-Goals and its DO NOT contract. PRD-043 correctly waits for PRD-040, but currently waits for an internally contradictory predecessor.
 
-MF 5 is justified: Clause 5 is owner-approved canonical method content, so its missing enforcement is a method-fidelity gap rather than merely an ordinary parser bug. UI 4, TL 3, and AR 2 are defensible. RM 3 is not: a public numeric API begins throwing, a hand-rolled Markdown predicate expands, and four production modules change. RM should be 2, producing a corrected value of 3.45.
+The value score is correct:
+
+`0.25×5 + 0.25×4 + 0.20×3 + 0.15×2 + 0.15×2 = 3.45`.
+
+- MF 5: justified; Addendum A3 Clause 5 is approved method behavior that remains unenforced.
+- UI 4: justified; the fix prevents silent autonomous closes and supplies actionable diagnostics.
+- TL 3: justified; it improves a central gate without broadly unlocking unrelated roadmap work.
+- AR 2: justified; adopter impact is meaningful but not primarily an adoption-surface improvement.
+- RM 2: justified; a public numeric API starts throwing and the gate’s Markdown grammar changes across several consumers.
 
 ### 5. Memory Inputs
 
-- `scope-out-the-layer-the-rounds-keep-hitting`: relevant and genuinely applied; the split follows the record’s demonstrated remedy.
-- `assert-absent-needs-an-independent-cause`: only partially applicable. Independent refusal causes are valuable, but the planned assertions are primarily positive diagnostic assertions rather than assert-absent tests.
-- `fixture-must-reach-production-shape`: strongly relevant. The CLI-level requirement is correct, but FR-4 still fails to model the production task-presence distinction.
-- `metadata-declares-what-it-cannot-provide`: a useful analogy, though not a direct metadata case.
-- `gate-run-resume-after-archive`: relevant through the `core/run/**` watch; placing the fatal check inside `operatorGateOk` covers resumed merge paths.
-- `strictness-added-during-extraction-is-a-behavior-change`: central and not fully honored. The PRD acknowledges artifact refusals but understates the public exported function’s runtime break.
-- `surface-set-without-its-predicate`: directly relevant through `core/gates/**`; its disposition is premature because the boundaryless-table candidate predicate remains undefined.
-- `exemption-marker-needs-no-prose`: correctly reviewed; no exemption surface is introduced.
-- `narrow-the-grammar-not-the-parser`: relevant in principle, but the PRD adds a new boundaryless-table recognition heuristic without closing its grammar.
-- `a-rule-corrected-survives-where-it-is-restated`: relevant; the split is mostly consistent across PRD-040 and PRD-043.
-- `state-model-before-mechanism`: not fully applied because absent-task and present-zero-task states remain indistinguishable at FR-4’s proposed interface.
-- `two-parsers-wrong-together`: relevant; one reader avoids duplicated implementations, but behavioral fixtures still need to bind the undefined predicate to A3’s required outcomes.
+- `scope-out-the-layer-the-rounds-keep-hitting`: applied appropriately; the diagnostic layer is now separate.
+- `assert-absent-needs-an-independent-cause`: relevant to independent refusal fixtures, though the PRD should add positive controls as well.
+- `fixture-must-reach-production-shape`: relevant and correctly drives the `runCheck` test, but FR-4’s proposed production argument still does not match the declared type.
+- `metadata-declares-what-it-cannot-provide`: a defensible analogy for an unjustified numeric answer.
+- `gate-run-resume-after-archive`: relevant; placing refusal inside `operatorGateOk` covers resume paths.
+- `strictness-added-during-extraction-is-a-behavior-change`: now substantially honored through the audit, explicit public throw, migration, and rollback.
+- `surface-set-without-its-predicate`: not fully applied because “separator-shaped” remains undefined and FR-4’s presence input lacks one executable representation.
+- `operator-row-must-be-a-table-row`: now explicitly reviewed; closure recorded.
+- `exemption-marker-needs-no-prose`: correctly reviewed; no exemption syntax is introduced.
+- `narrow-the-grammar-not-the-parser`: directionally applied, but the candidate grammar still needs contextual closure.
+- `a-rule-corrected-survives-where-it-is-restated`: not successfully applied across PRD-040; stale refusal and state-field claims remain.
+- `state-model-before-mechanism`: partially applied; the intended three states are named, but `undefined` plus unrestricted `present: boolean` leaves duplicate absence representations.
+- `two-parsers-wrong-together`: correctly applied by retaining one reader and binding consumers to its result.
 
-The supplied passing lint indicates no active record with a `watch` overlapping a declared FR Target is mechanically missing. However, active record `operator-row-must-be-a-table-row` is substantively relevant and omitted: its central observation is that zero currently cannot distinguish empty from malformed, exactly the distinction PRD-043 changes.
-
-Memory Outputs `none` is not adequately reasoned. PRD-040’s proposed learning concerns counting every permitted shape and the compatibility consequences of changing a count. PRD-043 introduces a distinct durable rule: an unreadable artifact needs a diagnostic result propagated through every consumer, while a legacy numeric API must refuse rather than invent a number. The deferred PRD-040 learning does not yet exist and its declared text does not capture that consumer contract. The current `none` is ceremonial.
+No additional active record with a `watch` overlapping PRD-043’s declared FR Targets is missing; the supplied passing readiness lint corroborates the watch-declaration check.
 
 ---
 
 ## Scorecard
 
-| #         | Dimension                | Weight | Score    | Notes |
-| --------- | ------------------------ | ------ | -------- | ----- |
-| 1         | Clarity                  | 15%    | 6/10     | Concrete targets and commands, but candidate grammar, diagnostic identity, task presence, and sequencing are unresolved. |
-| 2         | Completeness             | 20%    | 5.5/10   | Public API migration, audit evolution, multi-problem behavior, and durable learning are incomplete. |
-| 3         | Technical Depth          | 25%    | 6/10     | Correct architecture and scanner precedent; result invariants and parser boundaries remain open. |
-| 4         | Multi-Tenancy & Security | 20%    | 9/10     | Local pure parsing/state change; no tenant, auth, network, route, or query surface. |
-| 5         | Scope & Testability      | 10%    | 7/10     | The split is coherent, but several tests cannot be implemented deterministically from the stated contract. |
-| 6         | Migration & Rollback     | 10%    | 4/10     | Rollback is sound; public throw, semver, hard ordering, and audit-script migration are not. |
-| **Total** | **Weighted**             |        | **6.4/10** | **ITERATE** |
+| #         | Dimension                | Weight | Score | Notes |
+| --------- | ------------------------ | ------ | ----- | ----- |
+| 1         | Clarity                  | 15%    | 6.5/10 | Concrete targets and commands, but table-candidate context, boundaryless separators, presence representation, and audit fingerprint remain ambiguous. |
+| 2         | Completeness             | 20%    | 6.5/10 | Most iteration-1 gaps were addressed; installed-export wiring, positive controls, and the predecessor sweep remain incomplete. |
+| 3         | Technical Depth          | 25%    | 7/10 | Strong diagnostic architecture and failure ordering, weakened by contradictory parser and state predicates. |
+| 4         | Multi-Tenancy & Security | 20%    | 9/10 | Local parsing and state change; no tenant, auth, route, endpoint, query, telemetry, or network surface. |
+| 5         | Scope & Testability      | 10%    | 6.5/10 | Intended split is sensible, but PRD-040 still claims both sides and FR-2’s installed test has no scoped execution path. |
+| 6         | Migration & Rollback     | 10%    | 7/10 | Public throw and rollback are honest; package-export migration and three-population audit evolution are incomplete. |
+| **Total** | **Weighted**             |        | **7.2/10** | **ITERATE** |
 
 Hard caps checked:
 
-- Security cap: not tripped — no protected route, endpoint, or query path is touched.
-- Contract cap: not tripped — no new client-to-server payload is introduced.
-- Lint cap: not tripped — supplied evidence records `gate check PRD-043` passing. The scorer’s rerun stopped before lint evaluation because the read-only sandbox denied `_state/prds.json` temporary-file creation.
+- Security cap: not tripped — no protected route, endpoint, or query surface is touched.
+- Contract cap: not tripped — no client-to-server payload is introduced.
+- Lint cap: not tripped — measured `gate check PRD-043` evidence passes.
 
 ---
 
 ## Missing Pieces (to reach 10/10)
 
-1. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-1 and §6, define the exact header-candidate, separator-candidate, block-boundary, cell-splitting, and width-equality predicates for both boundary-piped and boundaryless lines. State diagnostic ordering or aggregation for multiple malformed sections and define whether `count` is zero, partial, or explicitly unusable when `problem` is non-null. Add matching cases to §11.
+1. **OPEN — iteration-1 Missing Piece 1.** In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-1 and §11, the five predicates and aggregation were added, but the new header predicate also matches valid data rows and “separator-shaped” is undefined for boundaryless lines. Exact change: state that header candidates are evaluated only outside a table block already consumed through its first non-boundary-piped line; define a boundaryless separator candidate including cell-count equality and minimum cell/pipe requirements; add positive fixtures for a valid one-row table and ordinary `A | B` prose followed by `---`.
 
-2. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-3/FR-4, make task presence part of the contract. Either add an explicit `present` field to the task-read input or require `runCheck` to pass `undefined` when `found.record.artifacts.tasks` is empty. Add `packages/provegate/src/core/state/build.ts::StateRecord` to FR-3’s Targets and state the exact sixth-parameter type.
+2. **OPEN — iteration-1 Missing Piece 2.** In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-3/FR-4 and §8, `StateRecord` was added to Targets and absence was named, but `found.record.task` still lacks the required `present` property. Exact change: make the sixth parameter `{ present: true; count: number; problem: string | null } | undefined`, and require `runCheck` to construct that object only when `record.artifacts.tasks` is non-empty; otherwise pass `undefined`. Do not allow `{ present: false, ... }`.
 
-3. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-2, §7 Migration & Compatibility, §8 Implementation Scope, Conflict Surface, and §11, define a stable public diagnostic identity—exported error class or documented error code—and explicitly state that unchanged source signature does not mean runtime compatibility. Require the changeset to name direct `countOperatorHandoff` callers and their migration, add `scripts/adopter-smoke.sh` to scope, and test the throw through the installed package export.
+3. **OPEN — iteration-1 Missing Piece 3.** In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-2, §8, Conflict Surface, and §11, the stable identity and runtime-compatibility warning are closed, but the installed-export test remains outside executable scope. Exact change: add `scripts/adopter-smoke.sh` to FR-2 Targets, Implementation Scope, and Conflict Surface; add an FR-2 smoke assertion that malformed content imported from installed `provegate` throws `OperatorHandoffUnreadableError` with code `OPERATOR_HANDOFF_UNREADABLE`; explicitly require package-root exports for `readOperatorHandoff`, its result type, and the error class.
 
-4. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-5 and §7 Dependencies, convert “PRD-040 lands first” into a hard Phase-3/Phase-4 precondition: PRD-040 must be merged and its grammar fixtures and `scripts/audit-operator-rows.mjs` interface must exist before work starts. Define the audit’s new refusal population, fingerprint/acknowledgement behavior, where the decision is recorded, and the authorized go/narrow/stop actor. State that a missing or incompatible script fails the preflight.
+4. **OPEN — iteration-1 Missing Piece 4.** In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, §4 FR-5, §7 Dependencies, and §11, the hard preflight, missing-script failure, new population, default stop, and owner actor are closed. The fingerprint evolution is not. Exact change: define the new fingerprint byte shape—preferably `audit: <count-changes>/<acceptance-changes>/<refusals>/<sha>`—and state that the hash covers all three sorted populations; add a stale-refusal acknowledgement case to FR-5 verification.
 
-5. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, Memory Inputs, add at least a reviewed disposition for `operator-row-must-be-a-table-row`; revise the `surface-set-without-its-predicate`, `narrow-the-grammar-not-the-parser`, and `state-model-before-mechanism` dispositions after closing the predicate and presence-state gaps.
+5. **CLOSED — iteration-1 Missing Piece 5.** `_prds/wip/prd-043-unreadable-artifact-refuses.md`, Memory Inputs, now includes `operator-row-must-be-a-table-row` and revises the predicate and state-model dispositions. Exact change: none for the missing-input finding; the accuracy issues above are tracked separately.
 
-6. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, Memory Outputs, Durable Artifacts, and Conflict Surface, replace `none` with a learning such as `_brain/learnings/unreadable-input-needs-a-diagnostic-result.md`, covering diagnostic-result propagation, consumer refusal, and the legacy numeric wrapper’s compatibility consequence. Alternatively, explicitly declare and repeat an update to PRD-040’s learning after it exists.
+6. **CLOSED — iteration-1 Missing Piece 6.** `_prds/wip/prd-043-unreadable-artifact-refuses.md`, Memory Outputs and Durable Artifacts, now declare `_brain/learnings/unreadable-input-needs-a-diagnostic-result.md` consistently. Exact change: none.
 
-7. In `_prds/wip/prd-043-unreadable-artifact-refuses.md`, the Value header and arithmetic comment, change RM from 3 to 2 and the total from 3.60 to 3.45 to reflect the public runtime throw and cross-module parser/gate blast radius.
+7. **CLOSED — iteration-1 Missing Piece 7.** `_prds/wip/prd-043-unreadable-artifact-refuses.md`, Value header and arithmetic comment, now use RM 2 and total 3.45. Exact change: none.
+
+8. **OPEN — new split-coherence finding.** In `_prds/wip/prd-040-operator-gate-coherence.md`, §7 Migration & Compatibility, Memory Inputs, DO NOT, and related historical restatements, remove present-tense claims that PRD-040 adds the diagnostic reader, `StateRecord.task` problem field, or unreadable-input refusal. Replace the DO NOT rule requiring PRD-040 to refuse unreadable input with a cross-reference to PRD-043, correct the audit reference from FR-8 to FR-7, and ensure every retained statement describes only PRD-040’s counting/declaration invariant and two-population audit.
 
 ---
 
@@ -157,24 +171,26 @@ Hard caps checked:
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
-| 1   | 2026-08-07 | 6.4   | ITERATE | Initial independent assessment; split judged coherent, but parser, public API, sequencing, audit, and memory contracts remain incomplete. |
+| 1   | 2026-08-07 | 6.4   | ITERATE | Split judged conceptually coherent; parser, public API, presence, sequencing, audit, memory, and value contracts incomplete. |
+| 2   | 2026-08-07 | 7.2   | ITERATE | Diagnostic identity, hard dependency, durable learning, and value closures verified; new predicate/state contradictions and stale PRD-040 split claims remain. |
 
 ---
 
 ## Project-Specific Checklist
 
-- No push code path: compliant; the PRD adds none.
-- Zero runtime dependencies: compliant; no dependency is proposed.
+- No push code path: compliant; none is proposed.
+- Zero runtime dependencies: compliant; none is proposed.
 - No telemetry or network calls: compliant.
-- Method-content traceability: compliant; behavior traces to owner-approved Addendum A3 Clauses 2, 4, and 5.
-- Addendum boundary: compliant; no acceptance-authorship or template-default change is proposed.
+- Method-content traceability: compliant; behavior is authorized by Addendum A3 Clause 5, with the Phase-2 warning derived from Clauses 2 and 4.
+- Addendum boundary: compliant; no template default, acceptance authorship, or acceptance schema change is proposed.
 - ADR compliance: no conflict identified.
 - Canonical status vocabulary: unaffected.
-- Public API compatibility: incomplete; runtime throwing behavior and adopter migration are underspecified.
-- Value score: arithmetic passes as written, but RM is overrated and should be corrected to 2.
+- Public API compatibility: honestly identified as behavior-breaking, but installed packaging verification remains incomplete.
+- Dependency ordering: correctly hard-gated; the currently missing audit script means Phase 3/4 must not start.
+- Value score: 3.45 is arithmetically and substantively correct.
 
 ---
 
 ## Verdict
 
-ITERATE — the split leaves PRD-040 and PRD-043 conceptually coherent, and no hard cap is tripped, but PRD-043 is below the 8.0 readiness threshold. Its boundaryless-table predicate, task-presence state, public exported throw, hard sequencing, audit evolution, and durable memory output must be specified before Phase 3.
+ITERATE — no hard cap is tripped, and most iteration-1 findings were materially addressed. The item remains below the PASS threshold because FR-1’s literal predicate can reject valid table data, FR-4’s production argument cannot satisfy its declared type, the installed public-export test is not scoped, the three-population fingerprint is undefined, and PRD-040 still contradicts the split by retaining unreadable-input refusal obligations.

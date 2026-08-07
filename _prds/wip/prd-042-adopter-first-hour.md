@@ -66,7 +66,7 @@ someone else can pick up.
 | Metric                                     | Current | Target | Measurement                    |
 | ------------------------------------------ | ------- | ------ | ------------------------------ |
 | Artifacts the CLI can instantiate          | 1 of 3  | 3 of 3 | FR-1 tests                     |
-| Unsubstituted tokens in a new PRD          | 7       | 0      | FR-2 test, adopter smoke fill  |
+| Resolvable tokens with a non-empty configured source left unsubstituted | 7 | 0 | FR-2 test, adopter smoke fill |
 | Templates `gate new` can read              | plain   | both   | FR-5 test against the rendered store |
 
 ---
@@ -114,9 +114,11 @@ so that my first close fails on my code and not on my paperwork.
    | `{{CMD_BUILD}}` | `config.commands.build` | config only |
    | `{{CMD_TEST_SCOPED}}` | `config.prompts.values.CMD_TEST_SCOPED`, else `config.commands.test` | prompts value wins |
    | `{{MEMORY_ROOT}}` | `config.memory.root` | config only |
-   | `{{DOCS_ROOT}}` | `config.prompts.values.DOCS_ROOT`, else the summary artifact dir | prompts value wins |
+   | `{{DOCS_ROOT}}` | `config.prompts.values.DOCS_ROOT`, else `config.dirs.artifacts.summary.dir` | prompts value wins |
 
-   That is seven tokens — the exact set the adopter run found unsubstituted. A source whose
+   Those seven rows are the CLOSED set: a token outside the table is never substituted, however
+   plausible its name, and adding a row is a change to this requirement rather than an
+   implementation detail. It is also exactly the set the adopter run found unsubstituted. A source whose
    value is absent or an empty string is **not** a substitution: the token stays, and it joins
    the unknown list. Unknown tokens are reported once each, sorted, deduplicated, on stdout as
    a single `[new] unresolved tokens: …` line; the command still exits 0, because an unresolved
@@ -184,6 +186,10 @@ so that my first close fails on my code and not on my paperwork.
   anchor, or two competing anchors, **Then** each refuses as template drift.
 - **Given** a close with no tasks file, **When** phase 6 stops, **Then** the message names the
   configured expected path and the `independent-review` row's required columns.
+- **Given** a task artifact freshly instantiated by `gate new --tasks` and otherwise unedited,
+  **When** the real Phase-6 chain runs against it, **Then** it FAILS — the template's placeholder
+  `independent-review` material must never satisfy the gate, or the convenience this item adds
+  would hand an author a pre-passed review row.
 - **Given** either quickstart copy, **When** `verify:quickstart-parity` runs, **Then** it fails
   when the manifest recipe follows the close section in that copy.
 
@@ -204,6 +210,23 @@ already agree on this for hand-written PRDs; the test pins it.
 
 The QUICKSTART edit moves prose between two copies that a parity check compares. Move both in
 the same commit or the check fails, which is the point of it.
+
+### Migration & Rollback
+
+- **Legacy `gate new <slug>` is unchanged.** The positional mode keeps its arguments, its output
+  path and its exit codes; the two new flags are additive, and the mixed-mode refusals in FR-1
+  are the only new failure on the old path.
+- **Both QUICKSTART copies ship in the same release.** They are compared by
+  `verify:quickstart-parity`, so a release carrying one and not the other is red before it
+  reaches an adopter.
+- **Revert:** reverting this work leaves any file already created by `--tasks`/`--review` in
+  place — they are ordinary artifacts, not managed state, and the older CLI neither reads nor
+  rejects them. A PRD created without its memory sections in a memory-disabled repository stays
+  valid there; if that repository later enables the contract, `gate check` fails it, which is the
+  correct reading and the same thing that happens to any hand-written PRD.
+- **Rollback trigger:** an anchor alternation that admits a template it should have refused.
+  FR-5's four deny tests are the detector; if one goes green after a change, revert rather than
+  widen.
 
 ### Dependencies
 
@@ -324,6 +347,7 @@ the same commit or the check fails, which is the point of it.
 | FR-3 | `pnpm test --filter provegate`  | new.test.ts            | memory sections absent when the contract is off            |
 | FR-3 | `pnpm test --filter provegate`  | prd-ready.test.ts      | absence passes with memory off, fails with memory on       |
 | FR-4 | `pnpm test --filter provegate`  | chain.test.ts          | the stop names the configured path and the ledger row columns |
+| FR-1 | `pnpm test --filter provegate`  | chain.test.ts          | an unedited instantiated tasks template FAILS the real Phase-6 chain |
 | FR-5 | `pnpm test --filter provegate`  | new.test.ts            | rendered template instantiates; four drift shapes each refuse |
 | FR-6 | `pnpm verify:quickstart-parity` | both quickstart copies | order assertion fails when the recipe follows the close section |
 
@@ -355,4 +379,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | ---------- | ------ | ------------------------------------------------------------ |
 | 2026-08-07 | owner  | Initial draft — the hand-work measured in the first adopter run |
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.1 ITERATE): FR-1 destination paths derived from `dirs.artifacts.tasks` / `dirs.reviewsDir` with exact-id resolution, mutually exclusive modes, `wx`-atomic contained writes and three refusals; FR-2 replaced by a closed seven-row token→source table with precedence, empty-value behaviour, sorted unique reporting and exit 0; FR-3 states the removal grammar and the memory-on failure that stops it becoming an escape hatch; FR-4 retargeted to `chain.ts::buildGateChain` (the message lives there, not in `review.ts`) and names the required ledger columns; FR-5 closed to a two-member anchor alternation with four deny tests and wildcards forbidden; FR-6 adds the structural order assertion to the parity verifier; every memory input rewritten to name the test that binds it; RM 4→2, value 3.75→3.45 |
+| 2026-08-07 | owner  | Iteration 2 (Codex 7.7 ITERATE; 6.1→7.7, five items closed): FR-1 states the three-mode argument grammar with every mixed form refused by name; §2's metric reworded to resolvable-with-non-empty-source; `{{DOCS_ROOT}}`'s fallback named as `config.dirs.artifacts.summary.dir`; the seven rows declared the CLOSED set; a chain.test.ts regression added proving an unedited instantiated tasks template FAILS Phase 6, so the convenience cannot hand an author a pre-passed review row; §7 gained Migration & Rollback (legacy mode unchanged, both quickstart copies in one release, revert leaves created artifacts, deny tests as the rollback trigger) |
 

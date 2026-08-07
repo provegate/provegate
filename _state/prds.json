@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-07T13:17:44.900Z",
+  "generatedAt": "2026-08-07T13:26:42.725Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1503,7 +1503,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.2,
+        "score": 7.8,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
@@ -1540,7 +1540,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.1,
+        "score": 7.7,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
@@ -1577,7 +1577,7 @@
         "summary": "missing"
       },
       "readiness": {
-        "score": 6.4,
+        "score": 7.2,
         "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null

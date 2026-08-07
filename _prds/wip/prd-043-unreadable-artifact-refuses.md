@@ -84,16 +84,21 @@ so that a formatting mistake cannot silently drop my operator gate.
    field without checking the second, and the tests assert that contract at each consumer
    rather than asserting a number.
    The predicates, closed:
-   - a **header candidate** is a line that begins and ends with an unescaped `|` and holds at
-     least one non-empty cell; a **separator candidate** is a line of only `|`, `-`, `:` and
-     whitespace with a cell count equal to the header candidate's.
-   - a **table block** is a header candidate immediately followed by a separator candidate; it
-     ends at the first line that is not boundary-piped. A header candidate NOT followed by a
-     separator candidate is a `problem` (`table at line N has no separator row`) — that shape
-     counts 2 today, per §7 of PRD-040.
-   - a **boundaryless** line (cells separated by `|` without leading and trailing pipes) is a
-     `problem` only when it is followed by a separator-shaped line; otherwise it is prose and is
-     ignored. Ordinary prose containing `|` is therefore never a table.
+   - a **piped line** begins and ends with an unescaped `|` and holds at least one non-empty
+     cell. A **separator line** contains only `|`, `-`, `:` and whitespace and holds at least one
+     `-`. Neither predicate is "header": a header is a POSITION, not a shape, which is why the
+     first draft's header predicate also matched every data row.
+   - a **table block** starts at a piped line whose NEXT line is a separator line with the same
+     cell count; that first line is the header, and the block runs to the first line that is not
+     a piped line. Every piped line inside a block that is neither the header nor the separator
+     is a data row.
+   - a piped line that starts a run of piped lines with **no** separator line as its second line
+     is a `problem` (`table at line N has no separator row`) — that shape counts 2 today, per §7
+     of PRD-040.
+   - a **boundaryless** line has at least one unescaped `|` but no leading-and-trailing pair. It
+     is a `problem` only when the line after it is a separator line ignoring boundary pipes —
+     i.e. someone wrote a GFM table without edge pipes. Otherwise it is prose, and prose
+     containing `|` is never a table.
    - **cells** split on unescaped pipes by backslash parity; a data row whose cell count differs
      from its block header's is a `problem` naming the line and both counts.
    - a ledger section with no `Result` column, or with two, is a `problem` naming the section.
@@ -110,7 +115,7 @@ so that a formatting mistake cannot silently drop my operator gate.
    INSTALLED package export, the way `scripts/adopter-smoke.sh` imports it, not through a
    source-relative import.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`,
-     `packages/provegate/src/core/state/index.ts`
+     `packages/provegate/src/core/state/index.ts`, `scripts/adopter-smoke.sh`
 3. **FR-3**: `buildState` stores both results on `StateRecord.task`: `operatorHandoffCount` and
    a new optional `operatorHandoffProblem: string | null`. `operatorGateOk` refuses on the
    problem **before** the acceptance lookup — an unreadable artifact is not a close that merely
@@ -119,9 +124,13 @@ so that a formatting mistake cannot silently drop my operator gate.
      `packages/provegate/src/core/state/build.ts::StateRecord`,
      `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
 4. **FR-4**: `lintPrd` gains a sixth parameter
-   `task: { present: boolean; count: number; problem: string | null } | undefined`, and
-   `runCheck` passes `found.record.task` when the record has a task artifact and `undefined`
-   when it does not — **presence is part of the contract**, because "no task file" and "a task
+   `task: { present: true; count: number; problem: string | null } | { present: false } | undefined`
+   — a discriminated union, so a caller cannot read `count` on an absent artifact and the
+   compiler says so. `runCheck` builds it from `found.record`: `{ present: true, … }` when the
+   record has a task artifact (`found.record.task` supplies the count and the problem;
+   `StateRecord.task` carries no `present` field of its own and this parameter is where the
+   distinction is made), `{ present: false }` when it does not, and `undefined` only from callers
+   with no state at all — **presence is part of the contract**, because "no task file" and "a task
    file with zero rows" are different facts and a lint that cannot tell them apart cannot warn
    correctly. `PrdReadyReport` gains `warnings: string[]`, printed by `runCheck` without
    changing the exit code. A `problem` is a fatal `issues` entry; the declaration/count
@@ -134,8 +143,12 @@ so that a formatting mistake cannot silently drop my operator gate.
    `--assert-acknowledged` interface PRD-040 defines. A missing or incompatible script fails the
    preflight and the work does not start — this is a Phase-3/Phase-4 precondition, not a note.
    The audit then gains a third population: artifacts that would newly **REFUSE** under FR-1.
-   Its fingerprint line and the acknowledgement it demands work exactly as PRD-040 specifies,
-   the decision is recorded in this PRD's Changelog, and the authorized actor is the owner. A
+   The fingerprint line GROWS a field rather than changing meaning: PRD-040 ships
+   `audit: <count-changes>/<acceptance-changes>/<sha>` and this item extends it to
+   `audit: <count-changes>/<acceptance-changes>/<refusals>/<sha>`. A three-field line is
+   therefore stale under the four-field reader, which is the correct outcome — a PRD-040
+   acknowledgement cannot silently authorize a population it never measured. The decision is
+   recorded in this PRD's Changelog and the authorized actor is the owner. A
    refusal on a historical artifact stops the work by default: it means the corpus contains
    something the reader cannot parse, which is a finding about the reader.
    - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`,
@@ -210,6 +223,7 @@ therefore the only one it may assume.
 - [ ] `packages/provegate/src/core/gates/prd-ready.ts`, `packages/provegate/src/cli.ts`
 - [ ] `packages/provegate/test/markdown.test.ts`, `packages/provegate/test/acceptance.test.ts`,
       `packages/provegate/test/lint-parsers.test.ts`, `packages/provegate/test/cli-state.test.ts`
+- [ ] `scripts/adopter-smoke.sh` (the installed-export assertion)
 - [ ] `scripts/audit-operator-rows.mjs`, `.changeset/`
 
 ---
@@ -292,6 +306,7 @@ therefore the only one it may assume.
 - `packages/provegate/test/acceptance.test.ts`
 - `packages/provegate/test/lint-parsers.test.ts`
 - `packages/provegate/test/cli-state.test.ts`
+- `scripts/adopter-smoke.sh`
 - `scripts/audit-operator-rows.mjs`
 - `.changeset/**`
 
@@ -312,6 +327,7 @@ therefore the only one it may assume.
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts     | one fixture per refusal cause, each failing independently  |
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts     | a paragraph containing `\|` produces no problem            |
 | FR-2 | `pnpm test --filter provegate`         | markdown.test.ts     | legacy numeric export throws the named diagnostic          |
+| FR-2 | `pnpm smoke:adopter`                   | adopter fixture      | the throw and its `code` observed through the INSTALLED export |
 | FR-3 | `pnpm test --filter provegate`         | acceptance.test.ts   | merge gate refuses before the acceptance lookup            |
 | FR-4 | `pnpm test --filter provegate`         | cli-state.test.ts    | problem is fatal, contradiction is a warning, via runCheck |
 | FR-4 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warning only when the task file exists; exit code unchanged |
@@ -346,4 +362,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Initial draft — split out of PRD-040 after two flat readiness rounds landed on this layer |
 | 2026-08-07 | owner  | Absorbed PRD-040's Phase-2 contradiction warning: it needs this item's `lintPrd` parameter and `runCheck` plumbing, and one contract split across two items half-specifies both. `PrdReadyReport.warnings` and the print-without-exit-change rule are stated here |
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.4 ITERATE): FR-1 states the five predicates as a closed set (header candidate, separator candidate, block boundary, cell parity by backslash, width equality), aggregates problems in document order, and declares `count` UNUSABLE rather than zero when a problem exists; FR-2 gains a stable exported diagnostic identity (`OperatorHandoffUnreadableError` / `OPERATOR_HANDOFF_UNREADABLE`), states that an unchanged signature is not runtime compatibility, and is tested through the installed export; FR-3 adds `StateRecord` to Targets; FR-4 makes artifact PRESENCE part of the contract (`present` flag, `undefined` when absent) — the missing third state the first draft had; FR-5 converts the PRD-040 dependency into a hard preflight with the new refusal population and the owner as the authorized actor; Memory Outputs `none` replaced by a real learning; RM 3→2, value 3.60→3.45 |
+| 2026-08-07 | owner  | Iteration 2 (Codex 7.2 ITERATE; 6.4→7.2, three items closed): FR-1's "header candidate" predicate matched every data row — corrected to position-based block detection (a piped line whose NEXT line is a matching separator line starts a block; header is a position, not a shape), with "separator line" defined for boundaryless lines too; FR-4's sixth parameter is now a discriminated union (`{present: true, count, problem} | {present: false}`) so a caller cannot read a count on an absent artifact, and where the distinction is built is named; `scripts/adopter-smoke.sh` added to FR-2's Targets, Scope, Conflict Surface and §11 so the installed-export assertion is executable; FR-5 defines the fingerprint's field GROWTH (three fields → four), which correctly stales a PRD-040 acknowledgement that never measured refusals |
 

@@ -5,15 +5,15 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-041-close-writes-its-own-state.md` |
-| Score                  | 6.2/10 |
+| Score                  | 7.8/10 |
 | Verdict                | ITERATE |
-| Iteration              | 1 |
+| Iteration              | 2 |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit)     | — |
 | Scored by              | Codex (gpt-5), fresh independent scorer |
 | Self-scored            | no |
 | Date                   | 2026-08-07 |
-| PRD Lint               | passed per supplied measured run; local rerun was blocked before lint by read-only-sandbox `EPERM` while refreshing `_state/prds.json` |
+| PRD Lint               | passed per supplied `node packages/provegate/dist/cli.js check PRD-041`; local rerun reached the read-only-sandbox `EPERM` while refreshing `_state/prds.json` |
 | State Record           | pending — read-only sandbox |
 
 ---
@@ -22,8 +22,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign — fix PRD first | The write point, failed-post-merge state, resume path, and lease-deletion commit transaction remain underspecified. |
-| Phase 6 (Audit)     | — | Re-score after the PRD defines those state transitions and their tests. |
+| Phase 4 (Execution) | Do not assign — fix PRD first | Branch-specific failure state, archived resume, cleanup-hook behavior, and the corpus assertion remain ambiguous or ineffective. |
+| Phase 6 (Audit)     | — | Re-score after the four open closures are corrected. |
 
 ---
 
@@ -31,48 +31,43 @@
 
 ### 1. Technical Depth & Architecture
 
-`archivePrdArtifacts` is the existing owner of the artifact move and archive commit. Its pathspec includes both destination and former paths, so a status mutation performed before its `git commit` can carry the resulting artifact bytes. The PRD is correct that the archive commit can own those bytes.
+Archive is the correct owner of the artifact-byte mutation. `archivePrdArtifacts` stages both old and completed artifact paths plus `_state/prds.json`; writing before `git mv`, or restaging the completed paths after writing, can therefore carry the terminal bytes in the archive commit. The configured value is correctly available through `normalizeStatus(config.statusVocab, 'complete')`; `statusVocab.complete` does not exist.
 
-The chosen timing is not yet safe. Archive runs before the local merge and before post-merge gates. If a post-merge gate fails, `merge.ts` resets the base checkout to its pre-merge SHA but deliberately leaves the feature branch intact. The feature branch therefore retains completed-path artifacts saying `Ship Verified` even though the close failed. The PRD says only that a merge-time write would be reverted; it does not specify the actual feature/base states, lease state, or recovery command after this failure.
+The auto-revert model is still stated inaccurately. `merge.ts` resets the base checkout to `preMergeSha` after a post-merge failure while leaving the feature branch intact. Consequently:
 
-FR-1 also names a configuration member that does not exist. `StatusVocabConfig` has no `statusVocab.complete`; the shipped value is `config.statusVocab.aliases.complete`, currently `Ship Verified`. The PRD must either name that existing path and require that its value is canonical, or explicitly introduce a dedicated terminal-status configuration field.
+- Feature branch: completed artifacts, terminal status, archive commit retained.
+- Base branch: pre-merge wip artifacts and their prior status.
 
-FR-4 is incomplete against its target. Current `isImplemented` has three success arms: configured implemented status, completed PRD location, and presence of a summary artifact. “Instead of the artifact’s location” does not unambiguously require removal of both non-status fallbacks.
+The §6 table reports only terminal/completed and says the archive commit “is not reverted.” That is true only of the feature ref; the archive commit is removed from the base ref by the hard reset. The table does not name both states as iteration 1 required.
 
-The corpus claim is false:
+FR-4’s design is now correct. Current `isImplemented` has three arms, and the PRD explicitly removes both location and summary fallbacks. The measured corpus also holds: 43 records, `Ship Verified 37`, `Superseded 1`, `Archived 1`, `Draft 4`; status-based implemented is 38 versus completed-location 39.
 
-- The current snapshot has 43 records.
-- Existing `isImplemented` counts 39.
-- A status-only `statusVocab.implemented` predicate counts 38.
-- `PRD-023` is `Superseded` in `completed/`, so the board count necessarily falls from 39 to 38.
-- The published self-hosting figure is separately derived from exact `Ship Verified` statuses and is currently 37. `pnpm verify:doc-claims` is runnable and passed, but it does not exercise `isImplemented`; it can remain green regardless of the FR-4 regression.
-
-The archive also stages `_state/prds.json` as built before archive/status mutation. The PRD does not say whether the close must regenerate and commit the terminal status and completed paths into that snapshot.
+The §11 corpus command is not an assertion. `gate queue --json` always exits successfully after printing the queue, and its JSON contains `ready`, `inFlight`, `blocked`, and `inReview`—not the `Implemented` status-panel metric. It neither exposes nor verifies the claimed count of 38.
 
 ### 2. Edge Cases & Failure Modes
 
-FR-2 is internally inconsistent: it says the write “refuses” when already terminal, while §6 says that case is a no-op and the run continues. It also leaves “terminal” undefined—exactly `aliases.complete`, any member of `implemented`, or another terminal lifecycle status.
+FR-2 now distinguishes an already-terminal no-op from malformed-header refusal, closing the direct idempotency contradiction.
 
-Status-level idempotency does not make `--from-phase=7` resumable. The declared `gate-run-resume-after-archive` record says the resumed chain re-evaluates memory gates against archived paths and can fail because `main` still contains the wip path. The PRD neither changes that behavior nor specifies automatic unarchive/recovery.
+It does not make an already-archived close resumable by itself. Phase-7 memory gates are `nonSkippable`, including under `--from-phase=7` and `--from-phase=merge`, and they run before archive. An archived working tree can therefore fail before the new no-op is reached. The transition table acknowledges this only as “on an un-archived tree,” without specifying the unarchive operation. The claimed resume behavior remains dependent on the manual recovery recorded in `gate-run-resume-after-archive`.
 
-The status mutation needs a preflight transaction: both artifacts should be validated before either is edited or moved. Otherwise a missing or malformed second status line can leave the first artifact mutated and the archive partially staged. Duplicate status lines and mismatched PRD/task states are also unspecified.
+FR-3 now specifies `merge.baseDir`, post-merge timing, pre-handoff placement, mutex ownership, a conventional path-scoped commit, and tracked/untracked/ignored/absent/recreated cases. The never-committed lease case is adequately covered: deleting an untracked or ignored lease produces no commit-worthy diff.
 
-FR-3 covers only the measured committed-lease case. It does not define:
+The commit-hook failure remains underdefined. The current runner deliberately degrades post-merge cleanup failures to handoff warnings because the source merge has landed. The PRD instead says to surface the hook output and leave the tree unchanged, but does not say whether the runner returns nonzero, emits the handoff card, records a warning, or what exact retry completes cleanup. No §11 row tests this fifth case.
 
-- No lease found.
-- Lease existed but was untracked or ignored, so deletion produces nothing commit-worthy.
-- The exact protected-base branch and working directory used in worktree mode.
-- Commit message and pathspec.
-- Commit-hook failure after the source merge has already landed.
-- A new claimant recreating the lease between mutex-protected deletion and an unprotected commit.
-
-The last case is material: `releaseLease` releases its mutex before returning to `runRun`, so a commit added only in `cli.ts` can race a new claim and record the wrong bytes. Worktree cleanup already occurs inside the mutex, but the plain-close path does not expose an equivalent atomic delete-and-stage operation.
+There is also tension between “cleanup and commit are under the same claim mutex” and “another claim recreates the lease between cleanup and commit”: a conforming claim cannot enter that interval. Reappearance can still be defended against, but the PRD should describe it as an identity/reappearance check rather than a normal claim race.
 
 ### 3. Maintainability & DX
 
-Using the existing status reader is directionally correct, but `getMetaValue` returns only a value, not the exact source span to replace. “Do not add a second regex” therefore needs a named writer/parser extension and explicit behavior for every accepted metadata-line form.
+The main FR, acceptance criteria, architecture, and changelog now use the normalizer, but two stale restatements created by the rework remain:
 
-The verification table points FR-3 at `cli.test.ts`, while Implementation Scope and Conflict Surface name `chain.test.ts` and `cli-state.test.ts`, not `cli.test.ts`. `STATUS.md` is an FR-5 target and Implementation Scope entry but is absent from Conflict Surface. The declared learning output is also outside Conflict Surface. Combined with “DO NOT touch paths outside the Conflict Surface,” the PRD currently forbids required work.
+- Memory Inputs says FR-1 writes `statusVocab.complete`.
+- §12 instructs implementers to read `statusVocab.complete`.
+
+These directly contradict FR-1 and the actual configuration types. The declared `a-rule-corrected-survives-where-it-is-restated` input was therefore not successfully applied.
+
+Prevalidation can reuse the existing reader without extending scope: split the document into lines, use `getMetaValue(line, 'Status')` to identify accepted lines, require exactly one, and replace that line. The PRD’s ban on a second status regex is executable.
+
+Scope, Conflict Surface, test paths, durable output, and project-wide DO NOT categories are otherwise aligned.
 
 The value arithmetic is correct:
 
@@ -80,33 +75,31 @@ The value arithmetic is correct:
 
 Axis judgment:
 
-- MF 4: reasonable intent, but terminal-before-post-merge semantics prevent a higher score.
-- UI 5: justified by the measured adopter failure and blocked next claim.
-- TL 3: reasonable for localized close-state reliability.
-- AR 2: conservative but defensible; this improves adopter DX without adding documentation or examples.
-- RM 3: not yet supported because the design adds git commits around mutex, hook, resume, and auto-revert boundaries. On the present specification RM is closer to 2, which would yield 3.45.
+- MF 4: justified; it closes a gap between verified execution and durable workflow state, though failed-close state remains imprecise.
+- UI 5: justified by the measured adopter failure and dirty-tree refusal.
+- TL 3: justified for a localized close/state correction.
+- AR 2: defensible; adopter reliability improves without broadening the adoption surface.
+- RM 3: defensible only after the remaining branch, resume, and hook semantics are pinned; it is not conservative enough for a higher score.
 
 ### 4. Migration & Rollback
 
-The protected-base claim is correct: `scripts/base-branch-guard.mjs` explicitly permits `_state/`, including deletions, on `main`.
+The new subsection materially improves the PRD. It names commit ordering, previous-CLI behavior, archive rollback, lease rollback, and a refusal trigger. The protected-base claim is correct: `scripts/base-branch-guard.mjs` permits `_state/` paths and checks deletions.
 
-The PRD does not specify the cleanup commit’s branch, timing, message, or failure policy. It also lacks a rollback plan for a close that may now produce an archive commit, merge commit, terminal-state commit, and lease-deletion commit.
-
-A simple “git revert the implementation” does not repair already-closed artifacts or restore a deleted active lease. Deployment ordering and compatibility with close attempts started on the previous CLI are likewise absent.
+Rollback remains dependent on understanding which ref contains the archive commit after merge or post-merge failure. Correcting §6’s branch-specific state table will make the existing rollback directions executable without changing the overall design.
 
 ### 5. Memory Inputs
 
-- `no-completed-done-status-alias`: relevant to canonical output, but the rationale conflates writing the configured canonical value with accepting a terminal alias as author input. The exact configuration path is misstated.
-- `metadata-declares-what-it-cannot-provide`: conceptually relevant, though it has no matching watch. It should result in a read-back/coherence assertion, not only prose.
-- `gate-run-resume-after-archive`: directly relevant and watch-matched, but not actually applied. The record says status idempotency alone cannot make the archived-path resume work.
-- `assert-absent-needs-an-independent-cause`: relevant to the missing-status regression. The PRD does not require the stated mutation check or paired positive creator.
-- `strictness-added-during-extraction-is-a-behavior-change`: watch-matched and relevant, but the compatibility surface and existing-status corpus are not pinned.
-- `fixture-must-reach-production-shape`: watch-matched and crucial. FR-3 does not yet require both tracked and untracked lease shapes or the real mutex/cleanup sequence.
-- `free-text-field-is-the-unread-drift-ledger`: its `_state/**` watch does not overlap a declared FR Target. The disposition is peripheral, while the more direct stale `_state/prds.json` issue is omitted.
-- `docs-outlive-the-gate-they-promise`: watch-matched through `STATUS.md`, but deleting a resolved deferral is only loosely related to the record’s shipped-check/future-prose failure mode.
-- `a-rule-corrected-survives-where-it-is-restated`: useful consistency guidance, but its `_prds/**` watch is not a declared implementation target. The FR-2 contradiction and test-path mismatch show the promised sweep has not yet held.
+- `no-completed-done-status-alias`: relevant, but its disposition still names nonexistent `statusVocab.complete` and fails to explain why using the `complete` alias internally to derive a canonical output is distinct from accepting it as author input.
+- `metadata-declares-what-it-cannot-provide`: relevant and now applied through archive-commit and regenerated-state coherence requirements.
+- `gate-run-resume-after-archive`: directly relevant but only partially applied; status idempotency does not bypass the non-skippable memory gates that fail on an already-archived tree.
+- `assert-absent-needs-an-independent-cause`: relevant to malformed-header tests. The zero/two-line fixtures are named, but §11 still does not require the record’s mutation check proving removal of prevalidation makes the test fail.
+- `strictness-added-during-extraction-is-a-behavior-change`: relevant and adequately reviewed; the new refusal is explicitly identified as new behavior and its accepted/refused cases are pinned.
+- `fixture-must-reach-production-shape`: relevant and improved by targeting the real `runRun` cleanup sequence and tracked/untracked lease shapes.
+- `free-text-field-is-the-unread-drift-ledger`: peripheral; its `_state/**` watch does not overlap a declared FR Target, and the rationale correctly records that no lease-schema field is added.
+- `docs-outlive-the-gate-they-promise`: relevant to removing the resolved `STATUS.md` deferral.
+- `a-rule-corrected-survives-where-it-is-restated`: highly relevant and not successfully applied; stale `statusVocab.complete` instructions survived in Memory Inputs and §12.
 
-Deterministic watch matching over all five declared FR target paths found four active overlaps: `docs-outlive-the-gate-they-promise`, `fixture-must-reach-production-shape`, `gate-run-resume-after-archive`, and `strictness-added-during-extraction-is-a-behavior-change`. All four are declared; no active watch-overlapping record is missing.
+Active watch overlaps are unchanged and all are declared: `gate-run-resume-after-archive`, `strictness-added-during-extraction-is-a-behavior-change`, `fixture-must-reach-production-shape`, and `docs-outlive-the-gate-they-promise`. No active watch-overlapping record is missing.
 
 ---
 
@@ -114,42 +107,39 @@ Deterministic watch matching over all five declared FR target paths found four a
 
 | #         | Dimension                | Weight | Score | Notes |
 | --------- | ------------------------ | ------ | ----- | ----- |
-| 1         | Clarity                  | 15% | 6/10 | Clarity gate is capped at 7: DO NOT omits project-wide prohibitions; configuration member, FR-2 behavior, FR-3 transaction, and scope/test paths conflict. |
-| 2         | Completeness             | 20% | 5/10 | Failed post-merge state, archived resume, status-write atomicity, lease variants, snapshot regeneration, and rollback are missing. |
-| 3         | Technical Depth          | 25% | 5/10 | Correctly identifies archive ownership, but misses the auto-revert branch state, mutex/commit race, second `isImplemented` fallback, and actual corpus delta. |
-| 4         | Multi-Tenancy & Security | 20% | 10/10 | Local repository state only; no tenant, auth, permission, endpoint, or data-leakage surface is introduced. |
-| 5         | Scope & Testability      | 10% | 6/10 | Useful adopter smoke coverage, but scope files disagree and key failure/concurrency cases lack named tests. |
-| 6         | Migration & Rollback     | 10% | 4/10 | Base-path legality is verified, but multi-commit ordering, hook failure, backward compatibility, and undo behavior are unspecified. |
-| **Total** | **Weighted**             |        | **6.2/10** | **ITERATE** |
+| 1         | Clarity                  | 15% | 7/10 | Structural Clarity-gate requirements pass, but stale vocabulary instructions, branch-conflated transitions, and unspecified hook outcome prevent autonomous execution. |
+| 2         | Completeness             | 20% | 7/10 | Most cases are now covered; archived resume, hook failure, and the ineffective corpus check remain open. |
+| 3         | Technical Depth          | 25% | 7/10 | Good archive, mutex, and predicate design, but the rework misstates auto-revert ref state and mistakes queue output for an implemented-count assertion. |
+| 4         | Multi-Tenancy & Security | 20% | 10/10 | Local repository-state operations only; no tenant, auth, endpoint, permission, or protected data surface is introduced. |
+| 5         | Scope & Testability      | 10% | 8/10 | Scope and test files now agree; the hook case lacks a test and `queue --json` cannot verify the stated count. |
+| 6         | Migration & Rollback     | 10% | 8/10 | Ordering, old-CLI compatibility, and rollback are present; ref-specific recovery still needs correction. |
+| **Total** | **Weighted**             |        | **7.8/10** | **ITERATE** |
 
 Hard caps checked:
 
-- Security cap: not tripped — `core/state/query.ts` is a local state predicate, not a protected auth/query surface; no deny-path test is required.
+- Security cap: not tripped — no protected route, endpoint, authorization, or server query surface is touched; no deny-path test is required.
 - Contract cap: not tripped — no client→server payload or schema contract is introduced.
-- Lint cap: not tripped — the supplied measured `node packages/provegate/dist/cli.js check PRD-041` passed. The scorer’s rerun was blocked before lint by sandbox `EPERM` when the CLI attempted its normal `_state/prds.json` refresh; this is the written read-only-environment waiver.
-- Runtime-dependency cap: not tripped — Dependencies declares none.
-- Push cap: not tripped — no push path is requested.
+- Lint cap: not tripped — the supplied measured `gate check PRD-041` passed. Local verification was blocked only by read-only-sandbox `EPERM` while the CLI attempted `_state/prds.json.58890.tmp`.
+- Runtime-dependency cap: not tripped — Dependencies remains `none`.
+- Push cap: not tripped — no push path is introduced.
 - Method-content cap: not tripped — no prompt, template, or schema content is changed.
 
 ---
 
 ## Missing Pieces (to reach 10/10)
 
-1. `_prds/wip/prd-041-close-writes-its-own-state.md` — §4 FR-1/FR-2, §6, and §7: replace nonexistent `statusVocab.complete` with the exact existing configuration source, define “terminal” precisely, prevalidate both artifact headers before any mutation, specify duplicate/malformed handling, and make already-complete an explicit no-op rather than a “refusal.”
+### Iteration-1 Closure Audit
 
-2. `_prds/wip/prd-041-close-writes-its-own-state.md` — §6 and §7 Architecture: add a transition table for archive success, merge failure, and post-merge-gate failure, naming feature/base artifact paths and statuses, lease state, and the exact retry command. Specify a recovery that makes `--from-phase=7` work without the manual unarchive procedure documented by `gate-run-resume-after-archive`.
-
-3. `_prds/wip/prd-041-close-writes-its-own-state.md` — §4 FR-3 and §6: require the deletion commit on `merge.baseDir` after successful post-merge gates and before the handoff, under the claim mutex, with a path-scoped conventional message; define tracked, untracked/ignored, absent, recreated, and commit-hook-failure cases. Add `packages/provegate/src/core/run/release.ts` and, if worktree cleanup changes, `packages/provegate/src/core/run/worktree.ts` to Targets and Conflict Surface.
-
-4. `_prds/wip/prd-041-close-writes-its-own-state.md` — §4 FR-4, §6, and §7: state that configured status is the sole `isImplemented` predicate and both completed-location and summary-presence fallbacks are removed. Add a fixture with both a completed PRD and present summary carrying a non-implemented status.
-
-5. `_prds/wip/prd-041-close-writes-its-own-state.md` — §7 and §11: replace “the number must not move” with the measured expectation: board implemented count changes 39→38 because `PRD-023` is `Superseded`; the independently derived exact-`Ship Verified` figure remains 37. Keep `pnpm verify:doc-claims`, but add a runnable state-query or CLI assertion that actually exercises `isImplemented`.
-
-6. `_prds/wip/prd-041-close-writes-its-own-state.md` — §4 FR-1, §6, and §11: specify regeneration and inclusion of `_state/prds.json` after status/path mutation, then verify a subsequent `gate status` leaves the tree clean and reports the committed terminal state.
-
-7. `_prds/wip/prd-041-close-writes-its-own-state.md` — §8, Conflict Surface, §11, and §12: align the test path (`cli.test.ts` versus the currently declared test files), add `STATUS.md` and the declared learning output to Conflict Surface, and add the project-wide DO NOT rules for push, runtime dependencies, telemetry/network calls, hook bypass, and untraceable method content.
-
-8. `_prds/wip/prd-041-close-writes-its-own-state.md` — add a Migration & Rollback subsection: name commit ordering, behavior for closes begun with the previous CLI, and exact recovery/revert steps for the archive/status commit and lease-deletion commit without recreating or deleting another claimant’s lease.
+| Iteration-1 item | State | Evidence checked and exact remaining change |
+| ---------------- | ----- | ------------------------------------------- |
+| 1. Terminal source, atomic prevalidation, and no-op semantics | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1/FR-2 are corrected, but Memory Inputs and §12 still say `statusVocab.complete`. Replace both with `normalizeStatus(config.statusVocab, 'complete')`; in §11 also require the zero-line refusal test to fail when prevalidation is mutation-disabled. |
+| 2. Archive/merge/post-merge transition and resume model | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §6: split merge-failure and auto-revert rows into feature-ref and base-ref states. State that base returns to wip/prior status while the feature retains completed/terminal artifacts. Replace “on an un-archived tree” with the exact unarchive-and-commit recovery steps before `gate run --from-phase=7 PRD-NNN`, or scope a runner change that makes the archived form resumable directly. |
+| 3. Atomic lease-deletion commit | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-3, §6, and §11: retain the now-correct branch/message/timing/mutex cases, but specify whether commit-hook failure returns 1 or produces a warning/handoff, name the exact retry command, and add a `packages/provegate/test/cli.test.ts` row exercising the failing hook. Reword the recreated case as reappearance/identity revalidation inside the mutex. |
+| 4. Remove both `isImplemented` fallbacks | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-4 and §6 explicitly remove completed-location and summary-presence fallbacks and name a combined negative fixture. No further change. |
+| 5. Correct corpus counts and assert the predicate | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §7’s counts are correct, but §11’s `gate queue --json` command cannot expose or assert `Implemented: 38`. Replace that row with a named `packages/provegate/test/cli-state.test.ts` corpus test that calls the status metric/`isImplemented`, asserts 38, and proves completed `Superseded` is false. |
+| 6. Regenerate and commit `_state/prds.json` | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — FR-1, §6, §7, and §11 now require regenerated state in the archive commit and a clean subsequent status run. Existing archive pathspec already permits those bytes. No further change. |
+| 7. Align scope, tests, Conflict Surface, and DO NOT rules | **OPEN** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §8, Conflict Surface, and test paths are aligned, and project-wide prohibitions are present. Correct the remaining §12 `statusVocab.complete` instruction to the normalizer call; the present DO NOT directs implementation toward a nonexistent property. |
+| 8. Migration and rollback | **CLOSED** | `_prds/wip/prd-041-close-writes-its-own-state.md` — §7 Migration & Rollback now covers ordering, previous-CLI artifacts, archive/lease reversal, and rollback trigger. No further standalone subsection change beyond the ref-state correction in item 2. |
 
 ---
 
@@ -157,7 +147,8 @@ Hard caps checked:
 
 | #   | Date       | Score | Verdict | Key Changes |
 | --- | ---------- | ----- | ------- | ----------- |
-| 1   | 2026-08-07 | 6.2 | ITERATE | Initial independent assessment; archive ownership confirmed, but post-merge failure/resume, lease commit transaction, FR-4 corpus effect, and scope consistency remain unresolved. |
+| 1   | 2026-08-07 | 6.2 | ITERATE | Archive ownership confirmed; post-merge failure/resume, lease transaction, FR-4 corpus effect, state regeneration, and scope consistency were unresolved. |
+| 2   | 2026-08-07 | 7.8 | ITERATE | Normalizer, prevalidation, no-op semantics, both FR-4 fallback removals, measured counts, state regeneration, scope, and rollback improved. Remaining defects are stale `statusVocab.complete` restatements, branch-conflated auto-revert state, incomplete archived resume/hook behavior, and a queue command that cannot assert the implemented count. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
@@ -167,16 +158,18 @@ Hard caps checked:
 
 - No push code path: PASS — no push behavior is requested.
 - Zero `packages/provegate` runtime dependencies: PASS — Dependencies is `none`.
-- No telemetry or network calls: PASS — no such behavior is in scope.
-- Method content traceability: N/A — no prompts, templates, or schemas change.
-- ADR compliance: PASS — no ADR change or contradiction is declared.
-- Canonical status vocabulary: ITERATE — the intended configured value is correct in principle, but the PRD names a nonexistent property and does not require canonical-value validation.
-- Protected-base legality: PASS — `_state/` deletions are explicitly allowed by `scripts/base-branch-guard.mjs`.
-- Known-red retirement: PASS in scope — `terminal-status` and `clean-tree` are the two PRD-041 entries in `scripts/adopter-smoke.sh`; deletion must remain conditional on their assertions becoming green.
-- Value header: arithmetic PASS at 3.60; RM 3 is not substantiated until the git/mutex/resume risks are closed.
+- No telemetry or network calls: PASS — none are in scope.
+- Method content traceability: N/A — no prompt, template, or schema content changes.
+- ADR compliance: PASS — no active ADR is contradicted.
+- Canonical status vocabulary: ITERATE — FR-1 is correct, but Memory Inputs and §12 still direct use of nonexistent `statusVocab.complete`.
+- Protected-base legality: PASS — `_state/` deletions are explicitly permitted, including on `main`.
+- Known-red retirement: PASS in scope — `terminal-status` and `clean-tree` are exactly the two PRD-041 entries in `scripts/adopter-smoke.sh`.
+- FR-4 measured corpus: PASS — 39 location-based versus 38 status-based; exact `Ship Verified` remains 37.
+- Published-doc check: PASS — `pnpm verify:doc-claims` completed with six documents scanned and zero violations.
+- Value header: arithmetic PASS at 3.60; MF/UI/TL/AR/RM dispositions are reasonable, with RM contingent on closing the remaining failure semantics.
 
 ---
 
 ## Verdict
 
-ITERATE — fix the state-transition and recovery contract before Phase 3. The PRD identifies real, measured defects and chooses plausible components, but it currently permits a failed close to leave terminal artifacts on the feature branch, does not make the documented archived resume executable, under-specifies a concurrency-sensitive protected-base deletion commit, and asserts a corpus count that demonstrably moves.
+ITERATE — the rework closes most of iteration 1, but not enough for Phase 3. Correct the two stale vocabulary instructions, state auto-revert separately for base and feature refs, make archived resume and commit-hook failure executable, and replace `queue --json` with a check that can actually fail when the implemented predicate or count is wrong.
