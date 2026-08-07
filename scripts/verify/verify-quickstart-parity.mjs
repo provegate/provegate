@@ -19,8 +19,9 @@ import { targetRoot, read, makeReporter } from './lib.mjs';
 // the two can never drift; a missing build is reported as what it is rather
 // than silently degrading to an approximation.
 let fencedLines;
+let fenceSpans;
 try {
-  ({ fencedLines } = await import('../../packages/provegate/dist/index.js'));
+  ({ fencedLines, fenceSpans } = await import('../../packages/provegate/dist/index.js'));
 } catch (error) {
   console.error(
     'verify:quickstart-parity: FAIL — packages/provegate/dist is missing; ' +
@@ -184,25 +185,21 @@ for (const spec of DOCS) {
   // accepted a fence nested inside another fence. A fence OPENER is a fenced
   // line whose predecessor is not fenced; its closer is the last fenced line of
   // that run.
+  // Fence SPANS, not a derived opener predicate (phase-6 round 5, High): a
+  // closer is fenced too, so a JSON fence opening immediately after another
+  // fence's closer was invisible to `fenced[i] && !fenced[i-1]`.
   const recipes = [];
-  for (let i = 0; i < lines.length; i++) {
-    const isOpener = fenced[i] && (i === 0 || !fenced[i - 1]);
-    if (!isOpener) continue;
+  for (const [i, close] of fenceSpans(lines)) {
     if (!/^ {0,3}(```|~~~)+json\s*$/.test(lines[i])) continue;
-    let close = i;
-    while (close + 1 < lines.length && fenced[close + 1]) close++;
-    if (close === i) continue;
     let parsed;
     try {
       parsed = JSON.parse(lines.slice(i + 1, close).join('\n'));
     } catch {
-      i = close;
       continue;
     }
     const phases = parsed && typeof parsed === 'object' ? parsed.phases : undefined;
     const commands = phases && typeof phases === 'object' ? Object.values(phases).flat() : [];
     if (commands.length > 0) recipes.push({ start: i, end: close });
-    i = close;
   }
   if (recipes.length !== 1) {
     r.fail(

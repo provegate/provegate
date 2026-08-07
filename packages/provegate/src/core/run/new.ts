@@ -117,6 +117,34 @@ export function slugHolder(config: WorkflowConfig, root: string, slug: string): 
 /** Line indexes that sit inside a fenced code block. A template may legally
  * SHOW a heading or an anchor inside a fence — the quickstart does — and a
  * reader that cannot tell shown from meant will edit the wrong one. */
+/** Fence spans as `[openIndex, closeIndex]` pairs. An open fence that never
+ * closes runs to the end. Exported because the quickstart verifier needs the
+ * same answer, and deriving "is this an opener" from the boolean map is wrong
+ * whenever two fences are adjacent — a closer is fenced too (phase-6 round 5). */
+export function fenceSpans(lines: string[]): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  let open: { char: string; len: number; at: number } | null = null;
+  lines.forEach((raw, i) => {
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (!m) return;
+    const run = m[1]!;
+    const tail = m[2]!;
+    const char = run[0]!;
+    if (open === null) {
+      if (char === '`' && tail.includes('`')) return;
+      open = { char, len: run.length, at: i };
+      return;
+    }
+    if (char === open.char && run.length >= open.len && /^[ \t]*$/.test(tail)) {
+      spans.push([open.at, i]);
+      open = null;
+    }
+  });
+  if (open !== null) spans.push([(open as { at: number }).at, lines.length - 1]);
+  return spans;
+}
+
 export function fencedLines(lines: string[]): boolean[] {
   const fenced: boolean[] = [];
   // CommonMark's rules, not an approximation (phase-6 round 2, High): the
@@ -179,7 +207,7 @@ function substituteAnchor(content: string, anchor: RegExp, replacement: string):
  * the thing this anchor exists to catch — a tool that picks for you has
  * replaced a question with a guess.
  */
-function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
+function assertSingleIdAnchor(config: WorkflowConfig, content: string): number {
   const lines = content.split('\n');
   const fenced = fencedLines(lines);
   const anchor = new RegExp(idAnchor(config).source);
@@ -215,6 +243,7 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
         'resolve the duplicate rather than letting gate new pick one',
     );
   }
+  return canonical[0]! - 1;
 }
 
 /**
@@ -241,10 +270,20 @@ function idAnchor(config: WorkflowConfig): RegExp {
  * command belongs, and `gate check` would then refuse a §11 row for being
  * unrunnable rather than for being unfilled. */
 export function configuredTokens(config: WorkflowConfig): Map<string, string> {
-  const promptValue = (key: string): string | undefined => {
+  // An explicitly EMPTY prompts value is a decision, not an absence
+  // (phase-6 round 5, Medium): FR-2 says an empty source is not a substitution,
+  // so the token stays unresolved and reported — falling back would silently
+  // overrule what the configuration said.
+  const EMPTY = Symbol('empty');
+  const promptValue = (key: string): string | undefined | typeof EMPTY => {
     const raw = config.prompts?.values?.[key];
-    return typeof raw === 'string' && raw !== '' ? raw : undefined;
+    if (typeof raw !== 'string') return undefined;
+    return raw === '' ? EMPTY : raw;
   };
+  const resolved = (
+    prompt: string | undefined | typeof EMPTY,
+    fallback: string | undefined,
+  ): string | undefined => (prompt === EMPTY ? undefined : (prompt ?? fallback));
   const nonEmpty = (value: string | undefined): string | undefined =>
     value !== undefined && value !== '' ? value : undefined;
 
@@ -253,9 +292,9 @@ export function configuredTokens(config: WorkflowConfig): Map<string, string> {
     ['{{CMD_LINT}}', nonEmpty(config.commands.lint)],
     ['{{CMD_TEST}}', nonEmpty(config.commands.test)],
     ['{{CMD_BUILD}}', nonEmpty(config.commands.build)],
-    ['{{CMD_TEST_SCOPED}}', promptValue('CMD_TEST_SCOPED') ?? nonEmpty(config.commands.test)],
+    ['{{CMD_TEST_SCOPED}}', resolved(promptValue('CMD_TEST_SCOPED'), nonEmpty(config.commands.test))],
     ['{{MEMORY_ROOT}}', nonEmpty(config.memory.root)],
-    ['{{DOCS_ROOT}}', promptValue('DOCS_ROOT') ?? nonEmpty(config.dirs.artifacts.summary.dir)],
+    ['{{DOCS_ROOT}}', resolved(promptValue('DOCS_ROOT'), nonEmpty(config.dirs.artifacts.summary.dir))],
   ];
   const out = new Map<string, string>();
   for (const [token, value] of pairs) if (value !== undefined) out.set(token, value);
@@ -362,9 +401,14 @@ export function instantiateTemplate(
   now: Date,
 ): string {
   const date = now.toISOString().slice(0, 10);
-  assertSingleIdAnchor(config, template);
-  let out = template;
-  out = substituteAnchor(out, idAnchor(config), `# ${id}: `);
+  // The anchor is substituted AT ITS LINE, not at the first textual match
+  // (phase-6 round 5, High): a fenced `# PRD-XXX:` example above the real
+  // heading used to receive the edit, leaving the artifact's own title
+  // unchanged and the example rewritten.
+  const anchorLine = assertSingleIdAnchor(config, template);
+  const templateLines = template.split('\n');
+  templateLines[anchorLine] = templateLines[anchorLine]!.replace(idAnchor(config), `# ${id}: `);
+  let out = templateLines.join('\n');
   out = out.replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
   out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`);
   out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`);

@@ -86,6 +86,7 @@ export {
 } from './merge.js';
 export {
   configuredTokens,
+  fenceSpans,
   fencedLines,
   createCompanion,
   createPrd,

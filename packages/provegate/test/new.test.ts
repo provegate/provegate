@@ -10,6 +10,7 @@ import { validateReviewArtifact } from '../src/core/gates/review.js';
 import {
   configuredTokens,
   createCompanion,
+  fenceSpans,
   createPrd,
   initWorkspace,
   instantiateTemplate,
@@ -875,5 +876,47 @@ describe('phase-6 round 4 fixes (PRD-042)', () => {
     const root = tempRoot();
     mkdirSync(join(root, '_prds/wip/prd-001-ghost.md'), { recursive: true });
     expect(() => createCompanion(cfg, root, 'tasks', 'PRD-001')).toThrow(/no work item/);
+  });
+});
+
+describe('phase-6 round 5 fixes (PRD-042)', () => {
+  const rendered = () =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', cfg.idPattern.prefix);
+
+  it('substitutes the REAL anchor when a fenced example precedes it', () => {
+    const root = tempRoot();
+    const path = join(root, 'fenced-first.md');
+    const base = rendered();
+    writeFileSync(
+      path,
+      base.replace('# PRD-XXX: ', '```md\n# PRD-XXX: example\n```\n\n# PRD-XXX: '),
+    );
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'fenced-first', templatePath: path }).path,
+      'utf8',
+    );
+    // The example survives verbatim; the heading below it becomes the title.
+    expect(text).toContain('```md\n# PRD-XXX: example\n```');
+    expect(text).toContain('# PRD-001: ');
+  });
+
+  it('leaves a token unresolved when its prompts value is explicitly empty', () => {
+    const config = {
+      ...cfg,
+      prompts: { ...cfg.prompts, values: { CMD_TEST_SCOPED: '', DOCS_ROOT: '' } },
+    };
+    const table = configuredTokens(config);
+    // An empty value is a decision, not an absence: falling back to
+    // `commands.test` would overrule what the configuration said.
+    expect(table.has('{{CMD_TEST_SCOPED}}')).toBe(false);
+    expect(table.has('{{DOCS_ROOT}}')).toBe(false);
+  });
+
+  it('reports fence spans that are adjacent', () => {
+    const spans = fenceSpans(['```a', 'x', '```', '```b', 'y', '```']);
+    expect(spans).toEqual([
+      [0, 2],
+      [3, 5],
+    ]);
   });
 });
