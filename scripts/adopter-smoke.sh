@@ -45,6 +45,7 @@ known_red() {
     handoff-prose)    echo "PRD-040 — a prose handoff bullet counts 0 operator rows" ;;
     handoff-table)    echo "PRD-040 — a 1-row handoff table counts its header row" ;;
     ledger-operator)  echo "PRD-040 — a ledger row with Result 'operator' counts 0" ;;
+    lint-refuses)     echo "board deferral 'unfilled PRD passes the lint' — PRD-042 FR-2 resolves the §11 commands at creation, so the unsafe-placeholder refusal that used to catch an unfilled template no longer fires" ;;
     *) echo "" ;;
   esac
 }

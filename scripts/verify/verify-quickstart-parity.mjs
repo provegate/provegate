@@ -123,4 +123,32 @@ if (sequences.length === 2) {
   r.note(`${a.commands.length} canonical commands compared across both documents`);
 }
 
+// PRD-042 FR-6: a STRUCTURAL order assertion. Command-sequence equality cannot
+// see prose order, and the order is the point: `gate init` writes an EMPTY
+// manifest, so a reader who meets the close section before the manifest recipe
+// runs the chain with nothing wired. That is exactly what the first external
+// adopter did.
+const ORDER = { before: '## Single-package repos', after: '## 5. Close (the runner)' };
+for (const spec of DOCS) {
+  const abs = join(root, spec.path);
+  if (!existsSync(abs)) continue;
+  const lines = read(abs).split('\n');
+  const before = lines.indexOf(ORDER.before);
+  const after = lines.indexOf(ORDER.after);
+  if (before === -1 || after === -1) {
+    r.fail(
+      `${spec.path}: expected both "${ORDER.before}" and "${ORDER.after}" headings — ` +
+        'the manifest-order assertion cannot judge a document it cannot find them in',
+    );
+    continue;
+  }
+  if (before > after) {
+    r.fail(
+      `${spec.path}: "${ORDER.before}" (line ${before + 1}) follows "${ORDER.after}" ` +
+        `(line ${after + 1}) — the manifest recipe must precede the close that executes it`,
+    );
+  }
+}
+r.note('manifest section precedes the close section in both documents');
+
 r.done();

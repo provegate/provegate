@@ -492,3 +492,25 @@ describe('rendered templates (PRD-042 FR-5)', () => {
     expect(readFileSync(result.path, 'utf8')).toContain('# PRD-XXX: ');
   });
 });
+
+describe('the token pass leaves author placeholders whole (PRD-042 FR-2)', () => {
+  it('does not resolve a token on a line that still carries a [placeholder]', () => {
+    const root = tempRoot();
+    const text = readFileSync(createPrd(cfg, root, { slug: 'placeholders' }).path, 'utf8');
+    // Durable Artifacts ships as `{{DOCS_ROOT}}/[page].md`. Resolving only the
+    // token would produce `_docs/[page].md`, which the Phase-7 gate reads as a
+    // DECLARED path and then demands. Measured: the executable quickstart
+    // stopped at Phase 7 for exactly this before the rule existed.
+    expect(text).not.toContain('_docs/[page].md');
+    expect(text).not.toContain('_brain/learnings/[slug].md');
+    expect(text).toContain('{{DOCS_ROOT}}/[page].md');
+  });
+
+  it('still resolves the same token on a line with no placeholder', () => {
+    const root = tempRoot();
+    const config = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    const text = readFileSync(createPrd(config, root, { slug: 'mixed-lines' }).path, 'utf8');
+    // The §11 floor bullets carry no `[placeholder]`, so they resolve.
+    expect(text).toContain(`- \`${cfg.commands.build}\` — clean build`);
+  });
+});

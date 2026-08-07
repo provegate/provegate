@@ -176,11 +176,28 @@ export function unresolvedTokens(content: string): string[] {
 }
 
 /** Apply the configured token table. Runs AFTER the anchored substitutions and
- * touches none of them. */
+ * touches none of them.
+ *
+ * A line that still carries an author placeholder (`[page]`, `[slug]`, …) is
+ * left ALONE, and that rule is load-bearing rather than cosmetic. The Durable
+ * Artifacts section ships as `` `{{DOCS_ROOT}}/[page].md` `` — resolving only
+ * the token turns template scaffolding into `_docs/[page].md`, which reads as a
+ * DECLARED path, and the Phase-7 gate then demands a file nobody meant to
+ * declare. Measured: the executable quickstart stopped at Phase 7 for exactly
+ * this. Half-substituting a placeholder makes it look filled; leaving it whole
+ * keeps it visibly the author's job.
+ */
 function substituteConfiguredTokens(config: WorkflowConfig, content: string): string {
-  let out = content;
-  for (const [token, value] of configuredTokens(config)) out = out.replaceAll(token, value);
-  return out;
+  const table = configuredTokens(config);
+  return content
+    .split('\n')
+    .map((line) => {
+      if (/\[[a-z][a-z0-9 -]*\]/i.test(line)) return line;
+      let out = line;
+      for (const [token, value] of table) out = out.replaceAll(token, value);
+      return out;
+    })
+    .join('\n');
 }
 
 /**
@@ -482,7 +499,7 @@ export function createCompanion(
     writeFileSync(full, content, { flag: 'wx' });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
-      throw new Error(`${relPath} already exists — left byte-untouched`);
+      throw new Error(`${relPath} already exists — left byte-untouched`, { cause: err });
     }
     throw err;
   }

@@ -255,17 +255,27 @@ function assertNoRemote(repo: string) {
 /** Harness scaffolding [H]: the artifacts the chain demands, pre-seeded so the
  * production path runs single-pass. Each helper names the CLI precondition. */
 function seedPrd(repo: string) {
-  // [H] minimal fill: the two {{CMD_TEST_SCOPED}} rows become a runnable
-  // allowlisted command; eligible close (measured: check greens after only this).
+  // [H] minimal fill: the §11 rows become a runnable allowlisted command;
+  // eligible close (measured: check greens after only this).
+  //
+  // PRD-042 FR-2 resolves `{{CMD_*}}` at `gate new` time from the scratch
+  // repo's config, so the rows arrive as the CONFIGURED commands (`pnpm test`)
+  // rather than as tokens — and `pnpm test` has no meaning in a scratch repo
+  // with no test script. The fixture therefore replaces both spellings: the
+  // token form for a repository that resolves nothing, and the resolved form
+  // for one that does.
   const p = join(repo, '_prds/wip/prd-001-fix-login-timeout.md');
   let s = readFileSync(p, 'utf8');
-  s = s.replaceAll('`{{CMD_TEST_SCOPED}}`', '`node -e "process.exit(0)"`');
-  s = s.replace(
-    '- `{{CMD_CHECK_TYPES}}` — zero errors',
-    '- `node -e "process.exit(0)"` — placeholder floor',
-  );
+  const PROBE = '`node -e "process.exit(0)"`';
+  s = s.replaceAll('`{{CMD_TEST_SCOPED}}`', PROBE);
+  s = s.replaceAll('`pnpm test --filter provegate`', PROBE);
+  s = s.replaceAll('`pnpm test`', PROBE);
+  s = s.replace('- `{{CMD_CHECK_TYPES}}` — zero errors', '- ' + PROBE + ' — placeholder floor');
+  s = s.replace('- `pnpm check-types` — zero errors', '- ' + PROBE + ' — placeholder floor');
   s = s.replace('- `{{CMD_LINT}}` — zero warnings', '');
+  s = s.replace('- `pnpm lint` — zero warnings', '');
   s = s.replace('- `{{CMD_TEST}}` — added tests pass; existing tests unchanged', '');
+  s = s.replace('- ' + PROBE + ' — added tests pass; existing tests unchanged', '');
   s = s.replace('> **Autonomous Close**: operator-gated', '> **Autonomous Close**: eligible');
   writeFileSync(p, s);
 }
@@ -426,9 +436,13 @@ describe.skipIf(!IS_POSIX)('the three measured chain stops, pinned', () => {
     seedPrd(repo);
     sh(repo, 'npx gate check PRD-001');
     const r = sh(repo, 'npx gate run PRD-001', { expectFail: true });
-    expect(r.stdout + r.stderr).toContain(
-      'PRD-001: no tasks file — independent-review ledger missing',
-    );
+    // PRD-042 FR-4: the stop names the path it expects and the row it reads.
+    // It used to say only "no tasks file — independent-review ledger missing",
+    // which told an adopter what was absent and nothing about what to write.
+    const out = r.stdout + r.stderr;
+    expect(out).toContain('no tasks file at _tasks/wip/tasks-001-fix-login-timeout.md');
+    expect(out).toContain('gate new --tasks PRD-001');
+    expect(out).toContain('independent-review');
   }, 600_000);
 
   it('(b) the planted literal `main` in Base SHA is refused with the exact reason', () => {

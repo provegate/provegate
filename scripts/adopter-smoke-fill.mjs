@@ -53,7 +53,10 @@ prd = section(prd, 'Durable Artifacts', '- none');
 prd = section(prd, 'Memory Inputs', '- none — memory is not enabled in this repository.');
 prd = section(prd, 'Memory Outputs', '- none — no non-derivable fact is expected here.');
 
-// The §11 rows and the floor bullets ship as placeholders `gate check` refuses.
+// The §11 rows: PRD-042 FR-2 resolves `{{CMD_*}}` at creation, so in a repository
+// with configured commands these arrive resolved and the replacements below are
+// no-ops. Both spellings are handled — the fixture must work against an older
+// installed CLI too (`--from-npm`).
 prd = prd.replace(
   /\| FR-1 \| `\{\{CMD_TEST_SCOPED\}\}` \|.*\n\| FR-2 \| `\{\{CMD_TEST_SCOPED\}\}` \|.*\n/,
   '| FR-1 | `npm run build` | compile | fold runs before the filter |\n' +
