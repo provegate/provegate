@@ -149,8 +149,11 @@ so that a formatting mistake cannot silently drop my operator gate.
    - `cli.ts::runRun`'s plan line (`cli.ts:1152`, the `[run] plan …` header block) — prints the
      problem in place of `operator rows: N`.
    - `cli.ts::runRun`'s **handoff card** argument (`cli.ts:1470`, `operatorRows:` passed to
-     `handoffCard`) — the same substitution at the end of a successful close, which is the one
-     place a wrong number is most likely to be believed.
+     `handoffCard`) — UNREACHABLE with a problem, by construction: an unreadable artifact stops
+     at `operatorGateOk`, so no successful handoff card and no `READY TO PUSH` line is ever
+     emitted for it. The requirement here is that unreachability, asserted — not a substitution
+     the path can never perform. Requiring the card to print a problem would have obliged a
+     change in `@provegate/design`'s card renderer for a state it cannot be in.
    A consumer that reads `count` without reading `problem` is the defect this item exists to
    remove, wherever it sits.
    - **Targets:** `packages/provegate/src/core/state/build.ts::buildState`,
@@ -245,10 +248,10 @@ so that a formatting mistake cannot silently drop my operator gate.
 
 ### Architecture
 
-One reader, one result type, and FIVE read sites that must each say what they do with a
+One reader, one result type, and five read sites that must each say what they do with a
 problem: `operatorGateOk` refuses, `lintPrd` records a fatal issue, `formatCompactRecord`
-publishes `null` plus the problem, and `runRun`'s plan line and handoff card print the problem
-in place of a count. Naming two of them, as an earlier draft did, is the same defect one level
+publishes `null` plus the problem, `runRun`'s plan line prints the problem in place of a count,
+and `runRun`'s handoff card is unreachable with one — the close stopped before it. Naming two of them, as an earlier draft did, is the same defect one level
 up — an inventory that misses a reader leaves that reader believing a number. The
 diagnostic reader is additive; the numeric export keeps its shape because an installed copy is
 imported by the adopter smoke, which is the only external consumer this repository can see and
@@ -396,7 +399,9 @@ therefore the only one it may assume.
 | FR-2 | `pnpm test --filter provegate`         | markdown.test.ts     | legacy numeric export throws the named diagnostic          |
 | FR-2 | `pnpm smoke:adopter`                   | adopter fixture      | from the INSTALLED package root: `readOperatorHandoff` and the error class both import, the wrapper throws, and the thrown value's `code` is `OPERATOR_HANDOFF_UNREADABLE` |
 | FR-3 | `pnpm test --filter provegate`         | acceptance.test.ts   | merge gate refuses before the acceptance lookup            |
-| FR-3 | `pnpm test --filter provegate`         | cli-state.test.ts    | `formatCompactRecord` and both `runRun` printers report the problem, never a bare count |
+| FR-3 | `pnpm test --filter provegate`         | cli-state.test.ts    | `formatCompactRecord` publishes `operatorHandoffs: null` with the problem beside it       |
+| FR-3 | `pnpm test --filter provegate`         | cli.test.ts          | a production `gate run` over an unreadable artifact names the problem on the stop path and emits NO handoff card and no `READY TO PUSH` line |
+| FR-3 | `node packages/provegate/dist/cli.js queue --json` | repo corpus | every record carries `operatorHandoffs` and `operatorHandoffProblem`; a problem record shows `null` and a non-null problem |
 | FR-4 | `pnpm test --filter provegate`         | cli-state.test.ts    | problem is fatal, contradiction is a warning, via runCheck |
 | FR-4 | `pnpm test --filter provegate`         | prd-ready.test.ts    | the six report-shape expectations assert the new shape by deep equality, not a loosened matcher |
 | FR-4 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warning only when the task file exists; exit code unchanged |
@@ -439,4 +444,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Iteration 6 (Codex 7.9; three findings, two of them about PRD-040): §1 said every unreadable shape "returns 0" — the measurement says otherwise (missing `Result` 0, separator-less table 2, narrow row 2, unterminated fence 0), and PRD-040 changes two of those values without making any of them refuse. Restated from the measurement, and the metric reworded from "counted as zero" to "answered with a number", because a number the reader could not justify is the defect at any value |
 | 2026-08-07 | owner  | Iteration 7 (Codex 7.8; the measured-baseline and escape-parity findings CLOSED): the unusable-count contract had an open consumer inventory — `query.ts::formatCompactRecord` (`:117`) and `cli.ts::runRun`'s two printers (`:1152`, `:1470`) read the count with no problem check, so the contract said "no consumer may read `count` without `problem`" while three consumers did exactly that. Inventory closed and each named in FR-3, Scope, Conflict Surface and §11. FR-4 now states its regression surface up front: `prd-ready.test.ts` holds six exact `{ok: true, issues: []}` expectations that the `warnings` field breaks, updated by deep equality rather than a loosened matcher |
 | 2026-08-07 | owner  | Iteration 8 (Codex 7.9): the previous round's inventory fix had left its own restatements behind — §2's metric and §7 still said "two consumers" where FR-3 now names five, which is the inventory defect one level up. FR-3 also offered `CompactRecord` an ALTERNATIVE ("alongside or in place"); one representation is chosen now: `operatorHandoffs: number | null` plus `operatorHandoffProblem: string | null`, the number necessarily `null` when a problem exists. The `cli.ts:1470` site was misdescribed as a JSON summary — it is the HANDOFF CARD argument, the one place a wrong number is most likely to be believed. §7 records that `CompactRecord` is package-root exported and published by `gate queue --json`, so the changeset must name the representation change |
+| 2026-08-07 | owner  | Iteration 9 (Codex 7.8): the previous round's own fix was refuted — requiring the handoff card to print the problem contradicts the mandatory refusal path, because an unreadable artifact stops at `operatorGateOk` and no successful card is ever emitted for it. It would also have obliged a change in `@provegate/design`'s card renderer for a state the card cannot be in. The requirement is now the UNREACHABILITY, asserted through a production `gate run` that names the problem on the stop path and emits no card and no `READY TO PUSH` line; §11 also gained an exact `gate queue --json` assertion for `operatorHandoffs: null` beside its problem |
 

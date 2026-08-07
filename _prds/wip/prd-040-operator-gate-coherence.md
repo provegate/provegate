@@ -236,8 +236,9 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 - Changing what an acceptance entry contains or who may author it (PRD-033 settled that).
 - **Documenting the counted shapes in the shipped tasks template.** Addendum A3 authorizes the
   predicate and its statement in `METHOD.md` (FR-8); it does not authorize new template prose,
-  and §3 of the addendum says so. The refusal messages teach the shape at the moment it
-  matters, which is where a reader actually is.
+  and §3 of the addendum says so. FR-8's `METHOD.md` text states the authorized list, table and
+  ledger shapes, so an adopter meets them in the document they read; no task-template prose is
+  added here.
 - **Refusing an unreadable task artifact**, and the Phase-2 warning that would report the
   declaration contradiction through the lint. A ledger with no `Result` column, a table with no
   separator row, a row whose width differs from its header's, a document ending inside a fence:
@@ -366,10 +367,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
   changes while the count stays `0 → 0` — the second is invisible to a count diff and is the
   one Clause 1 creates. Its classification is the decision input, and the classifications are
-  the four counting sources plus the zero-row acceptance changes — nothing else. PRD-043's
-  unreadable-artifact population is not audited here — where "refusal" means an artifact PRD-043 will later
-  refuse, recorded here as information only. This item performs no refusals, so no rollback of
-  this item can be triggered by one.
+  the four counting sources plus the zero-row acceptance changes — nothing else.
 - **Remedy, per population:** a handoff row that is real work → flip `Autonomous Close` to
   `operator-gated` and record the acceptance; a row that is not work → delete it. A ledger row
   sitting at `operator` → run the check and update the `Result`, or accept it explicitly. An
@@ -585,4 +583,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Fourth cross-item sweep (found while scoring PRD-043, iteration 6): §5's METHOD reference and the `known-red`/resume/state-model dispositions were still on the pre-renumbering FR ids; §5's interim claim said "each contributes zero rows" where the MEASUREMENT says the separator-less table goes 2→0 and the narrow row 2→1; the audit classifications omitted the zero-row acceptance population; the rollback aside still mentioned refusals this item does not perform; `surface-set-without-its-predicate` still described a lint surface that left with the Phase-2 warning. And the escape-parity example in §6 and §11 showed the SAME source string for both arms — `a\|b` twice — while claiming one cell and two; the odd/even pair is now written out. Sixth restatement instance in this file |
 | 2026-08-07 | owner  | Fifth cross-item sweep (PRD-043 iteration 7). The fourth sweep had reported success while leaving every twin in place: `str.replace(..., 1)` fixes the FIRST occurrence, and this file restates each rule two or three times. Measured this round instead of assumed — occurrence counts checked before and after every edit. Closed: §5's interim outcomes (measured, none refuses), §7's `refusal` classification and the rollback aside that named refusals this item does not perform, the resume (FR-6→FR-5) and state-model (FR-5/FR-6→FR-4/FR-5) dispositions, `surface-set-without-its-predicate` rewritten around FR-6's acknowledgement predicate, and `narrow-the-grammar`'s interim reference repointed from FR-4 to §7/FR-2–FR-3 |
 | 2026-08-07 | owner  | Sixth cross-item sweep (PRD-043 iteration 8): two live survivors of the fifth sweep — §7 Migration still recorded PRD-043's unreadable-artifact population as if this item audited it, and `gate-run-resume-after-archive` still credited FR-6 for the second evaluation FR-5 performs. Both closed, occurrence-counted |
+| 2026-08-07 | owner  | Seventh cross-item sweep (PRD-043 iteration 9): §7's classification paragraph still trailed a clause about PRD-043's refusal population "recorded here as information only" and a global "this item performs no refusals" — both deleted, the paragraph now ends at its classification list. §5's Non-Goal was bound to FR-8 (`METHOD.md` states the authorized shapes) instead of gesturing at refusal messages |
 
