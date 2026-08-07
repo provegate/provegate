@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
+import { validateReviewArtifact } from '../src/core/gates/review.js';
 import {
   createCompanion,
   createPrd,
@@ -356,10 +357,12 @@ describe('companion artifacts (PRD-042 FR-1)', () => {
     expect(result.relPath).toBe('_docs/reviews/review-001-card-truncation.md');
     const text = readFileSync(result.path, 'utf8');
     expect(text).toContain('> **PRD:** PRD-001');
-    // The reviewer's own fields are untouched: a pre-filled SHA claims a diff
-    // nobody read, and a supplied quorum is a panel nobody convened.
-    expect(text).toContain('> **Base SHA:** `[git merge-base or base tip]`');
-    expect(text).toContain('> **Quorum:** 3/5 pass');
+    // Every reviewer-owned field is BLANK: a pre-filled SHA claims a diff
+    // nobody read, and a supplied quorum is a panel nobody convened. Phase-6
+    // round 1 showed the template's own placeholders SATISFY the review gate,
+    // so leaving them was worse than leaving nothing.
+    expect(text).toContain('> **Base SHA:**\n');
+    expect(text).toContain('> **Quorum:**\n');
   });
 
   it('takes identity from the artifact basename, not the heading', () => {
@@ -512,5 +515,24 @@ describe('the token pass leaves author placeholders whole (PRD-042 FR-2)', () =>
     const text = readFileSync(createPrd(config, root, { slug: 'mixed-lines' }).path, 'utf8');
     // The §11 floor bullets carry no `[placeholder]`, so they resolve.
     expect(text).toContain(`- \`${cfg.commands.build}\` — clean build`);
+  });
+});
+
+describe('an instantiated review artifact cannot satisfy the gate (PRD-042, phase-6 round 1)', () => {
+  it('flipping only the Verdict to pass is still refused', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'review-shape' });
+    const created = createCompanion(cfg, root, 'review', 'PRD-001');
+    const text = readFileSync(created.path, 'utf8');
+    // Every reviewer-owned field is blank; only identity is filled.
+    for (const field of ['Verdict', 'Reviewer', 'Base SHA', 'Critical', 'High', 'Medium', 'Quorum']) {
+      expect(text).toContain(`> **${field}:**\n`);
+    }
+    // The gate must refuse the artifact even after the one edit an author is
+    // most tempted to make.
+    const flipped = text.replace('> **Verdict:**', '> **Verdict:** pass');
+    const report = validateReviewArtifact(flipped);
+    expect(report.ok).toBe(false);
+    expect(report.issues.join(' ')).toMatch(/Base SHA|Reviewer|Critical|Quorum/);
   });
 });

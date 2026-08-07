@@ -484,12 +484,29 @@ export function createCompanion(
   } else {
     relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
     const template = readFileSync(shippedTemplatePath('review-template.md'), 'utf8');
+    // Identity is filled; EVERY reviewer-owned field is BLANKED.
+    //
+    // Phase-6 round 1 found this as a Critical, and it is the
+    // `evidence-pattern-satisfied-by-the-template` record firing on the work
+    // that cited it: the shipped template's own placeholders satisfy
+    // `validateReviewArtifact` — `[git merge-base or base tip]` is longer than
+    // the seven characters the gate checks, the counts are already `0`, and the
+    // Quorum reads `3/5 pass`. Instantiating those bytes meant an author could
+    // flip `Verdict` to `pass` and hand the gate a review nobody performed.
+    // Blank fields fail the gate by name until a reviewer types them.
     content = template
       .replace(
         /^# Independent Review: \{\{ID_PREFIX\}\}-XXX — \[Feature Name\]$/m,
         `# Independent Review: ${canonicalId} — ${slug}`,
       )
       .replace(/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/m, `> **PRD:** ${canonicalId}`)
+      .replace(/^> \*\*Verdict:\*\* .*$/m, '> **Verdict:**')
+      .replace(/^> \*\*Reviewer:\*\* .*$/m, '> **Reviewer:**')
+      .replace(/^> \*\*Base SHA:\*\* .*$/m, '> **Base SHA:**')
+      .replace(/^> \*\*Critical:\*\* .*$/m, '> **Critical:**')
+      .replace(/^> \*\*High:\*\* .*$/m, '> **High:**')
+      .replace(/^> \*\*Medium:\*\* .*$/m, '> **Medium:**')
+      .replace(/^> \*\*Quorum:\*\* .*$/m, '> **Quorum:**')
       .replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
   }
 
