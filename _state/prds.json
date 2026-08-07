@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-07T08:46:47.977Z",
+  "generatedAt": "2026-08-07T09:00:59.252Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1455,19 +1455,19 @@
       "autonomousClose": "eligible",
       "artifacts": {
         "prd": "_prds/wip/prd-040-operator-gate-coherence.md",
-        "readiness": "",
+        "readiness": "_readiness/wip/readiness-040-operator-gate-coherence.md",
         "tasks": "",
         "summary": ""
       },
       "artifactStates": {
         "prd": "wip",
-        "readiness": "missing",
+        "readiness": "wip",
         "tasks": "missing",
         "summary": "missing"
       },
       "readiness": {
-        "score": null,
-        "verdict": null,
+        "score": 5.7,
+        "verdict": "ITERATE",
         "modelTierExecution": null,
         "modelTierAudit": null
       },
