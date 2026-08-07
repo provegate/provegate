@@ -179,7 +179,10 @@ so that the upgrade is a decision instead of a surprise at the next merge.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::readOperatorHandoff`,
      `packages/provegate/src/core/state/build.ts::buildState`,
      `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-5. **FR-5**: `Autonomous Close` becomes the gate it claims to be, in both directions:
+5. **FR-5**: `Autonomous Close` becomes the gate it claims to be, in both directions. The
+   predicate is method content and traces to **Addendum A3**
+   (`docs/research/provegate-bootstrap/source-snapshot/addenda/operator-acceptance-predicate-2026-08-07.md`,
+   owner-approved 2026-08-07, Clauses 1–2), listed in `MANIFEST.md` and `DECISIONS.md`:
    (a) `operator-gated` requires a valid owner acceptance **regardless of row count** — the
    declaration is the demand, the rows are only evidence of what is being accepted. Today an
    `operator-gated` PRD with zero rows merges silently, which makes QUICKSTART's advice ("keep
@@ -212,7 +215,11 @@ so that the upgrade is a decision instead of a surprise at the next merge.
    the rows).
    - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`,
      `_prds/wip/prd-040-operator-gate-coherence.md`
-9. **FR-9**: The three known-red entries this work closes are deleted from the adopter smoke in
+9. **FR-9**: `METHOD.md`'s operator-acceptance section states Clauses 1–3 of Addendum A3, so
+   the rule reaches adopters in the document they read rather than only in the refusal they
+   hit. Every added sentence traces to a named clause; nothing else in the file moves.
+   - **Targets:** `packages/provegate/METHOD.md`
+10. **FR-10**: The three known-red entries this work closes are deleted from the adopter smoke in
    the same change; the harness fails on a known-red assertion that passes, so they cannot
    outlive the defect.
    - **Targets:** `scripts/adopter-smoke.sh`
@@ -224,10 +231,10 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 - Writing acceptance entries from the CLI (`gate accept`) — a separate item, and an agent must
   never originate an acceptance.
 - Changing what an acceptance entry contains or who may author it (PRD-033 settled that).
-- **Documenting the counted shapes in the shipped tasks template.** That template is method
-  content, and method content moves only from the source snapshot; adding new wording needs an
-  owner-approved addendum first (the PRD-031 precedent). FR-4's and FR-5's refusal messages
-  teach the shape at the moment it matters instead, which is where a reader actually is.
+- **Documenting the counted shapes in the shipped tasks template.** Addendum A3 authorizes the
+  predicate and its statement in `METHOD.md` (FR-9); it does not authorize new template prose,
+  and §3 of the addendum says so. The refusal messages teach the shape at the moment it
+  matters, which is where a reader actually is.
 - Teaching the table reader that a pipe inside a code span is not a cell separator. That is
   how `splitTableCells` reads every table in this repository today; changing it here would
   change §11 parsing too, which is a different blast radius and a different item.
@@ -294,9 +301,12 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   is additive, and `StateRecord.task` gains an optional field, so a generated `_state/prds.json`
   from an older version still loads.
 - **Measurement decides (FR-8):** the audit runs as the first task of Phase 4, before any
-  behaviour change is written. Its classification is the decision input: a `refusal`
-  classification on an existing artifact stops the work by default, because it means the new
-  grammar cannot read something the corpus already contains.
+  behaviour change is written. It reports two populations, because they change for different
+  reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
+  changes while the count stays `0 → 0` — the second is invisible to a count diff and is the
+  one Clause 1 creates. Its classification is the decision input: a `refusal` classification on
+  an existing artifact stops the work by default, because it means the new grammar cannot read
+  something the corpus already contains.
 - **Remedy, per population:** a handoff row that is real work → flip `Autonomous Close` to
   `operator-gated` and record the acceptance; a row that is not work → delete it. A ledger row
   sitting at `operator` → run the check and update the `Result`, or accept it explicitly. An
@@ -325,6 +335,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 - [ ] `packages/provegate/test/markdown.test.ts`, `packages/provegate/test/acceptance.test.ts`,
       `packages/provegate/test/chain.test.ts`, `packages/provegate/test/lint-parsers.test.ts`,
       `packages/provegate/test/cli-state.test.ts`
+- [ ] `packages/provegate/METHOD.md` (FR-9, traceable to Addendum A3)
 - [ ] `scripts/audit-operator-rows.mjs`, `scripts/adopter-smoke.sh`, `.changeset/`
 
 ---
@@ -339,6 +350,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 
 - `scripts/adopter-smoke.sh` — the run that measured the four shapes
 - `_readiness/wip/readiness-040-operator-gate-coherence.md` — iteration 1, 5.7 ITERATE
+- Addendum A3 — `docs/research/provegate-bootstrap/source-snapshot/addenda/operator-acceptance-predicate-2026-08-07.md`
 - `_brain/learnings/operator-row-must-be-a-table-row.md`
 - `_brain/learnings/notes-column-runs-commands.md`
 
@@ -359,6 +371,9 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   describing an idealized Markdown; FR-2 states the one construct it deliberately still reads
   wrong (a pipe inside a code span) as a Non-Goal instead of leaving it unstated; and FR-4
   refuses everything outside that partition, including the scanner's own `unreliable` signal.
+- applied: `a-rule-that-exempts-itself` — the predicate FR-5 enforces was the author's to
+  invent and is not; it moved to the owner as Addendum A3 before any method byte moved (the
+  PRD-031 ordering), because a gated party writing its own exemption is not gated.
 - applied: `metadata-declares-what-it-cannot-provide` — FR-5 is that rule in both directions.
   `operator-gated` declares a human signature and provides none when the row count is zero;
   `eligible` beside operator rows declares the opposite of what the artifact holds. Iteration 1
@@ -427,6 +442,8 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 - `packages/provegate/test/cli-state.test.ts`
 - `scripts/audit-operator-rows.mjs`
 - `scripts/adopter-smoke.sh`
+- `packages/provegate/METHOD.md`
+- `packages/provegate/test/content-canon.test.ts`
 - `.changeset/**`
 - `_prds/wip/prd-040-operator-gate-coherence.md`
 
@@ -452,7 +469,8 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 | FR-6 | `pnpm test --filter provegate`         | chain.test.ts        | early gate refuses; a --from-phase=merge resume refuses on the same invariant |
 | FR-7 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warns with a task file, silent without one, exit code unchanged |
 | FR-8 | `node scripts/audit-operator-rows.mjs` | repo corpus          | prints path, old → new, and the classification |
-| FR-9 | `pnpm smoke:adopter`                   | adopter fixture      | three known-red entries gone, run green      |
+| FR-9 | `pnpm test --filter provegate`         | content-canon.test.ts | METHOD.md states A3 clauses 1-3, each traceable |
+| FR-10 | `pnpm smoke:adopter`                  | adopter fixture      | three known-red entries gone, run green      |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -487,4 +505,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 5.7 ITERATE): closed row grammar with named exclusions; structural table read; malformed input refuses instead of counting zero; declaration/count contradiction refused at the 3→4 boundary while Phase 2 only warns; §7 Migration written around `operatorGateOk` keying on the count alone; corpus audit added as FR-7; template edit moved to Non-Goals as method content; two memory inputs added; RM 4→2 accepted, total 4.00→3.70 |
 | 2026-08-07 | owner  | Iteration 2 rework (Codex 6.6 ITERATE; 5.7→6.6): grammar rewritten over `scanDocument`'s masked view with unreachable/permitted/refused separated and `unreliable` propagated; diagnostic reader added beside the unchanged public `countOperatorHandoff`, plumbed through `buildState` to both consumers; `Autonomous Close` enforced in both directions with the invariant bound to a named chain entry AND re-evaluated in the merge gate so no resume skips it; `PrdReadyReport.warnings` added for the Phase-2 warning; audit moved to first task of Phase 4 with a classification and a default stop; three memory dispositions rewritten; RM held at 2 |
 | 2026-08-07 | owner  | Iteration 3 partial rework (Codex 7.3 ITERATE; 6.6→7.3, lifecycle + method-content + value CLOSED): FR-1 partition restated in the scanner's own terms (unreachable / masked `COMMENT_MASK` / preserved code spans), marker whitespace and ordered-digit range pinned, escaped-pipe rule stated and the pipe-in-code-span boundary moved to Non-Goals; FR-4 caller routes specified per consumer with fatal-vs-warning split and the legacy numeric export's documented behaviour; `narrow-the-grammar-not-the-parser` disposition rewritten against the real partition. **Iteration-3 finding 4 is an OWNER GATE** — FR-5(a) (an `operator-gated` PRD requires an acceptance even at zero rows) is a method predicate that `METHOD.md` does not carry, so it needs an owner-approved source-snapshot addendum (PRD-031 precedent) or FR-5(a) is cut. Not decided by the author; the item waits here.
+| 2026-08-07 | owner  | Owner gate resolved: FR-5(a) KEPT, authorized by **Addendum A3** (`source-snapshot/addenda/operator-acceptance-predicate-2026-08-07.md`, approved in-session 2026-08-07), listed in `MANIFEST.md` and `DECISIONS.md` — whose addenda table was also missing the A2 row and now carries both. FR-9 added: `METHOD.md` states A3 clauses 1–3 so the rule reaches adopters in the document they read; FR-8's audit now reports the zero-row `operator-gated` population separately, since Clause 1 changes those items with no count diff to show for it |
 
