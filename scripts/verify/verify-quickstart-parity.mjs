@@ -15,6 +15,21 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { targetRoot, read, makeReporter } from './lib.mjs';
 
+// One fence grammar, shared with the CLI. Imported from the BUILT package so
+// the two can never drift; a missing build is reported as what it is rather
+// than silently degrading to an approximation.
+let fencedLines;
+try {
+  ({ fencedLines } = await import('../../packages/provegate/dist/index.js'));
+} catch (error) {
+  console.error(
+    'verify:quickstart-parity: FAIL — packages/provegate/dist is missing; ' +
+      'build the CLI first (this check shares its fence scanner)',
+  );
+  console.error(String(error?.message ?? error));
+  process.exit(1);
+}
+
 const root = targetRoot();
 const r = makeReporter('verify:quickstart-parity');
 
@@ -133,24 +148,12 @@ for (const spec of DOCS) {
   const abs = join(root, spec.path);
   if (!existsSync(abs)) continue;
   const lines = read(abs).split('\n');
-  // Fence map: a heading SHOWN inside a fence is not the section, and the
-  // recipe fence is what we are actually looking for.
-  const fenced = [];
-  let open = null;
-  for (const line of lines) {
-    const m = /^(\s*)(`{3,}|~{3,})/.exec(line);
-    if (open === null && m) {
-      open = m[2][0];
-      fenced.push(true);
-      continue;
-    }
-    if (open !== null && m && m[2][0] === open) {
-      open = null;
-      fenced.push(true);
-      continue;
-    }
-    fenced.push(open !== null);
-  }
+  // The SAME fence scanner the CLI uses, imported from the built package
+  // (phase-6 round 3, High): this file carried an approximation — unlimited
+  // indentation opened a fence and any same-marker run closed it — so an
+  // indented `~~~` pair could hide the real Close heading. Two parsers over one
+  // grammar is how they agree while both are wrong; there is one now.
+  const fenced = fencedLines(lines);
   const findUnique = (heading) => {
     const hits = lines.map((l, i) => (!fenced[i] && l === heading ? i : -1)).filter((i) => i >= 0);
     return hits;

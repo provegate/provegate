@@ -10,8 +10,10 @@ already knows.
   and only from the wip state; an existing destination is reported and left byte-untouched.
 - The template pass now substitutes the seven tokens configuration can answer
   (`{{CMD_CHECK_TYPES}}`, `{{CMD_LINT}}`, `{{CMD_TEST}}`, `{{CMD_BUILD}}`, `{{CMD_TEST_SCOPED}}`,
-  `{{MEMORY_ROOT}}`, `{{DOCS_ROOT}}`) and reports the rest. A line that still carries an author
-  placeholder is left whole, so template scaffolding never becomes a declared path.
+  `{{MEMORY_ROOT}}`, `{{DOCS_ROOT}}`) and reports the rest. The pass is unconditional over that
+  closed set and its replacements are literal, so a configured value containing `$&` stays what
+  it says. An unfilled Durable Artifacts section therefore declares paths that do not exist, and
+  Phase 7 refuses it by name — write `none` there when a work item produces no durable output.
 - With `memory.enabled: false`, new PRDs omit the Memory Inputs and Memory Outputs sections. The
   lint still fails those same bytes where the contract is on.
 - The id anchor accepts both `{{ID_PREFIX}}` and the configured prefix, so a repository that

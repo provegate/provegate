@@ -751,3 +751,65 @@ describe('phase-6 round 2 fixes (PRD-042)', () => {
     expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-dotted.md)`);
   });
 });
+
+describe('phase-6 round 3 fixes (PRD-042)', () => {
+  const rendered = () =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', cfg.idPattern.prefix);
+
+  it('refuses id-shaped headings whose prefix is not an ASCII word', () => {
+    // Configuration accepts any non-empty prefix, so `2FA`, `_RFC` and
+    // `RFC-ALT` are legal ids somewhere; the earlier ASCII-word shape let all
+    // three sit beside the real anchor.
+    for (const foreign of ['2FA', '_RFC', 'RFC-ALT']) {
+      const root = tempRoot();
+      const path = join(root, `${foreign.replace(/\W/g, '')}.md`);
+      writeFileSync(path, rendered().replace('# PRD-XXX: ', `# ${foreign}-XXX: x\n\n# PRD-XXX: `));
+      expect(() => createPrd(cfg, root, { slug: 'shape', templatePath: path }), foreign).toThrow(
+        /id-shaped heading/,
+      );
+    }
+  });
+
+  it('does not accept a non-breaking space after a closing fence', () => {
+    const root = tempRoot();
+    const path = join(root, 'nbsp.md');
+    const base = rendered().replace(/^# PRD-XXX: .*$/m, '# Untitled');
+    // ```<NBSP> is content, not a closer, so the heading below stays fenced.
+    const NBSP = '\u00a0';
+    writeFileSync(path, `${base}\n\n\`\`\`md\n\`\`\`${NBSP}\n# PRD-XXX: fenced\n\`\`\`\n`);
+    expect(() => createPrd(cfg, root, { slug: 'nbsp', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('omits the memory sections in a CRLF template', () => {
+    const root = tempRoot();
+    const path = join(root, 'crlf.md');
+    writeFileSync(path, rendered().replaceAll('\n', '\r\n'));
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'crlf-template', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).not.toMatch(/## Memory Inputs/);
+    expect(text).not.toMatch(/## Memory Outputs/);
+  });
+
+  it('collapses .. when computing the PRD link depth', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: {
+          ...cfg.dirs.artifacts,
+          tasks: { dir: 'workflow/tasks/../plans', prefix: 'tasks' },
+        },
+      },
+    };
+    createPrd(config, root, { slug: 'dotdot' });
+    const text = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    const up = '..' + '/';
+    // The file lands under `workflow/plans/wip`: three real levels, three hops.
+    expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-dotdot.md)`);
+  });
+});

@@ -124,7 +124,8 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
 
 - [x] 4.0 Token substitution pass (FR-2)
   - [x] 4.1 `new.ts` — a pass that runs AFTER the existing anchored substitutions and changes
-        none of them; the seven-row table is the closed set.
+        none of them; the seven-row table is the closed set, applied unconditionally in a single
+        callback pass so replacements stay literal.
   - [x] 4.2 Precedence: `prompts.values` wins for `CMD_TEST_SCOPED` and `DOCS_ROOT`; the rest are
         config-only; an absent or empty source is not a substitution.
   - [x] 4.3 Unresolved tokens: one `[new] unresolved tokens: …` line, sorted, deduplicated, on
@@ -206,7 +207,7 @@ One row per PRD §11 command, pre-populated `pending`; evidence filled at Phase 
 | ------------------ | ------------------------------------------------ | ----------------------- | ------- | -------- | --------------------------- |
 | FR-1               | `pnpm test --filter provegate`                   | new.test.ts             | passed  | 43 tests; 8 refusals by title | paths, re-run, refusals     |
 | FR-1               | `pnpm test --filter provegate`                   | chain.test.ts           | passed  | 83 tests   | unedited template fails P6  |
-| FR-2               | `pnpm test --filter provegate`                   | new.test.ts             | passed  | incl. placeholder-line rule | seven tokens, empty value   |
+| FR-2               | `pnpm test --filter provegate`                   | new.test.ts             | passed  | seven tokens + both precedence rules | unconditional, literal replacements |
 | FR-3               | `pnpm test --filter provegate`                   | new.test.ts             | passed  | template HAS them          | sections absent, memory off |
 | FR-3               | `pnpm test --filter provegate`                   | prd-ready.test.ts       | passed  | same bytes fail with memory on | memory-on failure        |
 | FR-4               | `pnpm test --filter provegate`                   | chain.test.ts           | passed  | resolved path asserted     | stop names path + columns   |

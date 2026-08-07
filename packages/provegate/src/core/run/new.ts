@@ -117,7 +117,7 @@ export function slugHolder(config: WorkflowConfig, root: string, slug: string): 
 /** Line indexes that sit inside a fenced code block. A template may legally
  * SHOW a heading or an anchor inside a fence — the quickstart does — and a
  * reader that cannot tell shown from meant will edit the wrong one. */
-function fencedLines(lines: string[]): boolean[] {
+export function fencedLines(lines: string[]): boolean[] {
   const fenced: boolean[] = [];
   // CommonMark's rules, not an approximation (phase-6 round 2, High): the
   // opener may carry an info string, a CLOSER may not, and the closer's run
@@ -141,7 +141,11 @@ function fencedLines(lines: string[]): boolean[] {
         fenced.push(true);
         continue;
       }
-      if (char === open.char && run.length >= open.len && tail.trim() === '') {
+      // Only spaces and tabs may follow a closer (phase-6 round 3, High):
+      // `tail.trim()` also swallows NBSP and other Unicode whitespace, so
+      // ```` ```<NBSP> ```` inside an open fence read as a closer and the
+      // heading below it became real.
+      if (char === open.char && run.length >= open.len && /^[ \t]*$/.test(tail)) {
         open = null;
         fenced.push(true);
         continue;
@@ -179,7 +183,11 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
   // carrying `# RFC-XXX: …` beside the real anchor used to instantiate and keep
   // the foreign heading (phase-6 round 2, High) — the artifact then had two id
   // lines and only one of them meant anything.
-  const shaped = /^# [A-Za-z][A-Za-z0-9_]*-XXX: /;
+  // Prefix-AGNOSTIC (phase-6 round 3, High): configuration accepts any
+  // non-empty prefix, so `2FA`, `_RFC` and `RFC-ALT` are all legal ids
+  // somewhere. The shape is "a heading whose first token ends in `-XXX:`",
+  // which is what the anchor grammar means, rather than an ASCII-word guess.
+  const shaped = /^# \S+-XXX: /;
   const canonical: number[] = [];
   const foreign: number[] = [];
   lines.forEach((line, i) => {
@@ -293,7 +301,10 @@ function substituteConfiguredTokens(config: WorkflowConfig, content: string): st
  * not drift, it is a template with fewer sections.
  */
 function dropSection(content: string, heading: string): string {
-  const lines = content.split('\n');
+  // CR-stripped for COMPARISON (phase-6 round 3, Medium): a forked template
+  // saved with CRLF kept both memory sections while every regex anchor still
+  // matched, so the omission silently did nothing on Windows-authored files.
+  const lines = content.split('\n').map((l) => (l.endsWith('\r') ? l.slice(0, -1) : l));
   const fenced = fencedLines(lines);
   // A heading SHOWN inside a fence is not the section. Round 1 found that
   // taking the first textual match corrupted the fence and left the real
@@ -584,8 +595,18 @@ export function createCompanion(
     // directory like `workflow/./tasks` writes to a two-deep location but has
     // three raw segments, and the extra `../` produced a link that resolved
     // above the repository root.
-    const normalize = (p: string): string[] =>
-      p.split('/').filter((seg) => seg !== '' && seg !== '.');
+    // `..` collapses too (phase-6 round 3, Medium): `workflow/tasks/../plans`
+    // WRITES under `workflow/plans`, and counting the raw segments produced a
+    // link that climbed above the repository root.
+    const normalize = (p: string): string[] => {
+      const out: string[] = [];
+      for (const seg of p.split('/')) {
+        if (seg === '' || seg === '.') continue;
+        if (seg === '..') out.pop();
+        else out.push(seg);
+      }
+      return out;
+    };
     const hops = normalize(relPath).length - 1;
     const prdLink = `${'../'.repeat(hops)}${normalize(prdRel).join('/')}`;
     content = template
