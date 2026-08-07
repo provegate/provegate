@@ -27,9 +27,13 @@ that authorizes every close. Accepted rather than argued. -->
 Addendum A3 Clause 5, owner-approved 2026-08-07, says a task artifact the gate cannot read must
 refuse and name what it could not read, because "a silent zero is the permissive answer to a
 question nobody could answer". Nothing implements it. `countOperatorHandoff` returns a number
-for every input it is handed: a ledger with no `Result` column, a table with a header and no
-separator, a row with fewer cells than its header, a document that ends inside a fence. Each of
-those returns `0`, and a zero count is exactly what lets a close through.
+for every input it is handed, and the numbers are not all zero — measured against the shipped
+build on 2026-08-07: a ledger with no `Result` column returns **0**, a table with a header and no
+separator returns **2**, a row narrower than its header returns **2**, a document ending inside a
+fence returns **0**. PRD-040 changes some of those values (the separator-less table to 0, the
+narrow row to 1) without making any of them REFUSE. A number the reader could not justify is the
+defect whether it is zero or two: zero lets a close through, and two demands an acceptance nobody
+owes.
 
 This item exists because PRD-040 tried to carry it. Two readiness rounds there (7.7, then 7.7
 again) landed on this same plumbing — a diagnostic result, two caller contracts, a
@@ -55,7 +59,7 @@ happens when the reader cannot tell.
 
 | Metric                                  | Current | Target | Measurement                       |
 | --------------------------------------- | ------- | ------ | --------------------------------- |
-| Unreadable artifacts counted as zero    | always  | never  | FR-1 refusal fixtures             |
+| Unreadable artifacts answered with a number | always | never | FR-1 refusal fixtures             |
 | Consumers surfacing the problem         | 0 of 2  | 2 of 2 | FR-3/FR-4 tests, production shapes |
 
 ---
@@ -395,3 +399,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.2→7.7; three more items closed): the boundaryless predicate gained its second half — separator shape AND equal cell count, either alone being prose — and every refusal fixture is now paired with a POSITIVE control differing in exactly the refused property, so the predicate is shown to discriminate rather than to reject; FR-2 makes the reader and the error class package-root exports, because a migration naming a symbol an adopter cannot import is not a migration; FR-5's fingerprint growth is verified in both directions (a three-field acknowledgement reports STALE, a matching four-field line passes) instead of being asserted in prose |
 | 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS; the previous round's fix had introduced a contradiction): a MATCHING boundaryless table now has ONE outcome — a problem, because `splitTableCells` needs boundary pipes and PRD-040 measured that shape counting 0 — and the positive control for that predicate became a `|`-bearing sentence whose neighbour does not match, not the "legal boundaryless table" that contradicted the refusal; FR-2's §11 row now asserts that the reader AND the error class import from the installed package root, not only that the wrapper throws |
 | 2026-08-07 | owner  | **Correction.** The iteration-3 row's "one outcome per shape" paragraph never landed — the same silent `str.replace` no-op — so the file kept assigning both refusal and positive-control duty to a matching boundaryless table, exactly as iteration 4 reported. Written now via an exact-match edit and verified by reading it back |
+| 2026-08-07 | owner  | Iteration 6 (Codex 7.9; three findings, two of them about PRD-040): §1 said every unreadable shape "returns 0" — the measurement says otherwise (missing `Result` 0, separator-less table 2, narrow row 2, unterminated fence 0), and PRD-040 changes two of those values without making any of them refuse. Restated from the measurement, and the metric reworded from "counted as zero" to "answered with a number", because a number the reader could not justify is the defect at any value |
+

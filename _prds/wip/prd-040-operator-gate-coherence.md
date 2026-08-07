@@ -235,7 +235,7 @@ so that the upgrade is a decision instead of a surprise at the next merge.
   never originate an acceptance.
 - Changing what an acceptance entry contains or who may author it (PRD-033 settled that).
 - **Documenting the counted shapes in the shipped tasks template.** Addendum A3 authorizes the
-  predicate and its statement in `METHOD.md` (FR-9); it does not authorize new template prose,
+  predicate and its statement in `METHOD.md` (FR-8); it does not authorize new template prose,
   and §3 of the addendum says so. The refusal messages teach the shape at the moment it
   matters, which is where a reader actually is.
 - **Refusing an unreadable task artifact**, and the Phase-2 warning that would report the
@@ -269,8 +269,10 @@ so that the upgrade is a decision instead of a surprise at the next merge.
   row.
 - **Given** the shipped placeholder handoff table, whose data cells are all empty, **When** the
   count runs, **Then** it is zero.
-- **Given** a cell containing `a\|b` and one containing `a\|b`, **When** cells are split,
-  **Then** the first is one cell and the second is two.
+- **Given** a row whose text is `| a\|b |` — one backslash before the pipe, an ODD count, so the
+  pipe is escaped — **When** cells are split, **Then** it is one cell; **Given** `| a\\|b |` —
+  two backslashes, an EVEN count, so the backslash is literal and the pipe separates — **Then**
+  it is two cells.
 - **Given** an `operator-gated` PRD with zero operator rows and no acceptance entry, **When**
   the merge gate runs, **Then** it refuses: the declaration itself is the demand.
 - **Given** a PRD declaring `eligible` whose task file yields two operator rows, **When**
@@ -440,7 +442,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 - applied: `assert-absent-needs-an-independent-cause` — the header-row fixture must fail from
   its own cause, not because the surrounding table also stopped parsing; likewise each excluded
   shape in FR-1 gets its own fixture rather than one document holding all of them.
-- applied: `known-red-ledger-must-expire` — FR-8: the three entries are deleted by the change
+- applied: `known-red-ledger-must-expire` — FR-9: the three entries are deleted by the change
   that fixes them, and the harness fails on a known-red assertion that passes, so the ledger
   cannot become a bypass.
 - applied: `strictness-added-during-extraction-is-a-behavior-change` — the whole of §7's
@@ -522,7 +524,7 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 | ---- | -------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts      | one fixture each: `-`/`*`/`+`/`1.`/`1)` marker, checkbox in all three spellings, nested item, blockquote, paragraph, heading, marker without whitespace, mask-only text, code-span text, `- none`, `- (none)` |
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts      | one fixture per unreachable kind: blanked fence, `indented-code`, `html`, `in-html`         |
-| FR-2 | `pnpm test --filter provegate`         | markdown.test.ts      | header excluded whatever its first cell; two blocks summed; all-empty placeholder row zero; escape parity `a\|b` vs `a\|b` |
+| FR-2 | `pnpm test --filter provegate`         | markdown.test.ts      | header excluded whatever its first cell; two blocks summed; all-empty placeholder row zero; escape parity: `\|` (odd) is one cell, `\\|` (even) is two |
 | FR-3 | `pnpm test --filter provegate`         | markdown.test.ts      | Result column by header name; two ledger sections summed; no Result column contributes zero |
 | FR-4 | `pnpm test --filter provegate`         | acceptance.test.ts    | operator-gated with zero rows refuses; eligible with rows refuses; both name the file        |
 | FR-5 | `pnpm test --filter provegate`         | chain.test.ts         | early gate refuses before phase-4 commands; a `--from-phase=merge` resume refuses identically |
@@ -575,4 +577,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Cross-item sweep (found while scoring PRD-043, iteration 2): this file still carried present-tense claims that IT plumbs the diagnostic result through `buildState` and that `StateRecord.task` gains a field — both left PRD-040 with the split. §1's history paragraph now marks them as moved, the Migration bullet states that this item changes only WHAT IS COUNTED, and the DO NOT names all four moved surfaces. Third instance of a correction surviving where it was restated |
 | 2026-08-07 | owner  | Second cross-item sweep (found while scoring PRD-043, iteration 3): the `narrow-the-grammar-not-the-parser` disposition still claimed FR-4 refuses `scanDocument().unreliable`, and §12 still ordered a refusal this item no longer performs. Both now point at PRD-043. Fourth instance of the restatement trap in this file — the pattern is that a scope change must sweep dispositions and DO NOTs, not only the FRs |
 | 2026-08-07 | owner  | Third cross-item sweep (found while scoring PRD-043, iteration 4): §5 cited FR-9 for the METHOD.md statement and §7 cited FR-8 for the audit — both off by one after the renumbering; the audit's `refusal` classification and the unreadable-input rollback trigger were PRD-043's and are gone, leaving this item's four counting sources as the only classifications and no refusal it could roll back. Fifth restatement instance in this file |
+| 2026-08-07 | owner  | Fourth cross-item sweep (found while scoring PRD-043, iteration 6): §5's METHOD reference and the `known-red`/resume/state-model dispositions were still on the pre-renumbering FR ids; §5's interim claim said "each contributes zero rows" where the MEASUREMENT says the separator-less table goes 2→0 and the narrow row 2→1; the audit classifications omitted the zero-row acceptance population; the rollback aside still mentioned refusals this item does not perform; `surface-set-without-its-predicate` still described a lint surface that left with the Phase-2 warning. And the escape-parity example in §6 and §11 showed the SAME source string for both arms — `a\|b` twice — while claiming one cell and two; the odd/even pair is now written out. Sixth restatement instance in this file |
 
