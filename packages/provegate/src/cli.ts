@@ -312,8 +312,21 @@ function runNew(args: string[]): number {
     }
   }
   const positional = args.filter((a) => !a.startsWith('--'));
-  const tasksFlags = args.filter((a) => a === '--tasks' || a.startsWith('--tasks='));
-  const reviewFlags = args.filter((a) => a === '--review' || a.startsWith('--review='));
+  // FR-1 declares `--tasks <ID>` and `--review <ID>`: the id is a separate
+  // token. The `=` spelling was an unasked-for convenience outside the declared
+  // grammar (phase-6 round 8, Medium), and a command that accepts a form its
+  // own spec does not name is a second grammar nobody reviewed.
+  for (const name of ['--tasks', '--review']) {
+    const equalsForm = args.find((a) => a.startsWith(`${name}=`));
+    if (equalsForm !== undefined) {
+      console.error(
+        `[new] ${name} takes the id as a separate argument — write \`gate new ${name} <ID>\`, not \`${equalsForm}\``,
+      );
+      return 1;
+    }
+  }
+  const tasksFlags = args.filter((a) => a === '--tasks');
+  const reviewFlags = args.filter((a) => a === '--review');
 
   if (tasksFlags.length > 0 && reviewFlags.length > 0) {
     console.error('[new] --tasks and --review are separate artifacts — run one, then the other');
@@ -334,7 +347,6 @@ function runNew(args: string[]): number {
     }
     // `--tasks PRD-001` (two tokens) and `--tasks=PRD-001` are both accepted;
     // anything else positional alongside them is ambiguous.
-    const inline = artifactFlag.includes('=') ? artifactFlag.split('=').slice(1).join('=') : undefined;
     // The id must FOLLOW its flag (phase-6 round 7, High). Taking the first
     // positional regardless of order made `gate new prd-001 --tasks` write a
     // tasks artifact, although the declared production is `--tasks <ID>` and
@@ -343,17 +355,17 @@ function runNew(args: string[]): number {
     const flagAt = args.indexOf(artifactFlag);
     const after = args.slice(flagAt + 1).filter((a) => !a.startsWith('--'));
     const before = args.slice(0, flagAt).filter((a) => !a.startsWith('--'));
-    if (inline === undefined && before.length > 0) {
+    if (before.length > 0) {
       console.error(
         `[new] the id follows --${kind}; "${before[0]}" precedes it — ` +
           `write \`gate new --${kind} <ID>\``,
       );
       return 1;
     }
-    const id = inline ?? after[0];
-    const extras = inline === undefined ? after.slice(1) : [...before, ...after];
+    const id = after[0];
+    const extras = after.slice(1);
     if (extras.length > 0) {
-      const got = inline === undefined ? positional : [inline, ...positional];
+      const got = positional;
       console.error(
         `[new] --${kind} takes exactly one id; got ${got.map((a) => `"${a}"`).join(', ')} — a slug creates a PRD, not a companion artifact`,
       );

@@ -159,8 +159,14 @@ for (const spec of DOCS) {
   // the SAME heading to a renderer, so prepending a closing-sequence form left
   // the exact string unique while a rendered Close preceded the recipe.
   const headingText = (line) => {
-    const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*(?:#+[ \t]*)?$/.exec(line);
-    return m ? `${m[1]} ${m[2]}` : null;
+    const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*$/.exec(line);
+    if (!m) return null;
+    // A CLOSING sequence must be preceded by whitespace (phase-6 round 8):
+    // `## Close ###` closes, `## Close###` does not — the hashes are part of
+    // the text. Stripping them unconditionally made two different headings
+    // compare equal.
+    const text = m[2].replace(/(^|[ \t])#+$/, '').trimEnd();
+    return `${m[1]} ${text}`;
   };
   const findUnique = (heading) =>
     lines

@@ -248,6 +248,25 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   `quickstart-e2e.test.ts` pinned the old Phase-6 message and a fixture that replaced
   `{{CMD_*}}` tokens FR-2 now resolves (it now replaces both spellings, so it still works against
   an older installed CLI).
+- **Rejection put back to the reviewer, not self-declared (phase-6 round 8, finding 2 and the
+  entity half of finding 3).** The claim: a template containing `# RFC&#45;XXX: foreign` renders
+  as a foreign id heading, and neither the anchor guard nor the parity verifier sees it, because
+  both read Markdown source.
+  The argument for rejecting it: **nothing in this toolchain renders.** `gate new` reads text and
+  writes text; the state builder, `gate check`, the review gate and the parity verifier all read
+  the same source bytes. An entity-encoded heading is therefore invisible to every consumer
+  equally — there is no state where the artifact means one thing to a gate and another to the
+  thing that consumes it, which is the property these guards exist to protect. The one reader
+  that would see a difference is a human in a Markdown viewer, looking at a template they
+  configured `templates.prd` to point at.
+  Accepting it would mean HTML-entity-decoding before every structural read, in this module AND
+  in the state builder AND in the lint — or the parity claim would be false in the other
+  direction. That is the renderer-parity chase `narrow-the-grammar-not-the-parser` exists to
+  refuse: this reader will never reach parity, so the answer is to restrict what the document may
+  contain, not to widen the parser. The restriction is already there — a literal `-XXX:` heading
+  is the grammar, and anything else is not an id anchor in this system.
+  Recorded here and put back to the reviewer for adjudication (the PRD-025 precedent: a rejection
+  is never self-declared).
 - **Scope expansion, recorded (phase-6 round 2 asked for exactly this): `scripts/adopter-smoke.sh`
   and `scripts/adopter-smoke-fill.mjs` are edited by this item although the PRD's Conflict
   Surface does not name them.** FR-3 breaks them by construction — the fill script fills the two

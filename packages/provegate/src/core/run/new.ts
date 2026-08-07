@@ -728,9 +728,13 @@ export function createCompanion(
       // it hardcoded `_docs/reviews/` while `gate new --review` writes to
       // `dirs.reviewsDir`, so under any custom reviews directory the two
       // commands produced artifacts Phase 6 could not connect.
+      // Literal replacement (phase-6 round 8, High — introduced by round 7's
+      // own fix): a string replacement interprets `$&`, so a configured
+      // `reviewsDir` containing it expanded to the matched template text. Same
+      // class as the token pass's `$&` defect, one function over.
       .replaceAll(
         '`_docs/reviews/review-XXX-{short-name}.md`',
-        `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
+        () => `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
       )
       .replaceAll('review-XXX-{short-name}.md', `review-${number}-${slug}.md`);
     content = substituteConfiguredTokens(config, content);

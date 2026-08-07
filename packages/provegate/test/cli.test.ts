@@ -118,3 +118,11 @@ describe('gate new id position (PRD-042, phase-6 round 7)', () => {
     expect(result.stderr).toContain('the id follows --tasks');
   });
 });
+
+describe('gate new artifact flag grammar (PRD-042, phase-6 round 8)', () => {
+  it('refuses the --tasks=<ID> spelling the spec does not declare', async () => {
+    const result = await cli('new', '--tasks=PRD-001');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('takes the id as a separate argument');
+  });
+});

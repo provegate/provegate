@@ -1000,3 +1000,16 @@ describe('phase-6 round 7 fixes (PRD-042)', () => {
     }
   });
 });
+
+describe('phase-6 round 8 fixes (PRD-042)', () => {
+  it('treats a configured reviewsDir containing $& as literal bytes', () => {
+    const root = tempRoot();
+    const config = { ...cfg, dirs: { ...cfg.dirs, reviewsDir: 'audits/$&' } };
+    createPrd(config, root, { slug: 'dollar-dir' });
+    const tasks = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    // Round 7's own fix used a string replacement, so `$&` expanded to the
+    // matched template text — the same class of defect the token pass had.
+    expect(tasks).toContain('audits/$&/review-001-dollar-dir.md');
+    expect(tasks).not.toContain('_docs/reviews/');
+  });
+});
