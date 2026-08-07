@@ -102,7 +102,8 @@ so that my first close fails on my code and not on my paperwork.
    more than one is a refusal naming the candidates. Every write is `wx`-atomic and
    containment-checked against the workspace root, exactly as `gate init` writes; an existing
    destination is reported and left byte-untouched.
-   - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`
+   - **Targets:** `packages/provegate/src/core/run/new.ts`, `packages/provegate/src/cli.ts::runNew`,
+     `packages/provegate/src/cli.ts::usage`
 2. **FR-2**: `gate new` substitutes every template token whose value the configuration can
    supply, from this closed table, in this precedence order:
 
@@ -154,6 +155,11 @@ so that my first close fails on my code and not on my paperwork.
    reader wires the floor before running the command that executes it. `verify:quickstart-parity`
    gains a structural order assertion — command-sequence equality alone cannot see prose order,
    and an unasserted ordering claim is the kind of documentation this repository already refuses.
+   The `new` line in `gate --help` advertises both artifact modes, and both quickstart copies
+   teach `gate new --tasks` / `gate new --review` exactly where they currently tell a reader to
+   copy a template by hand — a feature the help text does not mention is a feature an adopter
+   does not find. A content assertion in `packages/provegate/test/cli.test.ts` named
+   `"the new help line advertises --tasks and --review"` fails while either is absent.
    The practices `NEXT_STEPS.md` duplicate `## 7` heading is corrected in the same pass, and the
    correction is asserted rather than assumed: a test in
    `packages/provegate/test/content-hygiene.test.ts` named
@@ -177,6 +183,8 @@ so that my first close fails on my code and not on my paperwork.
 
 ## 6. Acceptance Criteria (Gherkin Style)
 
+- **Given** `gate --help`, **When** it prints the `new` line, **Then** that line names `--tasks`
+  and `--review`.
 - **Given** an existing PRD, **When** `gate new --tasks PRD-001` runs, **Then** the file appears
   at `<tasks.dir>/wip/tasks-001-<slug>.md` and the phase-6 gate finds it; re-running reports the
   existing file and leaves it byte-identical.
@@ -253,6 +261,7 @@ the same commit or the check fails, which is the point of it.
 - [ ] `packages/provegate/QUICKSTART.md`, `apps/docs/content/docs/quickstart.mdx`
 - [ ] `scripts/verify/verify-quickstart-parity.mjs`
 - [ ] `packages/provegate/practices/NEXT_STEPS.md`
+- [ ] `packages/provegate/test/cli.test.ts`
 - [ ] `packages/provegate/test/new.test.ts`, `packages/provegate/test/prd-ready.test.ts`,
       `packages/provegate/test/chain.test.ts`, `packages/provegate/test/content-hygiene.test.ts`
 
@@ -336,6 +345,7 @@ the same commit or the check fails, which is the point of it.
 - `packages/provegate/test/prd-ready.test.ts`
 - `packages/provegate/test/chain.test.ts`
 - `packages/provegate/test/content-hygiene.test.ts`
+- `packages/provegate/test/cli.test.ts`
 
 ---
 
@@ -362,6 +372,7 @@ the same commit or the check fails, which is the point of it.
 | FR-5 | `pnpm test --filter provegate`  | new.test.ts            | rendered template instantiates; four drift shapes each refuse |
 | FR-6 | `pnpm verify:quickstart-parity` | both quickstart copies | order assertion fails when the recipe follows the close section |
 | FR-6 | `pnpm test --filter provegate`  | content-hygiene.test.ts | test `"NEXT_STEPS numbered headings are unique and sequential"` |
+| FR-6 | `pnpm test --filter provegate`  | cli.test.ts             | test `"the new help line advertises --tasks and --review"` |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -393,4 +404,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.1 ITERATE): FR-1 destination paths derived from `dirs.artifacts.tasks` / `dirs.reviewsDir` with exact-id resolution, mutually exclusive modes, `wx`-atomic contained writes and three refusals; FR-2 replaced by a closed seven-row token→source table with precedence, empty-value behaviour, sorted unique reporting and exit 0; FR-3 states the removal grammar and the memory-on failure that stops it becoming an escape hatch; FR-4 retargeted to `chain.ts::buildGateChain` (the message lives there, not in `review.ts`) and names the required ledger columns; FR-5 closed to a two-member anchor alternation with four deny tests and wildcards forbidden; FR-6 adds the structural order assertion to the parity verifier; every memory input rewritten to name the test that binds it; RM 4→2, value 3.75→3.45 |
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.7 ITERATE; 6.1→7.7, five items closed): FR-1 states the three-mode argument grammar with every mixed form refused by name; §2's metric reworded to resolvable-with-non-empty-source; `{{DOCS_ROOT}}`'s fallback named as `config.dirs.artifacts.summary.dir`; the seven rows declared the CLOSED set; a chain.test.ts regression added proving an unedited instantiated tasks template FAILS Phase 6, so the convenience cannot hand an author a pre-passed review row; §7 gained Migration & Rollback (legacy mode unchanged, both quickstart copies in one release, revert leaves created artifacts, deny tests as the rollback trigger) |
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.7, flat; five items CLOSED and holding): the three productions written out as a grammar block with six enumerated refusals, each with a test; FR-2 scoped as an ADDITIONAL pass that leaves every existing anchor substitution — `{{ID_PREFIX}}` included — and its drift refusals untouched; the `evidence-pattern-satisfied-by-the-template` disposition repointed from a row that did not exist to the FR-1 row, with the exact test title named; the revert story now distinguishes the older `gate new` (ignores the artifacts) from the Phase-6 chain (keeps consuming them); rollback trigger reworded to a deny test FAILING; the NEXT_STEPS heading fix given a runnable assertion instead of a promise |
+| 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS): id resolution restricted to the configured wip role with the artifact BASENAME authoritative for number and slug (a heading an author edits is not an identifier); the eight refusals given a table of named `new.test.ts` test titles; `cli.ts::usage` added as a target so `gate --help` advertises both artifact modes, both quickstart copies teach them where they currently prescribe copying a template by hand, and a `cli.test.ts` content assertion fails while either is unadvertised — a feature the help text does not mention is a feature an adopter does not find |
 

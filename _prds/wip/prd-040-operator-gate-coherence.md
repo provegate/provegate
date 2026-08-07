@@ -356,21 +356,23 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   same signature, same return type, same absence of a thrown error. The diagnostic result and
   the `StateRecord` field belong to PRD-043; a reader of this PRD should find no promise of
   either here.
-- **Measurement decides (FR-8):** the audit runs as the first task of Phase 4, before any
+- **Measurement decides (FR-7):** the audit runs as the first task of Phase 4, before any
   behaviour change is written. It reports two populations, because they change for different
   reasons: artifacts whose COUNT changes, and `operator-gated` items whose required acceptance
   changes while the count stays `0 → 0` — the second is invisible to a count diff and is the
   one Clause 1 creates. Its classification is the decision input: a `refusal` classification on
   an existing artifact stops the work by default, because it means the new grammar cannot read
-  something the corpus already contains.
+  something the corpus already contains — where "refusal" means an artifact PRD-043 will later
+  refuse, recorded here as information only. This item performs no refusals, so no rollback of
+  this item can be triggered by one.
 - **Remedy, per population:** a handoff row that is real work → flip `Autonomous Close` to
   `operator-gated` and record the acceptance; a row that is not work → delete it. A ledger row
   sitting at `operator` → run the check and update the `Result`, or accept it explicitly. An
   `operator-gated` PRD with no rows → record the acceptance the declaration always implied, or
   declare `eligible`.
 - **Rollback trigger and plan:** revert the commit if the audit shows artifacts whose count
-  changes for reasons the grammar did not intend, or if a repository's existing closes begin
-  refusing on input the grammar cannot read. The counter is pure and nothing is migrated on
+  changes for reasons the grammar did not intend. Refusals on unreadable input are PRD-043's
+  trigger, not this item's — it adds none. The counter is pure and nothing is migrated on
   disk, so a revert restores previous behaviour exactly.
 - **Release:** a minor version. The changeset names the behaviour change first and the bug fix
   second, in that order, because that is the order an upgrading adopter meets them.
@@ -572,4 +574,5 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 7 (Codex 7.6, flat after 7.6): stopped arguing about today's behaviour and MEASURED it — the shipped counter executed against fourteen shapes, verbatim output pasted into §7 with the per-shape delta this item makes. Two earlier drafts had described that behaviour from reading the code and were wrong in both directions (an all-empty placeholder row does count 0; the 1 was the header, and a separator-less table counts 2, not 0). FR-2's "exactly as now" claim corrected to the measured deltas |
 | 2026-08-07 | owner  | Cross-item sweep (found while scoring PRD-043, iteration 2): this file still carried present-tense claims that IT plumbs the diagnostic result through `buildState` and that `StateRecord.task` gains a field — both left PRD-040 with the split. §1's history paragraph now marks them as moved, the Migration bullet states that this item changes only WHAT IS COUNTED, and the DO NOT names all four moved surfaces. Third instance of a correction surviving where it was restated |
 | 2026-08-07 | owner  | Second cross-item sweep (found while scoring PRD-043, iteration 3): the `narrow-the-grammar-not-the-parser` disposition still claimed FR-4 refuses `scanDocument().unreliable`, and §12 still ordered a refusal this item no longer performs. Both now point at PRD-043. Fourth instance of the restatement trap in this file — the pattern is that a scope change must sweep dispositions and DO NOTs, not only the FRs |
+| 2026-08-07 | owner  | Third cross-item sweep (found while scoring PRD-043, iteration 4): §5 cited FR-9 for the METHOD.md statement and §7 cited FR-8 for the audit — both off by one after the renumbering; the audit's `refusal` classification and the unreadable-input rollback trigger were PRD-043's and are gone, leaving this item's four counting sources as the only classifications and no refusal it could roll back. Fifth restatement instance in this file |
 

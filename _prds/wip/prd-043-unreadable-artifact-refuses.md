@@ -199,8 +199,12 @@ so that a formatting mistake cannot silently drop my operator gate.
 - **Given** an unreadable document, **When** the legacy numeric `countOperatorHandoff` is
   called from the INSTALLED package export, **Then** it throws the named diagnostic error, whose
   class and `code` are importable from the same root.
-- **Given** a legal boundaryless GFM table, a legal piped table, a one-`Result`-column ledger and
-  a document whose fence closes, **When** the read runs, **Then** none produces a problem.
+- **Given** a boundaryless table whose second line matches as a separator with equal cell count,
+  **When** the read runs, **Then** it is a problem — the reader cannot read cells without
+  boundary pipes, and today it silently counts zero.
+- **Given** a well-formed piped table, a `|`-bearing sentence whose neighbour does not match, a
+  one-`Result`-column ledger and a document whose fence closes, **When** the read runs, **Then**
+  none produces a problem.
 - **Given** an acknowledgement line carrying PRD-040's three fields, **When**
   `--assert-acknowledged` runs under this item's four-field reader, **Then** it reports STALE.
 
@@ -346,7 +350,7 @@ therefore the only one it may assume.
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts     | one fixture per refusal cause, each failing independently  |
 | FR-1 | `pnpm test --filter provegate`         | markdown.test.ts     | a paragraph containing `\|` produces no problem            |
 | FR-2 | `pnpm test --filter provegate`         | markdown.test.ts     | legacy numeric export throws the named diagnostic          |
-| FR-2 | `pnpm smoke:adopter`                   | adopter fixture      | the throw and its `code` observed through the INSTALLED export |
+| FR-2 | `pnpm smoke:adopter`                   | adopter fixture      | from the INSTALLED package root: `readOperatorHandoff` and the error class both import, the wrapper throws, and the thrown value's `code` is `OPERATOR_HANDOFF_UNREADABLE` |
 | FR-3 | `pnpm test --filter provegate`         | acceptance.test.ts   | merge gate refuses before the acceptance lookup            |
 | FR-4 | `pnpm test --filter provegate`         | cli-state.test.ts    | problem is fatal, contradiction is a warning, via runCheck |
 | FR-4 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warning only when the task file exists; exit code unchanged |
@@ -384,4 +388,5 @@ Before Phase 2 PASS, run: `gate check PRD-043`
 | 2026-08-07 | owner  | Iteration 1 rework (Codex 6.4 ITERATE): FR-1 states the five predicates as a closed set (header candidate, separator candidate, block boundary, cell parity by backslash, width equality), aggregates problems in document order, and declares `count` UNUSABLE rather than zero when a problem exists; FR-2 gains a stable exported diagnostic identity (`OperatorHandoffUnreadableError` / `OPERATOR_HANDOFF_UNREADABLE`), states that an unchanged signature is not runtime compatibility, and is tested through the installed export; FR-3 adds `StateRecord` to Targets; FR-4 makes artifact PRESENCE part of the contract (`present` flag, `undefined` when absent) — the missing third state the first draft had; FR-5 converts the PRD-040 dependency into a hard preflight with the new refusal population and the owner as the authorized actor; Memory Outputs `none` replaced by a real learning; RM 3→2, value 3.60→3.45 |
 | 2026-08-07 | owner  | Iteration 2 (Codex 7.2 ITERATE; 6.4→7.2, three items closed): FR-1's "header candidate" predicate matched every data row — corrected to position-based block detection (a piped line whose NEXT line is a matching separator line starts a block; header is a position, not a shape), with "separator line" defined for boundaryless lines too; FR-4's sixth parameter is now a discriminated union (`{present: true, count, problem} | {present: false}`) so a caller cannot read a count on an absent artifact, and where the distinction is built is named; `scripts/adopter-smoke.sh` added to FR-2's Targets, Scope, Conflict Surface and §11 so the installed-export assertion is executable; FR-5 defines the fingerprint's field GROWTH (three fields → four), which correctly stales a PRD-040 acknowledgement that never measured refusals |
 | 2026-08-07 | owner  | Iteration 3 (Codex 7.2→7.7; three more items closed): the boundaryless predicate gained its second half — separator shape AND equal cell count, either alone being prose — and every refusal fixture is now paired with a POSITIVE control differing in exactly the refused property, so the predicate is shown to discriminate rather than to reject; FR-2 makes the reader and the error class package-root exports, because a migration naming a symbol an adopter cannot import is not a migration; FR-5's fingerprint growth is verified in both directions (a three-field acknowledgement reports STALE, a matching four-field line passes) instead of being asserted in prose |
+| 2026-08-07 | owner  | Iteration 4 (Codex 7.9, one tenth under PASS; the previous round's fix had introduced a contradiction): a MATCHING boundaryless table now has ONE outcome — a problem, because `splitTableCells` needs boundary pipes and PRD-040 measured that shape counting 0 — and the positive control for that predicate became a `|`-bearing sentence whose neighbour does not match, not the "legal boundaryless table" that contradicted the refusal; FR-2's §11 row now asserts that the reader AND the error class import from the installed package root, not only that the wrapper throws |
 
