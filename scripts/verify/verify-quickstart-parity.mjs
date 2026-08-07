@@ -133,22 +133,72 @@ for (const spec of DOCS) {
   const abs = join(root, spec.path);
   if (!existsSync(abs)) continue;
   const lines = read(abs).split('\n');
-  const before = lines.indexOf(ORDER.before);
-  const after = lines.indexOf(ORDER.after);
-  if (before === -1 || after === -1) {
+  // Fence map: a heading SHOWN inside a fence is not the section, and the
+  // recipe fence is what we are actually looking for.
+  const fenced = [];
+  let open = null;
+  for (const line of lines) {
+    const m = /^(\s*)(`{3,}|~{3,})/.exec(line);
+    if (open === null && m) {
+      open = m[2][0];
+      fenced.push(true);
+      continue;
+    }
+    if (open !== null && m && m[2][0] === open) {
+      open = null;
+      fenced.push(true);
+      continue;
+    }
+    fenced.push(open !== null);
+  }
+  const findUnique = (heading) => {
+    const hits = lines.map((l, i) => (!fenced[i] && l === heading ? i : -1)).filter((i) => i >= 0);
+    return hits;
+  };
+  const beforeHits = findUnique(ORDER.before);
+  const afterHits = findUnique(ORDER.after);
+  if (beforeHits.length !== 1 || afterHits.length !== 1) {
     r.fail(
-      `${spec.path}: expected both "${ORDER.before}" and "${ORDER.after}" headings — ` +
-        'the manifest-order assertion cannot judge a document it cannot find them in',
+      `${spec.path}: expected exactly one unfenced "${ORDER.before}" and "${ORDER.after}" ` +
+        `heading (found ${beforeHits.length} and ${afterHits.length}) — the order assertion ` +
+        'cannot judge a document whose sections it cannot identify',
     );
     continue;
   }
-  if (before > after) {
+  const [before] = beforeHits;
+  const [after] = afterHits;
+  // The heading is not the recipe. Round 1 of PRD-042's review showed the
+  // heading could stay put while the JSON fence moved past the close — the
+  // assertion has to end where the RECIPE ends, so find the manifest fence
+  // inside the section and require its CLOSING line to precede the close.
+  let fenceEnd = -1;
+  for (let i = before + 1; i < lines.length; i++) {
+    if (!fenced[i] && lines[i].startsWith('## ')) break;
+    if (/^```/.test(lines[i]) && /"phases"/.test(lines.slice(i, i + 8).join('\n'))) {
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^```\s*$/.test(lines[j])) {
+          fenceEnd = j;
+          break;
+        }
+      }
+      break;
+    }
+  }
+  if (fenceEnd === -1) {
     r.fail(
-      `${spec.path}: "${ORDER.before}" (line ${before + 1}) follows "${ORDER.after}" ` +
-        `(line ${after + 1}) — the manifest recipe must precede the close that executes it`,
+      `${spec.path}: no manifest recipe fence (a \`\`\` block containing "phases") inside ` +
+        `"${ORDER.before}" — the section without its recipe teaches nothing`,
+    );
+    continue;
+  }
+  if (before > after || fenceEnd > after) {
+    r.fail(
+      `${spec.path}: the manifest recipe (heading line ${before + 1}, fence ends line ` +
+        `${fenceEnd + 1}) does not finish before "${ORDER.after}" (line ${after + 1}) — ` +
+        'the recipe must precede the close that executes it',
     );
   }
 }
-r.note('manifest section precedes the close section in both documents');
+r.note('manifest recipe fence closes before the close section in both documents');
 
 r.done();

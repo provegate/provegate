@@ -259,23 +259,35 @@ function seedPrd(repo: string) {
   // eligible close (measured: check greens after only this).
   //
   // PRD-042 FR-2 resolves `{{CMD_*}}` at `gate new` time from the scratch
-  // repo's config, so the rows arrive as the CONFIGURED commands (`pnpm test`)
-  // rather than as tokens — and `pnpm test` has no meaning in a scratch repo
-  // with no test script. The fixture therefore replaces both spellings: the
-  // token form for a repository that resolves nothing, and the resolved form
-  // for one that does.
+  // repo's config, so the rows arrive as the CONFIGURED commands (`pnpm test`),
+  // and `pnpm test` has no meaning in a scratch repo with no test script.
+  //
+  // The fixture REQUIRES the resolved spelling and refuses the token one: a
+  // fixture that accepts both would stay green if FR-2 were removed, which is
+  // the definition of a test that proves nothing (phase-6 round 1, Medium).
   const p = join(repo, '_prds/wip/prd-001-fix-login-timeout.md');
   let s = readFileSync(p, 'utf8');
+  const leftover = s.match(/\{\{CMD_[A-Z_]+\}\}/g);
+  if (leftover) {
+    throw new Error(
+      `gate new left ${[...new Set(leftover)].join(', ')} unresolved — FR-2 is not doing its job`,
+    );
+  }
   const PROBE = '`node -e "process.exit(0)"`';
-  s = s.replaceAll('`{{CMD_TEST_SCOPED}}`', PROBE);
   s = s.replaceAll('`pnpm test --filter provegate`', PROBE);
   s = s.replaceAll('`pnpm test`', PROBE);
-  s = s.replace('- `{{CMD_CHECK_TYPES}}` — zero errors', '- ' + PROBE + ' — placeholder floor');
   s = s.replace('- `pnpm check-types` — zero errors', '- ' + PROBE + ' — placeholder floor');
-  s = s.replace('- `{{CMD_LINT}}` — zero warnings', '');
   s = s.replace('- `pnpm lint` — zero warnings', '');
-  s = s.replace('- `{{CMD_TEST}}` — added tests pass; existing tests unchanged', '');
   s = s.replace('- ' + PROBE + ' — added tests pass; existing tests unchanged', '');
+  // Durable Artifacts ships as scaffolding, and FR-2 now resolves the roots
+  // inside it. An unfilled section declares a path that does not exist and
+  // Phase 7 refuses it BY NAME — correct, and the author's job. The quickstart
+  // scenario declares `none`, which is what a hotfix with no durable output
+  // says.
+  s = s.replace(
+    /## Durable Artifacts\n\n[\s\S]*?\n\n---/,
+    '## Durable Artifacts\n\n- none\n\n---',
+  );
   s = s.replace('> **Autonomous Close**: operator-gated', '> **Autonomous Close**: eligible');
   writeFileSync(p, s);
 }

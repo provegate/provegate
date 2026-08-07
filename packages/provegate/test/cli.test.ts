@@ -96,3 +96,17 @@ describe('discoverability (PRD-042 FR-6)', () => {
     expect(line).toContain('--review');
   });
 });
+
+describe('gate new argument arity (PRD-042, phase-6 round 1)', () => {
+  it('refuses a bare value option instead of ignoring it', async () => {
+    const result = await cli('new', '--tasks', 'PRD-001', '--class');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('--class needs a value');
+  });
+
+  it('refuses a second positional instead of silently writing the first', async () => {
+    const result = await cli('new', 'first', 'second');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('one slug per PRD');
+  });
+});

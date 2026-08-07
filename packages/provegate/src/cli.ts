@@ -291,6 +291,16 @@ function runNew(args: string[]): number {
     console.error(`[new] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
   }
+  // A VALUE option written bare (`--class`, `--template`) is refused before
+  // anything dispatches (phase-6 round 1, High). Recognizing the name and not
+  // its form let `gate new --tasks PRD-001 --class` write a tasks file while
+  // silently discarding an argument the author meant to matter.
+  for (const name of ['--class', '--template']) {
+    if (args.includes(name)) {
+      console.error(`[new] ${name} needs a value — write ${name}=<value>`);
+      return 1;
+    }
+  }
   const positional = args.filter((a) => !a.startsWith('--'));
   const tasksFlags = args.filter((a) => a === '--tasks' || a.startsWith('--tasks='));
   const reviewFlags = args.filter((a) => a === '--review' || a.startsWith('--review='));
@@ -350,6 +360,16 @@ function runNew(args: string[]): number {
   const slug = positional[0];
   if (!slug) {
     console.error(NEW_USAGE);
+    return 1;
+  }
+  // The PRD production takes EXACTLY one positional. `gate new first second`
+  // used to write `first` and drop `second` on the floor — a command that
+  // silently ignores an argument has decided something the author did not.
+  if (positional.length > 1) {
+    console.error(
+      `[new] one slug per PRD; got ${positional.map((a) => `"${a}"`).join(', ')} — ` +
+        'quote a multi-word slug or pick one',
+    );
     return 1;
   }
   const cls = args.find((a) => a.startsWith('--class='))?.slice('--class='.length);

@@ -17,10 +17,11 @@ if (!target) {
 // The heading arrives as the literal text it has in the document; escaping it
 // here keeps the replacement free of regex syntax (a leaked `\.` writes an
 // unreadable heading back into the file, and §4 then parses as zero FRs).
-const section = (body, heading, replacement) => {
+const section = (body, heading, replacement, { optional = false } = {}) => {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`## ${escaped}\\n\\n[\\s\\S]*?\\n\\n---`);
   if (!pattern.test(body)) {
+    if (optional) return body;
     console.error(`adopter-smoke-fill: no '## ${heading}' section to fill — the template moved`);
     process.exit(1);
   }
@@ -49,9 +50,23 @@ prd = section(
   ].join('\n'),
 );
 prd = section(prd, 'Conflict Surface', '- `src/**`\n- `test/**`');
+// Declared explicitly: PRD-042's token pass resolves `{{DOCS_ROOT}}` and
+// `{{MEMORY_ROOT}}` inside this section's scaffolding, so an unfilled section
+// now declares paths that do not exist and Phase 7 refuses it BY NAME. That is
+// correct — a PRD that never declared its durable knowledge is not ready to
+// close — and `none` is what a hotfix with no durable output says.
 prd = section(prd, 'Durable Artifacts', '- none');
-prd = section(prd, 'Memory Inputs', '- none — memory is not enabled in this repository.');
-prd = section(prd, 'Memory Outputs', '- none — no non-derivable fact is expected here.');
+// The memory sections are ABSENT by design in a memory-disabled repository —
+// PRD-042 FR-3 omits them at `gate new` time — so these two are optional and
+// say so. `optional: true` is scoped to exactly these headings and nothing
+// else: a blanket "skip what you cannot find" is how a fill script silently
+// stops filling.
+prd = section(prd, 'Memory Inputs', '- none — memory is not enabled in this repository.', {
+  optional: true,
+});
+prd = section(prd, 'Memory Outputs', '- none — no non-derivable fact is expected here.', {
+  optional: true,
+});
 
 // The §11 rows: PRD-042 FR-2 resolves `{{CMD_*}}` at creation, so in a repository
 // with configured commands these arrive resolved and the replacements below are

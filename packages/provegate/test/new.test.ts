@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../src/core/config/index.js';
 import { validateReviewArtifact } from '../src/core/gates/review.js';
 import {
+  configuredTokens,
   createCompanion,
   createPrd,
   initWorkspace,
@@ -389,13 +390,42 @@ describe('companion artifacts (PRD-042 FR-1)', () => {
 });
 
 describe('configured token pass (PRD-042 FR-2)', () => {
-  it('substitutes every token whose source is non-empty', () => {
+  it('resolves all seven tokens from their configured sources', () => {
     const root = tempRoot();
-    const text = readFileSync(createPrd(cfg, root, { slug: 'tokens' }).path, 'utf8');
-    for (const token of ['{{CMD_CHECK_TYPES}}', '{{CMD_LINT}}', '{{CMD_TEST}}', '{{CMD_BUILD}}']) {
-      expect(text).not.toContain(token);
+    // Memory ON so the sections carrying {{MEMORY_ROOT}} survive to be checked.
+    const config = { ...cfg, memory: { ...cfg.memory, enabled: true } };
+    const text = readFileSync(createPrd(config, root, { slug: 'tokens' }).path, 'utf8');
+    for (const token of [
+      '{{CMD_CHECK_TYPES}}',
+      '{{CMD_LINT}}',
+      '{{CMD_TEST}}',
+      '{{CMD_BUILD}}',
+      '{{CMD_TEST_SCOPED}}',
+      '{{MEMORY_ROOT}}',
+      '{{DOCS_ROOT}}',
+    ]) {
+      expect(text, token).not.toContain(token);
     }
-    expect(text).toContain(cfg.commands.checkTypes);
+    expect(text).toContain(config.commands.checkTypes);
+    expect(text).toContain(config.memory.root);
+    expect(text).toContain(config.dirs.artifacts.summary.dir);
+  });
+
+  it('lets a prompts value win for the two tokens that have one, and falls back when it does not', () => {
+    const withPrompts = {
+      ...cfg,
+      prompts: {
+        ...cfg.prompts,
+        values: { CMD_TEST_SCOPED: 'pnpm test --filter one', DOCS_ROOT: 'docs/knowledge' },
+      },
+    };
+    const table = configuredTokens(withPrompts);
+    expect(table.get('{{CMD_TEST_SCOPED}}')).toBe('pnpm test --filter one');
+    expect(table.get('{{DOCS_ROOT}}')).toBe('docs/knowledge');
+    // No prompts value: each falls back to the source FR-2 names.
+    const fallback = configuredTokens(cfg);
+    expect(fallback.get('{{CMD_TEST_SCOPED}}')).toBe(cfg.commands.test);
+    expect(fallback.get('{{DOCS_ROOT}}')).toBe(cfg.dirs.artifacts.summary.dir);
   });
 
   it('keeps a token whose configured source is empty, and reports it', () => {
@@ -483,37 +513,62 @@ describe('rendered templates (PRD-042 FR-5)', () => {
     );
   });
 
-  it('substitutes only the FIRST of two competing anchors and leaves the second visible', () => {
-    // Two id anchors is drift the author must resolve: the instantiated file
-    // keeps the second, so `gate check` and any reader see it immediately
-    // rather than the tool silently picking one.
+  it('refuses two competing anchors instead of picking one', () => {
+    // Phase-6 round 1 reversed this: the test used to assert that the tool
+    // substituted the FIRST anchor and left the second visible. A tool that
+    // picks for you has replaced a question with a guess, and the guess is
+    // invisible in the artifact it writes.
     const root = tempRoot();
     const path = join(root, 'competing.md');
     const base = rendered(cfg.idPattern.prefix);
     writeFileSync(path, base.replace('# PRD-XXX: ', '# PRD-XXX: \n\n# PRD-XXX: '));
-    const result = createPrd(cfg, root, { slug: 'competing', templatePath: path });
-    expect(readFileSync(result.path, 'utf8')).toContain('# PRD-XXX: ');
+    expect(() => createPrd(cfg, root, { slug: 'competing', templatePath: path })).toThrow(
+      /2 id anchors/,
+    );
+  });
+
+  it('does not count an anchor shown inside a fenced block', () => {
+    const root = tempRoot();
+    const path = join(root, 'fenced.md');
+    const base = rendered(cfg.idPattern.prefix);
+    // A template that DOCUMENTS the heading in a fence still has exactly one
+    // real anchor, and must instantiate.
+    writeFileSync(path, base.replace('# PRD-XXX: ', '# PRD-XXX: \n\n```md\n# PRD-XXX: shown\n```\n\n'));
+    const result = createPrd(cfg, root, { slug: 'fenced-anchor', templatePath: path });
+    expect(readFileSync(result.path, 'utf8')).toContain('# PRD-001: ');
+  });
+
+  it('refuses a template whose ONLY anchor is inside a fence', () => {
+    const root = tempRoot();
+    const path = join(root, 'fenced-only.md');
+    const base = rendered(cfg.idPattern.prefix).replace(/^# PRD-XXX: .*$/m, '# Untitled');
+    writeFileSync(path, `${base}\n\n\`\`\`md\n# PRD-XXX: shown\n\`\`\`\n`);
+    expect(() => createPrd(cfg, root, { slug: 'fenced-only', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
   });
 });
 
-describe('the token pass leaves author placeholders whole (PRD-042 FR-2)', () => {
-  it('does not resolve a token on a line that still carries a [placeholder]', () => {
-    const root = tempRoot();
-    const text = readFileSync(createPrd(cfg, root, { slug: 'placeholders' }).path, 'utf8');
-    // Durable Artifacts ships as `{{DOCS_ROOT}}/[page].md`. Resolving only the
-    // token would produce `_docs/[page].md`, which the Phase-7 gate reads as a
-    // DECLARED path and then demands. Measured: the executable quickstart
-    // stopped at Phase 7 for exactly this before the rule existed.
-    expect(text).not.toContain('_docs/[page].md');
-    expect(text).not.toContain('_brain/learnings/[slug].md');
-    expect(text).toContain('{{DOCS_ROOT}}/[page].md');
-  });
-
-  it('still resolves the same token on a line with no placeholder', () => {
+describe('the token pass is unconditional over the closed set (PRD-042 FR-2)', () => {
+  it('resolves a token even on a line that still carries an author placeholder', () => {
+    // Round 1 of the phase-6 review refuted the line heuristic an earlier round
+    // introduced: it skipped ordinary Markdown links whose tokens SHOULD
+    // resolve and let `[path/to/file]` through, so it could state neither what
+    // it governed nor why. The pass is unconditional; an unfilled Durable
+    // Artifacts section is then refused BY NAME at Phase 7, which is the
+    // correct outcome for a PRD that never declared its durable knowledge.
     const root = tempRoot();
     const config = { ...cfg, memory: { ...cfg.memory, enabled: true } };
-    const text = readFileSync(createPrd(config, root, { slug: 'mixed-lines' }).path, 'utf8');
-    // The §11 floor bullets carry no `[placeholder]`, so they resolve.
+    const text = readFileSync(createPrd(config, root, { slug: 'placeholders' }).path, 'utf8');
+    expect(text).toContain(`${config.dirs.artifacts.summary.dir}/[page].md`);
+    expect(text).toContain(`${config.memory.root}/learnings/[slug].md`);
+    expect(text).not.toContain('{{DOCS_ROOT}}');
+    expect(text).not.toContain('{{MEMORY_ROOT}}');
+  });
+
+  it('resolves the same token on a line with no placeholder', () => {
+    const root = tempRoot();
+    const text = readFileSync(createPrd(cfg, root, { slug: 'mixed-lines' }).path, 'utf8');
     expect(text).toContain(`- \`${cfg.commands.build}\` — clean build`);
   });
 });
@@ -534,5 +589,76 @@ describe('an instantiated review artifact cannot satisfy the gate (PRD-042, phas
     const report = validateReviewArtifact(flipped);
     expect(report.ok).toBe(false);
     expect(report.issues.join(' ')).toMatch(/Base SHA|Reviewer|Critical|Quorum/);
+  });
+});
+
+describe('phase-6 round 1 fixes (PRD-042)', () => {
+  it('enforces the configured id width — PRD-1 is not PRD-001', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'width' });
+    // Two spellings for one item is how a board loses a row: the state builder
+    // scans at the configured width, so `PRD-1` and `PRD-0001` must refuse.
+    expect(() => createCompanion(cfg, root, 'tasks', 'PRD-1')).toThrow(/exactly 3 digits/);
+    expect(() => createCompanion(cfg, root, 'tasks', 'PRD-0001')).toThrow(/exactly 3 digits/);
+    expect(createCompanion(cfg, root, 'tasks', 'PRD-001').relPath).toContain('tasks-001-');
+  });
+
+  it('writes a tasks heading carrying the id and a link computed from the destination', () => {
+    const root = tempRoot();
+    createPrd(cfg, root, { slug: 'linked' });
+    const text = readFileSync(createCompanion(cfg, root, 'tasks', 'PRD-001').path, 'utf8');
+    expect(text).toContain('# Tasks: PRD-001 — linked');
+    const up = '..' + '/';
+    expect(text).toContain(`](${up.repeat(2)}_prds/wip/prd-001-linked.md)`);
+  });
+
+  it('computes the PRD link for a deeper configured tasks directory', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: {
+          ...cfg.dirs.artifacts,
+          tasks: { dir: 'workflow/tasks/nested', prefix: 'tasks' },
+        },
+      },
+    };
+    createPrd(config, root, { slug: 'deep' });
+    const text = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    // Four segments deep → four hops back. A hardcoded `../../` would resolve
+    // nowhere, and a broken link in the artifact that names the PRD is a poor
+    // first impression from a tool whose subject is traceability.
+    // The escape is ASSEMBLED, never written literally: this repository's
+    // test-inputs grammar refuses a multi-parent literal in a test source, and
+    // the assembly doubles as the documented way to express one.
+    const up = '..' + '/';
+    expect(text).toContain(`](${up.repeat(4)}_prds/wip/prd-001-deep.md)`);
+  });
+
+  it('drops a memory section that is the LAST section, and ignores a fenced heading', () => {
+    const root = tempRoot();
+    const path = join(root, 'fenced-memory.md');
+    const base = readFileSync(shippedTemplate, 'utf8').replaceAll(
+      '{{ID_PREFIX}}',
+      cfg.idPattern.prefix,
+    );
+    // A fence that SHOWS the heading must survive intact while the real
+    // section goes — round 1 found the reverse: the fence was corrupted and the
+    // contract section stayed.
+    writeFileSync(
+      path,
+      base.replace('## Memory Inputs', '```md\n## Memory Inputs\n```\n\n## Memory Inputs'),
+    );
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'fenced-memory', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).toContain('```md\n## Memory Inputs\n```');
+    // Exactly one `## Memory Inputs` line survives — the one inside the fence —
+    // and the real section's BODY is gone with it.
+    expect(text.match(/^## Memory Inputs$/gm)).toHaveLength(1);
+    expect(text).not.toContain('Records from the memory index');
+    expect(text).not.toContain('## Memory Outputs');
   });
 });

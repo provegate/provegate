@@ -114,6 +114,29 @@ export function slugHolder(config: WorkflowConfig, root: string, slug: string): 
   return null;
 }
 
+/** Line indexes that sit inside a fenced code block. A template may legally
+ * SHOW a heading or an anchor inside a fence — the quickstart does — and a
+ * reader that cannot tell shown from meant will edit the wrong one. */
+function fencedLines(lines: string[]): boolean[] {
+  const fenced: boolean[] = [];
+  let open: string | null = null;
+  for (const line of lines) {
+    const m = /^(\s*)(`{3,}|~{3,})/.exec(line);
+    if (open === null && m) {
+      open = m[2]![0]!;
+      fenced.push(true);
+      continue;
+    }
+    if (open !== null && m && m[2]![0] === open) {
+      open = null;
+      fenced.push(true);
+      continue;
+    }
+    fenced.push(open !== null);
+  }
+  return fenced;
+}
+
 /** Substitute one anchored line; a missing anchor is a template-drift ERROR,
  * never a silent skip (W4). */
 function substituteAnchor(content: string, anchor: RegExp, replacement: string): string {
@@ -121,6 +144,35 @@ function substituteAnchor(content: string, anchor: RegExp, replacement: string):
     throw new Error(`template anchor not found: ${anchor} — template drifted from gate new`);
   }
   return content.replace(anchor, replacement);
+}
+
+/**
+ * The id anchor must appear EXACTLY ONCE outside a fence (phase-6 round 1,
+ * High). `String.replace` takes the first match, so a template with two id
+ * headings instantiated silently against whichever came first, and a heading
+ * shown inside a fence counted as the real one. Both are drift, and drift is
+ * the thing this anchor exists to catch — a tool that picks for you has
+ * replaced a question with a guess.
+ */
+function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
+  const lines = content.split('\n');
+  const fenced = fencedLines(lines);
+  const anchor = idAnchor(config);
+  const hits: number[] = [];
+  lines.forEach((line, i) => {
+    if (!fenced[i] && new RegExp(anchor.source).test(line)) hits.push(i + 1);
+  });
+  if (hits.length === 0) {
+    throw new Error(
+      `template anchor not found: ${anchor} — template drifted from gate new`,
+    );
+  }
+  if (hits.length > 1) {
+    throw new Error(
+      `template has ${hits.length} id anchors (lines ${hits.join(', ')}) — exactly one is required; ` +
+        'resolve the duplicate rather than letting gate new pick one',
+    );
+  }
 }
 
 /**
@@ -178,26 +230,24 @@ export function unresolvedTokens(content: string): string[] {
 /** Apply the configured token table. Runs AFTER the anchored substitutions and
  * touches none of them.
  *
- * A line that still carries an author placeholder (`[page]`, `[slug]`, …) is
- * left ALONE, and that rule is load-bearing rather than cosmetic. The Durable
- * Artifacts section ships as `` `{{DOCS_ROOT}}/[page].md` `` — resolving only
- * the token turns template scaffolding into `_docs/[page].md`, which reads as a
- * DECLARED path, and the Phase-7 gate then demands a file nobody meant to
- * declare. Measured: the executable quickstart stopped at Phase 7 for exactly
- * this. Half-substituting a placeholder makes it look filled; leaving it whole
- * keeps it visibly the author's job.
+ * UNCONDITIONAL over the closed set, as FR-2 specifies. An earlier round tried
+ * skipping lines that still carried an author placeholder, to keep
+ * `` `{{DOCS_ROOT}}/[page].md` `` from becoming a plausible-looking declared
+ * path — and the reviewer was right that the heuristic both over- and
+ * under-fired: it skipped ordinary Markdown links (`[docs](…)`) whose tokens
+ * SHOULD resolve, and let `[path/to/file]` through. A rule that cannot state
+ * which lines it governs is not a rule.
+ *
+ * The scaffolding problem it was papering over is real and belongs to the
+ * author: an unfilled Durable Artifacts section declares a path that does not
+ * exist, and the Phase-7 gate refuses it BY NAME. That refusal is correct — a
+ * PRD that never declared its durable knowledge is not ready to close — and it
+ * is now what the executable quickstart demonstrates.
  */
 function substituteConfiguredTokens(config: WorkflowConfig, content: string): string {
-  const table = configuredTokens(config);
-  return content
-    .split('\n')
-    .map((line) => {
-      if (/\[[a-z][a-z0-9 -]*\]/i.test(line)) return line;
-      let out = line;
-      for (const [token, value] of table) out = out.replaceAll(token, value);
-      return out;
-    })
-    .join('\n');
+  let out = content;
+  for (const [token, value] of configuredTokens(config)) out = out.replaceAll(token, value);
+  return out;
 }
 
 /**
@@ -210,22 +260,34 @@ function substituteConfiguredTokens(config: WorkflowConfig, content: string): st
  */
 function dropSection(content: string, heading: string): string {
   const lines = content.split('\n');
-  const start = lines.findIndex((l) => l === `## ${heading}`);
+  const fenced = fencedLines(lines);
+  // A heading SHOWN inside a fence is not the section. Round 1 found that
+  // taking the first textual match corrupted the fence and left the real
+  // contract section standing — the worst of both outcomes.
+  const start = lines.findIndex((l, i) => !fenced[i] && l === `## ${heading}`);
   if (start === -1) return content;
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i++) {
-    if (lines[i]!.startsWith('## ')) {
+    if (!fenced[i] && lines[i]!.startsWith('## ')) {
       end = i;
       break;
     }
   }
-  // Walk back over the blank lines and the single `---` that closes THIS
-  // section, so the removal leaves neither an orphan rule nor a double blank.
-  let cut = end;
-  while (cut > start && lines[cut - 1] === '') cut--;
-  if (cut > start && lines[cut - 1] === '---') cut--;
-  while (cut > start && lines[cut - 1] === '') cut--;
-  return [...lines.slice(0, start), ...lines.slice(cut)].join('\n');
+  // The span runs THROUGH `end`: everything from the heading up to (not
+  // including) the next heading goes, and the trailing blank line before that
+  // heading is kept so the document still reads as separated sections. The
+  // section's own `---` separator is inside the span and goes with it — round 1
+  // found the previous walk-back left it standing.
+  const removed = [...lines.slice(0, start), ...lines.slice(end)];
+  // Collapse a triple blank the removal may have created at the seam.
+  const out: string[] = [];
+  for (const line of removed) {
+    if (line === '' && out.length >= 2 && out[out.length - 1] === '' && out[out.length - 2] === '') {
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
 }
 
 export function instantiateTemplate(
@@ -237,6 +299,7 @@ export function instantiateTemplate(
   now: Date,
 ): string {
   const date = now.toISOString().slice(0, 10);
+  assertSingleIdAnchor(config, template);
   let out = template;
   out = substituteAnchor(out, idAnchor(config), `# ${id}: `);
   out = out.replaceAll('{{ID_PREFIX}}', config.idPattern.prefix);
@@ -413,12 +476,20 @@ export function findWipPrd(
   id: string,
 ): { number: string; slug: string } {
   const prdKind = config.dirs.artifacts.prd;
-  const idRe = new RegExp(`^${escapeRegExp(config.idPattern.prefix)}-(\\d+)$`, 'i');
+  // The CONFIGURED width, not "some digits" (phase-6 round 1, Medium): a
+  // tolerant grammar makes `PRD-1` an alias for `PRD-001` and lets `PRD-0001`
+  // name an artifact the state builder — which scans at the configured width —
+  // cannot index. Two spellings for one item is how a board loses a row.
+  const width = config.idPattern.width;
+  const idRe = new RegExp(`^${escapeRegExp(config.idPattern.prefix)}-(\\d{${width}})$`, 'i');
   const m = idRe.exec(id.trim());
   if (!m) {
-    throw new Error(`"${id}" is not an id — expected ${config.idPattern.prefix}-NNN`);
+    throw new Error(
+      `"${id}" is not an id — expected ${config.idPattern.prefix}-${'N'.repeat(width)} ` +
+        `(exactly ${width} digits, the configured width)`,
+    );
   }
-  const padded = m[1]!.padStart(config.idPattern.width, '0');
+  const padded = m[1]!;
   const fileRe = new RegExp(`^${escapeRegExp(prdKind.prefix)}-${padded}-(.+)\\.md$`);
   const wipDir = `${prdKind.dir}/${config.dirs.stateRoles.wip}`;
   let names: string[] = [];
@@ -470,11 +541,18 @@ export function createCompanion(
     const tasksKind = config.dirs.artifacts.tasks;
     relPath = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${number}-${slug}.md`;
     const template = readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8');
+    // The link is COMPUTED from the destination, never a hardcoded `../../`
+    // (phase-6 round 1, Medium): a configured task directory one level deeper
+    // or shallower would otherwise get a link that resolves nowhere, and a
+    // broken link in the artifact that names the PRD is a bad first impression
+    // of a tool whose whole subject is traceability.
+    const hops = relPath.split('/').length - 1;
+    const prdLink = `${'../'.repeat(hops)}${prdRel}`;
     content = template
-      .replace(/^# Tasks: \[Feature Name\]$/m, `# Tasks: ${slug}`)
+      .replace(/^# Tasks: \[Feature Name\]$/m, `# Tasks: ${canonicalId} — ${slug}`)
       .replace(
         /^> \*\*PRD\*\*: \[prd-XXX-\{short-name\}\.md\]\([^)]*\)$/m,
-        `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](../../${prdRel})`,
+        `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](${prdLink})`,
       )
       .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, `> **Created**: ${date}`)
       .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, `> **Updated**: ${date}`)
