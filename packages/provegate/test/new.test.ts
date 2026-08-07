@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -811,5 +811,69 @@ describe('phase-6 round 3 fixes (PRD-042)', () => {
     const up = '..' + '/';
     // The file lands under `workflow/plans/wip`: three real levels, three hops.
     expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-dotdot.md)`);
+  });
+});
+
+describe('phase-6 round 4 fixes (PRD-042)', () => {
+  const rendered = () =>
+    readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', cfg.idPattern.prefix);
+
+  it('refuses a competing heading with no space after the colon', () => {
+    const root = tempRoot();
+    const path = join(root, 'nospace.md');
+    writeFileSync(path, rendered().replace('# PRD-XXX: ', '# RFC-XXX:\n\n# PRD-XXX: '));
+    expect(() => createPrd(cfg, root, { slug: 'nospace', templatePath: path })).toThrow(
+      /id-shaped heading/,
+    );
+  });
+
+  it('sees fences in a CRLF template', () => {
+    const root = tempRoot();
+    const path = join(root, 'crlf-fence.md');
+    const base = rendered().replace(/^# PRD-XXX: .*$/m, '# Untitled');
+    const doc = `${base}\n\n\`\`\`md\n# PRD-XXX: fenced\n\`\`\`\n`.replaceAll('\n', '\r\n');
+    writeFileSync(path, doc);
+    // The only anchor is fenced, so there is no anchor: a CRLF document used to
+    // defeat the fence scanner entirely and instantiate against it.
+    expect(() => createPrd(cfg, root, { slug: 'crlf-fence', templatePath: path })).toThrow(
+      /template anchor not found/,
+    );
+  });
+
+  it('keeps CRLF line endings when it drops a section', () => {
+    const root = tempRoot();
+    const path = join(root, 'crlf-keep.md');
+    writeFileSync(path, rendered().replaceAll('\n', '\r\n'));
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'crlf-keep', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).not.toContain('## Memory Inputs');
+    // The surviving document is still CRLF: rewriting every line would be a
+    // change nobody asked this command to make.
+    expect(text).toContain('\r\n');
+    expect(text.split('\n').filter((l) => l !== '' && !l.endsWith('\r'))).toHaveLength(0);
+  });
+
+  it('drops every occurrence of a repeated memory section', () => {
+    const root = tempRoot();
+    const path = join(root, 'twice.md');
+    const base = rendered();
+    writeFileSync(
+      path,
+      base.replace('## Conflict Surface', '## Memory Inputs\n\n- second copy\n\n---\n\n## Conflict Surface'),
+    );
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'twice', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).not.toContain('## Memory Inputs');
+    expect(text).not.toContain('- second copy');
+  });
+
+  it('does not treat a directory named like a PRD as one', () => {
+    const root = tempRoot();
+    mkdirSync(join(root, '_prds/wip/prd-001-ghost.md'), { recursive: true });
+    expect(() => createCompanion(cfg, root, 'tasks', 'PRD-001')).toThrow(/no work item/);
   });
 });

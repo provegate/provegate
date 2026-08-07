@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -125,7 +125,11 @@ export function fencedLines(lines: string[]): boolean[] {
   // a closer let a fence containing ```` ```still-open ```` read as closed, and
   // an anchor or a heading below it then counted as real.
   let open: { char: string; len: number } | null = null;
-  for (const line of lines) {
+  for (const raw of lines) {
+    // Callers split on `\n`, so a CRLF document leaves a trailing `\r` on every
+    // line and the fence regex then matched nothing at all (phase-6 round 4,
+    // High): a CRLF template's fenced anchor counted as real.
+    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
     const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     if (m) {
       const run = m[1]!;
@@ -187,7 +191,7 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): void {
   // non-empty prefix, so `2FA`, `_RFC` and `RFC-ALT` are all legal ids
   // somewhere. The shape is "a heading whose first token ends in `-XXX:`",
   // which is what the anchor grammar means, rather than an ASCII-word guess.
-  const shaped = /^# \S+-XXX: /;
+  const shaped = /^# \S+-XXX:/;
   const canonical: number[] = [];
   const foreign: number[] = [];
   lines.forEach((line, i) => {
@@ -301,29 +305,43 @@ function substituteConfiguredTokens(config: WorkflowConfig, content: string): st
  * not drift, it is a template with fewer sections.
  */
 function dropSection(content: string, heading: string): string {
-  // CR-stripped for COMPARISON (phase-6 round 3, Medium): a forked template
-  // saved with CRLF kept both memory sections while every regex anchor still
-  // matched, so the omission silently did nothing on Windows-authored files.
-  const lines = content.split('\n').map((l) => (l.endsWith('\r') ? l.slice(0, -1) : l));
+  // The ORIGINAL lines are what gets rejoined; the CR-stripped copies are only
+  // for comparison (phase-6 round 4, Medium). Rewriting the survivors would
+  // have converted a whole CRLF template to LF — a change nobody asked this
+  // command to make.
+  const raw = content.split('\n');
+  const lines = raw.map((l) => (l.endsWith('\r') ? l.slice(0, -1) : l));
   const fenced = fencedLines(lines);
   // A heading SHOWN inside a fence is not the section. Round 1 found that
   // taking the first textual match corrupted the fence and left the real
   // contract section standing — the worst of both outcomes.
-  const start = lines.findIndex((l, i) => !fenced[i] && l === `## ${heading}`);
-  if (start === -1) return content;
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i++) {
-    if (!fenced[i] && lines[i]!.startsWith('## ')) {
-      end = i;
-      break;
+  // EVERY unfenced occurrence, not the first (phase-6 round 4, Medium): a
+  // template with two `## Memory Inputs` sections kept the second one, and a
+  // contract section that survives an omission is the omission failing quietly.
+  const starts: number[] = [];
+  lines.forEach((l, i) => {
+    if (!fenced[i] && l === `## ${heading}`) starts.push(i);
+  });
+  if (starts.length === 0) return content;
+  const spans = starts.map((start) => {
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+      if (!fenced[i] && lines[i]!.startsWith('## ')) {
+        end = i;
+        break;
+      }
     }
-  }
+    return [start, end] as const;
+  });
+
   // The span runs THROUGH `end`: everything from the heading up to (not
   // including) the next heading goes, and the trailing blank line before that
   // heading is kept so the document still reads as separated sections. The
   // section's own `---` separator is inside the span and goes with it — round 1
   // found the previous walk-back left it standing.
-  const removed = [...lines.slice(0, start), ...lines.slice(end)];
+  const dropped = new Set<number>();
+  for (const [s, e] of spans) for (let i = s; i < e; i++) dropped.add(i);
+  const removed = raw.filter((_, i) => !dropped.has(i));
   // Collapse a triple blank the removal may have created at the seam.
   const out: string[] = [];
   for (const line of removed) {
@@ -543,7 +561,19 @@ export function findWipPrd(
   } catch {
     /* no wip dir yet */
   }
-  const matches = names.map((n) => fileRe.exec(n)).filter((x): x is RegExpExecArray => x !== null);
+  // A directory named `prd-001-ghost.md` satisfies the basename regex
+  // (phase-6 round 4, Medium), so the entry is confirmed to be a FILE. Without
+  // it, companion artifacts were written for a PRD that does not exist.
+  const matches = names
+    .map((n) => fileRe.exec(n))
+    .filter((x): x is RegExpExecArray => x !== null)
+    .filter((m) => {
+      try {
+        return statSync(containedPath(root, `${wipDir}/${m[0]}`)).isFile();
+      } catch {
+        return false;
+      }
+    });
   if (matches.length === 0) {
     throw new Error(
       `no work item ${config.idPattern.prefix}-${padded} in ${wipDir} — companion artifacts belong to work in flight`,

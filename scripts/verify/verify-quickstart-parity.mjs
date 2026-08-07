@@ -179,17 +179,19 @@ for (const spec of DOCS) {
   // before Close satisfy the gate while the real floor recipe sat after it.
   // The recipe is a ```json fence whose parsed object has a `phases` key whose
   // value names at least one command — an empty decoy fails that test.
+  // Recipe discovery uses the SAME `fenced` map (phase-6 round 4, High): a
+  // second parser here recognized only unindented triple-backtick openers and
+  // accepted a fence nested inside another fence. A fence OPENER is a fenced
+  // line whose predecessor is not fenced; its closer is the last fenced line of
+  // that run.
   const recipes = [];
   for (let i = 0; i < lines.length; i++) {
-    if (!/^```json\s*$/.test(lines[i])) continue;
-    let close = -1;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (/^```\s*$/.test(lines[j])) {
-        close = j;
-        break;
-      }
-    }
-    if (close === -1) continue;
+    const isOpener = fenced[i] && (i === 0 || !fenced[i - 1]);
+    if (!isOpener) continue;
+    if (!/^ {0,3}(```|~~~)+json\s*$/.test(lines[i])) continue;
+    let close = i;
+    while (close + 1 < lines.length && fenced[close + 1]) close++;
+    if (close === i) continue;
     let parsed;
     try {
       parsed = JSON.parse(lines.slice(i + 1, close).join('\n'));
