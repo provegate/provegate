@@ -5,9 +5,9 @@
 | Field                  | Value |
 | ---------------------- | ----- |
 | PRD                    | `_prds/wip/prd-040-operator-gate-coherence.md` |
-| Score                  | 7.3/10 |
+| Score                  | 7.7/10 |
 | Verdict                | ITERATE |
-| Iteration              | 3 |
+| Iteration              | 4 |
 | Model Tier (Execution) | Do not assign — fix PRD first |
 | Model Tier (Audit)     | — |
 | Scored by              | Codex (gpt-5), fresh independent scorer |
@@ -22,8 +22,8 @@
 
 | Phase               | Tier | Rationale |
 | ------------------- | ---- | --------- |
-| Phase 4 (Execution) | Do not assign — fix PRD first | The scanner grammar, public numeric-wrapper behavior, readiness diagnostic path, and migration audit still require binding decisions. |
-| Phase 6 (Audit)     | — | Re-score after malformed input has an exact contract at every caller and the audit covers the new zero-row policy. |
+| Phase 4 (Execution) | Do not assign — fix PRD first | The diagnostic caller contract, complete table grammar, and binding migration decision remain underspecified. |
+| Phase 6 (Audit)     | — | Re-score after every supported or refused shape has an exact fixture and the audit mechanically gates continuation. |
 
 ---
 
@@ -31,7 +31,7 @@
 
 ### 1. Technical Depth & Architecture
 
-The original measurements remain correct against `packages/provegate/src/core/state/markdown.ts`:
+The iteration-1 measurements remain correct against `packages/provegate/src/core/state/markdown.ts`:
 
 | Shape | Current result | Required result |
 | ----- | -------------- | --------------- |
@@ -40,85 +40,91 @@ The original measurements remain correct against `packages/provegate/src/core/st
 | One-row table with `Item` header | 2 | 1 |
 | Verification Ledger `Result: operator` | 0 | 1 |
 
-The operation remains linear in document size and introduces no material scalability, concurrency, tenant-isolation, network, or persistence concern.
+FR-1 now accurately describes the scanner layer. `sectionsMatching` reads `scanDocument(content).lines`, exposes only `text` lines, blanks fenced, raw-HTML, and `indented-code` lines, preserves same-line code spans, and retains HTML comments as `COMMENT_MASK`. Marker whitespace and the one-to-nine-digit ordered-marker range now match the scanner conventions.
 
-FR-2 and FR-3 now specify the central parser behavior correctly: handoff tables have structural headers and separators, data rows alone count, multiple blocks sum, and ledger `Result` is located by normalized header name rather than position or whole-row matching.
+The grammar is nevertheless not closed yet:
 
-FR-1 is still not accurate over the actual scanner view. `sectionsMatching` consumes `scanDocument(content).lines` and blanks every non-`text` line. The scanner therefore makes fenced blocks, raw HTML blocks, and indented code unreachable. FR-1 omits raw HTML and indented code, while claiming code spans are masked and unreachable. `scanDocument` deliberately preserves same-line code spans; only carried multiline-span interiors are masked. HTML comments remain `text` lines containing `COMMENT_MASK`, so an item “empty after masking” requires an explicit rule for removing that sentinel.
+- The shipped `packages/provegate/templates/tasks-template.md` contains an all-empty table data row. FR-2 says rows after the separator are data rows but never says that an all-empty placeholder is zero. A literal implementation therefore recreates the header-overcount defect one row lower.
+- `splitTableCells` accepts only rows with leading and trailing pipes, while FR-2 says “a table” without making that boundary-pipe grammar explicit or refusing table-like rows outside it.
+- `\|` is named, but escape parity is not pinned: the treatment of `\\|` and `\\\|` remains an implementation decision.
+- Addendum A3 Clause 3 says an operator-owned row may be “a list item” or “a table data row,” while FR-1 permits only column-zero list items and deliberately excludes nested or indented ones. The PRD must either implement the approved clause as written or obtain an owner-approved clarification narrowing those terms.
 
-The admitted list grammar also leaves marker syntax undecided: it does not state the required whitespace after a marker or whether ordered markers use the scanner’s actual one-to-nine-digit range. FR-2’s “unescaped pipes” rule has no fixture defining escape-parity behavior.
+The fixture contract still does not cover the full partition. FR-1 and §11 require individual fixtures for admitted markers and permitted non-rows, but no individual obligation covers fenced blocks, raw HTML, indented code, preserved code spans, all-empty table rows, or escaped-pipe parity. The combined §6 scenario also does not independently prove the four permitted-zero causes.
 
-FR-4 is no longer a dead return type. It specifies that `buildState` calls `readOperatorHandoff`, stores `operatorHandoffCount` and `operatorHandoffProblem`, and lets `operatorGateOk` consume both. It also preserves the exported numeric `countOperatorHandoff` signature.
+FR-2 and FR-3 otherwise close the original structural defects: headers and separators are not data, multiple table blocks and ledger sections sum, and the ledger `Result` column is found by normalized header name.
 
-Two caller decisions remain:
+FR-4 correctly introduces `readOperatorHandoff(content): {count, problem}` and carries both fields through `buildState`. It still leaves two production contracts undecided:
 
-- The numeric wrapper “delegates,” but the PRD does not say what it returns or throws when `problem` is non-null. Ignoring the problem conflicts with “unsupported input is refused”; throwing is a new public behavioral break not covered by the compatibility claim.
-- `runCheck` already has the rebuilt `found.record`, but currently passes only PRD content, root, and number to `lintPrd`. The PRD does not bind whether `runCheck` passes the task diagnostic into `lintPrd`, whether `lintPrd` rebuilds state, or whether it rereads the task file. It also does not explicitly say that a malformed task is a fatal `issue`, distinct from FR-7’s non-fatal declaration warning.
+- The public numeric `countOperatorHandoff(content): number` cannot “delegate” a problem without choosing whether it throws or returns a best-effort count. “Unsupported input is refused, never counted as zero” points toward throwing, but the PRD never says so.
+- The current `runCheck` already receives `found.record` from `buildState`, but calls `lintPrd(config, manifest, content, root, number)` without task state. The PRD does not specify the new parameter or other exact route by which `operatorHandoffProblem` and the declaration/count pair reach `lintPrd`.
 
-The lifecycle binding is now real. `buildGateChain` begins with the `'4 Implementation'` entry at `chain.ts:515-516`, so a `declaration coherence` gate can be placed immediately before it. The merge gate at `chain.ts:750-754` always calls `operatorGateOk`, and `shouldSkipGate` explicitly never skips a `merge gate`, including for `--from-phase=merge`. Re-evaluating the invariant there reaches every resume mode.
+The lifecycle binding is real. `buildGateChain` currently begins at the `'4 Implementation'` entry, so the new gate has a precise insertion point. The merge gate always calls `operatorGateOk`, and `shouldSkipGate` never skips a `merge gate`; therefore every `--from-phase=4|5|6|7|merge` invocation reaches the late predicate.
 
-FR-5’s new policy—`operator-gated` requires acceptance even at zero rows—is defensible as making the declaration and QUICKSTART’s conservative default effective. It is nevertheless a larger contract change than the counter repair. It agrees with the shipped PRD template’s description but conflicts with the shipped `METHOD.md` merge table and source workflow statement that zero rows are sufficient. The PRD changes no method-content byte, so no provenance cap is tripped, but the migration must acknowledge and reconcile that observable documentation conflict.
+Addendum A3 is approved and is listed in both `source-snapshot/MANIFEST.md` and `DECISIONS.md`. FR-5 stays within Clauses 1–2, and FR-6 is supported by Clause 4. FR-9 limits its `METHOD.md` change to Clauses 1–3, matching A3 §3’s boundary.
 
-The value arithmetic is exact: `1.25 + 1.25 + 0.60 + 0.30 + 0.30 = 3.70`.
+The value arithmetic is exact:
+
+`5×0.25 + 5×0.25 + 3×0.20 + 2×0.15 + 2×0.15 = 3.70`.
 
 ### 2. Edge Cases & Failure Modes
 
-FR-1 names column-zero bullets, ordered markers, checkbox variants, `none`, nested items, blockquotes, paragraphs, headings, and masked-empty items. FR-4 adds malformed-table, ledger-header, cell-width, and unreliable-document refusals.
+FR-4 names the important fatal cases: missing separator, absent or duplicate ledger `Result`, short or wide rows, and a non-null scanner `unreliable` result. Both the merge gate and readiness lint are required to surface the diagnostic.
 
-The grammar fixture obligation is inconsistent. FR-1 and §11 require an individual fixture for each permitted non-row, while §6 combines the nested bullet, blockquote, paragraph, and masked-empty item into one scenario. No operator-reader fixture is required for raw HTML or indented-code masking, and the code-span claim is factually wrong. Escaped-pipe behavior also lacks a named fixture.
+The fatal/non-fatal split is conceptually correct but not wired precisely enough:
 
-FR-4 correctly refuses short and wide rows, missing or duplicate `Result`, missing separators, and non-null `scan.unreliable`. It does not yet define whether the compatibility wrapper propagates or suppresses those refusals.
+- An unreadable task must enter `PrdReadyReport.issues` and make `gate check` fail.
+- Only an otherwise readable eligible/positive-row contradiction belongs in `PrdReadyReport.warnings`.
+- FR-7’s test scope covers the warning through `lint-parsers.test.ts`, while FR-4 assigns “both consumers” to `acceptance.test.ts`; no listed production-shaped CLI test proves that `runCheck` supplies the diagnostic or prints it.
 
-The lifecycle split is otherwise complete:
+FR-5 closes both declaration directions:
 
-- `eligible` with positive rows is refused before Phase 4 on a normal run.
-- The same contradiction is re-evaluated inside the unskippable merge gate before acceptance lookup.
-- `operator-gated` requires an acceptance regardless of count.
-- Phase 2 stays silent while no task artifact exists and warns, rather than fails, once an eligible/row contradiction becomes observable.
+- `operator-gated` always requires owner acceptance, including at zero rows.
+- `eligible` with one or more operator-owned rows refuses before Phase 4 and again at the unskippable merge gate.
+- The approved addendum makes the new zero-row rule method-authorized rather than author-invented.
 
-The three current KNOWN_RED entries are correctly identified as `handoff-prose`, `handoff-table`, and `ledger-operator`. The harness already fails when a known-red assertion turns green, so deleting them in FR-9 closes that bypass.
+The three current adopter-smoke known-red mappings are exactly `handoff-prose`, `handoff-table`, and `ledger-operator`. FR-10 removes all three, and the existing stale-known-red behavior makes their survival fail the smoke run.
 
 ### 3. Maintainability & DX
 
-The work stays in strict TypeScript, adds no runtime dependency, telemetry, network path, protected endpoint, or client/server contract.
+The work remains local, deterministic, and linear in document size. It adds no runtime dependency, network call, telemetry, tenant surface, protected endpoint, or client/server payload.
 
-The implementation and conflict surfaces now include `build.ts`, `cli.ts`, `.changeset/**`, the PRD Changelog, and the relevant state, acceptance, chain, lint, and CLI tests.
+The state shape is sensible: an additive optional `operatorHandoffProblem` preserves older generated state compatibility, while the numeric public export remains source-compatible for valid input.
 
-Production-shaped coverage has improved:
+The remaining DX problems are at caller boundaries:
 
-- FR-4 requires both production consumers to surface parser problems.
-- FR-6 covers the early gate and a `--from-phase=merge` resume.
-- FR-7 drives the warning through `runCheck` and preserves the exit code.
-- FR-9 exercises the installed package through adopter smoke.
+- A public number-returning wrapper needs named malformed-input behavior.
+- `lintPrd` needs a concrete production argument carrying the task diagnostic and count.
+- FR-4’s Targets omit `prd-ready.ts` and `cli.ts` even though those files are required to fulfill “both consumers.”
+- The verification matrix lacks a CLI-level malformed-task test using the same arguments `runCheck` supplies.
 
-The remaining DX ambiguity is concentrated at the compatibility seam: a public numeric API cannot expose `{count, problem}` without a specified throw, fallback, or best-effort rule. The lint path likewise needs an explicit argument/data-flow contract so its test cannot invoke `lintPrd` with cleaner inputs than `runCheck` supplies.
-
-The shipped tasks-template edit remains an explicit Non-Goal. No FR target moves a prompt, template, or schema byte without snapshot provenance.
+The shipped tasks-template edit remains an explicit Non-Goal. FR-9 is the only shipped method-content edit, and `content-canon.test.ts` is named to bind it to A3.
 
 ### 4. Migration & Rollback
 
-The migration section now names the broad repository and adopter blast radius, preserves the public TypeScript signature, distinguishes handoff and ledger remedies, specifies a minor release, and gives an exact revert trigger for unintended grammar changes. This is materially stronger than iteration 2.
+The migration narrative now identifies both affected populations:
 
-The audit is still not fully load-bearing. FR-8 reports only task artifacts whose count changes. The larger FR-5 behavior change affects every `operator-gated` PRD with zero rows even though its count remains `0 → 0`, so that population cannot appear under any of the four required classifications. This contradicts §7’s claim that the audit reports the two populations separately.
+1. artifacts whose operator-row count changes; and
+2. zero-row `operator-gated` items whose acceptance obligation changes despite a `0 → 0` count.
 
-The recorded decision is also incomplete. A `refusal` classification stops by default, but for the other classifications the PRD says the owner chooses go/narrow/stop without defining a required decision record or machine outcome. Pasting raw output into the Changelog proves observation, not authorization to proceed.
+It also supplies population-specific remedies, calls for a minor release, names a rollback trigger, and correctly notes that no on-disk migration is needed.
 
-The changeset requirement names only “flip the declaration” and “clear the rows.” It omits the remedies an adopter meets first under FR-5: record an owner acceptance or change a zero-row `operator-gated` declaration to `eligible`. It also leaves the shipped `METHOD.md` zero-row predicate inconsistent with the new behavior.
+The audit is still not load-bearing:
 
-Rollback itself is sound: the counter is pure, no artifact migration occurs, and reverting the code restores the previous behavior.
+- FR-8’s normative output schema only describes count changes as `path: old → new (...)`. The zero-row population appears only in §7 prose and has no required output fields, classification, verification note, or §11 assertion.
+- The audit output is pasted into the Changelog, but a pasted measurement is not a decision.
+- Only `refusal` has a default stop. The other classifications and the zero-row population can be followed by implementation without an owner-authored go/narrow/stop record or a machine check requiring one.
+- FR-8’s changeset requirement still names only “flip the declaration” and “clear the rows”; it omits the zero-row remedies “record acceptance” and “declare eligible.”
+
+Rollback itself is sound: the reader is pure, state is derived, and reverting the implementation restores the former behavior.
 
 ### 5. Memory Inputs
 
-- `known-red-ledger-must-expire`: substantively applied. FR-9 removes all three owned mappings, and the existing stale-known-red failure prevents them from surviving the repair. Its rationale incorrectly calls this FR-8, but the mechanism is clear.
-- `narrow-the-grammar-not-the-parser`: not yet substantively applied. The disposition claims code spans are masked and exposed constructs are exhaustively partitioned; the scanner preserves same-line code spans, masks additional omitted constructs, and leaves marker and escape behavior undefined.
-- `operator-row-must-be-a-table-row`: relevant and applied to the measured false-green source.
-- `notes-column-runs-commands`: relevant and applied through header-named `Result` lookup.
-- `metadata-declares-what-it-cannot-provide`: substantively applied through both declaration directions.
-- `assert-absent-needs-an-independent-cause`: relevant, although §6’s combined negative scenario should be reconciled with FR-1 and §11’s individual-fixture obligation.
-- `strictness-added-during-extraction-is-a-behavior-change`: relevant and substantially applied through the migration section, but its larger zero-row population is missing from the audit.
-- `gate-run-resume-after-archive`: substantively applied. Every resume reaches the merge gate, where the invariant is recomputed.
-- `state-model-before-mechanism`: relevant and applied through the two declarations, two evaluation points, and refusal ordering.
-- `scope-out-the-layer-the-rounds-keep-hitting`, `fixture-must-reach-production-shape`, `surface-set-without-its-predicate`, `exemption-marker-needs-no-prose`, `evidence-pattern-satisfied-by-the-template`, and `a-rule-corrected-survives-where-it-is-restated`: their reviewed dispositions are relevant.
+- `known-red-ledger-must-expire`: substantively applied. FR-10 deletes all three owned mappings, and the harness fails if a known-red assertion turns green. Its disposition incorrectly cites FR-8, but the enforcement is real.
+- `narrow-the-grammar-not-the-parser`: not yet substantively closed. The disposition claims FR-4 refuses everything outside an exhaustive partition, but FR-4 does not resolve the empty placeholder row, boundary-pipe table grammar, escape parity, or A3’s broader list-item wording.
+- `metadata-declares-what-it-cannot-provide`: substantively applied through both declaration directions and the early/late enforcement split.
+- `gate-run-resume-after-archive`: substantively applied. Every resumed invocation reaches the merge-gate predicate.
+- `a-rule-that-exempts-itself`: substantively applied by moving the predicate decision to owner-approved Addendum A3.
+- The remaining declared dispositions are relevant to their targets and tests.
 
 No active indexed record with a `watch` overlapping a declared FR Target is missing. The watches covering `packages/provegate/test/**`, `core/run/**`, `core/gates/**`, `prd-ready.ts`, `cli.ts`, and `_prds/**` are all dispositioned.
 
@@ -128,38 +134,55 @@ No active indexed record with a `watch` overlapping a declared FR Target is miss
 
 | # | Dimension | Weight | Score | Notes |
 | - | --------- | ------ | ----- | ----- |
-| 1 | Clarity | 15% | 7/10 | Targets and commands pass the mechanical gate, but scanner facts, wrapper behavior, and lint diagnostic flow remain ambiguous. |
-| 2 | Completeness | 20% | 7/10 | Structural parsing and lifecycle directions are covered; unreachable shapes, public malformed-input behavior, and the zero-row migration population are not. |
-| 3 | Technical Depth | 25% | 7/10 | State plumbing and resume enforcement are substantially designed, but the compatibility seam and scanner-view partition remain incomplete. |
-| 4 | Multi-Tenancy & Security | 20% | 9/10 | No tenant, route, query, network, or client/server surface; acceptance validation remains owner-gated and fail-closed. |
-| 5 | Scope & Testability | 10% | 7/10 | Strong target and test coverage overall, but fixture obligations conflict and the audit decision lacks a mechanical outcome. |
-| 6 | Migration & Rollback | 10% | 6/10 | Blast radius, remedies, release, and revert are present; the audit omits the largest new behavior and shipped method documentation remains inconsistent. |
-| **Total** | **Weighted** |  | **7.3/10** | **ITERATE** |
+| 1 | Clarity | 15% | 7/10 | Targets and commands pass the mechanical gate, but the numeric wrapper, lint argument path, and parts of the table grammar still require implementation decisions. |
+| 2 | Completeness | 20% | 7/10 | Lifecycle and zero-row migration populations are present; the shipped empty table row, escape parity, caller tests, and binding audit decision are not fully covered. |
+| 3 | Technical Depth | 25% | 8/10 | Scanner terminology, state plumbing, owner provenance, and resume enforcement are strong; compatibility and grammar seams remain. |
+| 4 | Multi-Tenancy & Security | 20% | 9/10 | No tenant, route, query, network, or client/server surface; owner acceptance remains fail-closed. |
+| 5 | Scope & Testability | 10% | 7/10 | Scope is controlled, but fixture obligations do not cover every admitted/refused shape and the migration audit does not gate continuation. |
+| 6 | Migration & Rollback | 10% | 7/10 | Both populations, remedies, release, and rollback are described; FR-8 and the changeset do not normatively carry the second population or its decision. |
+| **Total** | **Weighted** |  | **7.7/10** | **ITERATE** |
 
 Hard caps checked:
 
-- Security cap: not tripped — no protected route, endpoint, or query path is added or changed.
+- Security cap: not tripped — no protected route, endpoint, or query path is changed.
 - Contract cap: not tripped — no client→server payload is introduced.
 - Lint cap: not tripped — the orchestrator reports `gate check PRD-040` passed.
-- Method-content cap: not tripped — no prompt, template, or schema byte is targeted without provenance.
+- Method-content cap: not tripped — A3 is approved and registered; FR-9 limits `METHOD.md` to its authorized clauses.
 
 ---
 
 ## Missing Pieces (to reach 10/10)
 
-1. **OPEN — iteration-1 grammar finding remains partially closed.** In `_prds/wip/prd-040-operator-gate-coherence.md`, §4 FR-1/FR-2, §6, §7 Architecture, and §11, correct the grammar to the actual scanner view: raw HTML blocks and indented code are unreachable; same-line code spans are preserved; HTML comments leave `COMMENT_MASK`. Define marker whitespace, ordered-marker digit range, masked-empty detection, and escaped-pipe behavior. Require a separate `packages/provegate/test/markdown.test.ts` fixture for every admitted, permitted-zero, unreachable-masked, and refused shape.
+1. **OPEN — scanner facts are corrected, but the grammar and fixture partition are not closed.** In `_prds/wip/prd-040-operator-gate-coherence.md`, §4 FR-1/FR-2/FR-4, §6, §7 Architecture, and §11:
 
-2. **OPEN — structural parsing is closed, but the caller contract is still incomplete.** In the same PRD, §4 FR-4/FR-7, §6, §7 Architecture and Migration, and §11, specify what exported `countOperatorHandoff(content): number` does when `readOperatorHandoff` returns a problem. Specify the exact production path by which `runCheck` passes `StateRecord.task.operatorHandoffProblem` to `lintPrd`, and state that malformed task input enters fatal `issues`, while only the declaration/count contradiction enters non-fatal `warnings`. Add CLI and merge-gate tests using those exact production arguments.
+   - state that the shipped all-empty handoff-table placeholder is zero;
+   - require leading and trailing pipes or explicitly support the alternative table form, refusing the other;
+   - define odd/even backslash parity around escaped pipes;
+   - reconcile A3 Clause 3’s “list item” with the column-zero and nested-item exclusions through an owner-approved clarification or by supporting those list items;
+   - add individual `markdown.test.ts` fixtures for every unreachable kind, masked-empty row, preserved code-span row, permitted non-row, empty table row, escape-parity case, and refused table shape.
 
-3. **CLOSED — lifecycle enforcement and eligible-with-rows contradiction.** FR-6 names a real insertion point before `chain.ts:515` and repeats the invariant in `operatorGateOk` before acceptance lookup. The merge gate is never skipped by `shouldSkipGate`, so `--from-phase=4|5|6|7|merge` cannot bypass the late refusal. FR-5 covers both `eligible` with rows and `operator-gated` without rows.
+2. **OPEN — structural parsing is specified, but both caller contracts are not.** In the same PRD, §4 FR-4/FR-7, §6, §7 Architecture and Migration, §8, and §11:
 
-4. **OPEN — migration measurement does not cover the behavior adopters meet first.** In the same PRD, §4 FR-8, §7 Migration & Compatibility, §11, and the changeset requirement, make the audit report both count changes and `operator-gated` zero-row items whose required acceptance changes despite a `0 → 0` count. Define a machine outcome or required owner-authored decision record for every classification, add the zero-row remedies, and reconcile the new predicate with `packages/provegate/METHOD.md` using named source-snapshot provenance or an owner-approved addendum.
+   - state that `countOperatorHandoff(content): number` throws a named diagnostic error when `readOperatorHandoff` returns `problem`;
+   - add `prd-ready.ts` and `cli.ts` to FR-4’s Targets;
+   - specify the exact `lintPrd` task-state parameter and require `runCheck` to pass `found.record.task`;
+   - route `operatorHandoffProblem` to fatal `issues`, the declaration/count contradiction to non-fatal `warnings`, and print warnings without changing the exit code;
+   - add merge-gate and CLI tests using the production argument shapes.
 
-5. **CLOSED — method-content provenance and scope.** The tasks-template edit remains a Non-Goal, and no FR target moves a shipped prompt, template, or schema byte without provenance.
+3. **CLOSED — lifecycle enforcement and eligible-with-rows contradiction.** A3 authorizes both directions. The early gate has a real insertion point before `'4 Implementation'`, and the late `operatorGateOk` predicate runs in the merge gate, which `shouldSkipGate` never skips. Every resume path therefore reaches the invariant.
 
-6. **OPEN — memory coverage is complete, but one disposition remains inaccurate.** In `## Memory Inputs`, revise `narrow-the-grammar-not-the-parser` after FR-1/FR-2 accurately partition the scanner’s real outputs and refuse every remaining unsupported construct. `known-red-ledger-must-expire`, `metadata-declares-what-it-cannot-provide`, and `gate-run-resume-after-archive` are substantively applied. No overlapping active record is missing.
+4. **OPEN — migration population is named, but the audit remains non-binding.** In the same PRD, §4 FR-8, §7 Migration & Compatibility, §11, and the changeset requirement:
 
-7. **CLOSED — value header.** `3.70` recomputes exactly from `5/5/3/2/2`. MF 5 and UI 5 remain defensible for repairing a central method gate; TL 3 and AR 2 fit the localized surface; RM should remain 2 because the migration story exists but still omits the larger zero-row population and documentation reconciliation.
+   - add a normative output schema and verification assertion for zero-row `operator-gated` items;
+   - require an owner-authored Changelog decision recording go/narrow/stop for both reported populations;
+   - make subsequent Phase-4 tasks refuse until that decision exists;
+   - require the changeset to name both zero-row remedies—record acceptance or declare `eligible`—as well as the count-change remedies.
+
+5. **CLOSED — method-content provenance and scope.** Addendum A3 is approved and registered in both provenance ledgers. FR-5 and FR-9 stay within its clauses, and the tasks-template edit remains a Non-Goal.
+
+6. **OPEN — memory coverage is complete, but one disposition still overclaims application.** In `## Memory Inputs`, rewrite `narrow-the-grammar-not-the-parser` after Missing Piece 1 closes, naming the final admitted/refused partition and its independent fixtures. Correct `known-red-ledger-must-expire` from FR-8 to FR-10. No watch-overlapping active record is missing.
+
+7. **CLOSED — value header.** `3.70` is the exact weighted result for `5/5/3/2/2`. MF 5 and UI 5 hold for repairing and documenting a central owner gate; TL 3 and AR 2 fit the localized leverage and adoption surface; RM 2 remains appropriate because the broad compatibility change and hand-written parser still carry significant regression risk despite the improved migration narrative.
 
 ---
 
@@ -168,8 +191,9 @@ Hard caps checked:
 | # | Date | Score | Verdict | Key Changes |
 | - | ---- | ----- | ------- | ----------- |
 | 1 | 2026-08-07 | 5.7 | ITERATE | Verified all four measured counts; identified grammar, malformed-input, lifecycle, consumer-blast-radius, method-content, memory, and value gaps. |
-| 2 | 2026-08-07 | 6.6 | ITERATE | Closed method-content and value findings; added structural parsing and migration prose, but diagnostic plumbing, warning output, lifecycle binding, exhaustive grammar, and load-bearing migration remained open. |
-| 3 | 2026-08-07 | 7.3 | ITERATE | Closed the lifecycle binding and most state plumbing; preserved the numeric API and added warning/audit contracts, but scanner claims remain inaccurate, malformed-input behavior is incomplete at two compatibility seams, and the audit omits the new zero-row policy. |
+| 2 | 2026-08-07 | 6.6 | ITERATE | Added structural parsing and migration prose; diagnostic plumbing, warning output, lifecycle binding, exhaustive grammar, and load-bearing migration remained open. |
+| 3 | 2026-08-07 | 7.3 | ITERATE | Closed lifecycle binding, method-template scope, and value arithmetic; scanner precision, caller behavior, zero-row migration coverage, and one memory disposition remained open. |
+| 4 | 2026-08-07 | 7.7 | ITERATE | Verified A3 provenance, accurate scanner terminology, the zero-row population, and `METHOD.md` authority. The public-wrapper/lint contracts remain undecided, the grammar omits the shipped empty table row and several fixtures, and FR-8 still does not make the audit decision binding. |
 
 > Re-scoring updates Quick Meta and appends a row here — never a new file.
 
@@ -179,21 +203,24 @@ Hard caps checked:
 
 - [x] No push code path is introduced.
 - [x] `packages/provegate` retains zero runtime dependencies, no telemetry, and no network calls.
-- [x] No shipped method-content byte is moved without source provenance.
-- [x] No ADR violation is declared or evident from the assessed scope.
+- [x] Addendum A3 is approved and listed in `MANIFEST.md` and `DECISIONS.md`.
+- [x] No shipped prompt, template, or schema byte is moved without provenance.
+- [x] `METHOD.md` is limited to A3 Clauses 1–3.
+- [x] No ADR violation is declared or evident.
 - [x] No non-canonical status vocabulary is introduced.
-- [x] The four §1 measurements agree with the shipped 0.3.0 source.
-- [x] The declaration/count invariant is re-evaluated on every resume path.
-- [x] Both declaration directions have an explicit merge-gate outcome.
-- [ ] FR-1 describes the actual `scanDocument` view and assigns every shape a fixture-backed outcome.
-- [ ] The numeric compatibility wrapper defines its behavior when the diagnostic reader refuses.
-- [ ] The malformed-input diagnostic has an exact production path and fatal/non-fatal classification at readiness.
-- [ ] The migration audit covers `operator-gated` zero-row items and records a binding decision.
-- [ ] The new zero-row acceptance predicate is reconciled with shipped method documentation.
-- [ ] `narrow-the-grammar-not-the-parser` is applied to the scanner’s real output rather than the PRD’s claimed one.
+- [x] The four original measurements agree with the shipped source.
+- [x] Every resume path reaches the late declaration-coherence predicate.
+- [x] Both declaration directions have explicit refusal/acceptance outcomes.
+- [ ] The table grammar handles the shipped all-empty placeholder and pins pipe boundaries and escape parity.
+- [ ] Every admitted, permitted-zero, unreachable, and refused shape has its own fixture.
+- [ ] The numeric wrapper defines malformed-input behavior.
+- [ ] `runCheck` passes the task diagnostic to `lintPrd`, with fatal issues separated from warnings.
+- [ ] FR-8 normatively reports the zero-row population and blocks continuation pending a recorded owner decision.
+- [ ] The changeset carries remedies for both migration populations.
+- [ ] `narrow-the-grammar-not-the-parser` describes the final grammar rather than claiming an incomplete partition is exhaustive.
 
 ---
 
 ## Verdict
 
-ITERATE — the lifecycle binding is now implementable and non-skippable, the public signature is preserved, both declaration directions are specified, and the migration section has real remedies and rollback criteria. The PRD still cannot pass readiness because FR-1 misstates the scanner’s observable view, the numeric compatibility wrapper and readiness caller lack exact malformed-input contracts, and FR-8 does not measure the larger `operator-gated` zero-row behavior introduced by FR-5.
+ITERATE — A3 closes the owner gate, the lifecycle binding is real and non-skippable, the scanner description is now materially accurate, and the migration section finally recognizes the zero-row population. The PRD remains below readiness because the closed grammar omits a shipped empty-table shape and several fixture obligations, the numeric wrapper and readiness caller still lack exact malformed-input contracts, and FR-8’s audit output does not mechanically control whether implementation may continue.

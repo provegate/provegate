@@ -65,6 +65,21 @@ carries the refusal that keeps a contradiction from reaching the merge gate, and
 below is closed rather than descriptive — "a plain list item" was an invitation for the
 implementer to decide what a row is.
 
+**What the fifth round changed — a scope move, not another rework.** Iterations 4 and 5 both
+scored 7.7 and both landed on the same two layers: Markdown grammar minutiae, and the plumbing
+that would carry a diagnostic refusal to two callers. A flat trajectory inside one band means
+the wrong action is being applied (`score-band-prescribes-the-action`), and defects clustering
+in one layer are a scope error reported as design errors
+(`scope-out-the-layer-the-rounds-keep-hitting`). Both records are inputs to this PRD, and both
+were describing it.
+
+So the refusal path left: **PRD-043** owns "an unreadable task artifact must refuse instead of
+counting zero" — the diagnostic reader, both caller contracts, the boundaryless-table
+predicate, and the fatal-versus-warning split. What remains here is what the adopter run
+actually measured (four shapes, one of them counted correctly) plus the declaration invariant
+Addendum A3 authorizes. Malformed input keeps today's behaviour under this item, stated as a
+Non-Goal with its successor named rather than left as an implication.
+
 **What the second readiness round changed.** Iteration 2 (6.6, ITERATE) closed the
 method-content and value findings and left four open, each of which moved a design decision
 rather than a sentence: the grammar is now written over `scanDocument`'s masked view (so a
@@ -87,7 +102,6 @@ trust the gates — inert. FR-5 makes the declaration the demand.
 ### Primary Goals
 
 - [ ] Every shape the closed grammar admits is counted; every permitted non-row is named.
-- [ ] Unsupported input is refused at both consumers, never counted as zero.
 - [ ] `Autonomous Close` is enforced in both directions, and no resume path can skip it.
 - [ ] The behaviour change to existing artifacts is measured, and the measurement decides.
 
@@ -96,9 +110,8 @@ trust the gates — inert. FR-5 makes the declaration the demand.
 | Metric                                   | Current | Target | Measurement                          |
 | ---------------------------------------- | ------- | ------ | ------------------------------------ |
 | Handoff shapes counted correctly         | 1 of 4  | 4 of 4 | `pnpm smoke:adopter` known-red count |
-| Unsupported input counted as zero        | always  | never  | FR-4 refusal fixtures, both consumers |
-| Declaration enforced in both directions  | neither | both   | FR-5/FR-6 tests, incl. a resume path |
-| Corpus items whose count changes         | unknown | listed | FR-8 audit, before implementation     |
+| Declaration enforced in both directions  | neither | both   | FR-4/FR-5 tests, incl. a resume path |
+| Corpus items whose acceptance changes    | unknown | listed | FR-7 audit, two populations, before implementation |
 
 ---
 
@@ -135,91 +148,79 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 
 ## 4. Functional Requirements
 
-1. **FR-1**: The row grammar is closed over the view the reader actually has —
-   `scanDocument(content).lines` — and the partition is stated in the scanner's own terms
-   (`core/memory/scan.ts`): **unreachable** (the scanner removes them from view: fenced blocks
-   are blanked, and `indented-code`, `html` and `in-html` lines carry their own kind);
-   **masked** (an HTML comment is replaced by `COMMENT_MASK` (`␀`) and never spliced out, so a
-   line whose remaining text is only mask characters and whitespace is empty); **preserved** (a
-   same-line code span survives intact, so a row whose text is a code span is a row).
-   Over that view, under a section headed `Operator Handoff`, a **row** is a list item at
-   column zero whose marker is `-`, `*`, `+`, or an ordered marker of one to nine digits
-   followed by `.` or `)`, separated from its text by at least one space or tab, optionally
-   followed by a `[ ]`, `[x]` or `[X]` checkbox, and whose remaining text is non-empty after
-   masking. A checkbox item is one row, never two. `- none` and `- (none)`, in any case, are
-   zero rows. **Permitted non-rows** — present, legal, counted as zero, each with its own
-   fixture: an indented or nested list item, a blockquote line, a paragraph, a heading, a
-   marker with no separating whitespace, and an item whose text is only mask characters.
+1. **FR-1**: The row grammar is closed over the view the reader has —
+   `scanDocument(content).lines` — stated in the scanner's own terms
+   (`core/memory/scan.ts`): **unreachable** (fenced blocks are blanked; `indented-code`, `html`
+   and `in-html` lines carry their own kind), **masked** (an HTML comment becomes
+   `COMMENT_MASK` (`␀`), never spliced, so a line whose remaining text is only mask characters
+   and whitespace is empty), **preserved** (a same-line code span survives, so a row whose text
+   is a code span is a row).
+   Over that view, under a section headed `Operator Handoff`, a **row** is a list item —
+   **at any indentation**, which is Addendum A3 Clause 3 read literally — whose marker is `-`,
+   `*`, `+`, or one to nine digits followed by `.` or `)`, separated from its text by at least
+   one space or tab, optionally followed by a `[ ]`, `[x]` or `[X]` checkbox, and whose
+   remaining text is non-empty after masking. A checkbox item is one row, never two. `- none`
+   and `- (none)`, in any case, are zero rows. Counting a nested item costs nothing the gate
+   reads — the acceptance demand is boolean — and it removes a judgement call the implementer
+   would otherwise make about what "under" means.
+   **Permitted non-rows**, each with its own fixture: a blockquote line, a paragraph, a heading,
+   a marker with no separating whitespace, and an item whose text is only mask characters.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`
 2. **FR-2**: A table under that heading is read structurally: the first row is the header, the
    second must be a separator in any alignment spelling, and only the rows after it are data
    rows. The header is never counted, whatever its first cell says — today only `| Task |` is
    excluded, so every other header spelling counts itself. Multiple table blocks in one section
-   are parsed independently and summed. Cells split on unescaped pipes: a `\|` is literal text,
-   not a separator. A pipe inside a code span still separates cells, exactly as
-   `splitTableCells` reads it today; that is stated so the boundary is a decision and not an
-   omission (Non-Goals).
+   are parsed independently and summed. A row is read only when it carries both a leading and a
+   trailing pipe, which is what `splitTableCells` requires today; anything else is not a table
+   row and is not counted, exactly as now. Cells split on unescaped pipes by backslash parity:
+   an even number of preceding backslashes separates, an odd number escapes. A data row whose
+   cells are all empty is not a row — the shipped placeholder table is that shape and counts
+   zero.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`
 3. **FR-3**: A Verification Ledger row whose `Result` cell is `operator` or `blocked`
-   (case-insensitive, trimmed) counts as an operator row. The column is located by its
-   normalized header name, never by position. Every ledger section in the document is summed.
+   (case-insensitive, trimmed) counts as an operator row — Addendum A3 Clause 3. The column is
+   located by its normalized header name, never by position. Every ledger section in the
+   document is summed. A ledger with no `Result` column contributes zero rows and no error;
+   refusing it is PRD-043's subject, not this item's.
    - **Targets:** `packages/provegate/src/core/state/markdown.ts::countOperatorHandoff`
-4. **FR-4**: Unsupported input is **refused**, never counted as zero, and the refusal reaches
-   both production consumers. A new diagnostic reader `readOperatorHandoff(content)` returns
-   `{ count, problem }`; the exported `countOperatorHandoff(content): number` keeps its
-   signature and delegates (it is public API — `packages/provegate/src/core/state/index.ts`
-   re-exports it and `scripts/adopter-smoke.sh` imports it from the installed package), so no
-   importer breaks. `buildState` stores both on `StateRecord.task` (`operatorHandoffCount` plus
-   a new optional `operatorHandoffProblem`), and `operatorGateOk` and `lintPrd` each surface the
-   problem instead of proceeding on a number. Refused: a table with a header and no separator
-   row, a ledger with no `Result` column, a ledger with two `Result` columns, a data row with
-   fewer or more cells than its header, and a document whose `scanDocument` returns a non-null
-   `unreliable` (it ends inside a fence or comment, so its sections cannot be read reliably —
-   `core/memory/artifacts.ts:641` already refuses on exactly this signal).
-   - **Targets:** `packages/provegate/src/core/state/markdown.ts::readOperatorHandoff`,
-     `packages/provegate/src/core/state/build.ts::buildState`,
-     `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-5. **FR-5**: `Autonomous Close` becomes the gate it claims to be, in both directions. The
-   predicate is method content and traces to **Addendum A3**
+4. **FR-4**: `Autonomous Close` becomes the gate it claims to be, in both directions, as
+   authorized by **Addendum A3**
    (`docs/research/provegate-bootstrap/source-snapshot/addenda/operator-acceptance-predicate-2026-08-07.md`,
    owner-approved 2026-08-07, Clauses 1–2), listed in `MANIFEST.md` and `DECISIONS.md`:
    (a) `operator-gated` requires a valid owner acceptance **regardless of row count** — the
-   declaration is the demand, the rows are only evidence of what is being accepted. Today an
+   declaration is the demand, the rows are evidence of what is accepted. Today an
    `operator-gated` PRD with zero rows merges silently, which makes QUICKSTART's advice ("keep
    `operator-gated` until you trust the gates") inert.
    (b) `eligible` whose task file yields one or more operator rows is a contradiction and is
    refused, naming the declaration, the count and the file.
    - **Targets:** `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-6. **FR-6**: The contradiction is caught early and cannot be skipped late. Early: a new
-   `ChainGate` inserted **before** the `'4 Implementation'` entry in `buildGateChain`
+5. **FR-5**: The invariant is caught early and cannot be skipped late (A3 Clause 4). Early: a
+   new `ChainGate` inserted before the `'4 Implementation'` entry in `buildGateChain`
    (`core/run/chain.ts:515`), labelled `declaration coherence`. Late: the same invariant is
    evaluated inside `operatorGateOk` before the acceptance lookup, so a `--from-phase=6` or
-   `--from-phase=merge` resume that skips the chain's phase-4 entries still meets it. Neither
-   path is reachable without the other agreeing.
+   `--from-phase=merge` resume that skips the chain's phase-4 entries still meets it.
    - **Targets:** `packages/provegate/src/core/run/chain.ts::buildGateChain`,
      `packages/provegate/src/core/run/acceptance.ts::operatorGateOk`
-7. **FR-7**: `gate check PRD-NNN` reports the same contradiction as a non-fatal **warning** when
-   the task file exists, and says nothing when it does not — at Phase 2 the task file
-   legitimately does not exist yet, and refusing there would refuse every correctly-ordered
-   item. `PrdReadyReport` gains `warnings: string[]`, and `runCheck` prints them without
-   changing its exit code.
-   - **Targets:** `packages/provegate/src/core/gates/prd-ready.ts::lintPrd`,
-     `packages/provegate/src/cli.ts::runCheck`
-8. **FR-8**: The audit decides, it does not decorate. `scripts/audit-operator-rows.mjs` reports
-   every task artifact whose count changes under the new grammar as
-   `path: old → new (source: prose-handoff | ledger-operator | header-overcount | refusal)`,
-   and it runs as the FIRST task of Phase 4, before any behaviour change is written. Its output
-   is pasted into this PRD's Changelog at that moment and the owner decides go / narrow / stop
-   from it; a `refusal` classification on an existing artifact is a stop by default. The
-   changeset names the behaviour change and the two remedies (flip the declaration, or clear
-   the rows).
+6. **FR-6**: `scripts/audit-operator-rows.mjs` carries its own continuation gate. Run with
+   `--assert-acknowledged` it recomputes the two populations, derives a one-line fingerprint
+   (`audit: <count-changes>/<acceptance-changes>/<sha>`), and exits 1 unless this PRD's
+   Changelog carries that exact line — so a stale acknowledgement fails the same way a missing
+   one does. Phase 4 may not proceed past its first task without it.
+   - **Targets:** `scripts/audit-operator-rows.mjs`
+7. **FR-7**: The audit measures both populations. `scripts/audit-operator-rows.mjs` reports
+   two populations — artifacts whose COUNT changes
+   (`path: old → new (source: prose-handoff | nested-item | ledger-operator | header-overcount)`)
+   and `operator-gated` items whose required acceptance changes while the count stays `0 → 0`,
+   which no count diff can show. It runs as the FIRST task of Phase 4, before any behaviour
+   change is written; its output is pasted into this PRD's Changelog at that moment and the
+   owner decides go / narrow / stop from it.
    - **Targets:** `scripts/audit-operator-rows.mjs`, `.changeset/`,
      `_prds/wip/prd-040-operator-gate-coherence.md`
-9. **FR-9**: `METHOD.md`'s operator-acceptance section states Clauses 1–3 of Addendum A3, so
+8. **FR-8**: `METHOD.md`'s operator-acceptance section states Clauses 1–3 of Addendum A3, so
    the rule reaches adopters in the document they read rather than only in the refusal they
    hit. Every added sentence traces to a named clause; nothing else in the file moves.
    - **Targets:** `packages/provegate/METHOD.md`
-10. **FR-10**: The three known-red entries this work closes are deleted from the adopter smoke in
+9. **FR-9**: The three known-red entries this work closes are deleted from the adopter smoke in
    the same change; the harness fails on a known-red assertion that passes, so they cannot
    outlive the defect.
    - **Targets:** `scripts/adopter-smoke.sh`
@@ -235,6 +236,15 @@ so that the upgrade is a decision instead of a surprise at the next merge.
   predicate and its statement in `METHOD.md` (FR-9); it does not authorize new template prose,
   and §3 of the addendum says so. The refusal messages teach the shape at the moment it
   matters, which is where a reader actually is.
+- **Refusing an unreadable task artifact**, and the Phase-2 warning that would report the
+  declaration contradiction through the lint. A ledger with no `Result` column, a table with no
+  separator row, a row whose width differs from its header's, a document ending inside a fence:
+  under this item each contributes zero rows, exactly as §7 states. Addendum A3 Clause 5 says they must refuse, and PRD-043 does it — with the
+  diagnostic reader, both caller contracts, and the fatal-versus-warning split that come with
+  it. Two rounds of this item's readiness were spent specifying that plumbing in prose; it is
+  its own work item, not a paragraph in this one. The warning goes with it: it needs the same
+  `lintPrd` parameter and the same `runCheck` plumbing, and splitting one contract across two
+  items is how both end up half-specified.
 - Teaching the table reader that a pipe inside a code span is not a cell separator. That is
   how `splitTableCells` reads every table in this repository today; changing it here would
   change §11 parsing too, which is a different blast radius and a different item.
@@ -250,12 +260,15 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 - **Given** a handoff table with a header row and one data row, **When** the count runs,
   **Then** it is 1.
 - **Given** a ledger row with `Result: operator`, **When** the count runs, **Then** it is 1.
-- **Given** a handoff section holding a nested bullet, a blockquote line, a paragraph and an
-  item whose text is empty after masking, **When** the count runs, **Then** none of them is a
-  row and the read carries no problem.
-- **Given** a ledger with no `Result` column, or a row wider than its header, or a document that
-  ends inside a fence, **When** the read runs, **Then** it returns a problem and both
-  `operatorGateOk` and `lintPrd` surface it — neither proceeds on zero.
+- **Given** a handoff section holding a nested bullet, **When** the count runs, **Then** it is
+  counted — A3 Clause 3 read literally, and the demand is boolean either way.
+- **Given** a blockquote line, a paragraph, a heading, a marker with no separating whitespace
+  and an item whose text is only mask characters, **When** the count runs, **Then** none is a
+  row.
+- **Given** the shipped placeholder handoff table, whose data cells are all empty, **When** the
+  count runs, **Then** it is zero.
+- **Given** a cell containing `a\|b` and one containing `a\|b`, **When** cells are split,
+  **Then** the first is one cell and the second is two.
 - **Given** an `operator-gated` PRD with zero operator rows and no acceptance entry, **When**
   the merge gate runs, **Then** it refuses: the declaration itself is the demand.
 - **Given** a PRD declaring `eligible` whose task file yields two operator rows, **When**
@@ -263,8 +276,9 @@ so that the upgrade is a decision instead of a surprise at the next merge.
   phase-4 commands run.
 - **Given** the same PRD resumed with `--from-phase=merge`, **When** the merge gate runs,
   **Then** it refuses on the same invariant — the early gate is skippable, the invariant is not.
-- **Given** the same PRD at Phase 2 with no task file yet, **When** `gate check` runs, **Then**
-  it passes silently; **Given** the task file exists, **Then** it passes with a warning.
+- **Given** an audit acknowledgement line that no longer matches the corpus, **When**
+  `--assert-acknowledged` runs, **Then** it exits 1 — a stale acknowledgement fails like a
+  missing one.
 
 ---
 
@@ -272,16 +286,26 @@ so that the upgrade is a decision instead of a surprise at the next merge.
 
 ### Architecture
 
-The counter is one function over Markdown; the fix widens what it reads, narrows what it
-mistakes for a row, and changes its return shape from a number to a count plus an optional
-problem. Both directions need their own fixtures — a corpus that only proves the new shapes
-count would not catch the header regression, and the reverse.
+The counter stays one function returning one number. It widens what it reads and narrows what
+it mistakes for a row; its signature does not change, and neither does any caller's. Both
+directions need their own fixtures — a corpus that only proves the new shapes count would not
+catch the header regression, and the reverse.
 
-The grammar is closed by enumeration (FR-1), not by describing the intent and leaving the
-implementer to bound it. The excluded shapes are the ones a Markdown reader is normally wrong
-about: nesting, blockquotes, fences, comments, and continuation lines. That is the
-`narrow-the-grammar-not-the-parser` rule — this reader will never reach renderer parity, so it
-restricts what the document may contain instead.
+The grammar is closed by enumeration (FR-1). Every reachable list item counts, at any
+indentation, which is Addendum A3 Clause 3 read literally; the permitted non-rows are
+blockquote lines, paragraphs, headings, markers without separating whitespace, and items whose
+text is only mask characters. Fences, HTML comments and html blocks are not "excluded" at all —
+`scanDocument` has already removed them from the view. That is the
+`narrow-the-grammar-not-the-parser` rule: this reader will never reach renderer parity, so it
+restricts what it may be asked to read instead.
+
+**Interim behaviour for input this item does not refuse.** A pipe table with no separator row
+is not a table under FR-2, so its lines contribute zero rows. A data row whose cell count
+differs from its header's is still one row — the width is not read. A ledger with no `Result`
+column contributes zero ledger rows. A document that ends inside a fence is read as far as the
+scanner can read it. Each of those is a silent zero, each is wrong, and each is PRD-043's
+subject: this item states them so the interim is a decision on the record rather than an
+implication a reader has to reconstruct.
 
 The ledger read locates the `Result` column by normalized header name and then reads that cell,
 the same shape `parseVerificationTable` uses for the Command column (PRD-024). Never a
@@ -329,13 +353,12 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 
 ### In Scope
 
-- [ ] `packages/provegate/src/core/state/markdown.ts`, `packages/provegate/src/core/state/build.ts`
+- [ ] `packages/provegate/src/core/state/markdown.ts`
 - [ ] `packages/provegate/src/core/run/acceptance.ts`, `packages/provegate/src/core/run/chain.ts`
-- [ ] `packages/provegate/src/core/gates/prd-ready.ts`, `packages/provegate/src/cli.ts`
 - [ ] `packages/provegate/test/markdown.test.ts`, `packages/provegate/test/acceptance.test.ts`,
-      `packages/provegate/test/chain.test.ts`, `packages/provegate/test/lint-parsers.test.ts`,
-      `packages/provegate/test/cli-state.test.ts`
-- [ ] `packages/provegate/METHOD.md` (FR-9, traceable to Addendum A3)
+      `packages/provegate/test/chain.test.ts`
+- [ ] `packages/provegate/METHOD.md` (FR-8, traceable to Addendum A3),
+      `packages/provegate/test/content-canon.test.ts`
 - [ ] `scripts/audit-operator-rows.mjs`, `scripts/adopter-smoke.sh`, `.changeset/`
 
 ---
@@ -398,18 +421,24 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
   mechanism was specified and the state model was not. FR-5 and FR-6 write it — which
   declaration demands what, at which two points it is evaluated, and what each contradiction is
   called — before any parser detail is settled.
-- reviewed: `scope-out-the-layer-the-rounds-keep-hitting` — both rounds' findings clustered in
-  the CONSUMER layer (who reads the count, when, and what they do with a problem), not in the
-  counter. That is why FR-4..FR-7 grew and the parser FRs barely moved; the scope was widened
-  to the layer the rounds kept hitting rather than resampled at the layer under attack.
-- reviewed: `fixture-must-reach-production-shape` — `cli.ts` watch; FR-7's warning test drives
-  `runCheck` with the arguments a user types, not `lintPrd` directly — a report shape asserted
-  one call below the production path proves nothing about what the command prints.
+- applied: `scope-out-the-layer-the-rounds-keep-hitting` — applied as an action, not a
+  citation. Rounds 4 and 5 both scored 7.7 and both landed on the same two layers: grammar
+  minutiae and diagnostic plumbing. The record says that is a scope error wearing design-error
+  clothes, so the refusal path was SCOPED OUT to PRD-043 instead of being specified more
+  precisely for a third time.
+- applied: `score-band-prescribes-the-action` — the trajectory went 5.7 → 6.6 → 7.3 → 7.7 →
+  7.7. The band's action for a flat round is not another rework at the same scope; this round
+  cut scope, and the readiness file records that as the reason rather than as a result.
+- reviewed: `fixture-must-reach-production-shape` — the `cli.ts` surface left with the warning,
+  and the record still binds FR-5: the chain test must build the real `buildGateChain` and run
+  it, not call the gate function it inserts.
 - reviewed: `surface-set-without-its-predicate` — `core/gates/**` watch; FR-6 adds a predicate
   to an existing lint surface rather than an input set, so the record's failure mode does not
   apply here.
-- reviewed: `exemption-marker-needs-no-prose` — `core/gates/prd-ready.ts` watch; FR-6 adds no
-  exemption syntax, so there is no author-typed field to close.
+- reviewed: `exemption-marker-needs-no-prose` — `core/gates/prd-ready.ts` no longer appears in
+  this item's targets (the lint warning moved to PRD-043 with the contract it needs), and the
+  acknowledgement line FR-6 checks is machine-derived: a fingerprint the script recomputes, with
+  no author-typed field to hide in.
 - reviewed: `evidence-pattern-satisfied-by-the-template` — `templates/**` watch; the template
   edit that would have tripped this record is now a Non-Goal, and no gate reads template prose
   as evidence.
@@ -430,16 +459,11 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 ## Conflict Surface
 
 - `packages/provegate/src/core/state/markdown.ts`
-- `packages/provegate/src/core/state/build.ts`
 - `packages/provegate/src/core/run/acceptance.ts`
 - `packages/provegate/src/core/run/chain.ts`
-- `packages/provegate/src/core/gates/prd-ready.ts`
-- `packages/provegate/src/cli.ts`
 - `packages/provegate/test/markdown.test.ts`
 - `packages/provegate/test/acceptance.test.ts`
 - `packages/provegate/test/chain.test.ts`
-- `packages/provegate/test/lint-parsers.test.ts`
-- `packages/provegate/test/cli-state.test.ts`
 - `scripts/audit-operator-rows.mjs`
 - `scripts/adopter-smoke.sh`
 - `packages/provegate/METHOD.md`
@@ -459,18 +483,18 @@ second, larger change: an `operator-gated` PRD now needs an acceptance even with
 
 ## 11. Verification Commands
 
-| FR   | Command / Check                        | Scope                | Notes                                        |
-| ---- | -------------------------------------- | -------------------- | -------------------------------------------- |
-| FR-1 | `pnpm test --filter provegate`         | markdown.test.ts     | each admitted marker counts; each permitted non-row has its own fixture |
-| FR-2 | `pnpm test --filter provegate`         | markdown.test.ts     | header excluded whatever its first cell says; blocks summed |
-| FR-3 | `pnpm test --filter provegate`         | markdown.test.ts     | Result column by header name, sections summed |
-| FR-4 | `pnpm test --filter provegate`         | acceptance.test.ts   | five unsupported inputs refuse by name at BOTH consumers |
-| FR-5 | `pnpm test --filter provegate`         | acceptance.test.ts   | operator-gated with zero rows refuses; eligible with rows refuses |
-| FR-6 | `pnpm test --filter provegate`         | chain.test.ts        | early gate refuses; a --from-phase=merge resume refuses on the same invariant |
-| FR-7 | `pnpm test --filter provegate`         | lint-parsers.test.ts | warns with a task file, silent without one, exit code unchanged |
-| FR-8 | `node scripts/audit-operator-rows.mjs` | repo corpus          | prints path, old → new, and the classification |
-| FR-9 | `pnpm test --filter provegate`         | content-canon.test.ts | METHOD.md states A3 clauses 1-3, each traceable |
-| FR-10 | `pnpm smoke:adopter`                  | adopter fixture      | three known-red entries gone, run green      |
+| FR   | Command / Check                        | Scope                 | Notes                                                                                     |
+| ---- | -------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
+| FR-1 | `pnpm test --filter provegate`         | markdown.test.ts      | one fixture each: `-`/`*`/`+`/`1.`/`1)` marker, checkbox in all three spellings, nested item, blockquote, paragraph, heading, marker without whitespace, mask-only text, code-span text, `- none`, `- (none)` |
+| FR-1 | `pnpm test --filter provegate`         | markdown.test.ts      | one fixture per unreachable kind: blanked fence, `indented-code`, `html`, `in-html`         |
+| FR-2 | `pnpm test --filter provegate`         | markdown.test.ts      | header excluded whatever its first cell; two blocks summed; all-empty placeholder row zero; escape parity `a\|b` vs `a\|b` |
+| FR-3 | `pnpm test --filter provegate`         | markdown.test.ts      | Result column by header name; two ledger sections summed; no Result column contributes zero |
+| FR-4 | `pnpm test --filter provegate`         | acceptance.test.ts    | operator-gated with zero rows refuses; eligible with rows refuses; both name the file        |
+| FR-5 | `pnpm test --filter provegate`         | chain.test.ts         | early gate refuses before phase-4 commands; a `--from-phase=merge` resume refuses identically |
+| FR-6 | `node scripts/audit-operator-rows.mjs --assert-acknowledged` | repo corpus | exits 1 on a missing or stale acknowledgement line |
+| FR-7 | `node scripts/audit-operator-rows.mjs` | repo corpus           | both populations printed: count changes with a source, and zero-row acceptance changes       |
+| FR-8 | `pnpm test --filter provegate`         | content-canon.test.ts | METHOD.md states A3 clauses 1-3, each traceable to its clause                                 |
+| FR-9 | `pnpm smoke:adopter`                   | adopter fixture       | three known-red entries gone, run green                                                      |
 
 Cross-cutting floor (run before Code Complete):
 
@@ -492,7 +516,8 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 - DO NOT edit the shipped tasks template — method content needs an owner-approved addendum.
 - DO NOT let the harness keep a known-red entry for a defect this work fixes.
 - DO NOT add a suppression flag that lets an author declare `eligible` and keep operator rows.
-- DO NOT change the exported `countOperatorHandoff` signature; add the diagnostic reader beside it.
+- DO NOT widen this item back into the refusal path or the lint warning; PRD-043 owns both.
+- DO NOT treat the interim zeros in §7 as correct behaviour; they are recorded, not endorsed.
 - DO NOT enforce the invariant in only one place — an early gate alone is skippable by a resume.
 
 ---
@@ -506,4 +531,7 @@ Before Phase 2 PASS, run: `gate check PRD-040`
 | 2026-08-07 | owner  | Iteration 2 rework (Codex 6.6 ITERATE; 5.7→6.6): grammar rewritten over `scanDocument`'s masked view with unreachable/permitted/refused separated and `unreliable` propagated; diagnostic reader added beside the unchanged public `countOperatorHandoff`, plumbed through `buildState` to both consumers; `Autonomous Close` enforced in both directions with the invariant bound to a named chain entry AND re-evaluated in the merge gate so no resume skips it; `PrdReadyReport.warnings` added for the Phase-2 warning; audit moved to first task of Phase 4 with a classification and a default stop; three memory dispositions rewritten; RM held at 2 |
 | 2026-08-07 | owner  | Iteration 3 partial rework (Codex 7.3 ITERATE; 6.6→7.3, lifecycle + method-content + value CLOSED): FR-1 partition restated in the scanner's own terms (unreachable / masked `COMMENT_MASK` / preserved code spans), marker whitespace and ordered-digit range pinned, escaped-pipe rule stated and the pipe-in-code-span boundary moved to Non-Goals; FR-4 caller routes specified per consumer with fatal-vs-warning split and the legacy numeric export's documented behaviour; `narrow-the-grammar-not-the-parser` disposition rewritten against the real partition. **Iteration-3 finding 4 is an OWNER GATE** — FR-5(a) (an `operator-gated` PRD requires an acceptance even at zero rows) is a method predicate that `METHOD.md` does not carry, so it needs an owner-approved source-snapshot addendum (PRD-031 precedent) or FR-5(a) is cut. Not decided by the author; the item waits here.
 | 2026-08-07 | owner  | Owner gate resolved: FR-5(a) KEPT, authorized by **Addendum A3** (`source-snapshot/addenda/operator-acceptance-predicate-2026-08-07.md`, approved in-session 2026-08-07), listed in `MANIFEST.md` and `DECISIONS.md` — whose addenda table was also missing the A2 row and now carries both. FR-9 added: `METHOD.md` states A3 clauses 1–3 so the rule reaches adopters in the document they read; FR-8's audit now reports the zero-row `operator-gated` population separately, since Clause 1 changes those items with no count diff to show for it |
+| 2026-08-07 | owner  | Iteration 4 rework (Codex 7.7 ITERATE; 7.3→7.7): all-empty placeholder table pinned at zero; leading/trailing pipe requirement stated with the alternative form refused; escaped-pipe backslash parity defined; nested items reconciled with A3 Clause 3 as a reading (detail about a row, not a second row) rather than an exception; per-shape fixture obligation enumerated; the legacy numeric export now THROWS a named diagnostic instead of returning an unjustifiable zero; `lintPrd`'s sixth parameter and `runCheck`'s `found.record.task` argument named at `cli.ts:920`, with fatal-vs-warning routing stated |
+| 2026-08-07 | owner  | Iteration 5 SCOPE MOVE (Codex 7.7, flat after 7.7): rounds 4 and 5 both landed on grammar minutiae and diagnostic plumbing, which `score-band-prescribes-the-action` and `scope-out-the-layer-the-rounds-keep-hitting` both name as a scope error. The refusal path left for **PRD-043** (diagnostic reader, both caller contracts, boundaryless-table predicate, fatal-vs-warning split); malformed input keeps today's behaviour here, as a stated Non-Goal. Nested list items are now COUNTED — A3 Clause 3 read literally — which removes the owner clarification the scorer asked for, since the acceptance demand is boolean either way. §11 enumerates a fixture per shape |
+| 2026-08-07 | owner  | Iteration 6 sweep (Codex 7.6): the scope move left restatements, which is `a-rule-corrected-survives-where-it-is-restated` verbatim — §7 still claimed a `{count, problem}` return shape and listed nesting as excluded. Swept: the counter keeps its signature, every reachable list item counts, and §7 now states the INTERIM behaviour for each input this item does not refuse (no-separator table, unequal-width row, missing Result column, unterminated fence) as a recorded decision rather than an implication. The Phase-2 lint warning moved WHOLE to PRD-043 with the `lintPrd`/`runCheck` contract it needs — splitting one contract across two items half-specifies both — so `prd-ready.ts`, `cli.ts` and `lint-parsers.test.ts` left this item's scope. FR-6 is now the audit's executable continuation gate: `--assert-acknowledged` recomputes a fingerprint and exits 1 on a missing or stale acknowledgement |
 
