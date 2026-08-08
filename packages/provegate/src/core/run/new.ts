@@ -305,33 +305,6 @@ export function unresolvedTokens(content: string): string[] {
   return [...new Set(content.match(/\{\{[A-Z0-9_]+\}\}/g) ?? [])].sort();
 }
 
-/** The configured token table, applied on its own for the companion artifacts.
- * In `instantiateTemplate` these rules join the single sweep instead.
- *
- * UNCONDITIONAL over the closed set, as FR-2 specifies. An earlier round tried
- * skipping lines that still carried an author placeholder, to keep
- * `` `{{DOCS_ROOT}}/[page].md` `` from becoming a plausible-looking declared
- * path — and the reviewer was right that the heuristic both over- and
- * under-fired: it skipped ordinary Markdown links (`[docs](…)`) whose tokens
- * SHOULD resolve, and let `[path/to/file]` through. A rule that cannot state
- * which lines it governs is not a rule.
- *
- * The scaffolding problem it was papering over is real and belongs to the
- * author: an unfilled Durable Artifacts section declares a path that does not
- * exist, and the Phase-7 gate refuses it BY NAME. That refusal is correct — a
- * PRD that never declared its durable knowledge is not ready to close — and it
- * is now what the executable quickstart demonstrates.
- */
-function substituteConfiguredTokens(config: WorkflowConfig, content: string): string {
-  const table = configuredTokens(config);
-  // ONE pass, with a CALLBACK replacement (phase-6 round 2, Medium): a string
-  // replacement interprets `$&` and friends, so a configured value like
-  // `docs/$&` wrote `docs/{{DOCS_ROOT}}` — a token that stayed unresolved
-  // because its own value re-inserted it. A single pass also means a value can
-  // never be re-scanned as a token by a later iteration.
-  return content.replace(/\{\{[A-Z0-9_]+\}\}/g, (match) => table.get(match) ?? match);
-}
-
 /**
  * Drop a `## <heading>` section — heading line through the last line before the
  * next `## ` at column zero, including that section's own trailing `---`
