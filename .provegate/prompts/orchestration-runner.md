@@ -34,7 +34,7 @@ Phase 5  Testing        → agent authors deny/contract tests; runner gate: ever
 Phase 6  Final Auditing → reviewer PANEL (below); agent saves a structured review artifact + ledger row; runner gate: review schema
 Phase 7  Learning       → agent updates declared Durable Artifacts; runner gate: declared paths present in the merge diff
 archive  → runner: wip→completed moves + commit (pathspec-scoped)
-merge    → runner: operator-acceptance guard, no-ff merge to LOCAL main, post-merge gates, auto-revert on failure
+merge    → runner: operator-acceptance guard, no-ff merge to LOCAL development, post-merge gates, auto-revert on failure
 handoff  → runner prints the card + metrics path; HUMAN runs git push
 ```
 
