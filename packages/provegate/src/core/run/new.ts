@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative as relativePath, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { WorkflowConfig } from '../config/index.js';
@@ -190,20 +190,19 @@ export function fencedLines(lines: string[]): boolean[] {
   return fenced;
 }
 
-/** Substitute one anchored line; a missing anchor is a template-drift ERROR,
- * never a silent skip (W4). */
-function substituteAnchor(
-  content: string,
-  anchor: RegExp,
-  replacement: string | (() => string),
-): string {
-  if (!anchor.test(content)) {
-    throw new Error(`template anchor not found: ${anchor} — template drifted from gate new`);
-  }
-  // A CALLBACK replacement wherever configured bytes are involved (phase-6
-  // round 9, High): configuration accepts any prefix, and a prefix of `$&`
-  // used as a replacement string expanded to the matched heading.
-  return content.replace(anchor, typeof replacement === 'string' ? () => replacement : replacement);
+/**
+ * The id anchor, as a CLOSED two-member alternation (PRD-042 FR-5): the raw
+ * `{{ID_PREFIX}}` form, or exactly the configured prefix. A repository that
+ * installs its own prompt store renders the token away, and `gate new` refused
+ * its own template for it — every PRD here was hand-created because of this.
+ *
+ * The alternation is two literals and nothing else. A wildcard (`[A-Z]+-XXX`)
+ * would turn drift detection into a heading search: a template whose id line
+ * names ANOTHER project's prefix would then instantiate silently, which is the
+ * drift this anchor exists to catch.
+ */
+function idAnchor(config: WorkflowConfig): RegExp {
+  return new RegExp(`^# (?:\\{\\{ID_PREFIX\\}\\}|${escapeRegExp(config.idPattern.prefix)})-XXX: `, 'm');
 }
 
 /**
@@ -259,21 +258,6 @@ function assertSingleIdAnchor(config: WorkflowConfig, content: string): number {
   return canonical[0]! - 1;
 }
 
-/**
- * The id anchor, as a CLOSED two-member alternation (PRD-042 FR-5): the raw
- * `{{ID_PREFIX}}` form, or exactly the configured prefix. A repository that
- * installs its own prompt store renders the token away, and `gate new` refused
- * its own template for it — every PRD here was hand-created because of this.
- *
- * The alternation is two literals and nothing else. A wildcard (`[A-Z]+-XXX`)
- * would turn drift detection into a heading search: a template whose id line
- * names ANOTHER project's prefix would then instantiate silently, which is the
- * drift this anchor exists to catch.
- */
-function idAnchor(config: WorkflowConfig): RegExp {
-  return new RegExp(`^# (?:\\{\\{ID_PREFIX\\}\\}|${escapeRegExp(config.idPattern.prefix)})-XXX: `, 'm');
-}
-
 /** Tokens `gate new` can resolve from configuration, with their sources and
  * precedence (PRD-042 FR-2). CLOSED set: a token outside this table is never
  * substituted, however plausible its name, and adding one is a spec change.
@@ -321,8 +305,8 @@ export function unresolvedTokens(content: string): string[] {
   return [...new Set(content.match(/\{\{[A-Z0-9_]+\}\}/g) ?? [])].sort();
 }
 
-/** Apply the configured token table. Runs AFTER the anchored substitutions and
- * touches none of them.
+/** The configured token table, applied on its own for the companion artifacts.
+ * In `instantiateTemplate` these rules join the single sweep instead.
  *
  * UNCONDITIONAL over the closed set, as FR-2 specifies. An earlier round tried
  * skipping lines that still carried an author placeholder, to keep
@@ -415,6 +399,27 @@ function dropSection(content: string, heading: string): string {
   return out.join('\n');
 }
 
+/**
+ * Apply every substitution in ONE sweep (phase-6 round 11, High).
+ *
+ * Ordering the passes only moved the problem: with the token pass first, the
+ * identity substitutions read its output (a `DOCS_ROOT` of `{{ID_PREFIX}}/docs`
+ * came back as `PRD/docs`); with it last, it read theirs. `String.replace` with
+ * a global pattern scans the ORIGINAL string and never revisits what a callback
+ * returned, so a single alternation over all the rules is the only arrangement
+ * where no substitution can read another's output — in either direction.
+ */
+function applyOnce(text: string, rules: Array<[RegExp, (match: string) => string]>): string {
+  if (rules.length === 0) return text;
+  const combined = new RegExp(rules.map(([re]) => `(?:${re.source})`).join('|'), 'gm');
+  return text.replace(combined, (match) => {
+    for (const [re, fn] of rules) {
+      if (new RegExp(`^(?:${re.source})$`).test(match)) return fn(match);
+    }
+    return match;
+  });
+}
+
 export function instantiateTemplate(
   config: WorkflowConfig,
   templateInput: string,
@@ -423,57 +428,51 @@ export function instantiateTemplate(
   cls: string | undefined,
   now: Date,
 ): string {
-  // An id prefix may not itself look like a template token. The token pass runs
-  // BEFORE the identity substitutions (so it can never rescan what they wrote),
-  // and a prefix such as `{{CMD_LINT}}` would therefore be resolved out of the
-  // heading the anchor is about to match. Refusing beats silently renaming the
-  // work item after a lint command.
-  if (/\{\{|\}\}/.test(config.idPattern.prefix)) {
-    throw new Error(
-      `idPattern.prefix ("${config.idPattern.prefix}") looks like a template token — ` +
-        'the token pass would resolve it out of the id heading; pick a literal prefix',
-    );
-  }
-  let template = templateInput;
   const date = now.toISOString().slice(0, 10);
-  // The configured-token pass runs FIRST, over the TEMPLATE's bytes only
-  // (phase-6 round 10, High). Running it last meant it rescanned everything the
-  // identity substitutions had just inserted, so a configured
-  // `idPattern.prefix: "{{CMD_LINT}}"` came back out as `pnpm lint`. Nothing a
-  // substitution writes is ever read by another substitution now.
-  template = substituteConfiguredTokens(config, template);
-  // The anchor is substituted AT ITS LINE, not at the first textual match
-  // (phase-6 round 5, High): a fenced `# PRD-XXX:` example above the real
-  // heading used to receive the edit, leaving the artifact's own title
-  // unchanged and the example rewritten.
+  const template = templateInput;
+  // Anchor drift is still checked FIRST, and against the template's own bytes:
+  // the id line must exist exactly once, unfenced, before anything is written.
   const anchorLine = assertSingleIdAnchor(config, template);
-  const templateLines = template.split('\n');
-  templateLines[anchorLine] = templateLines[anchorLine]!.replace(idAnchor(config), () => `# ${id}: `);
-  let out = templateLines.join('\n');
-  out = out.replaceAll('{{ID_PREFIX}}', () => config.idPattern.prefix);
-  out = substituteAnchor(out, /^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, () => `> **Created**: ${date}`);
-  out = substituteAnchor(out, /^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, () => `> **Updated**: ${date}`);
-  out = substituteAnchor(out, /^> \*\*Slug\*\*: `\[short-name\]`$/m, () => `> **Slug**: \`${slug}\``);
-  // Class anchor is ALWAYS validated (a template whose class line vanished is
-  // drift even when --class is absent). The default is the FIRST configured
-  // class, not the template's literal: a config without `feature` must never
-  // produce an artifact whose header names an unconfigured class.
-  out = substituteAnchor(
-    out,
-    /^> \*\*PRD Class\*\*: feature$/m,
-    () => `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
-  );
-  // Status anchor is verified even though its value is already correct — a
-  // template whose lifecycle line vanished should fail loudly here too.
-  out = substituteAnchor(out, /^> \*\*Status\*\*: Draft$/m, '> **Status**: Draft');
-  // Only the EXPLICITLY supported date sites are touched (blanket replaceAll
-  // could rewrite unrelated literals in a forked template): the metadata pair
-  // above and the changelog's initial row. Anything else stays user-fill.
-  out = substituteAnchor(
-    out,
-    /^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/m,
-    () => `| ${date} | [role] | Initial draft |`,
-  );
+  const anchor = idAnchor(config);
+  const tokens = configuredTokens(config);
+
+  // Every rule that may fire, applied in ONE sweep. Required anchors are
+  // verified before the sweep so a drifted template still fails loudly rather
+  // than silently instantiating without its metadata.
+  const required: Array<[RegExp, string]> = [
+    [/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, 'Created'],
+    [/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, 'Updated'],
+    [/^> \*\*Slug\*\*: `\[short-name\]`$/m, 'Slug'],
+    [/^> \*\*PRD Class\*\*: feature$/m, 'PRD Class'],
+    [/^> \*\*Status\*\*: Draft$/m, 'Status'],
+    [/^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/m, 'Changelog row'],
+  ];
+  for (const [re] of required) {
+    if (!re.test(template)) {
+      throw new Error(`template anchor not found: ${re} — template drifted from gate new`);
+    }
+  }
+
+  const lines = template.split('\n');
+  const rules: Array<[RegExp, (match: string) => string]> = [
+    [/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/, () => `> **Created**: ${date}`],
+    [/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/, () => `> **Updated**: ${date}`],
+    [/^> \*\*Slug\*\*: `\[short-name\]`$/, () => `> **Slug**: \`${slug}\``],
+    [
+      /^> \*\*PRD Class\*\*: feature$/,
+      () => `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
+    ],
+    [/^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/, () => `| ${date} | [role] | Initial draft |`],
+    [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix],
+    [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match],
+  ];
+
+  let out = lines
+    .map((line, i) =>
+      i === anchorLine ? line.replace(anchor, () => `# ${id}: `) : applyOnce(line, rules),
+    )
+    .join('\n');
+
   // A contract the repository cannot enforce is instruction the reader must
   // ignore (PRD-042 FR-3). When memory is off, the two sections come out; when
   // it is on they stay, and `gate check` refuses a PRD that lacks them — which
@@ -729,23 +728,15 @@ export function createCompanion(
     // directory like `workflow/./tasks` writes to a two-deep location but has
     // three raw segments, and the extra `../` produced a link that resolved
     // above the repository root.
-    // `..` collapses too (phase-6 round 3, Medium): `workflow/tasks/../plans`
-    // WRITES under `workflow/plans`, and counting the raw segments produced a
-    // link that climbed above the repository root.
-    // BOTH separators (phase-6 round 10, Medium): a configured
-    // `tasks.dir: "workflow\\tasks"` resolves as two directories on Windows,
-    // and counting only `/` produced a link one level short.
-    const normalize = (p: string): string[] => {
-      const out: string[] = [];
-      for (const seg of p.split(/[\\/]/)) {
-        if (seg === '' || seg === '.') continue;
-        if (seg === '..') out.pop();
-        else out.push(seg);
-      }
-      return out;
-    };
-    const hops = normalize(relPath).length - 1;
-    const prdLink = `${'../'.repeat(hops)}${normalize(prdRel).join('/')}`;
+    // Depth comes from where the file ACTUALLY lands, not from the config
+    // string (phase-6 round 11, Medium). Round 3 collapsed `.` and `..`; round
+    // 10 split on both separators, which fixed Windows and broke POSIX, where
+    // `workflow\\tasks` is ONE literal directory. Asking the path layer that
+    // writes the file is the only reading that is right on both.
+    const depthOf = (relative: string): string[] =>
+      relativePath(root, containedPath(root, relative)).split(sep).filter((s) => s !== '');
+    const hops = depthOf(relPath).length - 1;
+    const prdLink = `${'../'.repeat(hops)}${depthOf(prdRel).join('/')}`;
     content = template
       .replace(/^# Tasks: \[Feature Name\]$/m, () => `# Tasks: ${canonicalId} — ${slug}`)
       .replace(

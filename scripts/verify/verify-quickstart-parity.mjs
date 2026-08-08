@@ -158,7 +158,20 @@ for (const spec of DOCS) {
   // ATX grammar, not raw equality (phase-6 round 7, High): `## 5. Close ##` is
   // the SAME heading to a renderer, so prepending a closing-sequence form left
   // the exact string unique while a rendered Close preceded the recipe.
-  const headingText = (line) => {
+  // Setext headings count too (phase-6 round 11, High): `5. Close (the runner)`
+  // underlined by `===` is the same heading to a renderer, so recognizing only
+  // ATX let a Setext Close precede the recipe while the ATX one stayed after it.
+  const setext = new Set();
+  lines.forEach((line, i) => {
+    if (i === 0 || fenced[i]) return;
+    if (!/^ {0,3}(=+|-+)[ \t]*$/.test(line)) return;
+    if (fenced[i - 1] || lines[i - 1].trim() === '') return;
+    setext.add(i - 1);
+  });
+  const headingText = (line, index) => {
+    if (setext.has(index)) {
+      return `# ${line.trim()}`;
+    }
     const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*$/.exec(line);
     if (!m) return null;
     // A CLOSING sequence must be preceded by whitespace (phase-6 round 8):
@@ -170,7 +183,14 @@ for (const spec of DOCS) {
   };
   const findUnique = (heading) =>
     lines
-      .map((l, i) => (!fenced[i] && headingText(l) === heading ? i : -1))
+      .map((l, i) => {
+        if (fenced[i]) return -1;
+        const text = headingText(l, i);
+        if (text === null) return -1;
+        // Compare on the TEXT, so `## 5. Close` and a Setext `5. Close` are the
+        // same heading — which is what a reader sees.
+        return text.replace(/^#{1,6} /, '') === heading.replace(/^#{1,6} /, '') ? i : -1;
+      })
       .filter((i) => i >= 0);
   const beforeHits = findUnique(ORDER.before);
   const afterHits = findUnique(ORDER.after);

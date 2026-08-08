@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -1052,17 +1052,27 @@ describe('phase-6 round 10 fixes (PRD-042)', () => {
     expect(text).toContain('> **Slug**: `cmd-lint-slug`');
   });
 
-  it('refuses an id prefix that looks like a template token', () => {
+  it('keeps an id prefix that looks like a template token literal', () => {
     const root = tempRoot();
     const config = { ...cfg, idPattern: { ...cfg.idPattern, prefix: '{{CMD_LINT}}' } };
-    // Such a prefix would be resolved out of the very heading the anchor
-    // matches — the work item would be renamed after a lint command.
-    expect(() => createPrd(config, root, { slug: 'token-prefix' })).toThrow(
-      /looks like a template token/,
+    const path = join(root, 'token-prefix.md');
+    writeFileSync(
+      path,
+      readFileSync(shippedTemplate, 'utf8').replaceAll('{{ID_PREFIX}}', '{{CMD_LINT}}'),
     );
+    // Round 10 refused this because the passes ran in sequence and one read the
+    // other's output. With a single sweep the question disappears: the id line
+    // is written by the identity rule and never revisited, so a prefix that
+    // spells a token stays exactly what the configuration says.
+    const text = readFileSync(
+      createPrd(config, root, { slug: 'token-prefix', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).toContain('# {{CMD_LINT}}-001: ');
+    expect(text).not.toContain('# pnpm lint-001');
   });
 
-  it('counts a backslash-separated tasks directory as directories', () => {
+  it('counts a backslash-separated tasks directory the way THIS platform resolves it', () => {
     const root = tempRoot();
     const config = {
       ...cfg,
@@ -1074,6 +1084,11 @@ describe('phase-6 round 10 fixes (PRD-042)', () => {
     createPrd(config, root, { slug: 'winsep' });
     const text = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
     const up = '..' + '/';
-    expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-winsep.md)`);
+    // Round 10 split on both separators, which fixed Windows and broke POSIX —
+    // where `workflow\\tasks` is ONE literal directory. The depth now comes
+    // from where the file actually lands, so the expectation follows the
+    // platform rather than a guess about it.
+    const hops = sep === '\\' ? 3 : 2;
+    expect(text).toContain(`](${up.repeat(hops)}_prds/wip/prd-001-winsep.md)`);
   });
 });

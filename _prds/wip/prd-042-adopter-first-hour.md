@@ -152,10 +152,11 @@ so that my first close fails on my code and not on my paperwork.
    | `{{MEMORY_ROOT}}` | `config.memory.root` | config only |
    | `{{DOCS_ROOT}}` | `config.prompts.values.DOCS_ROOT`, else `config.dirs.artifacts.summary.dir` | prompts value wins |
 
-   This is an **additional** substitution pass that runs after the existing anchored
-   substitutions and changes none of them: the id, class, status, slug and date anchors
-   `substituteAnchor` already writes — including `{{ID_PREFIX}}` — keep their current behaviour
-   and their drift refusals. Within this new pass the seven rows are the CLOSED set: a token
+   The token substitution and the existing anchored substitutions happen in ONE sweep over the
+   template's bytes, so neither can read the other's output in either direction — the arrangement
+   phase-6 rounds 10 and 11 forced, after ordering the passes merely moved which one read which.
+   The id, class, status, slug and date anchors keep their current behaviour and their drift
+   refusals, which are still checked before anything is written. Within this new pass the seven rows are the CLOSED set: a token
    outside the table is never substituted, however plausible its name, and adding a row is a
    change to this requirement rather than an implementation detail. It is also exactly the set
    the adopter run found unsubstituted. A source whose

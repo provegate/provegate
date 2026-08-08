@@ -5,21 +5,23 @@
 > **Reviewer:** codex (gpt-5), read-only sandbox
 > **Base SHA:** `5552a11233e661048808d5d1bb6a2f7378f27095`
 > **Critical:** 0
-> **High:** 1
-> **Medium:** 1
+> **High:** 2
+> **Medium:** 2
 > **Quorum:** 0/1 pass
 
 ## Summary
 
-Round 10 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. Round 9’s three findings close, and the round-8 entity rejection remains upheld and closed. The placeholder-line heuristic is no longer present; substitutions are unconditional across table rows, Notes cells, links, and the Changelog. The anchor alternation, section removal, argument refusals, Phase-6 path, quickstart ordering assertion, and two changed tests otherwise satisfy the stated contract. Two defects introduced by this diff remain; neither is a pre-existing surrounding-code property carried into this verdict.
+Round 11 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. The round-10 identity-to-token rescan closes, but the inverse rescan remains: later identity passes still reinterpret configured-token output. The backslash-depth fix is correct on Windows but emits a broken link on POSIX. The placeholder-line heuristic is gone, `idAnchor`, `dropSection`, companion containment/atomicity, CLI grammar, Phase-6 path, and the two changed tests otherwise satisfy their contracts. The upheld entity rejection remains closed and carries no debt. Four findings are introduced by this diff; none is a pre-existing surrounding-code property merely made reachable.
 
 ## Findings
 
 | # | Sev | Finding | Resolution |
 | --- | --- | --- | --- |
-| 1 | HIGH | `packages/provegate/src/core/run/new.ts:433-469,725-751`: **Introduced by this diff.** `substituteConfiguredTokens` rescans bytes inserted by earlier callback replacements. With valid `idPattern.prefix: "{{CMD_LINT}}"`, a read-only probe produced `# pnpm lint-001` instead of the configured `# {{CMD_LINT}}-001`; with `reviewsDir: "{{DOCS_ROOT}}/reviews"`, `--tasks` records `_docs/reviews/...` while `--review` writes beneath the literal configured directory, so Phase 6 cannot connect them. Callback replacements close replacement-string interpretation, but not cross-pass rescanning. Substitute only token occurrences originating in the template, never assembled output. | open |
-| 2 | MEDIUM | `packages/provegate/src/core/run/new.ts:714-724`: **Introduced by this diff.** Task-link depth normalization recognizes only `/`, although valid artifact directories resolve `\` as a separator on Windows. `tasks.dir: "workflow\\tasks"` writes three directories below the root but emits only `../../_prds/...`, producing a broken PRD link. Derive the relative link from the contained absolute destination and PRD paths using platform path primitives, then normalize the emitted link to `/`. | open |
+| 1 | HIGH | `packages/provegate/src/core/run/new.ts:439-475,719-774`: **Introduced by this diff.** Moving `substituteConfiguredTokens` first prevents it from reading identity output, but later identity substitutions still read configured output. A read-only probe with `DOCS_ROOT: "{{ID_PREFIX}}/docs"` produced `PRD/docs/[page].md`, not the configured literal `{{ID_PREFIX}}/docs/[page].md`; the tasks path likewise rewrites configured values containing `prd-XXX-{short-name}.md` or `review-XXX-{short-name}.md`. Make all substitutions operate only on occurrences originating in the template. | open |
+| 2 | HIGH | `scripts/verify/verify-quickstart-parity.mjs:161-176,240`: **Introduced by this diff.** The order assertion recognizes only ATX headings. A Setext `5. Close (the runner)` heading can precede the manifest recipe while the required ATX close remains after it; the verifier sees one ATX close after the recipe and passes a document whose rendered close already occurred. Recognize Setext H2 headings or explicitly refuse them in the judged region. | open |
+| 3 | MEDIUM | `packages/provegate/src/core/run/new.ts:738-748`: **Introduced by this diff.** Splitting on both separators unconditionally fixes Windows but breaks POSIX, where `workflow\\tasks` is one literal directory. The file lands at `<root>/workflow\\tasks/wip/...`, requiring `../../_prds/...`, while the implementation emits `../../../_prds/...`. Derive the link with platform path primitives from the actual contained destinations, then convert its separators to `/`. | open |
+| 4 | MEDIUM | `_prds/wip/prd-042-adopter-first-hour.md:155-158`, `_tasks/wip/tasks-042-adopter-first-hour.md:125-128`, `packages/provegate/src/core/run/new.ts:324-325`: **Introduced by this diff.** The round-10 implementation now runs the token pass first, but the binding FR, checked task, and function documentation still require it to run after anchored substitutions. The reviewer briefing and commit message do not update the governing artifacts. Amend every restatement to the deliberate first-pass contract and its literal-output invariant. | open |
 
 ## Post-fix verification
 
-Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity` including its mutation probe, and `pnpm smoke:adopter` (0 failing, 0 stale known-red). A read-only in-memory probe reproduced finding 1. Finding 2 follows from the platform-dependent path semantics at the cited lines. No round-10 fixes were applied.
+Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity` including its mutation probe, and `pnpm smoke:adopter` (0 failing, 0 stale known-red). A read-only probe reproduced finding 1, and Node’s platform path resolution confirmed finding 3. Findings 2 and 4 follow directly from the cited parser and governing text. No round-11 fixes were applied.

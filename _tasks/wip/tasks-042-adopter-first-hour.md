@@ -123,9 +123,9 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
         parent and may never be `skipped`.
 
 - [x] 4.0 Token substitution pass (FR-2)
-  - [x] 4.1 `new.ts` — a pass that runs AFTER the existing anchored substitutions and changes
-        none of them; the seven-row table is the closed set, applied unconditionally in a single
-        callback pass so replacements stay literal.
+  - [x] 4.1 `new.ts` — the token table and the anchored substitutions are applied in ONE sweep
+        over the template's bytes, so neither reads the other's output; the seven-row table is
+        the closed set and every replacement is literal.
   - [x] 4.2 Precedence: `prompts.values` wins for `CMD_TEST_SCOPED` and `DOCS_ROOT`; the rest are
         config-only; an absent or empty source is not a substitution.
   - [x] 4.3 Unresolved tokens: one `[new] unresolved tokens: …` line, sorted, deduplicated, on
