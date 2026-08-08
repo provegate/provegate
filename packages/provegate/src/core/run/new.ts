@@ -417,13 +417,31 @@ function dropSection(content: string, heading: string): string {
 
 export function instantiateTemplate(
   config: WorkflowConfig,
-  template: string,
+  templateInput: string,
   id: string,
   slug: string,
   cls: string | undefined,
   now: Date,
 ): string {
+  // An id prefix may not itself look like a template token. The token pass runs
+  // BEFORE the identity substitutions (so it can never rescan what they wrote),
+  // and a prefix such as `{{CMD_LINT}}` would therefore be resolved out of the
+  // heading the anchor is about to match. Refusing beats silently renaming the
+  // work item after a lint command.
+  if (/\{\{|\}\}/.test(config.idPattern.prefix)) {
+    throw new Error(
+      `idPattern.prefix ("${config.idPattern.prefix}") looks like a template token — ` +
+        'the token pass would resolve it out of the id heading; pick a literal prefix',
+    );
+  }
+  let template = templateInput;
   const date = now.toISOString().slice(0, 10);
+  // The configured-token pass runs FIRST, over the TEMPLATE's bytes only
+  // (phase-6 round 10, High). Running it last meant it rescanned everything the
+  // identity substitutions had just inserted, so a configured
+  // `idPattern.prefix: "{{CMD_LINT}}"` came back out as `pnpm lint`. Nothing a
+  // substitution writes is ever read by another substitution now.
+  template = substituteConfiguredTokens(config, template);
   // The anchor is substituted AT ITS LINE, not at the first textual match
   // (phase-6 round 5, High): a fenced `# PRD-XXX:` example above the real
   // heading used to receive the edit, leaving the artifact's own title
@@ -464,9 +482,6 @@ export function instantiateTemplate(
     out = dropSection(out, 'Memory Inputs');
     out = dropSection(out, 'Memory Outputs');
   }
-  // Last, and additive: the anchored substitutions above are already done, and
-  // this pass changes none of them.
-  out = substituteConfiguredTokens(config, out);
   return out;
 }
 
@@ -698,7 +713,13 @@ export function createCompanion(
   if (kind === 'tasks') {
     const tasksKind = config.dirs.artifacts.tasks;
     relPath = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${number}-${slug}.md`;
-    const template = readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8');
+    // Token pass FIRST here too (phase-6 round 10, High): running it after the
+    // identity substitutions meant it rescanned the slug, the id and the
+    // configured review path it had just written.
+    const template = substituteConfiguredTokens(
+      config,
+      readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8'),
+    );
     // The link is COMPUTED from the destination, never a hardcoded `../../`
     // (phase-6 round 1, Medium): a configured task directory one level deeper
     // or shallower would otherwise get a link that resolves nowhere, and a
@@ -711,9 +732,12 @@ export function createCompanion(
     // `..` collapses too (phase-6 round 3, Medium): `workflow/tasks/../plans`
     // WRITES under `workflow/plans`, and counting the raw segments produced a
     // link that climbed above the repository root.
+    // BOTH separators (phase-6 round 10, Medium): a configured
+    // `tasks.dir: "workflow\\tasks"` resolves as two directories on Windows,
+    // and counting only `/` produced a link one level short.
     const normalize = (p: string): string[] => {
       const out: string[] = [];
-      for (const seg of p.split('/')) {
+      for (const seg of p.split(/[\\/]/)) {
         if (seg === '' || seg === '.') continue;
         if (seg === '..') out.pop();
         else out.push(seg);
@@ -748,7 +772,6 @@ export function createCompanion(
             ? `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``
             : `review-${number}-${slug}.md`,
       );
-    content = substituteConfiguredTokens(config, content);
   } else {
     relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
     const template = readFileSync(shippedTemplatePath('review-template.md'), 'utf8');

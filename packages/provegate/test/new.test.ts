@@ -1042,3 +1042,38 @@ describe('phase-6 round 9 fixes (PRD-042)', () => {
     expect(tasks).toContain('audits/review-XXX-{short-name}.md/review-001-rescan.md');
   });
 });
+
+describe('phase-6 round 10 fixes (PRD-042)', () => {
+  it('never rescans bytes an identity substitution inserted', () => {
+    const root = tempRoot();
+    // The token pass runs first, over template bytes only, so nothing the
+    // identity substitutions write is read by it.
+    const text = readFileSync(createPrd(cfg, root, { slug: 'cmd-lint-slug' }).path, 'utf8');
+    expect(text).toContain('> **Slug**: `cmd-lint-slug`');
+  });
+
+  it('refuses an id prefix that looks like a template token', () => {
+    const root = tempRoot();
+    const config = { ...cfg, idPattern: { ...cfg.idPattern, prefix: '{{CMD_LINT}}' } };
+    // Such a prefix would be resolved out of the very heading the anchor
+    // matches — the work item would be renamed after a lint command.
+    expect(() => createPrd(config, root, { slug: 'token-prefix' })).toThrow(
+      /looks like a template token/,
+    );
+  });
+
+  it('counts a backslash-separated tasks directory as directories', () => {
+    const root = tempRoot();
+    const config = {
+      ...cfg,
+      dirs: {
+        ...cfg.dirs,
+        artifacts: { ...cfg.dirs.artifacts, tasks: { dir: 'workflow\\tasks', prefix: 'tasks' } },
+      },
+    };
+    createPrd(config, root, { slug: 'winsep' });
+    const text = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    const up = '..' + '/';
+    expect(text).toContain(`](${up.repeat(3)}_prds/wip/prd-001-winsep.md)`);
+  });
+});
