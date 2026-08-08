@@ -1116,3 +1116,25 @@ describe('phase-6 round 12 fixes (PRD-042)', () => {
     expect(review).toContain('> **Verdict:**\n');
   });
 });
+
+describe('phase-6 round 13 fixes (PRD-042)', () => {
+  it('resolves a token that shares the id-anchor line', () => {
+    const root = tempRoot();
+    const path = join(root, 'anchor-token.md');
+    // A supported custom template may put a token on the heading line. Handling
+    // that line with a bare replace left every other rule off it.
+    writeFileSync(
+      path,
+      readFileSync(shippedTemplate, 'utf8').replace(
+        '# {{ID_PREFIX}}-XXX: [Feature Name]',
+        '# {{ID_PREFIX}}-XXX: {{CMD_LINT}} sweep',
+      ),
+    );
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'anchor-token', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).toContain(`# PRD-001: ${cfg.commands.lint} sweep`);
+    expect(text).not.toContain('{{CMD_LINT}}');
+  });
+});

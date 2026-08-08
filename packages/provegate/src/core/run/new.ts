@@ -440,10 +440,16 @@ export function instantiateTemplate(
     [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match],
   ];
 
+  // The anchor line goes through the SAME sweep (phase-6 round 13, High), with
+  // the anchor rule FIRST in the alternation. Handling it with a bare
+  // `line.replace` left every other rule off that one line: a supported custom
+  // template headed `# {{ID_PREFIX}}-XXX: {{CMD_LINT}}` kept its token.
+  const anchorRules: Array<[RegExp, (match: string) => string]> = [
+    [anchor, () => `# ${id}: `],
+    ...rules,
+  ];
   let out = lines
-    .map((line, i) =>
-      i === anchorLine ? line.replace(anchor, () => `# ${id}: `) : applyOnce(line, rules),
-    )
+    .map((line, i) => applyOnce(line, i === anchorLine ? anchorRules : rules))
     .join('\n');
 
   // A contract the repository cannot enforce is instruction the reader must

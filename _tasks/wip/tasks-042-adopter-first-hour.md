@@ -195,10 +195,11 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
   - [x] 11.2 Durable-artifacts check against the PRD's declaration. PRD-042 declares
         `_brain/learnings/the-first-hour-is-a-surface.md` as its Memory Output, and Durable
         Artifacts repeats it — the record must exist in the closing diff.
-  - [ ] 11.3 Summary written to `_docs/wip/summary-042-adopter-first-hour.md`. `gate run` NOT
-        run: the committed review artifact carries round 11's `fail`, so the Phase-6 gate would
-        refuse — correctly. A review round against the current tree, and the base-branch
-        decision, are both the owner's.
+  - [ ] 11.3 Summary written to `_docs/wip/summary-042-adopter-first-hour.md`. `gate run` WAS
+        executed on the owner's instruction: every gate through Phase 5 passed and it stopped at
+        Phase 6 on the committed review artifact's `fail`, which is the gate working. The
+        base-branch decision is made — `branches.base` is `development`. What remains is a review
+        round whose verdict is `pass`, and only an independent reviewer can write it.
 
 ---
 
@@ -223,7 +224,7 @@ One row per PRD §11 command, pre-populated `pending`; evidence filled at Phase 
 | test               | `pnpm test`                                      | repo                    | passed  | 8/8 tasks                  |                             |
 | build              | `pnpm build`                                     | repo                    | passed  | 4/4 tasks                  |                             |
 | smoke              | `pnpm smoke:adopter`                             | adopter fixture         | passed  | 0 failing, 0 stale         | delivered CLI still closes  |
-| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | failed  | round 11: Critical 0, High 2, Medium 2 — all fixed after it was written | needs a round against the current tree |
+| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | failed  | round 13: Critical 0, High 1, Medium 1 — both fixed after it was written | the artifact records the last round RUN, not the current tree |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -278,12 +279,15 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
   edits, would have meant landing a change that knowingly breaks the only check that watches an
   install. Both files are added to the PRD's Conflict Surface in the same change, which is the
   declaration this repository requires rather than the silence it refuses.
-- **Base-branch mismatch surfaced, not resolved:** `workflow.config.json` has no `branches`
-  block, so `branches.base` defaults to `main`, while this work and the last thirteen commits
-  live on `development` under the repository's GitHub flow. `gate run`'s merge step would merge
-  into a local `main` that lacks them. Phases 4–6 ran here; the merge is left to the owner, and
-  whether `branches.base` should become `development` is a branch-policy decision, not an
-  implementer's.
+- **Base-branch mismatch surfaced and RESOLVED by the owner (2026-08-08):**
+  `workflow.config.json` had no `branches` block, so the base defaulted to `main` while every
+  commit since the GitHub flow landed goes to `development` — `gate run` would have merged into
+  a local `main` that lacks them. `branches.base` is now `development`; the generated prompt
+  store went stale with it (three protocols name the base in rendered text) and was reinstalled
+  the documented way, `gate check --prompts` reporting 30 current. The pre-commit base guard
+  still protects only `main`, so direct commits to `development` remain possible — a separate
+  decision, and the guard is a pack-drift twin, so it moves with its packed copy or not at
+  all.
 
 ---
 

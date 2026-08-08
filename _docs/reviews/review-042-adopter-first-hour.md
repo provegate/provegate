@@ -5,21 +5,21 @@
 > **Reviewer:** codex (gpt-5), read-only sandbox
 > **Base SHA:** `5552a11233e661048808d5d1bb6a2f7378f27095`
 > **Critical:** 0
-> **High:** 2
-> **Medium:** 0
+> **High:** 1
+> **Medium:** 1
 > **Quorum:** 0/1 pass
 
 ## Summary
 
-Round 12 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. The round-11 path-depth and Setext fixes work, but the claimed single sweep was applied only to PRD body lines: companion-task identity substitutions still rescan configured output, while configured tokens on the PRD anchor line are skipped. The quickstart verifier can still miss a rendered Close heading containing inline Markdown. Both findings are introduced by this diff, not pre-existing properties made reachable. `idAnchor`, `dropSection`, companion containment/atomicity and ID width, CLI grammar, the Phase-6 task path, unconditional placeholder substitution, and both changed tests otherwise satisfy the reviewed contract. The changed tests assert the new behavior rather than loosen old expectations. The `development` base is consistently consumed by the runtime and regenerated prompt store. The upheld entity rejection remains closed and carries no debt.
+Round 13 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. Both round-12 fixes hold, but the PRD ID-heading special case still bypasses the single substitution sweep and can leave a resolvable configured token untouched. Phase-7 artifacts also describe superseded review, test, gate-run, and base-branch state. Both findings are introduced by this diff, not pre-existing properties merely made reachable. The `development` base is coherent with the runtime and regenerated prompt store; `idAnchor`, unconditional configured-token handling elsewhere, `dropSection`, companion containment/atomicity and exact-width ID parsing, CLI grammar, Phase-6 path, quickstart ordering, and both changed tests otherwise satisfy the reviewed contract. The upheld entity rejection and tracked unfilled-PRD follow-up remain outside this verdict.
 
 ## Findings
 
 | # | Sev | Finding | Resolution |
 | --- | --- | --- | --- |
-| 1 | HIGH | `packages/provegate/src/core/run/new.ts:456-473,712-765`: **Introduced by this diff.** The implementation is not one sweep over every identity and configured-token occurrence. `createCompanion(..., "tasks")` substitutes configured tokens first, then later `replaceAll("prd-XXX-{short-name}.md", …)` and the review-path replacement reinterpret configured command bytes; for example, a configured command containing `prd-XXX-{short-name}.md` is silently rewritten to the current PRD filename. Conversely, `instantiateTemplate` handles the ID-anchor line separately, so a resolvable token in that line’s title remains unresolved. Put the ID anchor, task identities, and configured-token table into one replacement over each template’s original bytes. | open |
-| 2 | HIGH | `scripts/verify/verify-quickstart-parity.mjs:171-205,260`: **Introduced by this diff.** “Heading text” is still raw Markdown text. A rendered heading such as `## **5. Close (the runner)**` before the recipe is ignored; retaining an unformatted `## 5. Close (the runner)` after the recipe gives exactly one recognized hit and passes, although a linear reader met Close first. Normalize supported inline heading content or fail closed on additional Close-shaped rendered headings. | open |
+| 1 | HIGH | `packages/provegate/src/core/run/new.ts:443-446`: **Introduced by this diff.** `instantiateTemplate` sends every non-anchor line through `applyOnce`, but handles the ID-anchor line with `line.replace(anchor, …)` alone. A supported custom template headed `# {{ID_PREFIX}}-XXX: {{CMD_LINT}}` therefore produces `# PRD-001: {{CMD_LINT}}` despite a non-empty configured lint command, violating FR-2’s every-token and one-sweep requirements. Include the anchor identity rule and configured-token rule in one sweep over that original line and add this exact regression. | open |
+| 2 | MEDIUM | `_tasks/wip/tasks-042-adopter-first-hour.md:204-226,281-286` and `_docs/wip/summary-042-adopter-first-hour.md:86-101,113-130`: **Introduced by this diff.** The close artifacts remain on round 11/1443 tests, say `gate run` was not executed, and claim `workflow.config.json` lacks a `branches` block even though round 12, 1445 tests, the supplied gate run, and `branches.base: "development"` are current. Refresh the ledger, Phase-7 task state, verification counts, and ship-readiness narrative after the final review. | open |
 
 ## Post-fix verification
 
-Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity` with its existing mutation probe, and `pnpm smoke:adopter` (0 failing, 0 stale known-red). Findings 1 and 2 follow from the cited replacement and heading-comparison paths; the existing tests do not exercise either counterexample. No round-12 fixes were applied.
+Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks, 1445 package tests), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity`, `pnpm smoke:adopter`, and `gate check PRD-042`. A read-only direct probe of `instantiateTemplate` produced `# PRD-001: {{CMD_LINT}}`, confirming finding 1. No round-13 fixes were applied.

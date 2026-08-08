@@ -83,8 +83,8 @@ instantiation, the memory-on failure under the omission, the four drift refusals
 anchor alternation. Two structural assertions are mutation-proven — moving the manifest recipe
 past the close fails the verifier, and a competing recipe fence fails it too.
 
-The adversarial rounds drove most of the coverage: 11 independent review rounds, 40+ findings,
-each closed with a test that fails without the fix. Package suite: 1443 tests.
+The adversarial rounds drove most of the coverage: 13 independent review rounds, 45+ findings,
+each closed with a test that fails without the fix. Package suite: 1445 tests.
 
 ---
 
@@ -95,10 +95,10 @@ each closed with a test that fails without the fix. Package suite: 1443 tests.
 | types | monorepo | passed | 5/5 turbo tasks | |
 | lint | monorepo | passed | 0 errors | |
 | build | monorepo | passed | 4/4 turbo tasks | |
-| tests | monorepo | passed | 8/8 tasks, 1443 package tests | |
+| tests | monorepo | passed | 8/8 tasks, 1445 package tests | |
 | workflow | repo | passed | `verify:workflow` PASS | includes brain, memory corpus, quickstart parity |
 | smoke | adopter fixture | passed | 0 failing, 0 stale known-red | packs the CLI, installs it, closes a PRD |
-| independent-review | repo | **failed** | `_docs/reviews/review-042-adopter-first-hour.md` — round 11, Critical 0, High 2, Medium 2, all since fixed | the artifact records the last round RUN, not the current tree |
+| independent-review | repo | **failed** | `_docs/reviews/review-042-adopter-first-hour.md` — round 13, Critical 0, High 1, Medium 1, both since fixed | the artifact records the last round RUN, not the current tree |
 
 Allowed results: `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -113,21 +113,17 @@ None — PRD-042 is `Autonomous Close: eligible` and produced no operator-owned 
 ## Ship Readiness
 
 **Code Complete.** Not `Ship Verified`, and the reason is mechanical rather than a judgement: the
-committed review artifact carries round 11's `fail`, because round 11's findings were fixed after
-it was written and no round has run against the current tree. The Phase-6 gate reads that
-artifact and will refuse — correctly. Declaring otherwise would be exactly the self-declared
-green this workflow exists to prevent.
+committed review artifact carries the last round's `fail`, because that round's findings were
+fixed after it was written. The Phase-6 gate reads that artifact and refuses — `gate run` was
+executed and stopped exactly there, with every gate through Phase 5 green. Declaring otherwise
+would be the self-declared green this workflow exists to prevent, and the author cannot write
+the verdict on their own work.
 
-Two things stand between here and a close, and both are the owner's:
-
-1. **A review round against the current tree.** Rounds 8–11 each closed every finding of the one
-   before; the last three were second-order effects of the fixes themselves, and both were closed
-   as classes rather than as points.
-2. **The base-branch mismatch.** `workflow.config.json` declares no `branches` block, so
-   `branches.base` defaults to `main`, while this work and the twenty commits before it live on
-   `development` under the repository's GitHub flow. `gate run`'s merge step would merge into a
-   local `main` that lacks them. Whether `branches.base` should become `development` is a
-   branch-policy decision, not an implementer's.
+The base-branch question is settled: the owner set `branches.base` to `development` on
+2026-08-08, and the merge target now matches where the work lives. What remains is one review
+round whose verdict is `pass` — thirteen have run, each closing every finding of the one before,
+and the last several were second-order effects of the fixes themselves, closed as classes rather
+than as points.
 
 ---
 
