@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-08T04:19:30.038Z",
+  "generatedAt": "2026-08-08T04:42:49.438Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1531,13 +1531,13 @@
         "prd": "_prds/wip/prd-042-adopter-first-hour.md",
         "readiness": "_readiness/wip/readiness-042-adopter-first-hour.md",
         "tasks": "_tasks/wip/tasks-042-adopter-first-hour.md",
-        "summary": ""
+        "summary": "_docs/wip/summary-042-adopter-first-hour.md"
       },
       "artifactStates": {
         "prd": "wip",
         "readiness": "wip",
         "tasks": "wip",
-        "summary": "missing"
+        "summary": "wip"
       },
       "readiness": {
         "score": 8.1,
@@ -1547,12 +1547,12 @@
       },
       "task": {
         "status": "Code Complete",
-        "checkedCount": 52,
-        "uncheckedCount": 8,
+        "checkedCount": 59,
+        "uncheckedCount": 1,
         "operatorHandoffCount": 0
       },
       "summary": {
-        "shipReadiness": "Unknown"
+        "shipReadiness": "Code Complete"
       },
       "lastUpdated": "2026-08-07"
     },

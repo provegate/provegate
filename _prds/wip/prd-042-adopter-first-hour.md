@@ -353,6 +353,12 @@ the same commit or the check fails, which is the point of it.
 - applied: `a-rule-corrected-survives-where-it-is-restated` — the seven-token set is restated in
   §1, §2's metric, §4's table and §11. FR-2's table is the single source; a correction sweeps all
   four, and the §11 count row is what catches a stale restatement.
+- not-applicable: `the-first-hour-is-a-surface` — this item's OWN Memory Output, watching the
+  diff that creates it. It cannot have shaped work that produced it; the disposition exists
+  because the watch fires on any closing diff that touches `new.ts` or `QUICKSTART.md`, which is
+  every diff this item makes.
+- not-applicable: `one-sweep-not-two-passes` — likewise newborn here, appended during Phase 6.
+  Its content is the conclusion of this work, not an input to it.
 - reviewed: `docs-are-a-wiring-surface` — `practices/**` watch; FR-6 corrects heading numbering
   in NEXT_STEPS and registers or deregisters nothing.
 - reviewed: `fixture-must-reach-production-shape` — `cli.ts` watch; FR-1's tests drive the CLI
@@ -369,6 +375,12 @@ the same commit or the check fails, which is the point of it.
 - learning: `_brain/learnings/the-first-hour-is-a-surface.md` — the steps between install and
   first close are a product surface with no gate over it; self-hosting cannot see them because
   the maintainers performed each one so often they stopped noticing they were performing it.
+- learning: `_brain/learnings/one-sweep-not-two-passes.md` — APPENDED during implementation,
+  which the contract allows with a rationale. Phase 6 spent three rounds on one composition
+  defect: two substitution passes over a document always let one read the other's output, and
+  ordering them only chooses the direction. The fact is not derivable from the diff — the diff
+  shows the final single sweep, not the two orderings that failed — and it generalizes past this
+  module.
 
 ---
 
@@ -395,6 +407,7 @@ the same commit or the check fails, which is the point of it.
 
 - `_brain/learnings/the-first-hour-is-a-surface.md` — every Memory Output above repeats here;
   the two lists are one contract and Phase 7 refuses when they disagree
+- `_brain/learnings/one-sweep-not-two-passes.md` — the appended output, repeated here
 - ADR: `none`
 
 ---

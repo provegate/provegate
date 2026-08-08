@@ -32,6 +32,8 @@
 - [a rule that exempts itself](learnings/a-rule-that-exempts-itself.md) — the gated party evaluating its own exception is not gated; move the predicate to the decision owner
 - [metadata declares what it cannot provide](learnings/metadata-declares-what-it-cannot-provide.md) — a declared capability with no asset degrades silently; assert declaration-asset coherence
 - [runner sentinel blocks CLI-spawning tests](learnings/runner-sentinel-blocks-cli-spawning-tests.md) — a §11 row reaching tests that spawn the gate CLI fails under gate run; route whole-suite rows through turbo
+- [the first hour is a surface](learnings/the-first-hour-is-a-surface.md) — install-to-first-close is a product surface no source-reading gate can see; measure it from outside
+- [one sweep not two passes](learnings/one-sweep-not-two-passes.md) — two substitution passes always let one read the other's output; ordering only picks the direction
 
 ## Orchestration & close gotchas
 

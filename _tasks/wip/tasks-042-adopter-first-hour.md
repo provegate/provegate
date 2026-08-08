@@ -181,21 +181,24 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
         fixture fill script's substitutions shrink because FR-2 now does them.
   - [x] 9.4 Add the changeset: the two new modes, the help line, the quickstart reordering.
 
-- [ ] 10.0 Phase 6 — Final Auditing
-  - [ ] 10.1 Independent adversarial review of the diff by an agent that did not write it
+- [x] 10.0 Phase 6 — Final Auditing
+  - [x] 10.1 Independent adversarial review of the diff by an agent that did not write it
         (`codex exec --sandbox read-only`), saved to
         `_docs/reviews/review-042-adopter-first-hour.md` with all six metadata fields.
-  - [ ] 10.2 Sweep, do not hunt: the token set is restated in §1, §2, §4 and §11 — confirm all
+  - [x] 10.2 Sweep, do not hunt: the token set is restated in §1, §2, §4 and §11 — confirm all
         four agree after every correction (`a-rule-corrected-survives-where-it-is-restated`).
-  - [ ] 10.3 Verify each closure by reading the file back; a changelog row is not evidence. This
+  - [x] 10.3 Verify each closure by reading the file back; a changelog row is not evidence. This
         item's own readiness cost three rounds to a silently-failed edit.
 
-- [ ] 11.0 Phase 7 — Learning
-  - [ ] 11.1 Knowledge ingest: capture any non-derivable trap as a `_brain/learnings/` record.
-  - [ ] 11.2 Durable-artifacts check against the PRD's declaration. PRD-042 declares
+- [x] 11.0 Phase 7 — Learning
+  - [x] 11.1 Knowledge ingest: capture any non-derivable trap as a `_brain/learnings/` record.
+  - [x] 11.2 Durable-artifacts check against the PRD's declaration. PRD-042 declares
         `_brain/learnings/the-first-hour-is-a-surface.md` as its Memory Output, and Durable
         Artifacts repeats it — the record must exist in the closing diff.
-  - [ ] 11.3 Summary in `_docs/wip/`, then `gate run PRD-042` from the primary checkout.
+  - [ ] 11.3 Summary written to `_docs/wip/summary-042-adopter-first-hour.md`. `gate run` NOT
+        run: the committed review artifact carries round 11's `fail`, so the Phase-6 gate would
+        refuse — correctly. A review round against the current tree, and the base-branch
+        decision, are both the owner's.
 
 ---
 
@@ -220,7 +223,7 @@ One row per PRD §11 command, pre-populated `pending`; evidence filled at Phase 
 | test               | `pnpm test`                                      | repo                    | passed  | 8/8 tasks                  |                             |
 | build              | `pnpm build`                                     | repo                    | passed  | 4/4 tasks                  |                             |
 | smoke              | `pnpm smoke:adopter`                             | adopter fixture         | passed  | 0 failing, 0 stale         | delivered CLI still closes  |
-| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | pending |          | verdict pass, critical = 0  |
+| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | failed  | round 11: Critical 0, High 2, Medium 2 — all fixed after it was written | needs a round against the current tree |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -293,6 +296,8 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-08-07 | 4     | W1–W3 closed in the PRD, then FR-1..FR-6 implemented on `feat/prd-042-adopter-first-hour` |
 | 2026-08-07 | 5     | Every §11 command run; ledger filled with evidence; changeset added |
 | 2026-08-07 | 6     | Independent review commissioned (codex, read-only sandbox) |
+| 2026-08-08 | 6     | Eleven review rounds; 40+ findings closed, one rejection upheld; Critical 0 since round 2 |
+| 2026-08-08 | 7     | Two learnings captured and indexed; the appended output recorded with its rationale; summary written. Close left to the owner |
 
 ---
 
