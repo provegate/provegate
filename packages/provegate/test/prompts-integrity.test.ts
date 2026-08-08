@@ -1011,13 +1011,18 @@ describe('migration (PRD-034 §7)', () => {
 
     // And the production template resolver reads the MOVED template. The §7
     // claim is resolution — `gate new` reads `templates.prd` at the new
-    // spelling, never the abandoned one — and the error classes discriminate:
-    // the moved template is READ and fails on its content (the anchor-drift
-    // error: rendering substitutes `{{ID_PREFIX}}`, which `gate new`'s anchor
-    // still expects — an inherited PRD-029 defect, recorded as a deferral),
-    // while the abandoned spelling never gets that far.
+    // spelling, never the abandoned one.
+    //
+    // This assertion CHANGED with PRD-042 FR-5, and the change is the point:
+    // it used to pin the anchor-drift ERROR, because a rendered store
+    // substitutes `{{ID_PREFIX}}` away and `gate new`'s anchor only knew the
+    // token form. That was the inherited PRD-029 defect (every PRD in this
+    // repository was hand-created because of it), and the id anchor is now a
+    // two-member alternation. The moved template is still READ — which is what
+    // §7 claims — and now it also instantiates.
     const created = await gate(root, 'new', 'migration-probe');
-    expect(created.stderr).toContain('template anchor not found');
+    expect(created.code, created.stdout + created.stderr).toBe(0);
+    expect(created.stdout).toContain('migration-probe');
     expect(created.stderr).not.toMatch(/ENOENT|no such file/);
 
     // Control: the ABANDONED spelling fails as a missing file, proving the
@@ -1031,8 +1036,8 @@ describe('migration (PRD-034 §7)', () => {
       },
       { templates: { prd: 'pg\\store/templates/prd-template.md' } },
     );
-    const stale = await gate(root, 'new', 'migration-probe');
+    const stale = await gate(root, 'new', 'migration-probe-2');
     expect(stale.code).toBe(1);
-    expect(stale.stderr).not.toContain('template anchor not found');
+    expect(stale.stderr).toMatch(/ENOENT|no such file/);
   });
 });

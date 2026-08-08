@@ -63,8 +63,14 @@ you touched anything guarded. You want PASS (≥ 8, no caps tripped) — the ver
 binary; don't negotiate tenths.
 
 Then `prompts/phase-3-task-generator.md` → the task file (repro → fix → verify → doc →
-quality gate skeleton), saved to `_tasks/wip/tasks-001-fix-login-timeout.md`. You
-approve the plan. That's the last human gate before the machines take over.
+quality gate skeleton). Create it with the CLI rather than by hand — it knows the path
+the Phase-6 gate reads:
+
+```sh
+npx gate new --tasks PRD-001
+```
+
+You approve the plan. That's the last human gate before the machines take over.
 
 ## 4. Implement and prove (Phases 4–7)
 
@@ -72,8 +78,43 @@ Your agent follows `prompts/phase-4-implementation.md` on a feature branch: fix,
 inline gates after every step, the regression test written next to the fix. Phase 5 is
 `prompts/phase-5-testing.md`: run every §11 command for real — a listed-but-not-run
 command is never passed. Phase 6: an agent that did not write the code reviews the
-diff (`prompts/phase-6-final-auditing.md`) and saves the verdict artifact from
-`templates/review-template.md`. Phase 7: update the docs your PRD declared.
+diff (`prompts/phase-6-final-auditing.md`) and saves the verdict artifact — start it with
+`npx gate new --review PRD-001`, which writes the shipped template to the path the gate
+reads and leaves `Base SHA`, `Verdict` and `Quorum` for the reviewer. Phase 7: update the
+docs your PRD declared.
+
+## Single-package repos
+
+`gate` is **repo-layout-agnostic** — a monorepo is not required. "Workspace" means
+your git repo root, and `gate init` scaffolds only the workflow tree (`_prds/`,
+`_tasks/`, …); it never creates `apps/`/`packages/` or a `pnpm-workspace.yaml`.
+The one thing to configure is which gate commands run — and nothing assumes pnpm
+or turbo.
+
+What `gate init` leaves you depends on which mode you ran, and the two differ in a way
+worth knowing: `--practices` writes `{ "phases": { "7": [ … ] } }` — `phases."4"` is
+**absent**, and an absent key inherits the built-in floor (`pnpm check-types`, `lint`,
+`build`, `test`), so Phase 4 already runs. Plain `gate init` writes
+`{ "phases": { "4": [] }, "postMerge": [] }`, and an **empty array erases** rather than
+inherits, so no floor command runs at all.
+
+Either way, write your own commands in once your script names are known —
+`phases."4"` is the floor the run executes, `postMerge` runs after the local merge:
+
+```json
+{
+  "phases": {
+    "4": ["npm run check-types", "npm run lint", "npm run test", "npm run build"]
+  },
+  "postMerge": ["npm run check-types", "npm run build"]
+}
+```
+
+The commands are plain strings, so any **allowlisted** invocation works — `npm`,
+`npx`, `yarn`, `bun`, `node`, `tsx`, `vitest`. A direct toolchain via `npx` is fine
+(`npx tsc --noEmit`, `npx eslint .`, `npx vitest run`); bare `tsc`/`eslint` are not
+allowlisted by default — use `npx …` or add the prefix to `commands.allowedPrefixes`.
+`gate check --wiring` confirms every gate is wired or excepted.
 
 ## 5. Close (the runner)
 
@@ -111,39 +152,6 @@ thing it wires. Everything else is a printed manual step — the `package.json` 
 add, the CI job to run them in, and the agent-entry shims to paste. That list is
 `NEXT_STEPS.md`, printed at the end of the install and kept in the package. Editing your
 `package.json` and your CI config is not something a scaffold should do without you.
-
-## Single-package repos
-
-`gate` is **repo-layout-agnostic** — a monorepo is not required. "Workspace" means
-your git repo root, and `gate init` scaffolds only the workflow tree (`_prds/`,
-`_tasks/`, …); it never creates `apps/`/`packages/` or a `pnpm-workspace.yaml`.
-The one thing to configure is which gate commands run — and nothing assumes pnpm
-or turbo.
-
-What `gate init` leaves you depends on which mode you ran, and the two differ in a way
-worth knowing: `--practices` writes `{ "phases": { "7": [ … ] } }` — `phases."4"` is
-**absent**, and an absent key inherits the built-in floor (`pnpm check-types`, `lint`,
-`build`, `test`), so Phase 4 already runs. Plain `gate init` writes
-`{ "phases": { "4": [] }, "postMerge": [] }`, and an **empty array erases** rather than
-inherits, so no floor command runs at all.
-
-Either way, write your own commands in once your script names are known —
-`phases."4"` is the floor the run executes, `postMerge` runs after the local merge:
-
-```json
-{
-  "phases": {
-    "4": ["npm run check-types", "npm run lint", "npm run test", "npm run build"]
-  },
-  "postMerge": ["npm run check-types", "npm run build"]
-}
-```
-
-The commands are plain strings, so any **allowlisted** invocation works — `npm`,
-`npx`, `yarn`, `bun`, `node`, `tsx`, `vitest`. A direct toolchain via `npx` is fine
-(`npx tsc --noEmit`, `npx eslint .`, `npx vitest run`); bare `tsc`/`eslint` are not
-allowlisted by default — use `npx …` or add the prefix to `commands.allowedPrefixes`.
-`gate check --wiring` confirms every gate is wired or excepted.
 
 ## Where to go next
 

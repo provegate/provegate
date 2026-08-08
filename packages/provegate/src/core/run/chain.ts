@@ -532,7 +532,32 @@ export function buildGateChain(options: {
       label: 'independent-review ledger + schema',
       fn: () => {
         if (!tasksContent) {
-          return { ok: false, why: 'no tasks file — independent-review ledger missing' };
+          // PRD-042 FR-4: name the path and the row. The first external adopter
+          // run stopped here and had to reverse-engineer both from the package's
+          // templates directory — a stop that knows what it wants and does not
+          // say so is a puzzle, not a gate.
+          const tasksKind = config.dirs.artifacts.tasks;
+          const expected = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${String(record.number).padStart(config.idPattern.width, '0')}-${record.slug}.md`;
+          // A prefix carrying a path separator names a file the state reader
+          // can never index, and `gate new --tasks` refuses it (phase-6 round
+          // 9, Medium). Recommending that command here would send an adopter
+          // to a refusal instead of to the configuration that caused it.
+          if (/[\\/]/.test(tasksKind.prefix)) {
+            return {
+              ok: false,
+              why:
+                `dirs.artifacts.tasks.prefix ("${tasksKind.prefix}") contains a path separator, ` +
+                'so the task artifact would be written where the state reader cannot index it — ' +
+                'fix the prefix before creating the file',
+            };
+          }
+          return {
+            ok: false,
+            why:
+              `no tasks file at ${expected} — create it with \`gate new --tasks ${record.prd}\`. ` +
+              'Its Verification Ledger needs an `independent-review` row whose Command / Check ' +
+              'names the review artifact path and whose Result is `passed`',
+          };
         }
         const check = validateTasksReviewRow(config, root, tasksContent, record.number);
         return check.ok ? { ok: true } : { ok: false, why: check.issues.join('; ') };

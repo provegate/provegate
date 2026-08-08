@@ -84,3 +84,45 @@ describe('cli skeleton', () => {
     expect(result.stderr).toContain('unknown command');
   });
 });
+
+describe('discoverability (PRD-042 FR-6)', () => {
+  it('the new help line advertises --tasks and --review', async () => {
+    const result = await cli('--help');
+    const line = result.stdout.split('\n').find((l) => l.trim().startsWith('new '));
+    // A feature the help text does not mention is a feature an adopter does not
+    // find: the first external run copied templates by hand because of this.
+    expect(line).toBeTruthy();
+    expect(line).toContain('--tasks');
+    expect(line).toContain('--review');
+  });
+});
+
+describe('gate new argument arity (PRD-042, phase-6 round 1)', () => {
+  it('refuses a bare value option instead of ignoring it', async () => {
+    const result = await cli('new', '--tasks', 'PRD-001', '--class');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('--class needs a value');
+  });
+
+  it('refuses a second positional instead of silently writing the first', async () => {
+    const result = await cli('new', 'first', 'second');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('one slug per PRD');
+  });
+});
+
+describe('gate new id position (PRD-042, phase-6 round 7)', () => {
+  it('refuses an id that precedes its flag', async () => {
+    const result = await cli('new', 'prd-001', '--tasks');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('the id follows --tasks');
+  });
+});
+
+describe('gate new artifact flag grammar (PRD-042, phase-6 round 8)', () => {
+  it('refuses the --tasks=<ID> spelling the spec does not declare', async () => {
+    const result = await cli('new', '--tasks=PRD-001');
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('takes the id as a separate argument');
+  });
+});

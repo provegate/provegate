@@ -15,6 +15,22 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { targetRoot, read, makeReporter } from './lib.mjs';
 
+// One fence grammar, shared with the CLI. Imported from the BUILT package so
+// the two can never drift; a missing build is reported as what it is rather
+// than silently degrading to an approximation.
+let fencedLines;
+let fenceSpans;
+try {
+  ({ fencedLines, fenceSpans } = await import('../../packages/provegate/dist/index.js'));
+} catch (error) {
+  console.error(
+    'verify:quickstart-parity: FAIL — packages/provegate/dist is missing; ' +
+      'build the CLI first (this check shares its fence scanner)',
+  );
+  console.error(String(error?.message ?? error));
+  process.exit(1);
+}
+
 const root = targetRoot();
 const r = makeReporter('verify:quickstart-parity');
 
@@ -122,5 +138,142 @@ if (sequences.length === 2) {
   }
   r.note(`${a.commands.length} canonical commands compared across both documents`);
 }
+
+// PRD-042 FR-6: a STRUCTURAL order assertion. Command-sequence equality cannot
+// see prose order, and the order is the point: `gate init` writes an EMPTY
+// manifest, so a reader who meets the close section before the manifest recipe
+// runs the chain with nothing wired. That is exactly what the first external
+// adopter did.
+const ORDER = { before: '## Single-package repos', after: '## 5. Close (the runner)' };
+for (const spec of DOCS) {
+  const abs = join(root, spec.path);
+  if (!existsSync(abs)) continue;
+  const lines = read(abs).split('\n');
+  // The SAME fence scanner the CLI uses, imported from the built package
+  // (phase-6 round 3, High): this file carried an approximation — unlimited
+  // indentation opened a fence and any same-marker run closed it — so an
+  // indented `~~~` pair could hide the real Close heading. Two parsers over one
+  // grammar is how they agree while both are wrong; there is one now.
+  const fenced = fencedLines(lines);
+  // ATX grammar, not raw equality (phase-6 round 7, High): `## 5. Close ##` is
+  // the SAME heading to a renderer, so prepending a closing-sequence form left
+  // the exact string unique while a rendered Close preceded the recipe.
+  // Setext headings count too (phase-6 round 11, High): `5. Close (the runner)`
+  // underlined by `===` is the same heading to a renderer, so recognizing only
+  // ATX let a Setext Close precede the recipe while the ATX one stayed after it.
+  const setext = new Set();
+  lines.forEach((line, i) => {
+    if (i === 0 || fenced[i]) return;
+    if (!/^ {0,3}(=+|-+)[ \t]*$/.test(line)) return;
+    if (fenced[i - 1] || lines[i - 1].trim() === '') return;
+    setext.add(i - 1);
+  });
+  const headingText = (line, index) => {
+    if (setext.has(index)) {
+      return `# ${line.trim().replace(/[*_`]/g, '')}`;
+    }
+    const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*$/.exec(line);
+    if (!m) return null;
+    // Inline emphasis is not part of a heading's identity (phase-6 round 12):
+    // `## **5. Close (the runner)**` is the same heading to a reader, and
+    // comparing raw text let a formatted duplicate sit before the recipe while
+    // the plain one stayed after it. A CLOSED set of markers — `*`, `_` and
+    // backticks — is stripped; this is not renderer parity, it is the three
+    // spellings a heading actually gets written in.
+    // A CLOSING sequence must be preceded by whitespace (phase-6 round 8):
+    // `## Close ###` closes, `## Close###` does not — the hashes are part of
+    // the text. Stripping them unconditionally made two different headings
+    // compare equal.
+    const text = m[2]
+      .replace(/(^|[ \t])#+$/, '')
+      .trimEnd()
+      .replace(/[*_`]/g, '');
+    return `${m[1]} ${text}`;
+  };
+  const findUnique = (heading) =>
+    lines
+      .map((l, i) => {
+        if (fenced[i]) return -1;
+        const text = headingText(l, i);
+        if (text === null) return -1;
+        // Compare on the TEXT, so `## 5. Close` and a Setext `5. Close` are the
+        // same heading — which is what a reader sees.
+        return text.replace(/^#{1,6} /, '') === heading.replace(/^#{1,6} /, '') ? i : -1;
+      })
+      .filter((i) => i >= 0);
+  const beforeHits = findUnique(ORDER.before);
+  const afterHits = findUnique(ORDER.after);
+  if (beforeHits.length !== 1 || afterHits.length !== 1) {
+    r.fail(
+      `${spec.path}: expected exactly one unfenced "${ORDER.before}" and "${ORDER.after}" ` +
+        `heading (found ${beforeHits.length} and ${afterHits.length}) — the order assertion ` +
+        'cannot judge a document whose sections it cannot identify',
+    );
+    continue;
+  }
+  const [before] = beforeHits;
+  const [after] = afterHits;
+  // The heading is not the recipe. Round 1 of PRD-042's review showed the
+  // heading could stay put while the JSON fence moved past the close — the
+  // assertion has to end where the RECIPE ends, so find the manifest fence
+  // inside the section and require its CLOSING line to precede the close.
+  // A recipe is identified STRUCTURALLY and must be UNIQUE in the document
+  // (phase-6 round 2, High): "any fence mentioning phases" let a decoy fence
+  // before Close satisfy the gate while the real floor recipe sat after it.
+  // The recipe is a ```json fence whose parsed object has a `phases` key whose
+  // value names at least one command — an empty decoy fails that test.
+  // Recipe discovery uses the SAME `fenced` map (phase-6 round 4, High): a
+  // second parser here recognized only unindented triple-backtick openers and
+  // accepted a fence nested inside another fence. A fence OPENER is a fenced
+  // line whose predecessor is not fenced; its closer is the last fenced line of
+  // that run.
+  // Fence SPANS, not a derived opener predicate (phase-6 round 5, High): a
+  // closer is fenced too, so a JSON fence opening immediately after another
+  // fence's closer was invisible to `fenced[i] && !fenced[i-1]`.
+  const recipes = [];
+  for (const [i, close] of fenceSpans(lines)) {
+    // Any marker RUN of three or more, not "a multiple of three" (phase-6
+    // round 6, High): a four-backtick JSON fence was invisible to the old
+    // pattern, so a decoy triple fence before Close could carry the check while
+    // the real recipe sat after it.
+    if (!/^ {0,3}(?:`{3,}|~{3,})json[ \t]*$/.test(lines[i])) continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(lines.slice(i + 1, close).join('\n'));
+    } catch {
+      continue;
+    }
+    const phases = parsed && typeof parsed === 'object' ? parsed.phases : undefined;
+    // A command is a NON-EMPTY string: `{"phases":{"4":""}}` used to qualify as
+    // a recipe, which is exactly the decoy shape.
+    const commands = (phases && typeof phases === 'object' ? Object.values(phases).flat() : [])
+      .filter((c) => typeof c === 'string' && c.trim() !== '');
+    if (commands.length > 0) recipes.push({ start: i, end: close });
+  }
+  if (recipes.length !== 1) {
+    r.fail(
+      `${spec.path}: expected exactly one manifest recipe (a \`\`\`json fence whose ` +
+        `\`phases\` names at least one command); found ${recipes.length}. A second ` +
+        'recipe-shaped fence makes the order assertion judge whichever it met first',
+    );
+    continue;
+  }
+  const fenceEnd = recipes[0].end;
+  if (recipes[0].start < before) {
+    r.fail(
+      `${spec.path}: the manifest recipe (line ${recipes[0].start + 1}) sits outside ` +
+        `"${ORDER.before}" (line ${before + 1}) — the section and its recipe belong together`,
+    );
+    continue;
+  }
+  if (before > after || fenceEnd > after) {
+    r.fail(
+      `${spec.path}: the manifest recipe (heading line ${before + 1}, fence ends line ` +
+        `${fenceEnd + 1}) does not finish before "${ORDER.after}" (line ${after + 1}) — ` +
+        'the recipe must precede the close that executes it',
+    );
+  }
+}
+r.note('manifest recipe fence closes before the close section in both documents');
 
 r.done();

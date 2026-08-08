@@ -83,8 +83,14 @@ you touched anything guarded. You want PASS (≥ 8, no caps tripped) — the ver
 binary; don't negotiate tenths.
 
 Then `prompts/phase-3-task-generator.md` → the task file (repro → fix → verify → doc →
-quality gate skeleton), saved to `_tasks/wip/tasks-001-fix-login-timeout.md`. You
-approve the plan. That's the last human gate before the machines take over.
+quality gate skeleton). Create it with the CLI rather than by hand — it knows the path
+the Phase-6 gate reads:
+
+```sh
+npx gate new --tasks PRD-001
+```
+
+You approve the plan. That's the last human gate before the machines take over.
 
 ## 4. Implement and prove (Phases 4–7)
 
@@ -92,27 +98,10 @@ Your agent follows `prompts/phase-4-implementation.md` on a feature branch: fix,
 inline gates after every step, the regression test written next to the fix. Phase 5 is
 `prompts/phase-5-testing.md`: run every §11 command for real — a listed-but-not-run
 command is never passed. Phase 6: an agent that did not write the code reviews the
-diff (`prompts/phase-6-final-auditing.md`) and saves the verdict artifact from
-`templates/review-template.md`. Phase 7: update the docs your PRD declared.
-
-## 5. Close (the runner)
-
-```sh
-npx gate run --dry-run PRD-001   # see the whole plan first
-npx gate run PRD-001
-```
-
-The runner executes the gate chain — floor gates, your §11 commands (safety-checked),
-the review-artifact schema, the durable-docs diff check, the operator gate — then
-archives the artifacts and merges the branch into your local base with post-merge
-verification and auto-revert. It ends with a handoff card whose last line is the whole
-philosophy:
-
-```text
-→ READY TO PUSH — run `git push` yourself (the runner never pushes)
-```
-
-<!-- /qs:scenario -->
+diff (`prompts/phase-6-final-auditing.md`) and saves the verdict artifact — start it with
+`npx gate new --review PRD-001`, which writes the shipped template to the path the gate
+reads and leaves `Base SHA`, `Verdict` and `Quorum` for the reviewer. Phase 7: update the
+docs your PRD declared.
 
 ## Single-package repos
 
@@ -141,6 +130,25 @@ direct toolchain via `npx` is fine — `npx tsc --noEmit`, `npx eslint .`,
 `npx vitest run`. (Bare `tsc`/`eslint` are not allowlisted by default; use `npx …`
 or add the prefix to `commands.allowedPrefixes` in `workflow.config.json`.) Run
 `gate check --wiring` to confirm every gate is wired or honestly excepted.
+
+## 5. Close (the runner)
+
+```sh
+npx gate run --dry-run PRD-001   # see the whole plan first
+npx gate run PRD-001
+```
+
+The runner executes the gate chain — floor gates, your §11 commands (safety-checked),
+the review-artifact schema, the durable-docs diff check, the operator gate — then
+archives the artifacts and merges the branch into your local base with post-merge
+verification and auto-revert. It ends with a handoff card whose last line is the whole
+philosophy:
+
+```text
+→ READY TO PUSH — run `git push` yourself (the runner never pushes)
+```
+
+<!-- /qs:scenario -->
 
 ## The practices layer (optional, recommended)
 

@@ -28,7 +28,7 @@
    lower tier is acceptable.
 7. **Claim before you code:** Record a lock lease for the work item (see METHOD.md →
    Locks) declaring your `ownedPaths` from the PRD's Conflict Surface, and work on a
-   feature branch — never directly on main. `gate queue` shows overlapping
+   feature branch — never directly on development. `gate queue` shows overlapping
    claims; do not start when your surface overlaps an active lease.
 8. **Guard failures are STOP signals:** If a gate fails for a reason unrelated to your
    change (formatting, another item's rows, stale state), stop and report it — do

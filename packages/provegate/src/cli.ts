@@ -46,7 +46,9 @@ import {
   baseWorktreeReady,
   buildGateChain,
   claimPrd,
+  createCompanion,
   createPrd,
+  type CompanionKind,
   initWorkspace,
   planPractices,
   planPrompts,
@@ -125,7 +127,7 @@ function usage(): string {
     '',
     'COMMANDS',
     '  init     scaffold the workflow tree + starter configs (--dry-run) (--practices: install the practices pack)',
-    '  new      create the next PRD from the shipped template (gate new <slug> [--class=X] [--template=path])',
+    '  new      create the next PRD, or a tasks/review artifact for one (gate new <slug> [--class=X] [--template=path] | --tasks <ID> | --review <ID>)',
     '  open     claim a PRD: lease its conflict surface or refuse on overlap ([--steal] [--worktree] [--hours=N])',
     '  renew    extend your lease (idempotent refresh) (gate renew PRD-XXX [--hours=N])',
     '  release  drop a PRD lease under the claim mutex (gate release PRD-XXX [--force])',
@@ -274,15 +276,137 @@ function runInit(args: string[]): number {
   return 0;
 }
 
+const NEW_USAGE =
+  'usage: gate new <slug> [--class=X] [--template=path] | gate new --tasks <ID> | gate new --review <ID>';
+
+/**
+ * `gate new` has three productions and they are mutually exclusive. Each
+ * ambiguous form gets its own refusal naming what was ambiguous: a command that
+ * guesses which production was meant writes the wrong file into the wrong place,
+ * and the adopter finds out at Phase 6.
+ */
 function runNew(args: string[]): number {
-  const unknown = unknownOption(args, ['--class', '--template']);
+  const unknown = unknownOption(args, ['--class', '--template', '--tasks', '--review']);
   if (unknown !== null) {
     console.error(`[new] unknown option ${unknown} — refusing rather than guessing what it meant`);
     return 1;
   }
-  const slug = args.find((a) => !a.startsWith('--'));
+  // A VALUE option written bare (`--class`, `--template`) is refused before
+  // anything dispatches (phase-6 round 1, High). Recognizing the name and not
+  // its form let `gate new --tasks PRD-001 --class` write a tasks file while
+  // silently discarding an argument the author meant to matter.
+  for (const name of ['--class', '--template']) {
+    if (args.includes(name)) {
+      console.error(`[new] ${name} needs a value — write ${name}=<value>`);
+      return 1;
+    }
+    // Cardinality too (phase-6 round 2, Medium): `--class=feature
+    // --class=hotfix` used to take the first and drop the second, which is a
+    // choice the author did not make.
+    const given = args.filter((a) => a.startsWith(`${name}=`));
+    if (given.length > 1) {
+      console.error(
+        `[new] ${name} is given ${given.length} times (${given.join(', ')}) — one value per run`,
+      );
+      return 1;
+    }
+  }
+  const positional = args.filter((a) => !a.startsWith('--'));
+  // FR-1 declares `--tasks <ID>` and `--review <ID>`: the id is a separate
+  // token. The `=` spelling was an unasked-for convenience outside the declared
+  // grammar (phase-6 round 8, Medium), and a command that accepts a form its
+  // own spec does not name is a second grammar nobody reviewed.
+  for (const name of ['--tasks', '--review']) {
+    const equalsForm = args.find((a) => a.startsWith(`${name}=`));
+    if (equalsForm !== undefined) {
+      console.error(
+        `[new] ${name} takes the id as a separate argument — write \`gate new ${name} <ID>\`, not \`${equalsForm}\``,
+      );
+      return 1;
+    }
+  }
+  const tasksFlags = args.filter((a) => a === '--tasks');
+  const reviewFlags = args.filter((a) => a === '--review');
+
+  if (tasksFlags.length > 0 && reviewFlags.length > 0) {
+    console.error('[new] --tasks and --review are separate artifacts — run one, then the other');
+    return 1;
+  }
+  if (tasksFlags.length > 1 || reviewFlags.length > 1) {
+    console.error('[new] the artifact flag is given twice — one artifact per run');
+    return 1;
+  }
+  const artifactFlag = tasksFlags[0] ?? reviewFlags[0];
+  if (artifactFlag !== undefined) {
+    const kind: CompanionKind = tasksFlags.length > 0 ? 'tasks' : 'review';
+    if (args.some((a) => a.startsWith('--class=') || a.startsWith('--template='))) {
+      console.error(
+        `[new] --class and --template belong to the PRD production; --${kind} instantiates the shipped ${kind} template`,
+      );
+      return 1;
+    }
+    // `--tasks PRD-001` (two tokens) and `--tasks=PRD-001` are both accepted;
+    // anything else positional alongside them is ambiguous.
+    // The id must FOLLOW its flag (phase-6 round 7, High). Taking the first
+    // positional regardless of order made `gate new prd-001 --tasks` write a
+    // tasks artifact, although the declared production is `--tasks <ID>` and
+    // that positional is slug-shaped — the command answered a question the
+    // author did not ask.
+    const flagAt = args.indexOf(artifactFlag);
+    const after = args.slice(flagAt + 1).filter((a) => !a.startsWith('--'));
+    const before = args.slice(0, flagAt).filter((a) => !a.startsWith('--'));
+    if (before.length > 0) {
+      console.error(
+        `[new] the id follows --${kind}; "${before[0]}" precedes it — ` +
+          `write \`gate new --${kind} <ID>\``,
+      );
+      return 1;
+    }
+    const id = after[0];
+    const extras = after.slice(1);
+    if (extras.length > 0) {
+      const got = positional;
+      console.error(
+        `[new] --${kind} takes exactly one id; got ${got.map((a) => `"${a}"`).join(', ')} — a slug creates a PRD, not a companion artifact`,
+      );
+      return 1;
+    }
+    if (id === undefined || id === '') {
+      console.error(`[new] --${kind} needs an id, e.g. gate new --${kind} PRD-001`);
+      return 1;
+    }
+    const { root, config } = loadConfig();
+    try {
+      const result = createCompanion(config, root, kind, id);
+      console.log(`[new] created ${result.relPath} for ${result.id}`);
+      if (result.unresolved.length > 0) {
+        console.log(`[new] unresolved tokens: ${result.unresolved.join(', ')}`);
+      }
+      console.log(
+        kind === 'tasks'
+          ? '[new] next: fill the tasks and the Verification Ledger'
+          : '[new] next: the reviewer fills Verdict, Base SHA, the counts and Quorum',
+      );
+      return 0;
+    } catch (error) {
+      console.error(`[new] ${error instanceof Error ? error.message : String(error)}`);
+      return 1;
+    }
+  }
+
+  const slug = positional[0];
   if (!slug) {
-    console.error('usage: gate new <slug> [--class=X] [--template=path]');
+    console.error(NEW_USAGE);
+    return 1;
+  }
+  // The PRD production takes EXACTLY one positional. `gate new first second`
+  // used to write `first` and drop `second` on the floor — a command that
+  // silently ignores an argument has decided something the author did not.
+  if (positional.length > 1) {
+    console.error(
+      `[new] one slug per PRD; got ${positional.map((a) => `"${a}"`).join(', ')} — ` +
+        'quote a multi-word slug or pick one',
+    );
     return 1;
   }
   const cls = args.find((a) => a.startsWith('--class='))?.slice('--class='.length);
@@ -300,6 +424,9 @@ function runNew(args: string[]): number {
       console.log(
         '[new] parent directories were missing — run `gate init` for the full workflow tree',
       );
+    }
+    if (result.unresolved.length > 0) {
+      console.log(`[new] unresolved tokens: ${result.unresolved.join(', ')}`);
     }
     console.log(`[new] next: fill the template, then \`gate check ${result.id}\``);
     return 0;

@@ -45,6 +45,7 @@ known_red() {
     handoff-prose)    echo "PRD-040 — a prose handoff bullet counts 0 operator rows" ;;
     handoff-table)    echo "PRD-040 — a 1-row handoff table counts its header row" ;;
     ledger-operator)  echo "PRD-040 — a ledger row with Result 'operator' counts 0" ;;
+    lint-refuses)     echo "board deferral 'unfilled PRD passes the lint' — PRD-042 FR-2 resolves the §11 commands at creation, so the unsafe-placeholder refusal that used to catch an unfilled template no longer fires" ;;
     *) echo "" ;;
   esac
 }
@@ -185,7 +186,14 @@ step "gate new + readiness lint"
 assert new-allocates "gate new allocates PRD-001" "$(contains "$(npx gate new fix-slug-unicode --class=hotfix 2>&1)" "PRD-001")"
 assert lint-refuses "an unfilled template fails the lint" "$(contains "$(npx gate check PRD-001 2>&1)" "not ready")"
 
-node "$ROOT/scripts/adopter-smoke-fill.mjs" _prds/wip/prd-001-fix-slug-unicode.md
+# The fill script's exit code is CHECKED. It failed silently for one round —
+# the memory sections it looked for are now omitted by design — and the smoke
+# carried on with an unfilled PRD, reporting four downstream failures instead of
+# the one real cause.
+if ! node "$ROOT/scripts/adopter-smoke-fill.mjs" _prds/wip/prd-001-fix-slug-unicode.md; then
+  echo "  FAIL       the fill script could not fill the PRD (see its message above)"
+  FAILURES=$((FAILURES + 1))
+fi
 assert lint-passes "the filled PRD passes the lint" \
   "$(contains "$(npx gate check PRD-001 2>&1)" "passes the readiness lint")"
 

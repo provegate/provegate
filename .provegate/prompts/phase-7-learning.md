@@ -40,7 +40,7 @@ before the merge** so repo docs never lag the code.
 
 ```
 For each non-`none` path in PRD §Durable Artifacts:
-  the path must be touched in the merge diff (git diff main...HEAD)
+  the path must be touched in the merge diff (git diff development...HEAD)
 ```
 
 `gate run PRD-XXX` enforces this mechanically: its Phase 7 gate parses
@@ -61,7 +61,7 @@ For each non-`none` path in PRD §Durable Artifacts:
 
 ## Ordering invariant
 
-Phase 7 runs **before** the merge to local main and **before** cleanup. The
+Phase 7 runs **before** the merge to local development and **before** cleanup. The
 durable-knowledge commits are part of the same merge as the code. Cleanup happens only
 after the merge is verified.
 
