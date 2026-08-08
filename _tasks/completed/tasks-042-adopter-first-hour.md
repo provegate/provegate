@@ -2,7 +2,7 @@
 
 > **PRD**: [prd-042-adopter-first-hour.md](../../_prds/wip/prd-042-adopter-first-hour.md)
 > **Readiness**: [readiness-042-adopter-first-hour.md](../../_readiness/wip/readiness-042-adopter-first-hour.md)
-> **Status**: Code Complete
+> **Status**: Ship Verified
 > **Readiness Score**: 8.1/10 (PASS, iteration 6)
 > **Model Tier (Execution)**: high
 > **Model Tier (Audit)**: high
@@ -225,7 +225,7 @@ One row per PRD §11 command, pre-populated `pending`; evidence filled at Phase 
 | test               | `pnpm test`                                      | repo                    | passed  | 8/8 tasks                  |                             |
 | build              | `pnpm build`                                     | repo                    | passed  | 4/4 tasks                  |                             |
 | smoke              | `pnpm smoke:adopter`                             | adopter fixture         | passed  | 0 failing, 0 stale         | delivered CLI still closes  |
-| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | failed  | round 15: Critical 0, High 0, Medium 2 — both fixed after it was written | the artifact records the last round RUN, not the current tree |
+| independent-review | `_docs/reviews/review-042-adopter-first-hour.md` | repo                    | failed  | round 15: Critical 0, High 0, Medium 2 — both fixed after it was written; round 16 blocked by the reviewer's usage limit | **WAIVED by the owner, recorded in the PRD Changelog.** The audit is incomplete, not passed |
 
 Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 

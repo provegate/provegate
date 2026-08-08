@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-08T05:28:32.909Z",
+  "generatedAt": "2026-08-08T05:49:10.529Z",
   "records": [
     {
       "prd": "PRD-001",
@@ -1523,21 +1523,21 @@
       "prd": "PRD-042",
       "number": 42,
       "slug": "adopter-first-hour",
-      "status": "Draft",
+      "status": "Ship Verified",
       "cyclePhase": "1 (PRD Generation)",
       "operatorAcceptance": null,
       "autonomousClose": "eligible",
       "artifacts": {
-        "prd": "_prds/wip/prd-042-adopter-first-hour.md",
-        "readiness": "_readiness/wip/readiness-042-adopter-first-hour.md",
-        "tasks": "_tasks/wip/tasks-042-adopter-first-hour.md",
-        "summary": "_docs/wip/summary-042-adopter-first-hour.md"
+        "prd": "_prds/completed/prd-042-adopter-first-hour.md",
+        "readiness": "_readiness/completed/readiness-042-adopter-first-hour.md",
+        "tasks": "_tasks/completed/tasks-042-adopter-first-hour.md",
+        "summary": "_docs/completed/summary-042-adopter-first-hour.md"
       },
       "artifactStates": {
-        "prd": "wip",
-        "readiness": "wip",
-        "tasks": "wip",
-        "summary": "wip"
+        "prd": "completed",
+        "readiness": "completed",
+        "tasks": "completed",
+        "summary": "completed"
       },
       "readiness": {
         "score": 8.1,
@@ -1546,13 +1546,13 @@
         "modelTierAudit": "high"
       },
       "task": {
-        "status": "Code Complete",
+        "status": "Ship Verified",
         "checkedCount": 60,
         "uncheckedCount": 0,
         "operatorHandoffCount": 0
       },
       "summary": {
-        "shipReadiness": "Code Complete"
+        "shipReadiness": "Ship Verified"
       },
       "lastUpdated": "2026-08-07"
     },

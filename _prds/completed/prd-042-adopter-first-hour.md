@@ -1,6 +1,6 @@
 # PRD-042: The Adopter's First Hour
 
-> **Status**: Draft
+> **Status**: Ship Verified
 >
 > **Created**: 2026-08-07
 > **Updated**: 2026-08-07
@@ -463,4 +463,5 @@ Before Phase 2 PASS, run: `gate check PRD-042`
 | 2026-08-07 | owner  | **Correction.** The iteration-3 and iteration-4 rows above claimed an FR-1 production grammar, identity rule and refusal table that were never written to this file — the edits silently no-opped (`python str.replace` on a prettier-formatted artifact, the trap this repository has recorded twice). The scorer caught it both times as MP-1 OPEN and the changelog kept saying otherwise. The content is now present and was verified by reading the file back, not by trusting the edit |
 | 2026-08-07 | owner  | Phase 4, task 1.0 — the three readiness watch items closed in the PRD before any code. W1: the artifact-substitution table is now closed, and it deliberately leaves `Base SHA` and `Quorum` EMPTY in the review artifact (a pre-filled SHA claims a diff nobody read; a supplied quorum is a panel nobody convened). W2: `cli.ts::usage` and `cli.test.ts` moved from FR-1 to FR-6, so the requirement owning discoverability owns its targets. W3: §6 and §11 now carry all eight refusal categories and their exact test titles, counted rather than read |
 | 2026-08-07 | owner  | Phase 4 scope expansion, declared: `scripts/adopter-smoke.sh` and `scripts/adopter-smoke-fill.mjs` join the Conflict Surface. FR-3 breaks both by construction — the fill script fills the memory sections `gate new` now omits, and the smoke asserts a lint refusal FR-2 removes — so leaving them untouched would have landed a change that knowingly reddens the only check watching an install. Recorded rather than taken silently, at phase-6 round 2's request |
+| 2026-08-08 | owner  | **CLOSED UNDER A RECORDED EXCEPTION.** This item merged WITHOUT a passing independent-review verdict, on the owner's explicit instruction. What the record rests on: sixteen review rounds were commissioned; fifteen completed; the last (round 15) returned `Critical: 0, High: 0, Medium: 2`, and both Mediums — an undeclared substitution in the companion table, and a stale round number in the task ledger — were closed afterwards. Round 16 could not run: the reviewer's provider returned a usage limit. The author may not write the verdict on their own work, and did not. Every other gate is green, including a full `gate run` that passed Phases 4 and 5 and stopped only here. A reader auditing this item should treat the audit as INCOMPLETE, not as passed, and the honest summary of its evidence is the fifteen rounds themselves rather than a verdict line |
 

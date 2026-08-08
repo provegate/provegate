@@ -112,6 +112,20 @@ None — PRD-042 is `Autonomous Close: eligible` and produced no operator-owned 
 
 ## Ship Readiness
 
+**Ship Verified — under a recorded exception, and the exception is the first thing to read.**
+
+This item merged WITHOUT a passing independent-review verdict, on the owner's explicit
+instruction. Sixteen rounds were commissioned and fifteen completed; the last returned
+`Critical: 0, High: 0, Medium: 2`, and both Mediums were closed afterwards. Round 16 could not
+run — the reviewer's provider returned a usage limit. The author may not write the verdict on
+their own work and did not.
+
+Anyone auditing this item should read its audit as INCOMPLETE rather than passed. The evidence
+is the fifteen rounds and what they closed — 49+ findings, Critical 0 since round 2, one
+rejection put back to the reviewer and upheld — not a verdict line.
+
+What follows was written before the exception and still describes the mechanics:
+
 **Code Complete.** Not `Ship Verified`, and the reason is mechanical rather than a judgement: the
 committed review artifact carries the last round's `fail`, because that round's findings were
 fixed after it was written. The Phase-6 gate reads that artifact and refuses — `gate run` was
