@@ -1138,3 +1138,40 @@ describe('phase-6 round 13 fixes (PRD-042)', () => {
     expect(text).not.toContain('{{CMD_LINT}}');
   });
 });
+
+describe('phase-6 round 14 fixes (PRD-042)', () => {
+  it('replaces only the FIRST occurrence of each identity anchor', () => {
+    const root = tempRoot();
+    const path = join(root, 'doubled.md');
+    // A forked template with two Created lines: the pre-refactor code replaced
+    // the first and left the second, and a refactor that claimed to change
+    // ordering must not change that.
+    const base = readFileSync(shippedTemplate, 'utf8').replace(
+      '> **Created**: [YYYY-MM-DD]',
+      '> **Created**: [YYYY-MM-DD]\n> **Created**: [YYYY-MM-DD]',
+    );
+    writeFileSync(path, base);
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'doubled', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).toContain('> **Created**: [YYYY-MM-DD]');
+    expect(text.match(/^> \*\*Created\*\*: \d{4}-\d{2}-\d{2}$/gm)).toHaveLength(1);
+  });
+
+  it('still replaces EVERY occurrence of a token', () => {
+    const root = tempRoot();
+    const path = join(root, 'twice-token.md');
+    const base = readFileSync(shippedTemplate, 'utf8').replace(
+      '- `{{CMD_BUILD}}` — clean build',
+      '- `{{CMD_BUILD}}` — clean build\n- `{{CMD_BUILD}}` — again',
+    );
+    writeFileSync(path, base);
+    const text = readFileSync(
+      createPrd(cfg, root, { slug: 'twice-token', templatePath: path }).path,
+      'utf8',
+    );
+    expect(text).not.toContain('{{CMD_BUILD}}');
+    expect(text.split(cfg.commands.build).length - 1).toBeGreaterThanOrEqual(2);
+  });
+});

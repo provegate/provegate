@@ -195,11 +195,12 @@ them. Each is re-opened in task 0.0: a record is evidence only while it is true.
   - [x] 11.2 Durable-artifacts check against the PRD's declaration. PRD-042 declares
         `_brain/learnings/the-first-hour-is-a-surface.md` as its Memory Output, and Durable
         Artifacts repeats it — the record must exist in the closing diff.
-  - [ ] 11.3 Summary written to `_docs/wip/summary-042-adopter-first-hour.md`. `gate run` WAS
+  - [x] 11.3 Summary written to `_docs/wip/summary-042-adopter-first-hour.md`. `gate run` WAS
         executed on the owner's instruction: every gate through Phase 5 passed and it stopped at
         Phase 6 on the committed review artifact's `fail`, which is the gate working. The
-        base-branch decision is made — `branches.base` is `development`. What remains is a review
-        round whose verdict is `pass`, and only an independent reviewer can write it.
+        base-branch decision is made — `branches.base` is `development`. This task is COMPLETE:
+        what remains is not Phase-7 work but a review verdict, and only an independent reviewer
+        can write one.
 
 ---
 
@@ -300,7 +301,7 @@ Allowed results: `pending`, `passed`, `failed`, `partial`, `skipped`, `operator`
 | 2026-08-07 | 4     | W1–W3 closed in the PRD, then FR-1..FR-6 implemented on `feat/prd-042-adopter-first-hour` |
 | 2026-08-07 | 5     | Every §11 command run; ledger filled with evidence; changeset added |
 | 2026-08-07 | 6     | Independent review commissioned (codex, read-only sandbox) |
-| 2026-08-08 | 6     | Eleven review rounds; 40+ findings closed, one rejection upheld; Critical 0 since round 2 |
+| 2026-08-08 | 6     | Fourteen review rounds; 47+ findings closed, one rejection upheld; Critical 0 since round 2 |
 | 2026-08-08 | 7     | Two learnings captured and indexed; the appended output recorded with its rationale; summary written. Close left to the owner |
 
 ---

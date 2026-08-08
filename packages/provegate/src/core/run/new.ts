@@ -382,12 +382,30 @@ function dropSection(content: string, heading: string): string {
  * returned, so a single alternation over all the rules is the only arrangement
  * where no substitution can read another's output — in either direction.
  */
-function applyOnce(text: string, rules: Array<[RegExp, (match: string) => string]>): string {
+function applyOnce(
+  text: string,
+  rules: Array<[RegExp, (match: string) => string, ('once' | 'global')?]>,
+  fired: Set<string> = new Set(),
+): string {
   if (rules.length === 0) return text;
   const combined = new RegExp(rules.map(([re]) => `(?:${re.source})`).join('|'), 'gm');
+  // Cardinality is per RULE, and it is not decoration (phase-6 round 14, High):
+  // the anchored identity substitutions replaced only their FIRST match before
+  // this refactor, so a forked template carrying two `> **Created**:` lines got
+  // one rewritten and one left. Making them global would have been a silent
+  // behaviour change smuggled in by a refactor that claimed to change ordering
+  // only. Tokens stay global — every occurrence of `{{CMD_TEST}}` is meant.
   return text.replace(combined, (match) => {
-    for (const [re, fn] of rules) {
-      if (new RegExp(`^(?:${re.source})$`).test(match)) return fn(match);
+    for (const [re, fn, cardinality] of rules) {
+      if (!new RegExp(`^(?:${re.source})$`).test(match)) continue;
+      if (cardinality !== 'global') {
+        // Keyed by the rule's own pattern, not by its position: the anchor line
+        // uses a different rule ARRAY, and an index-keyed set made rule 0 of one
+        // array mark rule 0 of the other as spent.
+        if (fired.has(re.source)) return match;
+        fired.add(re.source);
+      }
+      return fn(match);
     }
     return match;
   });
@@ -427,7 +445,8 @@ export function instantiateTemplate(
   }
 
   const lines = template.split('\n');
-  const rules: Array<[RegExp, (match: string) => string]> = [
+  type Rule = [RegExp, (match: string) => string, ('once' | 'global')?];
+  const rules: Rule[] = [
     [/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/, () => `> **Created**: ${date}`],
     [/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/, () => `> **Updated**: ${date}`],
     [/^> \*\*Slug\*\*: `\[short-name\]`$/, () => `> **Slug**: \`${slug}\``],
@@ -436,20 +455,25 @@ export function instantiateTemplate(
       () => `> **PRD Class**: ${cls ?? config.classes[0] ?? 'feature'}`,
     ],
     [/^\| \[YYYY-MM-DD\] \| \[role\] \| Initial draft \|$/, () => `| ${date} | [role] | Initial draft |`],
-    [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix],
-    [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match],
+    [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix, 'global'],
+    [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match, 'global'],
   ];
 
   // The anchor line goes through the SAME sweep (phase-6 round 13, High), with
   // the anchor rule FIRST in the alternation. Handling it with a bare
   // `line.replace` left every other rule off that one line: a supported custom
   // template headed `# {{ID_PREFIX}}-XXX: {{CMD_LINT}}` kept its token.
-  const anchorRules: Array<[RegExp, (match: string) => string]> = [
+  const anchorRules: Rule[] = [
     [anchor, () => `# ${id}: `],
     ...rules,
   ];
+  // The sweep runs line by line so the anchor line can carry its own rule, but
+  // "once" means once per DOCUMENT — the `fired` set is shared across the lines
+  // (phase-6 round 14). A per-line set would have made every anchored rule
+  // global again, one line at a time.
+  const fired = new Set<string>();
   let out = lines
-    .map((line, i) => applyOnce(line, i === anchorLine ? anchorRules : rules))
+    .map((line, i) => applyOnce(line, i === anchorLine ? anchorRules : rules, fired))
     .join('\n');
 
   // A contract the repository cannot enforce is instruction the reader must
@@ -722,9 +746,9 @@ export function createCompanion(
         /`_docs\/reviews\/review-XXX-\{short-name\}\.md`/,
         () => `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
       ],
-      [/review-XXX-\{short-name\}\.md/, () => `review-${number}-${slug}.md`],
-      [/prd-XXX-\{short-name\}\.md/, () => `${prdKind.prefix}-${number}-${slug}.md`],
-      [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match],
+      [/review-XXX-\{short-name\}\.md/, () => `review-${number}-${slug}.md`, 'global'],
+      [/prd-XXX-\{short-name\}\.md/, () => `${prdKind.prefix}-${number}-${slug}.md`, 'global'],
+      [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match, 'global'],
     ]);
   } else {
     relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
@@ -755,7 +779,7 @@ export function createCompanion(
       [/^> \*\*High:\*\* .*$/, () => '> **High:**'],
       [/^> \*\*Medium:\*\* .*$/, () => '> **Medium:**'],
       [/^> \*\*Quorum:\*\* .*$/, () => '> **Quorum:**'],
-      [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix],
+      [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix, 'global'],
     ]);
   }
 
