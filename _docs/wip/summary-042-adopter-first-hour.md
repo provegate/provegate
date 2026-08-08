@@ -83,7 +83,7 @@ instantiation, the memory-on failure under the omission, the four drift refusals
 anchor alternation. Two structural assertions are mutation-proven — moving the manifest recipe
 past the close fails the verifier, and a competing recipe fence fails it too.
 
-The adversarial rounds drove most of the coverage: 14 independent review rounds, 47+ findings,
+The adversarial rounds drove most of the coverage: 15 independent review rounds, 49+ findings,
 each closed with a test that fails without the fix. Package suite: 1447 tests.
 
 ---
@@ -98,7 +98,7 @@ each closed with a test that fails without the fix. Package suite: 1447 tests.
 | tests | monorepo | passed | 8/8 tasks, 1447 package tests | |
 | workflow | repo | passed | `verify:workflow` PASS | includes brain, memory corpus, quickstart parity |
 | smoke | adopter fixture | passed | 0 failing, 0 stale known-red | packs the CLI, installs it, closes a PRD |
-| independent-review | repo | **failed** | `_docs/reviews/review-042-adopter-first-hour.md` — round 14, Critical 0, High 1, Medium 1, both since fixed | the artifact records the last round RUN, not the current tree |
+| independent-review | repo | **failed** | `_docs/reviews/review-042-adopter-first-hour.md` — round 15, Critical 0, High 0, Medium 2, both since fixed | the artifact records the last round RUN, not the current tree |
 
 Allowed results: `passed`, `failed`, `partial`, `skipped`, `operator`, `blocked`.
 
@@ -121,7 +121,7 @@ the verdict on their own work.
 
 The base-branch question is settled: the owner set `branches.base` to `development` on
 2026-08-08, and the merge target now matches where the work lives. What remains is one review
-round whose verdict is `pass` — fourteen have run, each closing every finding of the one before,
+round whose verdict is `pass` — fifteen have run, the last with no High findings at all, each closing every finding of the one before,
 and the last several were second-order effects of the fixes themselves, closed as classes rather
 than as points.
 

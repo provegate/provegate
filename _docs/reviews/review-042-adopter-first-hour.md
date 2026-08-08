@@ -5,21 +5,21 @@
 > **Reviewer:** codex (gpt-5), read-only sandbox
 > **Base SHA:** `5552a11233e661048808d5d1bb6a2f7378f27095`
 > **Critical:** 0
-> **High:** 1
-> **Medium:** 1
+> **High:** 0
+> **Medium:** 2
 > **Quorum:** 0/1 pass
 
 ## Summary
 
-Round 14 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. The round-13 anchor-line correction works, but the unified sweep changes the established behavior of every other anchored substitution by rewriting all matching lines, including fenced examples. One Phase-7 task record also remains stale despite the prior artifact correction. Both findings are introduced by this diff. Companion containment, atomic writes, exact-width IDs, CLI grammar, unconditional configured-token handling, memory-section removal, Phase-6 path diagnostics, quickstart ordering, strengthened existing tests, and `branches.base: development` otherwise satisfy the reviewed contract. The upheld entity rejection and tracked unfilled-PRD follow-up remain outside this verdict.
+Round 15 reviewed `5552a11233e661048808d5d1bb6a2f7378f27095...feat/prd-042-adopter-first-hour`. Both round-14 findings are closed: identity anchors retain first-match cardinality while configured tokens remain global, and Phase 7 is checked with fourteen rounds recorded. Two introduced contract/artifact defects remain. The targeted anchor, token, section-removal, containment, atomicity, ID-width, CLI grammar, Phase-6 path, quickstart-order, changed-test, memory-output, and `branches.base: development` checks otherwise hold. The entity rejection remains upheld. The unfilled-PRD lint gap is a pre-existing readiness-lint property this diff makes reachable and belongs only to its recorded follow-up item.
 
 ## Findings
 
 | # | Sev | Finding | Resolution |
 | --- | --- | --- | --- |
-| 1 | HIGH | `packages/provegate/src/core/run/new.ts:430-452`: **Introduced by this diff.** The base implementation replaced only the first occurrence of each Created, Updated, Slug, Class, and Changelog anchor, but `applyOnce` now applies those rules globally to every matching line. A supported forked template containing its real Created line followed by a fenced `> **Created**: [YYYY-MM-DD]` example therefore rewrites both lines; a read-only probe produced two dated lines and removed the example placeholder. This violates FR-2’s requirement that existing anchored substitutions keep their behavior and silently edits content outside the supported metadata site. Resolve each existing anchor to its original line before the sweep, enable its identity arm only on that line while keeping configured-token substitution unconditional, and add a fenced-duplicate regression. | open |
-| 2 | MEDIUM | `_tasks/wip/tasks-042-adopter-first-hour.md:200,303`: **Introduced by this diff.** Phase 7 is marked complete and the summary exists, but task 11.3 remains unchecked, while the Progress Log still says “Eleven review rounds; 40+ findings” after round 13 and 45+ findings. The round-13 stale-artifact correction therefore did not update every restatement it claimed to close. Refresh the checkbox and progress entry with the final round/count. | open |
+| 1 | MEDIUM | `packages/provegate/src/core/run/new.ts:733-751,770-773`: **Introduced by this diff.** `createCompanion` exceeds FR-1’s closed substitution table: the tasks branch resolves the Verification Ledger’s review-path placeholder, and the review branch replaces `[Feature Name]` with the slug. FR-1 permits only the listed task identity/link/date/token substitutions and only the review ID substitutions; it explicitly says anything absent stays an author-filled placeholder. Leave those two placeholders untouched, or obtain an owner amendment to the closed table and add exact-output regressions. | open |
+| 2 | MEDIUM | `_tasks/wip/tasks-042-adopter-first-hour.md:228`: **Introduced by this diff.** The Verification Ledger still says the committed review artifact is round 13, while that artifact and the summary record round 14. This contradicts the claim that the task artifact is current and leaves Phase-6 evidence describing the wrong review run. Update the row to round 14 and its current evidence before replacing it with this round’s verdict. | open |
 
 ## Post-fix verification
 
-Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks, 1445 package tests), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity`, `pnpm smoke:adopter`, and `gate check PRD-042`; `gate run PRD-042` passed through Phase 5 and stopped at the committed Phase-6 failure. A read-only direct probe confirmed finding 1 by showing that both the real and fenced duplicate Created anchors were substituted. No round-14 fixes were applied.
+Orchestrator-provided evidence reports PASS for `pnpm check-types`, `pnpm lint`, `pnpm test` (8/8 tasks, 1447 package tests), `pnpm build`, `pnpm verify:workflow`, `pnpm verify:quickstart-parity` including its mutation probe, `pnpm smoke:adopter`, `gate check PRD-042`, and every `gate run PRD-042` gate through Phase 5. Read-only inspection confirmed the round-14 cardinality regressions and Phase-7 artifact corrections. No round-15 fixes were applied.

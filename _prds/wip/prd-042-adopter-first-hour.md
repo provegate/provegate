@@ -133,8 +133,8 @@ so that my first close fails on my code and not on my paperwork.
 
    | Template | Substituted by `gate new` | Left to the author |
    | -------- | ------------------------- | ------------------ |
-   | tasks | the PRD's id and slug in the heading and the `> **PRD**:` link, `> **Status**: Not Started`, `> **Created**` / `> **Updated**` dates, and the FR-2 token pass | task text, the Verification Ledger's rows, Relevant Files |
-   | review | the PRD's id in the heading and the `> **PRD:**` metadata line, `> **Base SHA:**` left EMPTY (the reviewer fills it — a pre-filled SHA is a claim about a diff nobody read) | verdict, reviewer, the four count fields, findings |
+   | tasks | the PRD's id and slug in the heading, the `> **PRD**:` link (path computed from the configured destination), `> **Created**` / `> **Updated**` dates, every `prd-XXX-{short-name}.md` and `review-XXX-{short-name}.md` placeholder INCLUDING the Verification Ledger's `independent-review` row — that row must name the path `gate new --review` writes, or Phase 6 cannot connect the two artifacts — and the FR-2 token pass | task text, the ledger's other rows, Relevant Files |
+   | review | the PRD's id in the heading and in the `> **PRD:**` metadata line, and the heading's `[Feature Name]` placeholder; every reviewer-owned field is BLANKED — verdict, reviewer, Base SHA, the three counts, Quorum — because the shipped template's own placeholders satisfy the review gate, and instantiating them would let an author flip one field and hand the gate a review nobody performed | the verdict and every field behind it, the findings table |
 
    The review template's `Quorum` line is NOT pre-filled: the review gate refuses an artifact
    without it, and a value the tool supplied would be a quorum nobody convened.
