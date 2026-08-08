@@ -170,15 +170,24 @@ for (const spec of DOCS) {
   });
   const headingText = (line, index) => {
     if (setext.has(index)) {
-      return `# ${line.trim()}`;
+      return `# ${line.trim().replace(/[*_`]/g, '')}`;
     }
     const m = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*$/.exec(line);
     if (!m) return null;
+    // Inline emphasis is not part of a heading's identity (phase-6 round 12):
+    // `## **5. Close (the runner)**` is the same heading to a reader, and
+    // comparing raw text let a formatted duplicate sit before the recipe while
+    // the plain one stayed after it. A CLOSED set of markers — `*`, `_` and
+    // backticks — is stripped; this is not renderer parity, it is the three
+    // spellings a heading actually gets written in.
     // A CLOSING sequence must be preceded by whitespace (phase-6 round 8):
     // `## Close ###` closes, `## Close###` does not — the hashes are part of
     // the text. Stripping them unconditionally made two different headings
     // compare equal.
-    const text = m[2].replace(/(^|[ \t])#+$/, '').trimEnd();
+    const text = m[2]
+      .replace(/(^|[ \t])#+$/, '')
+      .trimEnd()
+      .replace(/[*_`]/g, '');
     return `${m[1]} ${text}`;
   };
   const findUnique = (heading) =>

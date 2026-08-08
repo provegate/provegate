@@ -1092,3 +1092,27 @@ describe('phase-6 round 10 fixes (PRD-042)', () => {
     expect(text).toContain(`](${up.repeat(hops)}_prds/wip/prd-001-winsep.md)`);
   });
 });
+
+describe('phase-6 round 12 fixes (PRD-042)', () => {
+  it('applies the companion substitutions in one sweep', () => {
+    const root = tempRoot();
+    // A configured reviews directory that itself spells the template's own
+    // placeholder: two sequential passes rewrote its bytes, one sweep cannot.
+    const config = {
+      ...cfg,
+      dirs: { ...cfg.dirs, reviewsDir: 'audits/prd-XXX-{short-name}.md' },
+    };
+    createPrd(config, root, { slug: 'sweep' });
+    const tasks = readFileSync(createCompanion(config, root, 'tasks', 'PRD-001').path, 'utf8');
+    expect(tasks).toContain('audits/prd-XXX-{short-name}.md/review-001-sweep.md');
+  });
+
+  it('does not let a token in the id prefix reach the companion output', () => {
+    const root = tempRoot();
+    const config = { ...cfg, idPattern: { ...cfg.idPattern, prefix: 'CMD' } };
+    createPrd(config, root, { slug: 'prefix-sweep' });
+    const review = readFileSync(createCompanion(config, root, 'review', 'CMD-001').path, 'utf8');
+    expect(review).toContain('> **PRD:** CMD-001');
+    expect(review).toContain('> **Verdict:**\n');
+  });
+});

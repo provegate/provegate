@@ -712,57 +712,41 @@ export function createCompanion(
   if (kind === 'tasks') {
     const tasksKind = config.dirs.artifacts.tasks;
     relPath = `${tasksKind.dir}/${config.dirs.stateRoles.wip}/${tasksKind.prefix}-${number}-${slug}.md`;
-    // Token pass FIRST here too (phase-6 round 10, High): running it after the
-    // identity substitutions meant it rescanned the slug, the id and the
-    // configured review path it had just written.
-    const template = substituteConfiguredTokens(
-      config,
-      readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8'),
-    );
-    // The link is COMPUTED from the destination, never a hardcoded `../../`
-    // (phase-6 round 1, Medium): a configured task directory one level deeper
-    // or shallower would otherwise get a link that resolves nowhere, and a
-    // broken link in the artifact that names the PRD is a bad first impression
-    // of a tool whose whole subject is traceability.
-    // Depth from the NORMALIZED path (phase-6 round 2, Medium): a configured
-    // directory like `workflow/./tasks` writes to a two-deep location but has
-    // three raw segments, and the extra `../` produced a link that resolved
-    // above the repository root.
+    const template = readFileSync(shippedTemplatePath('tasks-template.md'), 'utf8');
     // Depth comes from where the file ACTUALLY lands, not from the config
-    // string (phase-6 round 11, Medium). Round 3 collapsed `.` and `..`; round
-    // 10 split on both separators, which fixed Windows and broke POSIX, where
-    // `workflow\\tasks` is ONE literal directory. Asking the path layer that
+    // string (phase-6 round 11). Round 3 collapsed `.` and `..`; round 10 split
+    // on both separators, which fixed Windows and broke POSIX, where
+    // `workflow\tasks` is ONE literal directory. Asking the path layer that
     // writes the file is the only reading that is right on both.
     const depthOf = (relative: string): string[] =>
       relativePath(root, containedPath(root, relative)).split(sep).filter((s) => s !== '');
     const hops = depthOf(relPath).length - 1;
     const prdLink = `${'../'.repeat(hops)}${depthOf(prdRel).join('/')}`;
-    content = template
-      .replace(/^# Tasks: \[Feature Name\]$/m, () => `# Tasks: ${canonicalId} — ${slug}`)
-      .replace(
-        /^> \*\*PRD\*\*: \[prd-XXX-\{short-name\}\.md\]\([^)]*\)$/m,
+    const tokens = configuredTokens(config);
+    // ONE sweep here as well (phase-6 round 12, High): this branch still ran a
+    // token pass and then several substitutions over its output, which is the
+    // very composition `one-sweep-not-two-passes` records. The alternation
+    // below visits each site once, over the template's original bytes.
+    content = applyOnce(template, [
+      [/^# Tasks: \[Feature Name\]$/, () => `# Tasks: ${canonicalId} — ${slug}`],
+      [
+        /^> \*\*PRD\*\*: \[prd-XXX-\{short-name\}\.md\]\([^)]*\)$/,
         () => `> **PRD**: [${prdKind.prefix}-${number}-${slug}.md](${prdLink})`,
-      )
-      .replace(/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/m, () => `> **Created**: ${date}`)
-      .replace(/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/m, () => `> **Updated**: ${date}`)
-      .replaceAll('prd-XXX-{short-name}.md', () => `${prdKind.prefix}-${number}-${slug}.md`)
-      // The ledger's review path comes from CONFIG (phase-6 round 7, High):
-      // it hardcoded `_docs/reviews/` while `gate new --review` writes to
-      // `dirs.reviewsDir`, so under any custom reviews directory the two
-      // commands produced artifacts Phase 6 could not connect.
-      // ONE pass over both review spellings (phase-6 round 9, High): the
-      // literal-replacement fix still ran a SECOND `replaceAll` over the first
-      // one's output, so a `reviewsDir` that itself contains
-      // `review-XXX-{short-name}.md` had its own bytes rewritten. Alternation
-      // with a callback means each site is visited once and no output is
-      // rescanned.
-      .replace(
-        /`_docs\/reviews\/review-XXX-\{short-name\}\.md`|review-XXX-\{short-name\}\.md/g,
-        (match) =>
-          match.startsWith('`')
-            ? `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``
-            : `review-${number}-${slug}.md`,
-      );
+      ],
+      [/^> \*\*Created\*\*: \[YYYY-MM-DD\]$/, () => `> **Created**: ${date}`],
+      [/^> \*\*Updated\*\*: \[YYYY-MM-DD\]$/, () => `> **Updated**: ${date}`],
+      // The ledger's review path comes from CONFIG (round 7): it hardcoded
+      // `_docs/reviews/` while `gate new --review` writes to `dirs.reviewsDir`,
+      // so under a custom directory the two commands produced artifacts Phase 6
+      // could not connect. Both spellings are arms of the same alternation.
+      [
+        /`_docs\/reviews\/review-XXX-\{short-name\}\.md`/,
+        () => `\`${config.dirs.reviewsDir}/review-${number}-${slug}.md\``,
+      ],
+      [/review-XXX-\{short-name\}\.md/, () => `review-${number}-${slug}.md`],
+      [/prd-XXX-\{short-name\}\.md/, () => `${prdKind.prefix}-${number}-${slug}.md`],
+      [/\{\{[A-Z0-9_]+\}\}/, (match) => tokens.get(match) ?? match],
+    ]);
   } else {
     relPath = `${config.dirs.reviewsDir}/review-${number}-${slug}.md`;
     const template = readFileSync(shippedTemplatePath('review-template.md'), 'utf8');
@@ -776,20 +760,24 @@ export function createCompanion(
     // Quorum reads `3/5 pass`. Instantiating those bytes meant an author could
     // flip `Verdict` to `pass` and hand the gate a review nobody performed.
     // Blank fields fail the gate by name until a reviewer types them.
-    content = template
-      .replace(
-        /^# Independent Review: \{\{ID_PREFIX\}\}-XXX — \[Feature Name\]$/m,
+    // ONE sweep here too (phase-6 round 12): the blanking replacements and the
+    // `{{ID_PREFIX}}` substitution used to run in sequence over each other's
+    // output.
+    content = applyOnce(template, [
+      [
+        /^# Independent Review: \{\{ID_PREFIX\}\}-XXX — \[Feature Name\]$/,
         () => `# Independent Review: ${canonicalId} — ${slug}`,
-      )
-      .replace(/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/m, () => `> **PRD:** ${canonicalId}`)
-      .replace(/^> \*\*Verdict:\*\* .*$/m, '> **Verdict:**')
-      .replace(/^> \*\*Reviewer:\*\* .*$/m, '> **Reviewer:**')
-      .replace(/^> \*\*Base SHA:\*\* .*$/m, '> **Base SHA:**')
-      .replace(/^> \*\*Critical:\*\* .*$/m, '> **Critical:**')
-      .replace(/^> \*\*High:\*\* .*$/m, '> **High:**')
-      .replace(/^> \*\*Medium:\*\* .*$/m, '> **Medium:**')
-      .replace(/^> \*\*Quorum:\*\* .*$/m, '> **Quorum:**')
-      .replaceAll('{{ID_PREFIX}}', () => config.idPattern.prefix);
+      ],
+      [/^> \*\*PRD:\*\* \{\{ID_PREFIX\}\}-XXX$/, () => `> **PRD:** ${canonicalId}`],
+      [/^> \*\*Verdict:\*\* .*$/, () => '> **Verdict:**'],
+      [/^> \*\*Reviewer:\*\* .*$/, () => '> **Reviewer:**'],
+      [/^> \*\*Base SHA:\*\* .*$/, () => '> **Base SHA:**'],
+      [/^> \*\*Critical:\*\* .*$/, () => '> **Critical:**'],
+      [/^> \*\*High:\*\* .*$/, () => '> **High:**'],
+      [/^> \*\*Medium:\*\* .*$/, () => '> **Medium:**'],
+      [/^> \*\*Quorum:\*\* .*$/, () => '> **Quorum:**'],
+      [/\{\{ID_PREFIX\}\}/, () => config.idPattern.prefix],
+    ]);
   }
 
   const full = containedPath(root, relPath);
